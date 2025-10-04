@@ -1,16 +1,17 @@
 // Import the pieces of Three.js that we will use in this starter
 import {
-  AmbientLight,
   BoxGeometry,
   Clock,
-  Color,
-  DirectionalLight,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
   Scene,
   WebGLRenderer
 } from 'three';
+
+// Import the helper modules that manage the sky and lighting systems.
+import { createSky, updateSky } from './world/sky';
+import { createLighting, updateLighting } from './world/lighting';
 
 // Grab the root element that Vite sets up for us in index.html
 const app = document.getElementById('app');
@@ -19,7 +20,6 @@ const app = document.getElementById('app');
 const renderer = new WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setClearColor(new Color('#202533'));
 app.appendChild(renderer.domElement);
 
 // Set up a scene to hold all of our 3D objects
@@ -36,13 +36,9 @@ const camera = new PerspectiveCamera(
 // Position the camera slightly away from the origin so we can see our objects
 camera.position.set(2, 2, 4);
 
-// Add some simple lighting so the cube has shading
-const ambientLight = new AmbientLight(0xffffff, 0.5);
-scene.add(ambientLight);
-
-const directionalLight = new DirectionalLight(0xffffff, 1);
-directionalLight.position.set(5, 10, 7.5);
-scene.add(directionalLight);
+// Create the dynamic sky and the lighting rig that will change over time.
+const sky = createSky(scene);
+const lights = createLighting(scene);
 
 // Build a simple cube mesh to display in the scene
 const geometry = new BoxGeometry(1, 1, 1);
@@ -68,10 +64,19 @@ const handleResize = () => {
 window.addEventListener('resize', handleResize);
 
 // The animation loop: update anything that moves, then render the frame
+const dayLength = 60; // Length of a full day/night cycle in seconds.
+
 const animate = () => {
   requestAnimationFrame(animate);
 
   const elapsedTime = clock.getElapsedTime();
+
+  // Convert elapsed time into a normalized value between 0 and 1 where
+  // 0 is dawn, 0.5 is midday, and 1 loops back to dawn again.
+  const timeOfDay = (elapsedTime % dayLength) / dayLength;
+
+  updateSky(sky, timeOfDay);
+  updateLighting(lights, timeOfDay);
 
   cube.rotation.x = elapsedTime * 0.6;
   cube.rotation.y = elapsedTime * 0.4;
