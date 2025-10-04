@@ -41,44 +41,43 @@ export function createLighting(scene) {
   const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.6);
   scene.add(hemiLight);
 
-  return { sunLight, hemiLight };
+  return { sunLight, hemiLight, nightFactor: 0 };
 }
 
 export function updateLighting(lights, sunDir) {
   // Validate the light container before attempting to update state.
-  if (!lights || !lights.sunLight || !lights.hemiLight) {
-    return;
-  }
+  if (!lights || !lights.sunLight || !lights.hemiLight) return;
   const { sunLight, hemiLight } = lights;
 
   // Normalize the provided sun direction so derived math stays correct.
   const norm = scratchDir.copy(sunDir).normalize();
+  const sunHeight = norm.y;
+
+  // dayFactor describes how close we are to midday (1) vs midnight (0).
+  const dayFactor = MathUtils.clamp(MathUtils.smoothstep(sunHeight, -0.15, 0.1), 0, 1);
+  const nightFactor = 1 - dayFactor;
 
   // Position sun light far away
   sunLight.position.copy(norm).multiplyScalar(100);
   sunLight.target.position.set(0, 0, 0);
   sunLight.target.updateMatrixWorld();
 
-  // Compute the elevation factor for sun/moon blending.
-  const elevation = norm.y;
-  const dayFactor = MathUtils.smoothstep(elevation, -0.1, 0.25);
-  const nightFactor = 1 - dayFactor;
-
-  // Dim the sun as it approaches the horizon and slightly lift at night.
-  const targetSunIntensity = MathUtils.lerp(0.05, 1.5, dayFactor);
+  // Smoothly fade the sun intensity below the horizon so the moon can take over.
+  const targetSunIntensity = MathUtils.lerp(0.05, 1.4, dayFactor);
   sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
 
-  // Blend the sun color between dawn/noon/dusk palettes.
-  const sunColor = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, dayFactor);
-  sunColor.lerp(SUN_COLOR_DUSK, nightFactor * 0.5);
+  // Sun color blending: Dawn → Noon, with a nudge toward Dusk as night approaches.
+  const c0 = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, dayFactor);
+  const sunColor = c0.lerp(SUN_COLOR_DUSK, nightFactor * 0.55);
   sunLight.color.copy(sunColor);
 
-  // Hemisphere ambient blending
-  hemiLight.intensity = MathUtils.lerp(0.2, 1.0, dayFactor);
+  // Hemisphere ambient blending (cooler and dimmer at night).
+  const hemiTarget = MathUtils.lerp(0.12, 0.95, dayFactor);
+  hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
   lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
 
-  // Store the moon blend factor for any downstream consumers.
+  // Expose the night factor for consumers like the moon/stars.
   lights.nightFactor = nightFactor;
 }
 
@@ -94,7 +93,7 @@ export function createMoon(scene) {
   const moonMat = new MeshBasicMaterial({
     color: 0xeef7ff,
     transparent: true,
-    opacity: 0.3
+    opacity: 0.3,
   });
   const moonMesh = new Mesh(moonGeo, moonMat);
 
@@ -132,9 +131,15 @@ export function updateMoon(moon, sunDir) {
 
   // Derive how far into the night we are based on sun height.
   const sunHeight = sunDir.y;
-  const nightFactor = MathUtils.smoothstep(-sunHeight, 0, 1);
 
-  const targetIntensity = MathUtils.lerp(0.05, 0.25, nightFactor);
+  // nightFactor mirrors the sun fade so the moon brightens gently overnight.
+  const nightFactor = MathUtils.clamp(
+    MathUtils.smoothstep(-sunHeight, 0, 0.4),
+    0,
+    1
+  );
+
+  const targetIntensity = MathUtils.lerp(0.05, 0.3, nightFactor);
   light.intensity = MathUtils.lerp(light.intensity, targetIntensity, 0.1);
 
   if (mesh && mesh.material) {

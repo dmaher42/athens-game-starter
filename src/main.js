@@ -21,6 +21,7 @@ function init() {
   // Sky, stars & lighting
   const skyObj = createSky(scene);
   const lights = createLighting(scene);
+  // Create a star field with 1000 tiny points so nights feel alive.
   const stars = createStars(scene, 1000);
   const moon = createMoon(scene);
 
@@ -51,9 +52,10 @@ function init() {
       0
     );
 
-    // Update sky dome, stars, sun light, moon
+    // Update sky dome, atmospheric lighting, and celestial bodies each frame.
     updateSky(skyObj, sunDir);
     updateLighting(lights, sunDir);
+    // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
 
