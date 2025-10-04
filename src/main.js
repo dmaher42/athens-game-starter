@@ -1,88 +1,53 @@
-// Import the pieces of Three.js that we will use in this starter
-import {
-  BoxGeometry,
-  Clock,
-  Mesh,
-  MeshStandardMaterial,
-  PerspectiveCamera,
-  Scene,
-  WebGLRenderer
-} from 'three';
+import * as THREE from "three";
+import { createSky, updateSky } from "./world/sky.js";
+import { createLighting, updateLighting } from "./world/lighting.js";
 
-// Import the helper modules that manage the sky and lighting systems.
-import { createSky, updateSky } from './world/sky';
-import { createLighting, updateLighting } from './world/lighting';
+function init() {
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
 
-// Grab the root element that Vite sets up for us in index.html
-const app = document.getElementById('app');
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75,
+    window.innerWidth / window.innerHeight, 0.1, 2000);
+  camera.position.set(0, 5, 10);
 
-// Create a renderer and set its size to fill the window
-const renderer = new WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-app.appendChild(renderer.domElement);
+  const skyObj = createSky(scene);
+  const lights = createLighting(scene);
 
-// Set up a scene to hold all of our 3D objects
-const scene = new Scene();
+  const clock = new THREE.Clock();
 
-// Create a camera with a 75 degree field of view
-const camera = new PerspectiveCamera(
-  75,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  100
-);
+  function animate() {
+    requestAnimationFrame(animate);
 
-// Position the camera slightly away from the origin so we can see our objects
-camera.position.set(2, 2, 4);
+    const elapsed = clock.getElapsedTime();
+    const dayDuration = 60;  // seconds for full day cycle
+    const phase = (elapsed % dayDuration) / dayDuration;
 
-// Create the dynamic sky and the lighting rig that will change over time.
-const sky = createSky(scene);
-const lights = createLighting(scene);
+    // Convert phase to sun vector
+    // simple circular path in sky
+    const theta = phase * Math.PI * 2;  // full circle
+    const radius = 1;
+    // Let sun go from horizon (-y) up to peak, etc.
+    const sun = new THREE.Vector3(
+      Math.cos(theta),
+      Math.sin(theta),
+      0
+    );
 
-// Build a simple cube mesh to display in the scene
-const geometry = new BoxGeometry(1, 1, 1);
-const material = new MeshStandardMaterial({ color: '#4cc9f0' });
-const cube = new Mesh(geometry, material);
-scene.add(cube);
+    updateSky(skyObj, sun);
+    updateLighting(lights, sun);
 
-// A clock helps us make smooth animations that are time-based
-const clock = new Clock();
+    renderer.render(scene, camera);
+  }
 
-// Keep everything sized correctly when the browser window changes
-const handleResize = () => {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  animate();
 
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix();
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+}
 
-  renderer.setSize(width, height);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-};
-
-window.addEventListener('resize', handleResize);
-
-// The animation loop: update anything that moves, then render the frame
-const dayLength = 60; // Length of a full day/night cycle in seconds.
-
-const animate = () => {
-  requestAnimationFrame(animate);
-
-  const elapsedTime = clock.getElapsedTime();
-
-  // Convert elapsed time into a normalized value between 0 and 1 where
-  // 0 is dawn, 0.5 is midday, and 1 loops back to dawn again.
-  const timeOfDay = (elapsedTime % dayLength) / dayLength;
-
-  updateSky(sky, timeOfDay);
-  updateLighting(lights, timeOfDay);
-
-  cube.rotation.x = elapsedTime * 0.6;
-  cube.rotation.y = elapsedTime * 0.4;
-
-  renderer.render(scene, camera);
-};
-
-// Kick off the loop
-animate();
+init();
