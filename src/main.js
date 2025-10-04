@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { createSky, updateSky, createStars, updateStars } from "./world/sky.js";
 import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
+import { MainCharacter } from "./world/mainCharacter.js";
 
 function init() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -36,13 +37,17 @@ function init() {
     scene.add(ground);
   }
 
+  // Create our controllable main character after the world is ready.
+  const character = new MainCharacter(scene, camera);
+
   const clock = new THREE.Clock();
   const dayDuration = 60; // seconds for full cycle
 
   function animate() {
     requestAnimationFrame(animate);
 
-    const elapsed = clock.getElapsedTime();
+    const deltaTime = clock.getDelta();
+    const elapsed = clock.elapsedTime;
     const phase = (elapsed % dayDuration) / dayDuration;
 
     const theta = phase * Math.PI * 2;
@@ -58,6 +63,9 @@ function init() {
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
+
+    // Update player movement, rotation, and the following camera.
+    character.update(deltaTime);
 
     renderer.render(scene, camera);
   }
