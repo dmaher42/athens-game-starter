@@ -4,7 +4,6 @@ import { Sky } from "three/examples/jsm/objects/Sky.js";
 import * as THREE from "three";
 
 // Default configuration for the procedural star field.
-const DEFAULT_STAR_COUNT = 1200;
 const STAR_FIELD_RADIUS = 1000;
 
 export function createSky(scene) {
@@ -39,48 +38,45 @@ export function updateSky(skyObj, sunDir) {
   sky.material.uniforms.sunPosition.value.copy(sunDir).normalize();
 }
 
-export function createStars(scene, count = DEFAULT_STAR_COUNT) {
-  // Create a star field that wraps the entire sky dome using THREE.Points.
+export function createStars(scene, starCount) {
+  // Generate a list of points that will become our star positions.
+  // Each point is placed at a random direction on a large imaginary sphere
+  // so that the stars surround the player from every angle.
   const geometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(count * 3);
-  const colors = new Float32Array(count * 3);
+  const positions = new Float32Array(starCount * 3);
 
-  for (let i = 0; i < count; i++) {
-    // Generate a random direction so stars appear all around the viewer.
+  for (let i = 0; i < starCount; i++) {
+    // Pick a random direction, normalise it (make it length 1), then scale it
+    // by the radius of the shell. This keeps every star the same distance away
+    // so they look like they belong to the night sky, not the scene itself.
     const direction = new THREE.Vector3(
       Math.random() * 2 - 1,
       Math.random() * 2 - 1,
       Math.random() * 2 - 1
     ).normalize();
-
     const distance = STAR_FIELD_RADIUS * (0.8 + Math.random() * 0.2);
-    const idx = i * 3;
-    positions[idx] = direction.x * distance;
-    positions[idx + 1] = direction.y * distance;
-    positions[idx + 2] = direction.z * distance;
-
-    // Give every star a subtle colour variation (brightness only).
-    const brightness = 0.5 + Math.random() * 0.5;
-    colors[idx] = brightness;
-    colors[idx + 1] = brightness;
-    colors[idx + 2] = brightness;
+    const index = i * 3;
+    positions[index] = direction.x * distance;
+    positions[index + 1] = direction.y * distance;
+    positions[index + 2] = direction.z * distance;
   }
 
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
+  // PointsMaterial renders every vertex as a small sprite. We give it a tiny
+  // size, a white colour and enable transparency so we can fade the stars.
   const material = new THREE.PointsMaterial({
     size: 1.2,
-    sizeAttenuation: true,
-    vertexColors: true,
+    color: 0xffffff,
     transparent: true,
-    opacity: 0, // Start invisible; we fade the stars in at night.
+    opacity: 0, // Start hidden; updateStars will fade them in at night.
     depthWrite: false,
+    blending: THREE.AdditiveBlending,
   });
 
+  // Combine the geometry and material into a THREE.Points object and add it to
+  // the scene so it renders around the player.
   const stars = new THREE.Points(geometry, material);
-  stars.matrixAutoUpdate = false;
-  stars.updateMatrix();
   scene.add(stars);
 
   return stars;
@@ -92,12 +88,18 @@ export function updateStars(stars, phase) {
   const material = stars.material;
   if (!material) return;
 
-  // Mirror the phase (0-1) so we can treat midnight (0 or 1) as the peak.
-  const mirroredPhase = phase > 0.5 ? 1 - phase : phase;
-  // Smoothly fade the stars when we move towards daytime (phase ~0.25 or ~0.75).
-  const eased = 1 - THREE.MathUtils.smoothstep(mirroredPhase, 0.05, 0.2);
-  const targetOpacity = THREE.MathUtils.clamp(eased, 0, 1);
+  // Convert the current phase of the day (0 = midnight, 0.5 = midday) into
+  // the sun's height in the sky. The sine wave gives us -1 (midnight) to +1
+  // (midday) which we use to drive the fade.
+  const sunElevation = Math.sin(phase * Math.PI * 2);
 
-  // Lerp towards the target so the transition feels soft.
-  material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, 0.05);
+  // Fade the stars out shortly before the sun reaches the horizon and keep them
+  // invisible while it is high in the sky. The fade range is intentionally
+  // narrow so the transition feels gradual.
+  const fadeStart = -0.2; // sun just below the horizon
+  const fadeEnd = 0.1; // sun a little way into the sky
+  const nightStrength = 1 - THREE.MathUtils.smoothstep(sunElevation, fadeStart, fadeEnd);
+
+  // Slowly interpolate towards the desired opacity so the change is smooth.
+  material.opacity = THREE.MathUtils.lerp(material.opacity, nightStrength, 0.05);
 }
