@@ -1,93 +1,73 @@
-import { AmbientLight, Color, DirectionalLight, HemisphereLight } from 'three';
+import { Color, DirectionalLight, HemisphereLight, Vector3 } from 'three';
 
-export const createLighting = (scene) => {
-  // Directional light acts like the sun, shining from a distant point.
-  const sunLight = new DirectionalLight(0xffffff, 1.0);
-  sunLight.position.set(0, 10, 0);
-  sunLight.castShadow = true;
-  scene.add(sunLight);
+// Pre-create color instances so that we can reuse them inside the animation
+// loop without generating new objects every frame.
+const SUN_COLOR_DAWN = new Color('#ffb37f');
+const SUN_COLOR_NOON = new Color('#ffffff');
+const SUN_COLOR_DUSK = new Color('#ff9f76');
 
-  // Hemisphere light blends a sky color and a ground color to simulate
-  // ambient light bouncing from the environment.
-  const hemiLight = new HemisphereLight('#bcdffb', '#2f2f2f', 0.6);
-  scene.add(hemiLight);
+const SKY_COLOR_NIGHT = new Color('#0b1d51');
+const SKY_COLOR_DAY = new Color('#bde0fe');
+const GROUND_COLOR_NIGHT = new Color('#1f1f2e');
+const GROUND_COLOR_DAY = new Color('#9d8189');
 
-  // A subtle ambient light keeps the darkest shadows from becoming pure black.
-  const ambientLight = new AmbientLight('#ffffff', 0.15);
-  scene.add(ambientLight);
+const scratchColor = new Color();
+const scratchDirection = new Vector3();
 
-  // The DirectionalLight has a target object that determines which point it
-  // shines toward. We add it to the scene so Three.js updates it correctly.
-  scene.add(sunLight.target);
-
-  return { sunLight, ambientLight, hemiLight };
+// Helper to smoothly interpolate between two colors.
+const lerpColor = (target, colorA, colorB, t) => {
+  return target.copy(colorA).lerp(colorB, t);
 };
 
-export const updateLighting = (lights, timeOfDay) => {
-  if (!lights?.sunLight) return;
+export const createLighting = (scene) => {
+  // A directional light works well for sunlight because it simulates an
+  // infinitely distant light source with parallel rays.
+  const sunLight = new DirectionalLight(0xffffff, 1.0);
+  sunLight.castShadow = true;
+  scene.add(sunLight);
+  scene.add(sunLight.target);
 
-  const { sunLight, hemiLight, ambientLight } = lights;
+  // The hemisphere light gives a soft ambient fill made from two colours:
+  // one for the sky above and one for the ground below.
+  const hemiLight = new HemisphereLight('#bde0fe', '#1f1f2e', 0.6);
+  scene.add(hemiLight);
 
-  // Normalize the time value so 0.0-1.0 loops smoothly even if the caller
-  // passes values outside that range.
-  const normalizedTime = ((timeOfDay % 1) + 1) % 1;
+  return { sunLight, hemiLight };
+};
 
-  // Map the time of day to an angle in radians. 0.0 is dawn on the horizon,
-  // 0.5 is directly overhead (noon), and 1.0 loops back to dawn.
-  const sunAngle = normalizedTime * Math.PI * 2.0;
+export const updateLighting = (lights, sunDirection) => {
+  if (!lights?.sunLight || !lights?.hemiLight) return;
 
-  // Use the angle to move the sun around a large circle in the sky.
-  const radius = 50;
-  const x = Math.cos(sunAngle) * radius;
-  const y = Math.sin(sunAngle) * radius;
-  const z = Math.sin(sunAngle * 0.5) * radius; // Slight variation for depth.
-  sunLight.position.set(x, y, z);
+  const { sunLight, hemiLight } = lights;
+
+  // The lighting calculations work best with a normalised copy of the
+  // direction so we never mutate the vector passed in by the caller.
+  const normalizedDirection = scratchDirection.copy(sunDirection).normalize();
+
+  // Position the directional light far away in the direction of the sun and
+  // keep it looking at the origin. Multiplying by a large scalar gives us a
+  // distant light source that still affects objects in the scene.
+  sunLight.position.copy(normalizedDirection).multiplyScalar(100);
   sunLight.target.position.set(0, 0, 0);
   sunLight.target.updateMatrixWorld();
 
-  // Define colors for different times of day.
-  const dawnColor = new Color('#ffd6a5');
-  const dayColor = new Color('#ffffff');
-  const duskColor = new Color('#ffafcc');
-  const nightColor = new Color('#6272a4');
+  // The vertical component of the direction tells us how high the sun is in
+  // the sky. A value of 1 means straight overhead (midday) and 0 means the
+  // sun is on the horizon.
+  const elevation = Math.max(normalizedDirection.y, 0);
 
-  // Helper to blend between two colors and intensities.
-  const blend = (startColor, endColor, startIntensity, endIntensity, t) => ({
-    color: startColor.clone().lerp(endColor, t),
-    intensity: startIntensity + (endIntensity - startIntensity) * t
-  });
+  // Blend the sunlight colour and intensity based on the elevation. Lower sun
+  // angles feel warmer and softer while a high sun is brighter and cooler.
+  const sunWarmth = 1 - elevation;
+  const sunColor = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, elevation)
+    .lerp(SUN_COLOR_DUSK, sunWarmth * 0.5);
+  sunLight.color.copy(sunColor);
+  sunLight.intensity = 0.2 + elevation * 1.3;
 
-  let sunSettings;
-  if (normalizedTime < 0.25) {
-    const t = normalizedTime / 0.25;
-    sunSettings = blend(dawnColor, dayColor, 0.6, 1.2, t);
-  } else if (normalizedTime < 0.5) {
-    const t = (normalizedTime - 0.25) / 0.25;
-    sunSettings = blend(dayColor, duskColor, 1.2, 0.8, t);
-  } else if (normalizedTime < 0.75) {
-    const t = (normalizedTime - 0.5) / 0.25;
-    sunSettings = blend(duskColor, nightColor, 0.8, 0.2, t);
-  } else {
-    const t = (normalizedTime - 0.75) / 0.25;
-    sunSettings = blend(nightColor, dawnColor, 0.2, 0.6, t);
-  }
-
-  sunLight.color.copy(sunSettings.color);
-  sunLight.intensity = sunSettings.intensity;
-
-  // Adjust the hemisphere light to match the sun's phase.
-  const skyDay = new Color('#bde0fe');
-  const skyNight = new Color('#0b1d51');
-  const groundDay = new Color('#9d8189');
-  const groundNight = new Color('#1f1f2e');
-
-  const ambientFactor = Math.max(0.05, Math.sin(normalizedTime * Math.PI));
-  hemiLight.color.copy(skyNight.clone().lerp(skyDay, ambientFactor));
-  hemiLight.groundColor.copy(groundNight.clone().lerp(groundDay, ambientFactor));
-  hemiLight.intensity = 0.3 + ambientFactor * 0.7;
-
-  if (ambientLight) {
-    ambientLight.intensity = 0.1 + ambientFactor * 0.2;
-    ambientLight.color.copy(nightColor.clone().lerp(dayColor, ambientFactor));
-  }
+  // Hemisphere light shifts between day and night palettes depending on how
+  // much sky light we expect to bounce into the scene.
+  const skyMix = elevation;
+  lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, skyMix);
+  lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, skyMix);
+  hemiLight.intensity = 0.3 + skyMix * 0.7;
 };

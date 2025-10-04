@@ -6,6 +6,7 @@ import {
   MeshStandardMaterial,
   PerspectiveCamera,
   Scene,
+  Vector3,
   WebGLRenderer
 } from 'three';
 
@@ -49,6 +50,28 @@ scene.add(cube);
 // A clock helps us make smooth animations that are time-based
 const clock = new Clock();
 
+// Temporary vector reused to avoid generating garbage every frame.
+const sunDirection = new Vector3();
+
+// Given a timeOfDay value between 0 and 1, create a direction vector for the
+// sun. 0 represents sunrise, 0.25 is midday, 0.5 is sunset, and the value wraps
+// back around to 1.0. The sun follows a simple arc in the sky.
+const computeSunDirection = (timeOfDay) => {
+  const normalizedTime = ((timeOfDay % 1) + 1) % 1;
+  const theta = normalizedTime * Math.PI * 2; // Full day cycle in radians
+  const azimuth = theta - Math.PI / 2; // Start on the eastern horizon
+  const elevationAngle = Math.sin(theta) * (Math.PI / 3); // Up to ~60 degrees high
+  const cosElevation = Math.cos(elevationAngle);
+
+  sunDirection.set(
+    Math.cos(azimuth) * cosElevation,
+    Math.sin(elevationAngle),
+    Math.sin(azimuth) * cosElevation
+  );
+
+  return sunDirection;
+};
+
 // Keep everything sized correctly when the browser window changes
 const handleResize = () => {
   const width = window.innerWidth;
@@ -74,9 +97,10 @@ const animate = () => {
   // Convert elapsed time into a normalized value between 0 and 1 where
   // 0 is dawn, 0.5 is midday, and 1 loops back to dawn again.
   const timeOfDay = (elapsedTime % dayLength) / dayLength;
+  const currentSunDirection = computeSunDirection(timeOfDay);
 
-  updateSky(sky, timeOfDay);
-  updateLighting(lights, timeOfDay);
+  updateSky(sky, currentSunDirection);
+  updateLighting(lights, currentSunDirection);
 
   cube.rotation.x = elapsedTime * 0.6;
   cube.rotation.y = elapsedTime * 0.4;
