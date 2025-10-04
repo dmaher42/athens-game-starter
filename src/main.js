@@ -1,7 +1,6 @@
 // main.js
 
 import * as THREE from "three";
-import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { createSky, updateSky } from "./world/sky.js";
 import { createLighting, updateLighting } from "./world/lighting.js";
 
@@ -25,7 +24,7 @@ function init() {
   const skyObj = createSky(scene);
   const lights = createLighting(scene);
 
-  // Optional: add a ground plane
+  // Optional: add a ground plane so there’s a “floor” to see
   {
     const groundGeo = new THREE.PlaneGeometry(1000, 1000);
     const groundMat = new THREE.MeshStandardMaterial({ color: 0x556655 });
@@ -42,7 +41,7 @@ function init() {
     requestAnimationFrame(animate);
 
     const elapsed = clock.getElapsedTime();
-    const dayDuration = 60; // seconds for full day cycle
+    const dayDuration = 60; // seconds for full day/night cycle
     const phase = (elapsed % dayDuration) / dayDuration;
 
     // Compute sun vector (in sky dome space)

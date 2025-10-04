@@ -1,30 +1,31 @@
 // src/world/sky.js
-import * as THREE from "three";
+
 import { Sky } from "three/examples/jsm/objects/Sky.js";
+import * as THREE from "three";
 
 export function createSky(scene) {
   const sky = new Sky();
-  sky.scale.setScalar(450000);  // make it very large
+  sky.scale.setScalar(450000);  // make it huge so it surrounds everything
 
-  // Uniforms you can tweak for atmosphere effect
   const uniforms = sky.material.uniforms;
-  uniforms[ "turbidity" ].value = 10;
-  uniforms[ "rayleigh" ].value = 2;
-  uniforms[ "mieCoefficient" ].value = 0.005;
-  uniforms[ "mieDirectionalG" ].value = 0.8;
+  uniforms.turbidity.value = 10;
+  uniforms.rayleigh.value = 2;
+  uniforms.mieCoefficient.value = 0.005;
+  uniforms.mieDirectionalG.value = 0.8;
 
-  // initial sun position
-  const sun = new THREE.Vector3();
-  // We'll update sun later in updateSky
+  // initialize sunPosition to something (so you don’t see black sky immediately)
+  uniforms.sunPosition.value.set(0, 1, 0);
 
   scene.add(sky);
 
-  return { sky, sun };
+  return { sky };
 }
 
 export function updateSky(skyObj, sun) {
-  // skyObj: { sky, sun } or whatever shape you used
   const { sky } = skyObj;
-  // set the uniform for sun position
-  sky.material.uniforms[ "sunPosition" ].value.copy(sun);
+  if (!sky || !sky.material || !sky.material.uniforms.sunPosition) {
+    return;
+  }
+  // Copy sun vector (normalized) into uniform
+  sky.material.uniforms.sunPosition.value.copy(sun).normalize();
 }

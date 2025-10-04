@@ -1,41 +1,66 @@
 // src/world/lighting.js
-import * as THREE from "three";
+
+import {
+  Color,
+  DirectionalLight,
+  HemisphereLight,
+  Vector3
+} from "three";
+
+// Precreate colors to reuse and avoid allocations every frame
+const SUN_COLOR_DAWN = new Color("#ffb37f");
+const SUN_COLOR_NOON = new Color("#ffffff");
+const SUN_COLOR_DUSK = new Color("#ff9f76");
+
+const SKY_COLOR_NIGHT = new Color("#0b1d51");
+const SKY_COLOR_DAY = new Color("#bde0fe");
+const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
+const GROUND_COLOR_DAY = new Color("#9d8189");
+
+const scratchColor = new Color();
+const scratchDirection = new Vector3();
+
+function lerpColor(target, colorA, colorB, t) {
+  return target.copy(colorA).lerp(colorB, t);
+}
 
 export function createLighting(scene) {
-  // Directional “sun” light
-  const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  const sunLight = new DirectionalLight(0xffffff, 1.0);
+  sunLight.castShadow = true;
   scene.add(sunLight);
+  scene.add(sunLight.target);
 
-  // Hemisphere light: sky / ground ambient
-  const hemiLight = new THREE.HemisphereLight(0x8888ff, 0x443322, 0.5);
+  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.6);
   scene.add(hemiLight);
 
   return { sunLight, hemiLight };
 }
 
-export function updateLighting(lights, sun) {
+export function updateLighting(lights, sunDirection) {
+  if (!lights || !lights.sunLight || !lights.hemiLight) {
+    return;
+  }
+
   const { sunLight, hemiLight } = lights;
 
-  // Move sunLight to follow the “sun” vector
-  sunLight.position.copy(sun);
+  const normalized = scratchDirection.copy(sunDirection).normalize();
 
-  // You can modulate intensity & color based on sun elevation
-  const elevation = sun.y;  // approximate measure, -1 to +1
+  sunLight.position
+    .copy(normalized)
+    .multiplyScalar(100);
+  sunLight.target.position.set(0, 0, 0);
+  sunLight.target.updateMatrixWorld();
 
-  // Example: simple fade in/out
-  const intensity = THREE.MathUtils.clamp(elevation, 0, 1);
-  sunLight.intensity = intensity * 1.5;
+  const elevation = Math.max(normalized.y, 0);
 
-  // Color shift: warm dawn/dusk, cooler midday
-  const middayColor = new THREE.Color(0xffffff);
-  const dawnColor = new THREE.Color(0xffcc99);
-  const nightColor = new THREE.Color(0x223355);
+  const sunWarmth = 1 - elevation;
+  const sunColor = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, elevation)
+    .lerp(SUN_COLOR_DUSK, sunWarmth * 0.5);
+  sunLight.color.copy(sunColor);
+  sunLight.intensity = 0.2 + elevation * 1.3;
 
-  // map elevation to 0–1
-  const t = THREE.MathUtils.smoothstep(elevation, 0, 1);
-  sunLight.color.copy(dawnColor).lerp(middayColor, t);
-
-  // Hemisphere light: sky vs ground
-  hemiLight.intensity = 0.5 + intensity * 0.5;
-  hemiLight.color = new THREE.Color(0x88bbff).lerp(new THREE.Color(0x111133), 1 - t);
+  const skyMix = elevation;
+  lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, skyMix);
+  lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, skyMix);
+  hemiLight.intensity = 0.3 + skyMix * 0.7;
 }
