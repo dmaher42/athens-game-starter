@@ -21,6 +21,7 @@ function init() {
   // Sky, stars & lighting
   const skyObj = createSky(scene);
   const lights = createLighting(scene);
+  // Stars and moon add depth to the night-time scene.
   const stars = createStars(scene);
   const moon = createMoon(scene);
 
@@ -51,7 +52,7 @@ function init() {
       0
     );
 
-    // Update sky dome, stars, sun light, moon
+    // Update sky dome, atmospheric lighting, and celestial bodies each frame.
     updateSky(skyObj, sunDir);
     updateLighting(lights, sunDir);
     updateStars(stars, phase);
