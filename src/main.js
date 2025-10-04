@@ -26,7 +26,9 @@ function init() {
   const stars = createStars(scene, 1000);
   const moon = createMoon(scene);
 
-  // Optional ground so you see a floor
+  const colliders = [];
+
+  // Optional ground so you see a floor, and also collide against it.
   {
     const groundGeo = new THREE.PlaneGeometry(1000, 1000);
     const groundMat = new THREE.MeshStandardMaterial({ color: 0x556655 });
@@ -35,6 +37,19 @@ function init() {
     ground.position.y = 0;
     ground.receiveShadow = true;
     scene.add(ground);
+    colliders.push(ground);
+  }
+
+  // Add a few simple boxes so you can test bumping into obstacles.
+  const obstacleGeo = new THREE.BoxGeometry(2, 2, 2);
+  const obstacleMat = new THREE.MeshStandardMaterial({ color: 0x884422 });
+  for (let i = 0; i < 3; i++) {
+    const obstacle = new THREE.Mesh(obstacleGeo, obstacleMat);
+    obstacle.position.set(i * 4 - 4, 1, -5);
+    obstacle.castShadow = true;
+    obstacle.receiveShadow = true;
+    scene.add(obstacle);
+    colliders.push(obstacle);
   }
 
   // Create a simple controllable character that we update each frame.
@@ -66,7 +81,7 @@ function init() {
     updateMoon(moon, sunDir);
 
     // Update our character so they respond to input and move around the scene.
-    character.update(deltaTime);
+    character.update(deltaTime, colliders);
 
     renderer.render(scene, camera);
   }
