@@ -5,7 +5,11 @@ import {
   HemisphereLight,
   Color,
   Vector3,
-  MathUtils
+  MathUtils,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  SphereGeometry
 } from "three";
 
 // Predefined colors
@@ -27,11 +31,13 @@ function lerpColor(target, c0, c1, t) {
 }
 
 export function createLighting(scene) {
+  // Create the primary sunlight directional light.
   const sunLight = new DirectionalLight(0xffffff, 1.0);
   sunLight.castShadow = true;
   scene.add(sunLight);
   scene.add(sunLight.target);
 
+  // Add a hemisphere light to simulate ambient sky/ground bounce.
   const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.6);
   scene.add(hemiLight);
 
@@ -39,11 +45,13 @@ export function createLighting(scene) {
 }
 
 export function updateLighting(lights, sunDir) {
+  // Validate the light container before attempting to update state.
   if (!lights || !lights.sunLight || !lights.hemiLight) {
     return;
   }
   const { sunLight, hemiLight } = lights;
 
+  // Normalize the provided sun direction so derived math stays correct.
   const norm = scratchDir.copy(sunDir).normalize();
 
   // Position sun light far away
@@ -51,26 +59,27 @@ export function updateLighting(lights, sunDir) {
   sunLight.target.position.set(0, 0, 0);
   sunLight.target.updateMatrixWorld();
 
-  // Elevation: how high above horizon
-  const elevation = Math.max(norm.y, 0);
+  // Compute the elevation factor for sun/moon blending.
+  const elevation = norm.y;
+  const dayFactor = MathUtils.smoothstep(elevation, -0.1, 0.25);
+  const nightFactor = 1 - dayFactor;
 
-  // Optionally blend intensity more smoothly:
-  // const dayFactor = MathUtils.smoothstep(elevation, -0.1, 0.3);
-  // sunLight.intensity = MathUtils.lerp(0.05, 1.5, dayFactor);
-  // But simpler fallback:
-  sunLight.intensity = 0.2 + elevation * 1.3;
+  // Dim the sun as it approaches the horizon and slightly lift at night.
+  const targetSunIntensity = MathUtils.lerp(0.05, 1.5, dayFactor);
+  sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
 
-  // Sun color blending
-  const warmth = 1 - elevation;
-  const c0 = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, elevation);
-  const sunColor = c0.lerp(SUN_COLOR_DUSK, warmth * 0.5);
+  // Blend the sun color between dawn/noon/dusk palettes.
+  const sunColor = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, dayFactor);
+  sunColor.lerp(SUN_COLOR_DUSK, nightFactor * 0.5);
   sunLight.color.copy(sunColor);
 
   // Hemisphere ambient blending
-  const mix = elevation;
-  hemiLight.intensity = 0.3 + mix * 0.7;
-  lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, mix);
-  lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, mix);
+  hemiLight.intensity = MathUtils.lerp(0.2, 1.0, dayFactor);
+  lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
+  lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
+
+  // Store the moon blend factor for any downstream consumers.
+  lights.nightFactor = nightFactor;
 }
 
 // Moon functions
@@ -81,15 +90,15 @@ export function createMoon(scene) {
   moonLight.castShadow = false;
 
   // Moon mesh (semi-transparent sphere)
-  const moonGeo = new THREE.SphereGeometry(5, 16, 16);
-  const moonMat = new THREE.MeshBasicMaterial({
+  const moonGeo = new SphereGeometry(5, 16, 16);
+  const moonMat = new MeshBasicMaterial({
     color: 0xeef7ff,
     transparent: true,
     opacity: 0.3
   });
-  const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+  const moonMesh = new Mesh(moonGeo, moonMat);
 
-  const moonGroup = new THREE.Group();
+  const moonGroup = new Group();
   moonGroup.add(moonLight);
   moonGroup.add(moonMesh);
 
@@ -100,12 +109,15 @@ export function createMoon(scene) {
 }
 
 export function updateMoon(moon, sunDir) {
+  // Skip updates if moon data has not been created yet.
   if (!moon) return;
 
   const { light, mesh, group } = moon;
-  const moonDirection = sunDir.clone().multiplyScalar(-1).normalize();
 
-  const radius = 400;
+  // Position the moon opposite the sun direction.
+  const moonDirection = scratchDir.copy(sunDir).multiplyScalar(-1).normalize();
+
+  const radius = 400; // Distance from origin to keep moon on a sphere around scene.
   const pos = moonDirection.multiplyScalar(radius);
   group.position.copy(pos);
 
@@ -118,8 +130,9 @@ export function updateMoon(moon, sunDir) {
     mesh.position.set(0, 0, 0);
   }
 
+  // Derive how far into the night we are based on sun height.
   const sunHeight = sunDir.y;
-  const nightFactor = MathUtils.clamp(-sunHeight, 0, 1);
+  const nightFactor = MathUtils.smoothstep(-sunHeight, 0, 1);
 
   const targetIntensity = MathUtils.lerp(0.05, 0.25, nightFactor);
   light.intensity = MathUtils.lerp(light.intensity, targetIntensity, 0.1);

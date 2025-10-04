@@ -21,7 +21,7 @@ function init() {
   // Sky, stars & lighting
   const skyObj = createSky(scene);
   const lights = createLighting(scene);
-  const stars = createStars(scene);
+  const stars = createStars(scene, 1000);
   const moon = createMoon(scene);
 
   // Optional ground so you see a floor
