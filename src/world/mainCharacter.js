@@ -3,6 +3,7 @@
 // smooth rotation, and a following camera in a Three.js scene.
 
 import {
+  Box3,
   BoxGeometry,
   Mesh,
   MeshStandardMaterial,
@@ -15,6 +16,9 @@ const moveDirection = new Vector3();
 const worldDirection = new Vector3();
 const cameraOffset = new Vector3();
 const lookTarget = new Vector3();
+const proposedPosition = new Vector3();
+const originalPosition = new Vector3();
+const colliderBox = new Box3();
 const UP_AXIS = new Vector3(0, 1, 0);
 
 export class MainCharacter {
@@ -37,6 +41,11 @@ export class MainCharacter {
     this.mesh.castShadow = true;
     this.mesh.position.set(0, 1, 0); // Lift it so it rests on the ground plane.
     scene.add(this.mesh);
+
+    // Bounding boxes are invisible 3D rectangles that wrap around a mesh and
+    // describe the minimum and maximum XYZ coordinates it occupies. We can use
+    // them to quickly check if two objects overlap in the world.
+    this.collider = new Box3().setFromObject(this.mesh);
 
     // Movement flags are toggled when the player presses keyboard keys.
     this.moveForward = false;
@@ -84,7 +93,7 @@ export class MainCharacter {
     }
   }
 
-  update(deltaTime) {
+  update(deltaTime, colliders = []) {
     if (!this.mesh) return;
 
     // ---------------------------------------------------------------------
@@ -97,6 +106,7 @@ export class MainCharacter {
 
     if (moveDirection.lengthSq() === 0) {
       // No input this frame, but keep the camera following the idle character.
+      this.collider.setFromObject(this.mesh);
       this.updateCamera();
       return;
     }
@@ -120,7 +130,42 @@ export class MainCharacter {
     // the player's yaw, then move the mesh by speed * deltaTime.
     worldDirection.copy(moveDirection).applyAxisAngle(UP_AXIS, this.yaw);
     const distance = this.speed * deltaTime;
-    this.mesh.position.addScaledVector(worldDirection, distance);
+    proposedPosition
+      .copy(this.mesh.position)
+      .addScaledVector(worldDirection, distance);
+
+    // Store the current position so we can restore it if a collision occurs.
+    originalPosition.copy(this.mesh.position);
+
+    // Move the mesh to the proposed position and update the bounding box so we
+    // can test for overlaps before committing to the movement.
+    this.mesh.position.copy(proposedPosition);
+    this.collider.setFromObject(this.mesh);
+
+    let blocked = false;
+    for (const collider of colliders) {
+      if (!collider) continue;
+      colliderBox.setFromObject(collider);
+      if (this.collider.intersectsBox(colliderBox)) {
+        // If the boxes overlap in X/Z but only touch in Y (like standing on the
+        // floor) we allow the move. A small vertical tolerance keeps things
+        // stable and ignores harmless contact with the ground plane.
+        const verticalOverlap =
+          Math.min(this.collider.max.y, colliderBox.max.y) -
+          Math.max(this.collider.min.y, colliderBox.min.y);
+        if (verticalOverlap > 0.01) {
+          blocked = true;
+          break;
+        }
+      }
+    }
+
+    if (blocked) {
+      // For now we simply stop the player when they hit something. More
+      // advanced physics (sliding, bouncing, etc.) can be layered on later.
+      this.mesh.position.copy(originalPosition);
+      this.collider.setFromObject(this.mesh);
+    }
 
     // ---------------------------------------------------------------------
     // Camera follow: position the camera slightly behind and above the player.
