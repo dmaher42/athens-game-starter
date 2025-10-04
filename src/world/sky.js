@@ -3,13 +3,13 @@
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 import * as THREE from "three";
 
-// Constants used for the procedural star field.
-const STAR_COUNT = 1200;
+// Default configuration for the procedural star field.
+const DEFAULT_STAR_COUNT = 1200;
 const STAR_FIELD_RADIUS = 1000;
 
 export function createSky(scene) {
   const sky = new Sky();
-  sky.scale.setScalar(450000);  // make it very big
+  sky.scale.setScalar(450000); // make it very big
 
   const uniforms = sky.material.uniforms;
   uniforms.turbidity.value = 10;
@@ -35,18 +35,18 @@ export function updateSky(skyObj, sunDir) {
   ) {
     return;
   }
-  // copy normalized sun direction into the shader uniform
+  // Copy normalized sun direction into the shader uniform
   sky.material.uniforms.sunPosition.value.copy(sunDir).normalize();
 }
 
-export function createStars(scene) {
-  // Create a simple star field using THREE.Points and randomised vertices.
+export function createStars(scene, count = DEFAULT_STAR_COUNT) {
+  // Create a star field that wraps the entire sky dome using THREE.Points.
   const geometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(STAR_COUNT * 3);
-  const colors = new Float32Array(STAR_COUNT * 3);
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
 
-  for (let i = 0; i < STAR_COUNT; i++) {
-    // Generate a random unit direction so stars wrap the whole sky dome.
+  for (let i = 0; i < count; i++) {
+    // Generate a random direction so stars appear all around the viewer.
     const direction = new THREE.Vector3(
       Math.random() * 2 - 1,
       Math.random() * 2 - 1,
@@ -59,7 +59,7 @@ export function createStars(scene) {
     positions[idx + 1] = direction.y * distance;
     positions[idx + 2] = direction.z * distance;
 
-    // Give each star a slightly different brightness for variation.
+    // Give every star a subtle colour variation (brightness only).
     const brightness = 0.5 + Math.random() * 0.5;
     colors[idx] = brightness;
     colors[idx + 1] = brightness;
@@ -86,18 +86,17 @@ export function createStars(scene) {
   return stars;
 }
 
-export function updateStars(stars, sunHeight) {
+export function updateStars(stars, phase) {
   if (!stars) return;
 
   const material = stars.material;
   if (!material) return;
 
-  // Use the sun height to determine how visible the stars should be.
-  const targetOpacity = THREE.MathUtils.clamp(
-    1 - THREE.MathUtils.smoothstep(sunHeight, -0.1, 0.2),
-    0,
-    1
-  );
+  // Mirror the phase (0-1) so we can treat midnight (0 or 1) as the peak.
+  const mirroredPhase = phase > 0.5 ? 1 - phase : phase;
+  // Smoothly fade the stars when we move towards daytime (phase ~0.25 or ~0.75).
+  const eased = 1 - THREE.MathUtils.smoothstep(mirroredPhase, 0.05, 0.2);
+  const targetOpacity = THREE.MathUtils.clamp(eased, 0, 1);
 
   // Lerp towards the target so the transition feels soft.
   material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, 0.05);
