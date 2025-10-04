@@ -1,9 +1,8 @@
 // main.js
 
 import * as THREE from "three";
-import { Sky } from "three/examples/jsm/objects/Sky.js";
-import { createSky, updateSky } from "./world/sky.js";
-import { createLighting, updateLighting } from "./world/lighting.js";
+import { createSky, updateSky, createStars, updateStars } from "./world/sky.js";
+import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
 
 function init() {
   // Renderer
@@ -21,9 +20,11 @@ function init() {
   );
   camera.position.set(0, 5, 10);
 
-  // Sky & lighting
+  // Sky, stars & lighting
   const skyObj = createSky(scene);
   const lights = createLighting(scene);
+  const stars = createStars(scene);
+  const moon = createMoon(scene);
 
   // Optional: add a ground plane
   {
@@ -53,9 +54,11 @@ function init() {
       0
     );
 
-    // Update sky and lighting
+    // Update sky dome, stars, sun light and moon.
     updateSky(skyObj, sun);
     updateLighting(lights, sun);
+    updateStars(stars, sun.y);
+    updateMoon(moon, sun);
 
     // Render
     renderer.render(scene, camera);
