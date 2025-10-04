@@ -1,54 +1,93 @@
 // src/world/lighting.js
-import * as THREE from "three";
+
+import {
+  DirectionalLight,
+  HemisphereLight,
+  Color,
+  Vector3,
+  MathUtils
+} from "three";
+
+// Predefined colors
+const SUN_COLOR_DAWN = new Color("#ffb37f");
+const SUN_COLOR_NOON = new Color("#ffffff");
+const SUN_COLOR_DUSK = new Color("#ff9f76");
+
+const SKY_COLOR_NIGHT = new Color("#0b1d51");
+const SKY_COLOR_DAY = new Color("#bde0fe");
+const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
+const GROUND_COLOR_DAY = new Color("#9d8189");
+
+const scratchColor = new Color();
+const scratchDir = new Vector3();
+
+function lerpColor(target, c0, c1, t) {
+  target.copy(c0).lerp(c1, t);
+  return target;
+}
 
 export function createLighting(scene) {
-  // Directional “sun” light
-  const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  const sunLight = new DirectionalLight(0xffffff, 1.0);
+  sunLight.castShadow = true;
   scene.add(sunLight);
+  scene.add(sunLight.target);
 
-  // Hemisphere light: sky / ground ambient
-  const hemiLight = new THREE.HemisphereLight(0x8888ff, 0x443322, 0.5);
+  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.6);
   scene.add(hemiLight);
 
   return { sunLight, hemiLight };
 }
 
-export function updateLighting(lights, sun) {
+export function updateLighting(lights, sunDir) {
+  if (!lights || !lights.sunLight || !lights.hemiLight) {
+    return;
+  }
   const { sunLight, hemiLight } = lights;
 
-  // Move sunLight to follow the “sun” vector
-  sunLight.position.copy(sun);
+  const norm = scratchDir.copy(sunDir).normalize();
 
-  // You can modulate intensity & color based on sun elevation
-  const elevation = sun.y;  // approximate measure, -1 to +1
+  // Position sun light far away
+  sunLight.position.copy(norm).multiplyScalar(100);
+  sunLight.target.position.set(0, 0, 0);
+  sunLight.target.updateMatrixWorld();
 
-  // Blend the sun light intensity smoothly based on the sun elevation.
-  const dayFactor = THREE.MathUtils.smoothstep(elevation, -0.1, 0.3);
-  sunLight.intensity = THREE.MathUtils.lerp(0.05, 1.5, dayFactor);
+  // Elevation: how high above horizon
+  const elevation = Math.max(norm.y, 0);
 
-  // Color shift: warm dawn/dusk, cooler midday
-  const middayColor = new THREE.Color(0xffffff);
-  const dawnColor = new THREE.Color(0xffcc99);
-  const nightColor = new THREE.Color(0x223355);
+  // Optionally blend intensity more smoothly:
+  // const dayFactor = MathUtils.smoothstep(elevation, -0.1, 0.3);
+  // sunLight.intensity = MathUtils.lerp(0.05, 1.5, dayFactor);
+  // But simpler fallback:
+  sunLight.intensity = 0.2 + elevation * 1.3;
 
-  sunLight.color.copy(nightColor)
-    .lerp(dawnColor, THREE.MathUtils.smoothstep(elevation, -0.05, 0.1))
-    .lerp(middayColor, dayFactor);
+  // Sun color blending
+  const warmth = 1 - elevation;
+  const c0 = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, elevation);
+  const sunColor = c0.lerp(SUN_COLOR_DUSK, warmth * 0.5);
+  sunLight.color.copy(sunColor);
 
-  // Hemisphere light: sky vs ground. Keep a little ambient at night.
-  hemiLight.intensity = THREE.MathUtils.lerp(0.15, 1.0, dayFactor);
-  hemiLight.color = new THREE.Color(0x111133).lerp(new THREE.Color(0x88bbff), dayFactor);
+  // Hemisphere ambient blending
+  const mix = elevation;
+  hemiLight.intensity = 0.3 + mix * 0.7;
+  lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, mix);
+  lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, mix);
 }
 
+// Moon functions
+
 export function createMoon(scene) {
-  // A dim directional light paired with a small mesh to represent the moon.
-  const moonLight = new THREE.DirectionalLight(0xbfdfff, 0.2);
+  // Directional light for moon
+  const moonLight = new DirectionalLight(0xbfdfff, 0.2);
   moonLight.castShadow = false;
 
-  // Small emissive sphere so we can see where the moon is in the sky.
-  const moonGeometry = new THREE.SphereGeometry(5, 16, 16);
-  const moonMaterial = new THREE.MeshBasicMaterial({ color: 0xeef7ff, transparent: true, opacity: 0.3 });
-  const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+  // Moon mesh (semi-transparent sphere)
+  const moonGeo = new THREE.SphereGeometry(5, 16, 16);
+  const moonMat = new THREE.MeshBasicMaterial({
+    color: 0xeef7ff,
+    transparent: true,
+    opacity: 0.3
+  });
+  const moonMesh = new THREE.Mesh(moonGeo, moonMat);
 
   const moonGroup = new THREE.Group();
   moonGroup.add(moonLight);
@@ -60,35 +99,34 @@ export function createMoon(scene) {
   return { light: moonLight, mesh: moonMesh, group: moonGroup };
 }
 
-export function updateMoon(moon, sun) {
+export function updateMoon(moon, sunDir) {
   if (!moon) return;
 
   const { light, mesh, group } = moon;
-  const moonDirection = sun.clone().multiplyScalar(-1).normalize();
+  const moonDirection = sunDir.clone().multiplyScalar(-1).normalize();
 
-  // Position the moon opposite the sun on a large radius so it stays in the sky dome.
   const radius = 400;
-  const position = moonDirection.clone().multiplyScalar(radius);
-  group.position.copy(position);
+  const pos = moonDirection.multiplyScalar(radius);
+  group.position.copy(pos);
 
-  // Aim the light from the moon toward the origin (our world centre).
+  // Light origin aim
   light.position.set(0, 0, 0);
   light.target.position.set(0, 0, 0);
   light.target.updateMatrixWorld();
 
   if (mesh) {
-    // Keep the moon mesh centred on the group so it rides along with the light.
     mesh.position.set(0, 0, 0);
   }
 
-  // Brighter moon when the sun is well below the horizon.
-  const sunHeight = sun.y;
-  const nightFactor = THREE.MathUtils.clamp(-sunHeight, 0, 1);
-  const targetIntensity = THREE.MathUtils.lerp(0.05, 0.25, nightFactor);
-  light.intensity = THREE.MathUtils.lerp(light.intensity, targetIntensity, 0.1);
+  const sunHeight = sunDir.y;
+  const nightFactor = MathUtils.clamp(-sunHeight, 0, 1);
+
+  const targetIntensity = MathUtils.lerp(0.05, 0.25, nightFactor);
+  light.intensity = MathUtils.lerp(light.intensity, targetIntensity, 0.1);
+
   if (mesh && mesh.material) {
-    const targetOpacity = THREE.MathUtils.lerp(0.3, 1.0, nightFactor);
-    mesh.material.opacity = THREE.MathUtils.lerp(mesh.material.opacity, targetOpacity, 0.1);
+    const targetOpacity = MathUtils.lerp(0.3, 1.0, nightFactor);
+    mesh.material.opacity = MathUtils.lerp(mesh.material.opacity, targetOpacity, 0.1);
     mesh.material.transparent = true;
   }
 }

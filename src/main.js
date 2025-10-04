@@ -5,12 +5,10 @@ import { createSky, updateSky, createStars, updateStars } from "./world/sky.js";
 import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
 
 function init() {
-  // Renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // Scene & camera
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
     75,
@@ -26,7 +24,7 @@ function init() {
   const stars = createStars(scene);
   const moon = createMoon(scene);
 
-  // Optional: add a ground plane
+  // Optional ground so you see a floor
   {
     const groundGeo = new THREE.PlaneGeometry(1000, 1000);
     const groundMat = new THREE.MeshStandardMaterial({ color: 0x556655 });
@@ -38,29 +36,27 @@ function init() {
   }
 
   const clock = new THREE.Clock();
+  const dayDuration = 60; // seconds for full cycle
 
   function animate() {
     requestAnimationFrame(animate);
 
     const elapsed = clock.getElapsedTime();
-    const dayDuration = 60; // seconds for full day cycle
     const phase = (elapsed % dayDuration) / dayDuration;
 
-    // Compute sun vector (in sky dome space)
-    const theta = phase * Math.PI * 2; // full cycle
-    const sun = new THREE.Vector3(
+    const theta = phase * Math.PI * 2;
+    const sunDir = new THREE.Vector3(
       Math.cos(theta),
       Math.sin(theta),
       0
     );
 
-    // Update sky dome, stars, sun light and moon.
-    updateSky(skyObj, sun);
-    updateLighting(lights, sun);
-    updateStars(stars, sun.y);
-    updateMoon(moon, sun);
+    // Update sky dome, stars, sun light, moon
+    updateSky(skyObj, sunDir);
+    updateLighting(lights, sunDir);
+    updateStars(stars, phase);
+    updateMoon(moon, sunDir);
 
-    // Render
     renderer.render(scene, camera);
   }
 
