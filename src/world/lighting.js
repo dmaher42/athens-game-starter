@@ -84,67 +84,47 @@ export function updateLighting(lights, sunDir) {
 // Moon functions
 
 export function createMoon(scene) {
-  // Directional light for moon
-  const moonLight = new DirectionalLight(0xbfdfff, 0.2);
-  moonLight.castShadow = false;
+  // Simple directional light to simulate moonlight; no shadows for cheaper render.
+  const light = new DirectionalLight(0xbfdfff, 0.2);
+  light.castShadow = false;
 
-  // Moon mesh (semi-transparent sphere)
-  const moonGeo = new SphereGeometry(5, 16, 16);
-  const moonMat = new MeshBasicMaterial({
-    color: 0xeef7ff,
-    transparent: true,
-    opacity: 0.3,
-  });
-  const moonMesh = new Mesh(moonGeo, moonMat);
+  // Tiny glowing sphere so players can spot the moon itself.
+  const geometry = new SphereGeometry(5, 16, 16);
+  const material = new MeshBasicMaterial({ color: 0xeef7ff, transparent: true, opacity: 0.3 });
+  const mesh = new Mesh(geometry, material);
 
-  const moonGroup = new Group();
-  moonGroup.add(moonLight);
-  moonGroup.add(moonMesh);
+  // Group keeps the light and mesh moving together around the world.
+  const group = new Group();
+  group.add(light);
+  group.add(mesh);
 
-  scene.add(moonGroup);
-  scene.add(moonLight.target);
+  scene.add(group);
+  scene.add(light.target);
 
-  return { light: moonLight, mesh: moonMesh, group: moonGroup };
+  return { light, mesh, group };
 }
 
 export function updateMoon(moon, sunDir) {
-  // Skip updates if moon data has not been created yet.
-  if (!moon) return;
-
+  if (!moon || !sunDir) return;
   const { light, mesh, group } = moon;
 
-  // Position the moon opposite the sun direction.
-  const moonDirection = scratchDir.copy(sunDir).multiplyScalar(-1).normalize();
+  // The moon always sits opposite the sun on the sky dome.
+  const moonDir = scratchDir.copy(sunDir).multiplyScalar(-1).normalize();
+  group.position.copy(moonDir.multiplyScalar(400));
 
-  const radius = 400; // Distance from origin to keep moon on a sphere around scene.
-  const pos = moonDirection.multiplyScalar(radius);
-  group.position.copy(pos);
-
-  // Light origin aim
+  // Aim the moonlight at the world origin so it washes over the scene.
   light.position.set(0, 0, 0);
   light.target.position.set(0, 0, 0);
   light.target.updateMatrixWorld();
 
-  if (mesh) {
-    mesh.position.set(0, 0, 0);
-  }
+  if (mesh) mesh.position.set(0, 0, 0);
 
-  // Derive how far into the night we are based on sun height.
-  const sunHeight = sunDir.y;
-
-  // nightFactor mirrors the sun fade so the moon brightens gently overnight.
-  const nightFactor = MathUtils.clamp(
-    MathUtils.smoothstep(-sunHeight, 0, 0.4),
-    0,
-    1
-  );
-
-  const targetIntensity = MathUtils.lerp(0.05, 0.3, nightFactor);
-  light.intensity = MathUtils.lerp(light.intensity, targetIntensity, 0.1);
+  // nightFactor grows as the sun dips below the horizon; we fade the moon in.
+  const nightFactor = MathUtils.clamp(-sunDir.y, 0, 1);
+  light.intensity = MathUtils.lerp(0.05, 0.25, nightFactor);
 
   if (mesh && mesh.material) {
-    const targetOpacity = MathUtils.lerp(0.3, 1.0, nightFactor);
-    mesh.material.opacity = MathUtils.lerp(mesh.material.opacity, targetOpacity, 0.1);
+    mesh.material.opacity = MathUtils.lerp(0.3, 1.0, nightFactor);
     mesh.material.transparent = true;
   }
 }
