@@ -1,0 +1,1 @@
+.crosshair-overlay{position:fixed;top:50%;left:50%;width:16px;height:16px;transform:translate(-50%,-50%);pointer-events:none;z-index:1000;display:flex;align-items:center;justify-content:center}.crosshair-overlay:before{content:"";width:4px;height:4px;border-radius:50%;background:#ffffffe6;box-shadow:0 0 6px #fff9}
