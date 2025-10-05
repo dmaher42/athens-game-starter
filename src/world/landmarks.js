@@ -112,6 +112,15 @@ export async function loadLandmark(scene, url, options = {}) {
       return null;
     }
 
+    root.userData = root.userData || {};
+    root.userData.interactable = root.userData.interactable ?? true;
+    if (typeof root.userData.onUse !== "function") {
+      root.userData.onUse = () => {
+        const label = root.name || url;
+        console.log("Used", label);
+      };
+    }
+
     scene.add(root);
     entry.object = root;
 
