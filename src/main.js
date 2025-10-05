@@ -153,6 +153,7 @@ async function mainApp() {
   const input = new InputMap(renderer.domElement);
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
+  envCollider.fromStaticScene(scene);
   const player = new PlayerController(input, envCollider, { camera });
   scene.add(player.object);
 
