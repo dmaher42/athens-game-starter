@@ -2,45 +2,34 @@ import * as THREE from "three";
 import { LOD } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
 // Reuse a single loader instance so we don't repeatedly allocate it whenever we
 // load a new landmark. GLTFLoader understands the .glb format which packages a
 // model and all of its textures into one binary file.
+// Shared GLTF loader instance for every landmark. We hook a KTX2Loader into it
+// so GPU-compressed textures decode automatically without changing the rest of
+// our asset pipeline.
 const loader = new GLTFLoader();
 let ktx2Loader = null;
-
-const BASIS_CDN_PATH = "https://unpkg.com/three@0.160.0/examples/jsm/libs/basis/";
-
-function normalizePath(path) {
-  if (!path) return "";
-  return path.endsWith("/") ? path : `${path}/`;
-}
-
-function resolveTranscoderPath() {
-  const envPath =
-    typeof import.meta !== "undefined" && import.meta.env
-      ? import.meta.env.VITE_BASIS_TRANSCODER_PATH
-      : undefined;
-
-  if (typeof envPath === "string" && envPath.trim().length) {
-    return normalizePath(envPath.trim());
-  }
-
-  if (typeof window !== "undefined") {
-    const runtimePath = window.__BASIS_TRANSCODER_PATH__;
-    if (typeof runtimePath === "string" && runtimePath.trim().length) {
-      return normalizePath(runtimePath.trim());
-    }
-  }
-
-  return BASIS_CDN_PATH;
-}
+let supportsKTX2 = false;
+let hasWarnedUnsupportedKTX2 = false;
 
 /**
- * Configure the shared GLTF loader to decode KTX2 textures when supported.
+ * Initialise everything related to landmark loading.
  *
- * The loader gracefully falls back to standard textures when the current
- * browser / GPU does not support Basis Universal.
+ * Texture compression squishes big image files into formats that GPUs can read
+ * directly, so we avoid re-expanding textures on the CPU at runtime. KTX2 / Basis
+ * is a GPU-native family that keeps downloads tiny, uploads textures faster, and
+ * dramatically lowers VRAM usage once the model is on screen.
+ *
+ * You can generate `.ktx2` textures with CLI tools such as:
+ *   - `basisu texture.png -ktx2 -uastc` for individual images
+ *   - `gltfpack -i model.glb -o model.ktx2.glb -tc` to transcode every texture
+ *     inside a GLB. These ship alongside transcoder files placed in `/public/basis/`.
+ * When compressed textures are missing the GLTFLoader quietly falls back to
+ * whatever JPEG or PNG data is already bundled with the model, so older assets
+ * continue to render without any changes.
  */
 export function initializeAssetTranscoders(renderer) {
   if (!renderer || typeof renderer.getContext !== "function") {
@@ -48,16 +37,45 @@ export function initializeAssetTranscoders(renderer) {
   }
 
   if (!ktx2Loader) {
-    ktx2Loader = new KTX2Loader().setTranscoderPath(resolveTranscoderPath());
+    ktx2Loader = new KTX2Loader().setTranscoderPath("/basis/");
   }
 
   try {
     ktx2Loader.detectSupport(renderer);
-    loader.setKTX2Loader(ktx2Loader);
+    const supportFlags = ktx2Loader.workerConfig || {};
+    supportsKTX2 = Object.values(supportFlags).some(Boolean);
+
+    if (!supportsKTX2) {
+      if (!hasWarnedUnsupportedKTX2) {
+        console.warn(
+          "KTX2 is not supported on this GPU/driver combo. Falling back to standard textures."
+        );
+        hasWarnedUnsupportedKTX2 = true;
+      }
+      loader.setKTX2Loader(null);
+    } else {
+      loader.setKTX2Loader(ktx2Loader);
+      hasWarnedUnsupportedKTX2 = false;
+    }
+
+    loader.setMeshoptDecoder(MeshoptDecoder);
   } catch (error) {
-    console.warn("KTX2 support detection failed, falling back to standard textures.", error);
+    supportsKTX2 = false;
+    hasWarnedUnsupportedKTX2 = true;
+    console.warn(
+      "KTX2 not supported in this browser. Falling back to standard textures.",
+      error
+    );
     loader.setKTX2Loader(null);
   }
+}
+
+// Backwards compatible helper that aligns with older tutorials calling
+// `initLandmarks(scene, renderer)`. We simply set up the compression pipeline
+// and return the scene reference untouched so existing code keeps working.
+export function initLandmarks(scene, renderer) {
+  initializeAssetTranscoders(renderer);
+  return scene;
 }
 
 // Keep track of everything we add to the world so we can tear it all down later
@@ -130,6 +148,14 @@ function removePlaceholder(entry) {
  * placeholder for the actual model.
  */
 export async function loadLandmark(scene, url, options = {}) {
+  const timerLabel = `loadLandmark:${url}`;
+  if (typeof console?.time === "function") {
+    // A quick console benchmark so you can compare compressed vs. uncompressed
+    // assets. Check your devtools timeline to see how much faster `.ktx2`
+    // textures stream once you've transcoded them.
+    console.time(timerLabel);
+  }
+
   const placeholderGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
   const placeholderMaterial = new THREE.MeshStandardMaterial({
     color: 0x444444,
@@ -240,6 +266,10 @@ export async function loadLandmark(scene, url, options = {}) {
     removePlaceholder(entry);
     trackedLandmarks.delete(entry);
     throw error;
+  } finally {
+    if (typeof console?.timeEnd === "function") {
+      console.timeEnd(timerLabel);
+    }
   }
 }
 
