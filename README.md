@@ -57,7 +57,8 @@ glTF/glb assets before importing them into the project.
 This project deploys automatically on push to `main` using GitHub Actions.
 
 - Vite `base` is set to `/athens-game-starter/` in `vite.config.ts` (required for GH Pages).
-- Workflow: `.github/workflows/deploy.yml` builds and publishes `dist` to GitHub Pages.
+- Workflow: `.github/workflows/deploy.yml` builds with Vite and publishes whichever output directory is produced
+  (`dist/` or `docs/`) to GitHub Pages.
 - SPA fallback: `404.html` is copied from `index.html` during the workflow to support deep links.
 
 After the first successful run, the site will be available at:

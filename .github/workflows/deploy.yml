@@ -33,15 +33,29 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Detect build output directory
+        id: detect-build-dir
+        run: |
+          if [ -f dist/index.html ]; then
+            echo "dir=dist" >> "$GITHUB_OUTPUT"
+          elif [ -f docs/index.html ]; then
+            echo "dir=docs" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Unable to locate build output (expected dist/ or docs/)" >&2
+            exit 1
+          fi
+
       # Optional: SPA fallback so deep links work on GH Pages
       - name: Add 404 fallback
+        env:
+          BUILD_DIR: ${{ steps.detect-build-dir.outputs.dir }}
         run: |
-          if [ -f docs/index.html ]; then cp docs/index.html docs/404.html; fi
+          if [ -f "$BUILD_DIR/index.html" ]; then cp "$BUILD_DIR/index.html" "$BUILD_DIR/404.html"; fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: ${{ steps.detect-build-dir.outputs.dir }}
 
   deploy:
     needs: build
