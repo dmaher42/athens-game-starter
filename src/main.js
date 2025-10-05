@@ -9,6 +9,7 @@ import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { InputMap } from "./input/InputMap";
 import { EnvironmentCollider } from "./env/EnvironmentCollider";
+import { BuildingManager } from "./buildings/BuildingManager";
 import { PlayerController } from "./controls/PlayerController";
 import { Character } from "./characters/Character";
 
@@ -146,6 +147,7 @@ async function init() {
 
   const input = new InputMap(renderer.domElement);
   const envCollider = new EnvironmentCollider();
+  scene.add(envCollider.mesh);
   const player = new PlayerController(input, envCollider, { camera });
   scene.add(player.object);
 
@@ -156,6 +158,25 @@ async function init() {
     renderer
   );
   player.attachCharacter(character);
+
+  const buildingMgr = new BuildingManager(envCollider);
+
+  try {
+    await buildingMgr.loadBuilding(
+      `${import.meta.env.BASE_URL}models/buildings/parthenon.glb`,
+      {
+        scale: 1.5,
+        position: new THREE.Vector3(0, 0, -20),
+        rotateY: Math.PI / 4,
+        collision: true,
+      }
+    );
+  } catch (error) {
+    console.warn(
+      "Parthenon model failed to load. Add the asset to public/models/buildings/ to display it.",
+      error
+    );
+  }
 
   const interactor = createInteractor(renderer, camera, scene);
 
