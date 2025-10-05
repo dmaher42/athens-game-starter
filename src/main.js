@@ -13,7 +13,12 @@ import { BuildingManager } from "./buildings/BuildingManager";
 import { PlayerController } from "./controls/PlayerController";
 import { Character } from "./characters/Character";
 
-async function init() {
+window.addEventListener("unhandledrejection", (ev) => {
+  console.error("Unhandled promise rejection:", ev.reason);
+});
+
+async function mainApp() {
+  console.log("🔧 Athens mainApp start");
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
@@ -178,12 +183,30 @@ async function init() {
     );
   }
 
+  console.log("Scene children:", scene.children);
+  scene.traverse((obj) => {
+    console.log(
+      "Object:",
+      obj.name || obj.type,
+      "pos",
+      obj.position?.toArray ? obj.position.toArray() : obj.position
+    );
+  });
+
   const interactor = createInteractor(renderer, camera, scene);
 
   const clock = new THREE.Clock();
   const dayDuration = 60; // seconds for full cycle
 
+  let frameCount = 0;
   function animate() {
+    frameCount += 1;
+    if (frameCount === 1) {
+      console.log("🌀 Entered render loop");
+    }
+    if (frameCount % 60 === 0) {
+      console.log("⏱ frame", frameCount);
+    }
     requestAnimationFrame(animate);
 
     // Keep track of time for smooth animation and frame-independent movement.
@@ -241,4 +264,11 @@ async function init() {
   });
 }
 
-init();
+(async () => {
+  try {
+    await mainApp();
+    console.log("✅ mainApp loaded successfully");
+  } catch (err) {
+    console.error("❌ Error in mainApp:", err);
+  }
+})();
