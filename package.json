@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build && node scripts/ensure-three-bundled.mjs",
     "preview": "vite preview --strictPort",
-    "typecheck": "tsc -p . || true"
+    "typecheck": "tsc -p . || true",
+    "generate:favicon": "node scripts/generate-favicon.mjs",
+    "postinstall": "npm run generate:favicon"
   },
   "dependencies": {
     "three": "^0.160.0"
