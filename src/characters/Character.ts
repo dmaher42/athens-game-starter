@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 
-export type AnimName = 'Idle' | 'Walk' | 'Run' | 'Jump';
+export type AnimName = 'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump';
 
 export class Character extends THREE.Object3D {
   public model?: THREE.Object3D;
@@ -57,8 +57,10 @@ export class Character extends THREE.Object3D {
     const mapName = (n: string): AnimName | null => {
       const L = n.toLowerCase();
       if (L.includes('idle')) return 'Idle';
-      if (L.includes('walk')) return 'Walk';
+      if (L.includes('walk') && !L.includes('swagger')) return 'Walk';
       if (L.includes('run'))  return 'Run';
+      if (L.includes('swagger')) return 'Swagger';
+      if (L.includes('swag')) return 'Swagger'; // fallback
       if (L.includes('jump')) return 'Jump';
       return null;
     };
@@ -73,6 +75,10 @@ export class Character extends THREE.Object3D {
     }
 
     // Fallbacks if some clips are missing:
+    // fallback: if no Swagger clip, use Walk
+    if (!this.actions.get('Swagger') && this.actions.get('Walk')) {
+      this.actions.set('Swagger', this.actions.get('Walk')!);
+    }
     if (!this.actions.get('Run') && this.actions.get('Walk')) {
       this.actions.set('Run', this.actions.get('Walk')!);
     }

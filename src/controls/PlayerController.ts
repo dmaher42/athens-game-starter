@@ -134,21 +134,26 @@ export class PlayerController {
     const center = this.getCapsuleCenter(this.tmpVec);
     this.object.position.copy(center);
 
-    const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
-
     if (this.character) {
+      const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
       const EPS = 0.05;
       const yawFacing = Math.atan2(this.velocity.x, this.velocity.z);
       if (horizontalSpeed > EPS) {
         this.character.rotation.y = yawFacing;
       }
 
+      // drive character animations
+      const runThreshold = this.moveSpeed * 1.5;
+      const swaggerThreshold = this.moveSpeed * 0.8;
+
       if (!this.grounded) {
-        this.character.play('Jump', 0.05);
-      } else if (horizontalSpeed > (this.moveSpeed * 1.2)) {
+        this.character.play('Jump', 0.1);
+      } else if (horizontalSpeed > runThreshold) {
         this.character.play('Run', 0.1);
+      } else if (horizontalSpeed > swaggerThreshold) {
+        this.character.play('Swagger', 0.1);
       } else if (horizontalSpeed > 0.1) {
-        this.character.play('Walk', 0.1);
+        this.character.play('Walk', 0.15);
       } else {
         this.character.play('Idle', 0.2);
       }
