@@ -151,7 +151,10 @@ async function init() {
 
   const character = new Character();
   scene.add(character);
-  await character.load("/models/character/hero.glb", renderer);
+  await character.load(
+    `${import.meta.env.BASE_URL}models/character/hero.glb`,
+    renderer
+  );
   player.attachCharacter(character);
 
   const interactor = createInteractor(renderer, camera, scene);
