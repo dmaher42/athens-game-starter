@@ -252,7 +252,10 @@ async function mainApp() {
 
   // Simple controls: clicking the canvas or pressing E will run the onUse
   // callback attached to whatever we are currently looking at.
-  renderer.domElement.addEventListener("pointerdown", () => {
+  renderer.domElement.addEventListener("pointerdown", (event) => {
+    if (event.button === 0 && !input.pointerLocked) {
+      input.requestPointerLock();
+    }
     interactor.useObject();
   });
 
