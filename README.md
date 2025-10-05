@@ -1,5 +1,19 @@
 # athens-game-starter
 
+## Quick start
+
+To run the project locally:
+
+1. Install dependencies with `npm install`.
+2. Start the Vite dev server with `npm run dev`.
+
+The build step outputs self-contained static assets under `docs/`, suitable for
+hosting on GitHub Pages or any static site provider.
+
+> ⚠️ Opening `index.html` directly from the filesystem will not work. The source
+> imports bare modules (such as `three`) and TypeScript entry points that must be
+> processed by Vite before they can run in the browser.
+
 ## KTX2 textures
 
 Models loaded through `GLTFLoader` expect textures in the KTX2 (Basis Universal)
