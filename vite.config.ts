@@ -6,6 +6,10 @@ export default defineConfig({
     outDir: 'docs',
     emptyOutDir: true,
   },
-  // Ensure “three” is *not* external so it gets bundled
-  // If you added external in the past, remove it.
+  resolve: {
+    alias: {
+      // Explicit alias prevents accidental externalisation of the "three" dependency.
+      three: 'three',
+    },
+  },
 });
