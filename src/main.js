@@ -177,7 +177,8 @@ function init() {
     // Update our character so they respond to input and move around the scene.
     character.update(deltaTime, colliders, terrain);
 
-    // Cast a ray through the center of the screen to detect hovered objects.
+    // Cast a ray through the center of the screen to detect hovered objects and
+    // highlight anything marked as interactable via userData.
     const hovered = interactor.updateHover();
     interactPrompt.style.opacity = hovered ? "1" : "0";
 
@@ -186,6 +187,8 @@ function init() {
 
   animate();
 
+  // Simple controls: clicking the canvas or pressing E will run the onUse
+  // callback attached to whatever we are currently looking at.
   renderer.domElement.addEventListener("pointerdown", () => {
     interactor.useObject();
   });

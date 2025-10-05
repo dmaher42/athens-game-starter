@@ -216,17 +216,41 @@ export async function loadLandmark(scene, url, options = {}) {
       return null;
     }
 
-    root.userData = root.userData || {};
-    root.userData.interactable = root.userData.interactable ?? true;
-    if (typeof root.userData.onUse !== "function") {
-      root.userData.onUse = () => {
-        const label = root.name || url;
-        console.log("Used", label);
-      };
-    }
-
     scene.add(root);
     entry.object = root;
+
+    // userData is a plain JavaScript object attached to every 3D node. We use
+    // it like a sticky note to tag meshes that should respond to interactions.
+    // Anything that has `userData.interactable = true` will be picked up by the
+    // interaction helper so beginners can wire up behaviours without subclassing.
+    root.userData = root.userData || {};
+    root.userData.interactable = true;
+    root.userData.onUse = () => {
+      const label = root.name || "a landmark";
+      console.log(`You interacted with ${label}`);
+    };
+
+    // Optionally bubble interactivity down to specific meshes. Artists can name
+    // sub-meshes "Door" or prefix them with "INT_" to opt-in. Here we just spin
+    // the mesh by 90 degrees to mimic a simple door toggle.
+    root.traverse?.((mesh) => {
+      if (!mesh?.isMesh || typeof mesh.name !== "string") return;
+      const isInteractiveDoor = mesh.name === "Door" || mesh.name.startsWith("INT_");
+      if (!isInteractiveDoor) return;
+
+      mesh.userData = mesh.userData || {};
+      mesh.userData.interactable = true;
+      mesh.userData.onUse = () => {
+        mesh.userData.isOpen = !mesh.userData.isOpen;
+        const isDoor = mesh.name === "Door";
+        mesh.rotation.y = mesh.userData.isOpen ? Math.PI / 2 : 0;
+        if (isDoor) {
+          console.log(mesh.userData.isOpen ? "Door opened!" : "Door closed!");
+        } else {
+          console.log(`You interacted with ${mesh.name}`);
+        }
+      };
+    });
 
     return root;
   } catch (error) {
