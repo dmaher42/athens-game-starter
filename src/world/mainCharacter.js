@@ -209,12 +209,12 @@ export class MainCharacter {
       rayOrigin.copy(this.mesh.position);
       rayOrigin.y += this.halfHeight + 0.5; // Start slightly above the head to avoid self hits.
       groundRaycaster.set(rayOrigin, DOWN_AXIS);
-      groundRaycaster.far = this.halfHeight + 1.5; // Just far enough to reach our feet plus a buffer.
+      const distanceFromOriginToFeet = this.halfHeight * 2 + 0.5;
+      groundRaycaster.far = distanceFromOriginToFeet; // Reach from above the head to the feet.
       const hits = groundRaycaster.intersectObjects(validTargets, true);
 
       if (hits.length > 0) {
         const hit = hits[0];
-        const distanceFromOriginToFeet = this.halfHeight + 0.5;
         const gap = hit.distance - distanceFromOriginToFeet;
         if (gap <= this.footEpsilon) {
           // Snap the player so their feet rest gently on the contact point.
