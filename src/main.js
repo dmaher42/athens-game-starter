@@ -13,6 +13,26 @@ function init() {
   document.body.appendChild(renderer.domElement);
   attachCrosshair();
 
+  const interactPrompt = document.createElement("div");
+  interactPrompt.textContent = "Press E to interact";
+  Object.assign(interactPrompt.style, {
+    position: "fixed",
+    left: "50%",
+    bottom: "20%",
+    transform: "translateX(-50%)",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    background: "rgba(0, 0, 0, 0.6)",
+    color: "#fff",
+    fontFamily: "sans-serif",
+    fontSize: "14px",
+    letterSpacing: "0.05em",
+    opacity: "0",
+    transition: "opacity 0.2s ease",
+    pointerEvents: "none",
+  });
+  document.body.appendChild(interactPrompt);
+
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
     75,
@@ -45,8 +65,8 @@ function init() {
 
   // Add a few simple boxes so you can test bumping into obstacles.
   const obstacleGeo = new THREE.BoxGeometry(2, 2, 2);
-  const obstacleMat = new THREE.MeshStandardMaterial({ color: 0x884422 });
   for (let i = 0; i < 3; i++) {
+    const obstacleMat = new THREE.MeshStandardMaterial({ color: 0x884422 });
     const obstacle = new THREE.Mesh(obstacleGeo, obstacleMat);
     obstacle.position.set(i * 4 - 4, 1, -5);
     obstacle.castShadow = true;
@@ -55,47 +75,26 @@ function init() {
     colliders.push(obstacle);
   }
 
+  // Example interactable props. userData acts like a metadata bag so you can
+  // describe behaviour without subclassing three.js meshes.
+  const interactableGeo = new THREE.ConeGeometry(1, 2, 12);
+  for (let i = 0; i < 2; i++) {
+    const material = new THREE.MeshStandardMaterial({ color: 0x3366aa });
+    const interactable = new THREE.Mesh(interactableGeo, material);
+    interactable.position.set(-2 + i * 4, 1, -12);
+    interactable.name = `Beacon_${i + 1}`;
+    interactable.castShadow = true;
+    interactable.receiveShadow = true;
+    interactable.userData.interactable = true;
+    interactable.userData.onUse = (object) => {
+      console.log("Used", object.name);
+    };
+    scene.add(interactable);
+  }
+
   // Create a simple controllable character that we update each frame.
   const character = new MainCharacter(scene, camera);
   const interactor = createInteractor(renderer, camera, scene);
-
-  function onInteract(hit) {
-    const { object } = hit;
-    if (!object) return;
-
-    console.log(`Interacted with ${object.name || object.type}`);
-
-    if (object.userData && typeof object.userData.onUse === "function") {
-      object.userData.onUse(hit);
-      return;
-    }
-
-    const materials = Array.isArray(object.material)
-      ? object.material
-      : [object.material];
-    const originals = new Map();
-
-    for (const material of materials) {
-      if (!material) continue;
-      if (material.emissive) {
-        originals.set(material, material.emissive.clone());
-        material.emissive.offsetHSL(0, 0, 0.3);
-      } else if (material.color) {
-        originals.set(material, material.color.clone());
-        material.color.offsetHSL(0, 0, 0.3);
-      }
-    }
-
-    setTimeout(() => {
-      for (const [material, color] of originals.entries()) {
-        if (material.emissive && color.isColor) {
-          material.emissive.copy(color);
-        } else if (material.color && color.isColor) {
-          material.color.copy(color);
-        }
-      }
-    }, 200);
-  }
 
   const clock = new THREE.Clock();
   const dayDuration = 60; // seconds for full cycle
@@ -126,10 +125,8 @@ function init() {
     character.update(deltaTime, colliders);
 
     // Cast a ray through the center of the screen to detect hovered objects.
-    const hoverHit = interactor.pickCenter();
-    if (interactor.updateHover) {
-      interactor.updateHover(hoverHit ? hoverHit.object : null);
-    }
+    const hovered = interactor.updateHover();
+    interactPrompt.style.opacity = hovered ? "1" : "0";
 
     renderer.render(scene, camera);
   }
@@ -137,9 +134,12 @@ function init() {
   animate();
 
   renderer.domElement.addEventListener("pointerdown", () => {
-    const hit = interactor.pickCenter();
-    if (hit) {
-      onInteract(hit);
+    interactor.useObject();
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (event.code === "KeyE") {
+      interactor.useObject();
     }
   });
 

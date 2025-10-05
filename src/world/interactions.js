@@ -13,9 +13,10 @@ import * as THREE from "three";
  *   mouse: THREE.Vector2,
  *   pickObject: (screenX: number, screenY: number) => THREE.Intersection | null,
  *   pickCenter: () => THREE.Intersection | null,
- *   updateHover: (object: THREE.Object3D | null) => void,
+ *   updateHover: () => THREE.Object3D | null,
  *   clearHover: () => void,
- *   getCurrentHover: () => THREE.Object3D | null
+ *   getCurrentHover: () => THREE.Object3D | null,
+ *   useObject: () => void,
  * }}
  */
 export function createInteractor(renderer, camera, scene) {
@@ -23,8 +24,27 @@ export function createInteractor(renderer, camera, scene) {
   const mouse = new THREE.Vector2();
 
   const HOVER_COLOR = 0x222244;
-  const storedEmissive = new Map();
+  const storedMaterialState = new Map();
   let currentHover = null;
+
+  /**
+   * Because `userData` is just a plain JavaScript object, we can attach custom
+   * metadata to any mesh. Here we look for a boolean flag that marks an object
+   * as interactable and optional callbacks to run when it is used.
+   *
+   * @param {THREE.Object3D | null} object
+   * @returns {THREE.Object3D | null}
+   */
+  function findInteractable(object) {
+    let node = object;
+    while (node) {
+      if (node.userData && node.userData.interactable) {
+        return node;
+      }
+      node = node.parent;
+    }
+    return null;
+  }
 
   /**
    * Helper that gathers all materials on the object (meshes may have an array).
@@ -37,41 +57,57 @@ export function createInteractor(renderer, camera, scene) {
   }
 
   /**
-   * Restore emissive colors for the previously hovered object.
+   * Restore material colors/emissive values for the previously hovered object.
    */
   function clearHover() {
     if (!currentHover) return;
     for (const material of getMaterials(currentHover)) {
-      if (material && material.emissive && storedEmissive.has(material)) {
-        material.emissive.copy(storedEmissive.get(material));
-        storedEmissive.delete(material);
+      if (!material || !storedMaterialState.has(material)) continue;
+      const stored = storedMaterialState.get(material);
+      if (material.emissive && stored.emissive) {
+        material.emissive.copy(stored.emissive);
       }
+      if (material.color && stored.color) {
+        material.color.copy(stored.color);
+      }
+      storedMaterialState.delete(material);
     }
     currentHover = null;
   }
 
   /**
-   * Apply a subtle emissive highlight to the hovered object.
-   * @param {THREE.Object3D | null} object
+   * Apply a subtle highlight to the hovered object. We try to tint the
+   * emissive channel for PBR materials, otherwise fall back to the base color.
+   * The highlight feedback tells the player what they can interact with.
+   *
+   * @param {THREE.Object3D} object
    */
-  function updateHover(object) {
-    if (object === currentHover) return;
-    clearHover();
-    if (!object) return;
-
+  function applyHighlight(object) {
     for (const material of getMaterials(object)) {
-      if (!material || !material.emissive) continue;
-      if (!storedEmissive.has(material)) {
-        storedEmissive.set(material, material.emissive.clone());
+      if (!material) continue;
+
+      if (!storedMaterialState.has(material)) {
+        storedMaterialState.set(material, {
+          emissive: material.emissive ? material.emissive.clone() : null,
+          color: material.color ? material.color.clone() : null,
+        });
       }
-      material.emissive.setHex(HOVER_COLOR);
+
+      if (material.emissive) {
+        material.emissive.setHex(HOVER_COLOR);
+      } else if (material.color) {
+        material.color.offsetHSL(0, 0, 0.2);
+      }
     }
+
     currentHover = object;
   }
 
   /**
    * Convert a screen-space coordinate to normalized device coordinates (NDC)
-   * and cast a ray to find the closest intersected object.
+   * and cast a ray to find the closest intersected object. Raycasters only hit
+   * meshes that are in the scene graph and visible to the camera, so hidden or
+   * culled objects are naturally ignored.
    *
    * @param {number} screenX - Pixel X coordinate relative to the canvas.
    * @param {number} screenY - Pixel Y coordinate relative to the canvas.
@@ -104,8 +140,39 @@ export function createInteractor(renderer, camera, scene) {
     return intersects.length > 0 ? intersects[0] : null;
   }
 
+  function updateHover() {
+    const hit = pickCenter();
+    const target = hit ? findInteractable(hit.object) : null;
+
+    if (!target) {
+      clearHover();
+      return null;
+    }
+
+    if (target === currentHover) {
+      return currentHover;
+    }
+
+    clearHover();
+    applyHighlight(target);
+    return currentHover;
+  }
+
   function getCurrentHover() {
     return currentHover;
+  }
+
+  function useObject() {
+    if (!currentHover) return;
+
+    const onUse = currentHover.userData && currentHover.userData.onUse;
+    if (typeof onUse === "function") {
+      onUse(currentHover);
+      return;
+    }
+
+    const name = currentHover.name || currentHover.type || "object";
+    console.log(`Interacted with ${name}`);
   }
 
   return {
@@ -116,5 +183,6 @@ export function createInteractor(renderer, camera, scene) {
     updateHover,
     clearHover,
     getCurrentHover,
+    useObject,
   };
 }
