@@ -9,6 +9,7 @@
     "preview": "vite preview --strictPort",
     "typecheck": "tsc -p . || true",
     "generate:favicon": "node scripts/generate-favicon.mjs",
+    "download:aristotle": "node scripts/download-aristotle-tomb.mjs",
     "postinstall": "npm run generate:favicon"
   },
   "dependencies": {
