@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite';
 
-// IMPORTANT: base must match the repo name for GitHub Pages.
 export default defineConfig({
   base: '/athens-game-starter/',
   build: {
     outDir: 'docs',
     emptyOutDir: true,
   },
+  // Ensure “three” is *not* external so it gets bundled
+  // If you added external in the past, remove it.
 });
