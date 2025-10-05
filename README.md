@@ -14,6 +14,20 @@ hosting on GitHub Pages or any static site provider.
 > imports bare modules (such as `three`) and TypeScript entry points that must be
 > processed by Vite before they can run in the browser.
 
+### Downloading Aristotle's Tomb
+
+The main scene now features Aristotle's Tomb from Sketchfab. Because the model
+is distributed under a free license, you still need a Sketchfab API token to
+pull the binary. Run the helper script and pass your token via the environment:
+
+```bash
+SKETCHFAB_TOKEN=<your token> npm run download:aristotle
+```
+
+The GLB is saved to `public/models/buildings/aristotle-tomb.glb`. If the file is
+missing when the app boots the code falls back to the existing Akropol model,
+so you can continue exploring even before fetching the new landmark.
+
 ## KTX2 textures
 
 Models loaded through `GLTFLoader` expect textures in the KTX2 (Basis Universal)

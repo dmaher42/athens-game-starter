@@ -166,22 +166,26 @@ async function mainApp() {
   player.attachCharacter(character);
 
   const buildingMgr = new BuildingManager(envCollider);
+  const tombOptions = {
+    scale: 1.2,
+    position: new THREE.Vector3(6, 0, -28),
+    rotateY: Math.PI * 0.15,
+    collision: true,
+  };
+  const buildingBase = `${import.meta.env.BASE_URL}models/buildings/`;
 
   try {
-    await buildingMgr.loadBuilding(
-      `${import.meta.env.BASE_URL}models/buildings/parthenon.glb`,
-      {
-        scale: 1.5,
-        position: new THREE.Vector3(0, 0, -20),
-        rotateY: Math.PI / 4,
-        collision: true,
-      }
-    );
+    await buildingMgr.loadBuilding(`${buildingBase}aristotle-tomb.glb`, tombOptions);
   } catch (error) {
     console.warn(
-      "Parthenon model failed to load. Add the asset to public/models/buildings/ to display it.",
+      "Aristotle's Tomb failed to load. Download it with npm run download:aristotle.",
       error
     );
+    try {
+      await buildingMgr.loadBuilding(`${buildingBase}Akropol.glb`, tombOptions);
+    } catch (fallbackError) {
+      console.error('Akropol fallback model also failed to load.', fallbackError);
+    }
   }
 
   console.log("Scene children:", scene.children);
