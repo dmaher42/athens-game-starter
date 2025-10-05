@@ -68,6 +68,13 @@ export class EnvironmentCollider {
       if (!mesh.visible) return;
 
       const cloned = geometry.clone();
+
+      Object.keys(cloned.attributes).forEach((attrName) => {
+        if (attrName !== 'position') {
+          cloned.deleteAttribute(attrName);
+        }
+      });
+
       cloned.applyMatrix4(mesh.matrixWorld);
       geometries.push(cloned);
     });
