@@ -1,5 +1,14 @@
 // main.js
 
+// BEGIN temporary compile check imports
+import { InputMap } from "./input/InputMap";
+import { EnvironmentCollider } from "./env/EnvironmentCollider";
+import { PlayerController } from "./controls/PlayerController";
+void InputMap;
+void EnvironmentCollider;
+void PlayerController;
+// END temporary compile check imports
+
 import * as THREE from "three";
 import { createSky, updateSky, createStars, updateStars } from "./world/sky.js";
 import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
