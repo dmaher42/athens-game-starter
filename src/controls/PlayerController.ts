@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 import type { InputMap } from '../input/InputMap';
 import type { EnvironmentCollider } from '../env/EnvironmentCollider';
+import type { Character } from '../characters/Character';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -37,6 +38,8 @@ export class PlayerController {
   private grounded = false;
   private jumpLocked = false;
 
+  private character?: Character;
+
   private readonly desired = new THREE.Vector3();
   private readonly tmpVec = new THREE.Vector3();
   private readonly tmpVec2 = new THREE.Vector3();
@@ -58,7 +61,7 @@ export class PlayerController {
     this.camera = opts.camera;
 
     this.height = opts.height ?? 1.8;
-    this.radius = opts.radius ?? 0.35;
+    this.radius = opts.radius ?? 0.35; // Capsule alignment tip: tweak radius (~0.35-0.42) & height (~1.8) so feet meet the ground.
 
     const topOffset = this.height - this.radius;
     this.capsule = new Capsule(
@@ -72,6 +75,12 @@ export class PlayerController {
   }
 
   get position() { return this.object.position; }
+
+  attachCharacter(char: Character) {
+    this.character = char;
+    this.object.add(char);
+    char.position.set(0, 0, 0);
+  }
 
   update(dt: number) {
     if (!Number.isFinite(dt) || dt <= 0) return;
@@ -124,6 +133,28 @@ export class PlayerController {
 
     const center = this.getCapsuleCenter(this.tmpVec);
     this.object.position.copy(center);
+
+    const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
+
+    if (this.character) {
+      const EPS = 0.05;
+      const yawFacing = Math.atan2(this.velocity.x, this.velocity.z);
+      if (horizontalSpeed > EPS) {
+        this.character.rotation.y = yawFacing;
+      }
+
+      if (!this.grounded) {
+        this.character.play('Jump', 0.05);
+      } else if (horizontalSpeed > (this.moveSpeed * 1.2)) {
+        this.character.play('Run', 0.1);
+      } else if (horizontalSpeed > 0.1) {
+        this.character.play('Walk', 0.1);
+      } else {
+        this.character.play('Idle', 0.2);
+      }
+
+      this.character.update(dt);
+    }
   }
 
   private computeDesiredVelocity(speed: number) {

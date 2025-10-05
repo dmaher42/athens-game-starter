@@ -1,24 +1,18 @@
 // main.js
 
-// BEGIN temporary compile check imports
-import { InputMap } from "./input/InputMap";
-import { EnvironmentCollider } from "./env/EnvironmentCollider";
-import { PlayerController } from "./controls/PlayerController";
-void InputMap;
-void EnvironmentCollider;
-void PlayerController;
-// END temporary compile check imports
-
 import * as THREE from "three";
 import { createSky, updateSky, createStars, updateStars } from "./world/sky.js";
 import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
-import { MainCharacter } from "./world/mainCharacter.js";
 import { createInteractor } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
+import { InputMap } from "./input/InputMap";
+import { EnvironmentCollider } from "./env/EnvironmentCollider";
+import { PlayerController } from "./controls/PlayerController";
+import { Character } from "./characters/Character";
 
-function init() {
+async function init() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
@@ -150,8 +144,16 @@ function init() {
 
   scene.add(lamp);
 
-  // Create a simple controllable character that we update each frame.
-  const character = new MainCharacter(scene, camera);
+  const input = new InputMap(renderer.domElement);
+  const envCollider = new EnvironmentCollider();
+  const player = new PlayerController(input, envCollider, { camera });
+  scene.add(player.object);
+
+  const character = new Character();
+  scene.add(character);
+  await character.load("/models/character/hero.glb", renderer);
+  player.attachCharacter(character);
+
   const interactor = createInteractor(renderer, camera, scene);
 
   const clock = new THREE.Clock();
@@ -183,8 +185,8 @@ function init() {
     // prefer a static landscape without vertex animation.
     updateTerrain(terrain, elapsed);
 
-    // Update our character so they respond to input and move around the scene.
-    character.update(deltaTime, colliders, terrain);
+    // Update player movement and drive the attached character animation.
+    player.update(deltaTime);
 
     // Cast a ray through the center of the screen to detect hovered objects and
     // highlight anything marked as interactable via userData.
