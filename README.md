@@ -51,3 +51,14 @@ Two common workflows for preparing KTX2 textures are:
 
 After conversion, ensure the resulting `.ktx2` files are referenced by your
 glTF/glb assets before importing them into the project.
+
+## Deployment — GitHub Pages
+
+This project deploys automatically on push to `main` using GitHub Actions.
+
+- Vite `base` is set to `/athens-game-starter/` in `vite.config.ts` (required for GH Pages).
+- Workflow: `.github/workflows/deploy.yml` builds and publishes `dist` to GitHub Pages.
+- SPA fallback: `404.html` is copied from `index.html` during the workflow to support deep links.
+
+After the first successful run, the site will be available at:
+`https://<your-username>.github.io/athens-game-starter/`
