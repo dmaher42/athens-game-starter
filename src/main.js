@@ -55,10 +55,9 @@ function init() {
 
   const colliders = [];
   // Generate a dynamic terrain mesh so the world has rolling hills instead of
-  // a perfectly flat plane. The returned mesh is also registered for collision
-  // checks so the character follows the landscape.
+  // a perfectly flat plane. We'll pass the mesh to the character so it can
+  // query ground height during its update loop.
   const terrain = createTerrain(scene);
-  colliders.push(terrain);
 
   // Add a few simple boxes so you can test bumping into obstacles.
   const obstacleGeo = new THREE.BoxGeometry(2, 2, 2);
@@ -123,7 +122,7 @@ function init() {
     updateTerrain(terrain, elapsed);
 
     // Update our character so they respond to input and move around the scene.
-    character.update(deltaTime, colliders);
+    character.update(deltaTime, colliders, terrain);
 
     // Cast a ray through the center of the screen to detect hovered objects.
     const hovered = interactor.updateHover();
