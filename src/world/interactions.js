@@ -171,16 +171,18 @@ export function createInteractor(renderer, camera, scene) {
   }
 
   function useObject() {
-    if (!currentHover) return;
+    if (!currentHover) {
+      console.log("Nothing to interact with.");
+      return;
+    }
 
     const onUse = currentHover.userData && currentHover.userData.onUse;
     if (typeof onUse === "function") {
       onUse(currentHover);
-      return;
+    } else {
+      const name = currentHover.name || currentHover.type || "object";
+      console.log(`Nothing to interact with on ${name}.`);
     }
-
-    const name = currentHover.name || currentHover.type || "object";
-    console.log(`Interacted with ${name}`);
   }
 
   return {
