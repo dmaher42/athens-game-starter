@@ -4,11 +4,14 @@ import * as THREE from "three";
 import { createSky, updateSky, createStars, updateStars } from "./world/sky.js";
 import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
 import { MainCharacter } from "./world/mainCharacter.js";
+import { createInteractor } from "./world/interactions.js";
+import { attachCrosshair } from "./world/ui/crosshair.js";
 
 function init() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
+  attachCrosshair();
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
@@ -54,6 +57,45 @@ function init() {
 
   // Create a simple controllable character that we update each frame.
   const character = new MainCharacter(scene, camera);
+  const interactor = createInteractor(renderer, camera, scene);
+
+  function onInteract(hit) {
+    const { object } = hit;
+    if (!object) return;
+
+    console.log(`Interacted with ${object.name || object.type}`);
+
+    if (object.userData && typeof object.userData.onUse === "function") {
+      object.userData.onUse(hit);
+      return;
+    }
+
+    const materials = Array.isArray(object.material)
+      ? object.material
+      : [object.material];
+    const originals = new Map();
+
+    for (const material of materials) {
+      if (!material) continue;
+      if (material.emissive) {
+        originals.set(material, material.emissive.clone());
+        material.emissive.offsetHSL(0, 0, 0.3);
+      } else if (material.color) {
+        originals.set(material, material.color.clone());
+        material.color.offsetHSL(0, 0, 0.3);
+      }
+    }
+
+    setTimeout(() => {
+      for (const [material, color] of originals.entries()) {
+        if (material.emissive && color.isColor) {
+          material.emissive.copy(color);
+        } else if (material.color && color.isColor) {
+          material.color.copy(color);
+        }
+      }
+    }, 200);
+  }
 
   const clock = new THREE.Clock();
   const dayDuration = 60; // seconds for full cycle
@@ -83,10 +125,23 @@ function init() {
     // Update our character so they respond to input and move around the scene.
     character.update(deltaTime, colliders);
 
+    // Cast a ray through the center of the screen to detect hovered objects.
+    const hoverHit = interactor.pickCenter();
+    if (interactor.updateHover) {
+      interactor.updateHover(hoverHit ? hoverHit.object : null);
+    }
+
     renderer.render(scene, camera);
   }
 
   animate();
+
+  renderer.domElement.addEventListener("pointerdown", () => {
+    const hit = interactor.pickCenter();
+    if (hit) {
+      onInteract(hit);
+    }
+  });
 
   window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
