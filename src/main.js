@@ -6,6 +6,7 @@ import { createLighting, updateLighting, createMoon, updateMoon } from "./world/
 import { MainCharacter } from "./world/mainCharacter.js";
 import { createInteractor } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
+import { createTerrain, updateTerrain } from "./world/terrain.js";
 
 function init() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -34,6 +35,9 @@ function init() {
   document.body.appendChild(interactPrompt);
 
   const scene = new THREE.Scene();
+  // Light atmospheric fog increases depth perception so the far mountains blend
+  // into the horizon. Adjust near/far distances to taste.
+  scene.fog = new THREE.Fog(0xa0a0a0, 50, 400);
   const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
@@ -50,18 +54,11 @@ function init() {
   const moon = createMoon(scene);
 
   const colliders = [];
-
-  // Optional ground so you see a floor, and also collide against it.
-  {
-    const groundGeo = new THREE.PlaneGeometry(1000, 1000);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x556655 });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0;
-    ground.receiveShadow = true;
-    scene.add(ground);
-    colliders.push(ground);
-  }
+  // Generate a dynamic terrain mesh so the world has rolling hills instead of
+  // a perfectly flat plane. The returned mesh is also registered for collision
+  // checks so the character follows the landscape.
+  const terrain = createTerrain(scene);
+  colliders.push(terrain);
 
   // Add a few simple boxes so you can test bumping into obstacles.
   const obstacleGeo = new THREE.BoxGeometry(2, 2, 2);
@@ -120,6 +117,10 @@ function init() {
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
+
+    // Dynamic terrain subtly sways, hinting at wind. Remove this call if you
+    // prefer a static landscape without vertex animation.
+    updateTerrain(terrain, elapsed);
 
     // Update our character so they respond to input and move around the scene.
     character.update(deltaTime, colliders);
