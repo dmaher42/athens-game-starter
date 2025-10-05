@@ -6,6 +6,11 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 // model and all of its textures into one binary file.
 const loader = new GLTFLoader();
 
+// Distances control when a new level of detail becomes active as the camera
+// moves farther away from the object. Larger distances delay the switch to the
+// lower-detail meshes so the high quality mesh is visible for longer.
+const DEFAULT_LOD_DISTANCES = [50, 150, 300];
+
 // Keep track of everything we add to the world so we can tear it all down later
 // when the player leaves the area or reloads the scene.
 const trackedLandmarks = new Set();
@@ -69,6 +74,17 @@ function removePlaceholder(entry) {
   entry.placeholder = null;
 }
 
+export function makeLOD(levels) {
+  const lod = new THREE.LOD();
+
+  for (const { object3D, distance } of levels) {
+    if (!object3D) continue;
+    lod.addLevel(object3D, distance ?? 0);
+  }
+
+  return lod;
+}
+
 /**
  * Load a landmark model and keep track of it so we can dispose everything later.
  * We immediately add a placeholder mesh to the scene so players get instant
@@ -98,9 +114,44 @@ export async function loadLandmark(scene, url, options = {}) {
 
   try {
     const gltf = await loader.loadAsync(url);
-    const root = gltf.scene || gltf.scenes?.[0];
+    let root = gltf.scene || gltf.scenes?.[0];
     if (!root) {
       throw new Error(`GLB at ${url} did not contain a scene`);
+    }
+
+    if (root.children?.length) {
+      const lodMeshes = new Map();
+
+      for (const child of [...root.children]) {
+        const match = /^LOD(\d+)$/.exec(child.name ?? "");
+        if (!match) continue;
+
+        const lodIndex = Number(match[1]);
+        root.remove(child);
+        lodMeshes.set(lodIndex, child);
+      }
+
+      if (lodMeshes.size) {
+        const levels = [...lodMeshes.entries()]
+          .sort((a, b) => a[0] - b[0])
+          .map(([lodIndex, object3D]) => ({
+            object3D,
+            distance: DEFAULT_LOD_DISTANCES[lodIndex] ?? DEFAULT_LOD_DISTANCES.at(-1) ?? 0,
+          }));
+
+        const lod = makeLOD(levels);
+        lod.name = root.name;
+        lod.position.copy(root.position);
+        lod.quaternion.copy(root.quaternion);
+        lod.scale.copy(root.scale);
+        lod.matrix.copy(root.matrix);
+        lod.matrixAutoUpdate = root.matrixAutoUpdate;
+        if (!lod.matrixAutoUpdate) {
+          lod.updateMatrix();
+        }
+        lod.userData = { ...(root.userData || {}) };
+        root = lod;
+      }
     }
 
     applyTransform(root, options);
