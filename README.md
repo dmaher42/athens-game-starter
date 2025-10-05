@@ -77,3 +77,7 @@ This project deploys automatically on push to `main` using GitHub Actions.
 
 After the first successful run, the site will be available at:
 `https://<your-username>.github.io/athens-game-starter/`
+
+## Asset credits
+
+- **Hero character** – [Robot Hero (Poly Pizza)](https://poly.pizza/m/y9KWOVG21R) by [Quaternius](https://poly.pizza/u/Quaternius), licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/).
