@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { LOD } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 
@@ -58,11 +59,6 @@ export function initializeAssetTranscoders(renderer) {
     loader.setKTX2Loader(null);
   }
 }
-
-// Distances control when a new level of detail becomes active as the camera
-// moves farther away from the object. Larger distances delay the switch to the
-// lower-detail meshes so the high quality mesh is visible for longer.
-const DEFAULT_LOD_DISTANCES = [50, 150, 300];
 
 // Keep track of everything we add to the world so we can tear it all down later
 // when the player leaves the area or reloads the scene.
@@ -127,17 +123,6 @@ function removePlaceholder(entry) {
   entry.placeholder = null;
 }
 
-export function makeLOD(levels) {
-  const lod = new THREE.LOD();
-
-  for (const { object3D, distance } of levels) {
-    if (!object3D) continue;
-    lod.addLevel(object3D, distance ?? 0);
-  }
-
-  return lod;
-}
-
 /**
  * Load a landmark model and keep track of it so we can dispose everything later.
  * We immediately add a placeholder mesh to the scene so players get instant
@@ -172,68 +157,66 @@ export async function loadLandmark(scene, url, options = {}) {
       throw new Error(`GLB at ${url} did not contain a scene`);
     }
 
+    let finalObject = root;
+
     if (root.children?.length) {
-      const lodMeshes = new Map();
+      const lodLevels = root.children
+        .filter((child) => child?.name?.startsWith("LOD"))
+        .map((child) => ({
+          object3D: child,
+          level: parseInt(child.name.slice(3)) || 0,
+        }));
 
-      for (const child of [...root.children]) {
-        const match = /^LOD(\d+)$/.exec(child.name ?? "");
-        if (!match) continue;
-
-        const lodIndex = Number(match[1]);
-        root.remove(child);
-        lodMeshes.set(lodIndex, child);
-      }
-
-      if (lodMeshes.size) {
-        const levels = [...lodMeshes.entries()]
-          .sort((a, b) => a[0] - b[0])
-          .map(([lodIndex, object3D]) => ({
-            object3D,
-            distance: DEFAULT_LOD_DISTANCES[lodIndex] ?? DEFAULT_LOD_DISTANCES.at(-1) ?? 0,
-          }));
-
-        const lod = makeLOD(levels);
-        lod.name = root.name;
+      if (lodLevels.length) {
+        // THREE.LOD swaps between meshes based on camera distance, rendering the
+        // most detailed models up close and progressively cheaper meshes as you
+        // move away. Lower-numbered LODs render first, higher numbers take over
+        // farther away, keeping frame-rates higher across busy scenes.
+        const lod = new LOD();
+        const baseName = root.name || "Landmark";
+        lod.name = `${baseName}_LOD`;
         lod.position.copy(root.position);
-        lod.quaternion.copy(root.quaternion);
+        lod.rotation.copy(root.rotation);
         lod.scale.copy(root.scale);
-        lod.matrix.copy(root.matrix);
-        lod.matrixAutoUpdate = root.matrixAutoUpdate;
-        if (!lod.matrixAutoUpdate) {
-          lod.updateMatrix();
-        }
+
+        lodLevels
+          .sort((a, b) => a.level - b.level)
+          .forEach(({ object3D, level }) => {
+            lod.addLevel(object3D, level * 50);
+          });
+
         lod.userData = { ...(root.userData || {}) };
-        root = lod;
+        finalObject = lod;
       }
     }
 
-    applyTransform(root, options);
+    applyTransform(finalObject, options);
     removePlaceholder(entry);
 
     if (entry.disposed) {
-      disposeObject(root);
+      disposeObject(finalObject);
       trackedLandmarks.delete(entry);
       return null;
     }
 
-    scene.add(root);
-    entry.object = root;
+    scene.add(finalObject);
+    entry.object = finalObject;
 
     // userData is a plain JavaScript object attached to every 3D node. We use
     // it like a sticky note to tag meshes that should respond to interactions.
     // Anything that has `userData.interactable = true` will be picked up by the
     // interaction helper so beginners can wire up behaviours without subclassing.
-    root.userData = root.userData || {};
-    root.userData.interactable = true;
-    root.userData.onUse = () => {
-      const label = root.name || "a landmark";
+    finalObject.userData = finalObject.userData || {};
+    finalObject.userData.interactable = true;
+    finalObject.userData.onUse = () => {
+      const label = finalObject.name || "a landmark";
       console.log(`You interacted with ${label}`);
     };
 
     // Optionally bubble interactivity down to specific meshes. Artists can name
     // sub-meshes "Door" or prefix them with "INT_" to opt-in. Here we just spin
     // the mesh by 90 degrees to mimic a simple door toggle.
-    root.traverse?.((mesh) => {
+    finalObject.traverse?.((mesh) => {
       if (!mesh?.isMesh || typeof mesh.name !== "string") return;
       const isInteractiveDoor = mesh.name === "Door" || mesh.name.startsWith("INT_");
       if (!isInteractiveDoor) return;
@@ -252,7 +235,7 @@ export async function loadLandmark(scene, url, options = {}) {
       };
     });
 
-    return root;
+    return finalObject;
   } catch (error) {
     removePlaceholder(entry);
     trackedLandmarks.delete(entry);
