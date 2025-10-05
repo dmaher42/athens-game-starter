@@ -21,20 +21,18 @@ export class BuildingManager {
     if (options?.rotateY) obj.rotation.y = options.rotateY;
     if (options?.position) obj.position.copy(options.position);
 
-    const parent = this.envCollider.mesh.parent;
-    if (parent) {
-      parent.add(obj);
-    } else {
-      this.envCollider.mesh.add(obj);
-    }
+    // Add to scene
+    this.envCollider.mesh.parent?.add(obj);
 
+    // If collision desired, mark meshes
     if (options?.collision) {
       obj.traverse((child: any) => {
         if (child.isMesh) {
           child.userData.noCollision = false;
         }
       });
-      this.envCollider.fromStaticScene(this.envCollider.mesh.parent ?? this.envCollider.mesh);
+      // Rebuild the collider from static scene
+      this.envCollider.fromStaticScene(this.envCollider.mesh.parent!);
     } else {
       obj.traverse((child: any) => {
         if (child.isMesh) {
