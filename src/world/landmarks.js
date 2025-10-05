@@ -1,10 +1,63 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 
 // Reuse a single loader instance so we don't repeatedly allocate it whenever we
 // load a new landmark. GLTFLoader understands the .glb format which packages a
 // model and all of its textures into one binary file.
 const loader = new GLTFLoader();
+let ktx2Loader = null;
+
+const BASIS_CDN_PATH = "https://unpkg.com/three@0.160.0/examples/jsm/libs/basis/";
+
+function normalizePath(path) {
+  if (!path) return "";
+  return path.endsWith("/") ? path : `${path}/`;
+}
+
+function resolveTranscoderPath() {
+  const envPath =
+    typeof import.meta !== "undefined" && import.meta.env
+      ? import.meta.env.VITE_BASIS_TRANSCODER_PATH
+      : undefined;
+
+  if (typeof envPath === "string" && envPath.trim().length) {
+    return normalizePath(envPath.trim());
+  }
+
+  if (typeof window !== "undefined") {
+    const runtimePath = window.__BASIS_TRANSCODER_PATH__;
+    if (typeof runtimePath === "string" && runtimePath.trim().length) {
+      return normalizePath(runtimePath.trim());
+    }
+  }
+
+  return BASIS_CDN_PATH;
+}
+
+/**
+ * Configure the shared GLTF loader to decode KTX2 textures when supported.
+ *
+ * The loader gracefully falls back to standard textures when the current
+ * browser / GPU does not support Basis Universal.
+ */
+export function initializeAssetTranscoders(renderer) {
+  if (!renderer || typeof renderer.getContext !== "function") {
+    return;
+  }
+
+  if (!ktx2Loader) {
+    ktx2Loader = new KTX2Loader().setTranscoderPath(resolveTranscoderPath());
+  }
+
+  try {
+    ktx2Loader.detectSupport(renderer);
+    loader.setKTX2Loader(ktx2Loader);
+  } catch (error) {
+    console.warn("KTX2 support detection failed, falling back to standard textures.", error);
+    loader.setKTX2Loader(null);
+  }
+}
 
 // Distances control when a new level of detail becomes active as the camera
 // moves farther away from the object. Larger distances delay the switch to the

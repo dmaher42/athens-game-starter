@@ -7,11 +7,13 @@ import { MainCharacter } from "./world/mainCharacter.js";
 import { createInteractor } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
+import { initializeAssetTranscoders } from "./world/landmarks.js";
 
 function init() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
+  initializeAssetTranscoders(renderer);
   attachCrosshair();
 
   const interactPrompt = document.createElement("div");
