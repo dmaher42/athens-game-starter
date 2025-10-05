@@ -72,21 +72,72 @@ function init() {
   }
 
   // Example interactable props. userData acts like a metadata bag so you can
-  // describe behaviour without subclassing three.js meshes.
-  const interactableGeo = new THREE.ConeGeometry(1, 2, 12);
-  for (let i = 0; i < 2; i++) {
-    const material = new THREE.MeshStandardMaterial({ color: 0x3366aa });
-    const interactable = new THREE.Mesh(interactableGeo, material);
-    interactable.position.set(-2 + i * 4, 1, -12);
-    interactable.name = `Beacon_${i + 1}`;
-    interactable.castShadow = true;
-    interactable.receiveShadow = true;
-    interactable.userData.interactable = true;
-    interactable.userData.onUse = (object) => {
-      console.log("Used", object.name);
-    };
-    scene.add(interactable);
-  }
+  // describe behaviour without subclassing three.js meshes. Below we hook up a
+  // swinging door and a street lamp that toggles its light.
+
+  const doorPivot = new THREE.Group();
+  doorPivot.name = "DemoDoor";
+  doorPivot.position.set(-2, 0, -12);
+
+  const doorGeometry = new THREE.BoxGeometry(1.2, 2.4, 0.12);
+  const doorMaterial = new THREE.MeshStandardMaterial({ color: 0x5a3310 });
+  const door = new THREE.Mesh(doorGeometry, doorMaterial);
+  door.position.set(0.6, 1.2, 0);
+  door.castShadow = true;
+  door.receiveShadow = true;
+  doorPivot.add(door);
+
+  doorPivot.userData.interactable = true;
+  doorPivot.userData.highlightTarget = door;
+  doorPivot.userData.open = false;
+  doorPivot.userData.onUse = (object) => {
+    const willOpen = !object.userData.open;
+    object.userData.open = willOpen;
+    door.rotation.y = willOpen ? -Math.PI / 2 : 0;
+    console.log(`Door ${willOpen ? "opened" : "closed"}`);
+  };
+
+  scene.add(doorPivot);
+
+  const lamp = new THREE.Group();
+  lamp.name = "DemoLamp";
+  lamp.position.set(2, 0, -12);
+
+  const poleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 3, 12);
+  const poleMaterial = new THREE.MeshStandardMaterial({ color: 0x303030 });
+  const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+  pole.position.y = 1.5;
+  pole.castShadow = false;
+  lamp.add(pole);
+
+  const bulbMaterial = new THREE.MeshStandardMaterial({
+    color: 0x222222,
+    emissive: new THREE.Color(0xfff5b5),
+    emissiveIntensity: 1.5,
+  });
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), bulbMaterial);
+  bulb.position.y = 3;
+  bulb.castShadow = false;
+  lamp.add(bulb);
+
+  const pointLight = new THREE.PointLight(0xfff5b5, 1.5, 12, 2);
+  pointLight.position.y = 3;
+  pointLight.castShadow = true;
+  lamp.add(pointLight);
+
+  lamp.userData.interactable = true;
+  lamp.userData.highlightTarget = bulb;
+  lamp.userData.light = pointLight;
+  lamp.userData.onUse = (object) => {
+    const light = object.userData.light;
+    if (!light) return;
+    const isOn = light.intensity > 0.1;
+    light.intensity = isOn ? 0 : 1.5;
+    bulbMaterial.emissiveIntensity = isOn ? 0 : 1.5;
+    console.log(`Lamp ${isOn ? "turned off" : "turned on"}`);
+  };
+
+  scene.add(lamp);
 
   // Create a simple controllable character that we update each frame.
   const character = new MainCharacter(scene, camera);

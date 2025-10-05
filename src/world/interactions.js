@@ -56,12 +56,19 @@ export function createInteractor(renderer, camera, scene) {
     return Array.isArray(object.material) ? object.material : [object.material];
   }
 
+  function getHighlightTarget(object) {
+    if (!object) return object;
+    const target = object.userData?.highlightTarget;
+    return target || object;
+  }
+
   /**
    * Restore material colors/emissive values for the previously hovered object.
    */
   function clearHover() {
     if (!currentHover) return;
-    for (const material of getMaterials(currentHover)) {
+    const target = getHighlightTarget(currentHover);
+    for (const material of getMaterials(target)) {
       if (!material || !storedMaterialState.has(material)) continue;
       const stored = storedMaterialState.get(material);
       if (material.emissive && stored.emissive) {
@@ -83,7 +90,8 @@ export function createInteractor(renderer, camera, scene) {
    * @param {THREE.Object3D} object
    */
   function applyHighlight(object) {
-    for (const material of getMaterials(object)) {
+    const target = getHighlightTarget(object);
+    for (const material of getMaterials(target)) {
       if (!material) continue;
 
       if (!storedMaterialState.has(material)) {
