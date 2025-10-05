@@ -36,12 +36,12 @@ jobs:
       # Optional: SPA fallback so deep links work on GH Pages
       - name: Add 404 fallback
         run: |
-          if [ -f dist/index.html ]; then cp dist/index.html dist/404.html; fi
+          if [ -f docs/index.html ]; then cp docs/index.html docs/404.html; fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: docs
 
   deploy:
     needs: build
