@@ -34,6 +34,16 @@ export function createLighting(scene) {
   // Create the primary sunlight directional light.
   const sunLight = new DirectionalLight(0xffffff, 1.0);
   sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(2048, 2048);
+  sunLight.shadow.camera.near = 1;
+  sunLight.shadow.camera.far = 600;
+  sunLight.shadow.camera.left = -200;
+  sunLight.shadow.camera.right = 200;
+  sunLight.shadow.camera.top = 200;
+  sunLight.shadow.camera.bottom = -200;
+  sunLight.shadow.bias = -0.001;
+  sunLight.shadow.normalBias = 0.02;
+  sunLight.shadow.camera.updateProjectionMatrix();
   scene.add(sunLight);
   scene.add(sunLight.target);
 

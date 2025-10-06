@@ -21,6 +21,7 @@ export class EnvironmentCollider {
     this.mesh.matrixAutoUpdate = false;
     this.mesh.userData.noCollision = true;
 
+    this.lastRoot = null;
     this.positionAttr = null;
     this.indexAttr = null;
     this.capsuleBox = new THREE.Box3();
@@ -49,11 +50,20 @@ export class EnvironmentCollider {
    * @param {{ debug?: boolean }} [opts]
    */
   fromStaticScene(root, opts = {}) {
+    const source =
+      root ?? this.lastRoot ?? (this.mesh ? this.mesh.parent : null);
+
+    if (!source || typeof source.traverse !== "function") {
+      return;
+    }
+
     const geometries = [];
-    root.updateWorldMatrix(true, true);
+    source.updateWorldMatrix(true, true);
 
     const material = this.mesh.material;
     material.visible = !!opts.debug;
+
+    this.lastRoot = source;
 
     const shouldInclude = (node) => {
       let current = node;
@@ -79,7 +89,7 @@ export class EnvironmentCollider {
       geometries.push(cloned);
     };
 
-    root.traverse((child) => {
+    source.traverse((child) => {
       if (!child.isMesh) return;
       if (child === this.mesh) return;
 
@@ -123,6 +133,10 @@ export class EnvironmentCollider {
 
     this.positionAttr = merged.getAttribute('position');
     this.indexAttr = merged.getIndex();
+  }
+
+  refresh(opts = {}) {
+    this.fromStaticScene(undefined, opts);
   }
 
   /**

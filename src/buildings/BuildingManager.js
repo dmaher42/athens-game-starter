@@ -21,7 +21,14 @@ export class BuildingManager {
     if (options?.rotateY) obj.rotation.y = options.rotateY;
     if (options?.position) obj.position.copy(options.position);
 
-    this.envCollider.mesh.parent?.add(obj);
+    const parent = this.envCollider.mesh.parent;
+    if (parent) {
+      parent.add(obj);
+    } else {
+      console.warn(
+        "EnvironmentCollider mesh has no parent; building was loaded without being attached to the scene graph."
+      );
+    }
 
     if (options?.collision) {
       obj.traverse((child) => {
@@ -29,7 +36,7 @@ export class BuildingManager {
           child.userData.noCollision = false;
         }
       });
-      this.envCollider.fromStaticScene(this.envCollider.mesh.parent);
+      this.envCollider.refresh();
     } else {
       obj.traverse((child) => {
         if (child.isMesh) {
