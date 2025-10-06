@@ -9,11 +9,13 @@ import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { createOcean, updateOcean } from "./world/water.js";
 import { createHarbor } from "./world/harbor.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
+import { createCivicDistrict } from "./world/cityPlan.js";
 import { InputMap } from "./input/InputMap.js";
 import { EnvironmentCollider } from "./env/EnvironmentCollider.js";
 import { BuildingManager } from "./buildings/BuildingManager.js";
 import { PlayerController } from "./controls/PlayerController.js";
 import { Character } from "./characters/Character.js";
+import { spawnCitizenCrowd } from "./world/npcs.js";
 
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -132,7 +134,6 @@ async function mainApp() {
   const stars = createStars(scene, 1000);
   const moon = createMoon(scene);
 
-  const colliders = [];
   // Generate a dynamic terrain mesh so the world has rolling hills instead of
   // a perfectly flat plane. We'll pass the mesh to the character so it can
   // query ground height during its update loop.
@@ -143,17 +144,14 @@ async function mainApp() {
   });
   createHarbor(scene, { center: new THREE.Vector3(-120, 0, 80) });
 
-  // Add a few simple boxes so you can test bumping into obstacles.
-  const obstacleGeo = new THREE.BoxGeometry(2, 2, 2);
-  for (let i = 0; i < 3; i++) {
-    const obstacleMat = new THREE.MeshStandardMaterial({ color: 0x884422 });
-    const obstacle = new THREE.Mesh(obstacleGeo, obstacleMat);
-    obstacle.position.set(i * 4 - 4, 1, -5);
-    obstacle.castShadow = true;
-    obstacle.receiveShadow = true;
-    scene.add(obstacle);
-    colliders.push(obstacle);
-  }
+  // Lay out a formal civic district with a central promenade, symmetrical
+  // civic buildings, and decorative lighting to give the city a planned
+  // character rather than scattered props.
+  const civicDistrict = createCivicDistrict(scene, {
+    plazaLength: 90,
+    promenadeWidth: 16,
+    greensWidth: 9,
+  });
 
   // Example interactable props. userData acts like a metadata bag so you can
   // describe behaviour without subclassing three.js meshes. Below we hook up a
@@ -226,9 +224,9 @@ async function mainApp() {
   const input = new InputMap(renderer.domElement);
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
-  envCollider.fromStaticScene(scene);
   const player = new PlayerController(input, envCollider, { camera });
   scene.add(player.object);
+  envCollider.fromStaticScene(scene);
 
   const createFallbackAvatar = () => {
     const group = new THREE.Group();
@@ -304,6 +302,15 @@ async function mainApp() {
   }
 
   const buildingMgr = new BuildingManager(envCollider);
+  const npcUpdaters = [];
+  if (civicDistrict.walkingLoop) {
+    const crowd = spawnCitizenCrowd(scene, civicDistrict.walkingLoop, {
+      count: 8,
+      minSpeed: 0.7,
+      maxSpeed: 1.4,
+    });
+    npcUpdaters.push(...crowd.updaters);
+  }
   const spawnPlaceholderMonument = (options = {}) => {
     const placeholder = new THREE.Group();
     placeholder.name = "PlaceholderMonument";
@@ -468,6 +475,7 @@ async function mainApp() {
 
     // Update player movement and drive the attached character animation.
     player.update(deltaTime);
+    for (const updateNpc of npcUpdaters) updateNpc(deltaTime);
 
     // Cast a ray through the center of the screen to detect hovered objects and
     // highlight anything marked as interactable via userData.
