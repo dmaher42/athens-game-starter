@@ -10,6 +10,11 @@ export function createSky(scene) {
   // Build and configure the sky dome shader.
   const sky = new Sky();
   sky.scale.setScalar(450000); // make it very big
+  // Mark the sky dome as non-collidable so it is ignored when building
+  // the environment collider. Otherwise the huge sphere would be merged
+  // into the collision geometry and the player capsule would constantly
+  // intersect it, preventing movement.
+  sky.userData.noCollision = true;
 
   const uniforms = sky.material.uniforms;
   uniforms.turbidity.value = 10;
