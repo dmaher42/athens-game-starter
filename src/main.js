@@ -92,6 +92,8 @@ function startTimeOfDayCycle(options = {}) {
 async function mainApp() {
   console.log("🔧 Athens mainApp start");
   const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
   initializeAssetTranscoders(renderer);
