@@ -13,6 +13,25 @@ import { BuildingManager } from "./buildings/BuildingManager";
 import { PlayerController } from "./controls/PlayerController";
 import { Character } from "./characters/Character";
 
+async function probeAsset(url) {
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+    if (response.ok) {
+      return true;
+    }
+
+    if (response.status === 405 || response.status === 501) {
+      const getResponse = await fetch(url, { method: "GET" });
+      return getResponse.ok;
+    }
+
+    return false;
+  } catch (error) {
+    console.debug(`Asset probe failed for "${url}"`, error);
+    return false;
+  }
+}
+
 window.addEventListener("unhandledrejection", (ev) => {
   console.error("Unhandled promise rejection:", ev.reason);
 });
@@ -211,15 +230,28 @@ async function mainApp() {
   };
   const buildingBase = `${import.meta.env.BASE_URL}models/buildings/`;
 
-  try {
-    await buildingMgr.loadBuilding(`${buildingBase}aristotle-tomb.glb`, tombOptions);
-  } catch (error) {
-    console.warn(
-      "Aristotle's Tomb failed to load. Download it with npm run download:aristotle.",
-      error
+  const tombUrl = `${buildingBase}aristotle-tomb.glb`;
+  const fallbackUrl = `${buildingBase}Akropol.glb`;
+  if (await probeAsset(tombUrl)) {
+    try {
+      await buildingMgr.loadBuilding(tombUrl, tombOptions);
+    } catch (error) {
+      console.warn(
+        "Aristotle's Tomb failed to load. Download it with npm run download:aristotle.",
+        error
+      );
+      try {
+        await buildingMgr.loadBuilding(fallbackUrl, tombOptions);
+      } catch (fallbackError) {
+        console.error('Akropol fallback model also failed to load.', fallbackError);
+      }
+    }
+  } else {
+    console.info(
+      "Aristotle's Tomb premium asset not detected. Install it with npm run download:aristotle."
     );
     try {
-      await buildingMgr.loadBuilding(`${buildingBase}Akropol.glb`, tombOptions);
+      await buildingMgr.loadBuilding(fallbackUrl, tombOptions);
     } catch (fallbackError) {
       console.error('Akropol fallback model also failed to load.', fallbackError);
     }
