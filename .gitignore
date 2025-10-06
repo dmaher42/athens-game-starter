@@ -4,3 +4,4 @@ public/basis/
 public/models/buildings/*.glb
 public/favicon.ico
 docs/models/**/*.glb
+!docs/models/character/hero.glb
