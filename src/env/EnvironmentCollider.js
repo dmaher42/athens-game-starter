@@ -1,39 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import type { Capsule } from 'three/examples/jsm/math/Capsule.js';
-
-interface CapsuleCollisionResult {
-  normal: THREE.Vector3;
-  depth: number;
-}
 
 const EPSILON = 1e-6;
 
 export class EnvironmentCollider {
-  public mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
-
-  private positionAttr: THREE.BufferAttribute | null = null;
-  private indexAttr: THREE.BufferAttribute | null = null;
-  private readonly capsuleBox = new THREE.Box3();
-  private readonly triangleBox = new THREE.Box3();
-  private readonly triangle = new THREE.Triangle();
-  private readonly plane = new THREE.Plane();
-  private readonly capsuleSegment = new THREE.Line3();
-
-  private readonly tmpVec0 = new THREE.Vector3();
-  private readonly tmpVec1 = new THREE.Vector3();
-  private readonly tmpVec2 = new THREE.Vector3();
-  private readonly tmpVec3 = new THREE.Vector3();
-  private readonly tmpVec4 = new THREE.Vector3();
-  private readonly tmpVec5 = new THREE.Vector3();
-  private readonly tmpVec6 = new THREE.Vector3();
-  private readonly tmpVec7 = new THREE.Vector3();
-  private readonly tmpVec8 = new THREE.Vector3();
-  private readonly tmpVec9 = new THREE.Vector3();
-  private readonly tmpNormal = new THREE.Vector3();
-  private readonly segPoint = new THREE.Vector3();
-  private readonly triPoint = new THREE.Vector3();
-
   constructor() {
     const material = new THREE.MeshBasicMaterial({
       visible: false,
@@ -48,22 +18,48 @@ export class EnvironmentCollider {
     this.mesh.frustumCulled = false;
     this.mesh.matrixAutoUpdate = false;
     this.mesh.userData.noCollision = true;
+
+    this.positionAttr = null;
+    this.indexAttr = null;
+    this.capsuleBox = new THREE.Box3();
+    this.triangleBox = new THREE.Box3();
+    this.triangle = new THREE.Triangle();
+    this.plane = new THREE.Plane();
+    this.capsuleSegment = new THREE.Line3();
+
+    this.tmpVec0 = new THREE.Vector3();
+    this.tmpVec1 = new THREE.Vector3();
+    this.tmpVec2 = new THREE.Vector3();
+    this.tmpVec3 = new THREE.Vector3();
+    this.tmpVec4 = new THREE.Vector3();
+    this.tmpVec5 = new THREE.Vector3();
+    this.tmpVec6 = new THREE.Vector3();
+    this.tmpVec7 = new THREE.Vector3();
+    this.tmpVec8 = new THREE.Vector3();
+    this.tmpVec9 = new THREE.Vector3();
+    this.tmpNormal = new THREE.Vector3();
+    this.segPoint = new THREE.Vector3();
+    this.triPoint = new THREE.Vector3();
   }
 
-  fromStaticScene(root: THREE.Object3D, opts: { debug?: boolean } = {}) {
-    const geometries: THREE.BufferGeometry[] = [];
+  /**
+   * @param {THREE.Object3D} root
+   * @param {{ debug?: boolean }} [opts]
+   */
+  fromStaticScene(root, opts = {}) {
+    const geometries = [];
     root.updateWorldMatrix(true, true);
 
     const material = this.mesh.material;
     material.visible = !!opts.debug;
 
     root.traverse((child) => {
-      if (!(child as THREE.Mesh).isMesh) return;
+      if (!child.isMesh) return;
       if (child === this.mesh) return;
 
-      const mesh = child as THREE.Mesh;
+      const mesh = child;
       if (mesh.userData?.noCollision === true) return;
-      const geometry = mesh.geometry as THREE.BufferGeometry | undefined;
+      const geometry = mesh.geometry;
       if (!geometry || !geometry.attributes.position) return;
       if (!mesh.visible) return;
 
@@ -79,7 +75,7 @@ export class EnvironmentCollider {
       geometries.push(cloned);
     });
 
-    let merged: THREE.BufferGeometry;
+    let merged;
     if (geometries.length > 0) {
       const combined = mergeGeometries(geometries, false);
       merged = combined ?? new THREE.BufferGeometry();
@@ -96,11 +92,15 @@ export class EnvironmentCollider {
     merged.computeBoundingBox();
     merged.computeBoundingSphere();
 
-    this.positionAttr = merged.getAttribute('position') as THREE.BufferAttribute | null;
-    this.indexAttr = merged.getIndex() as THREE.BufferAttribute | null;
+    this.positionAttr = merged.getAttribute('position');
+    this.indexAttr = merged.getIndex();
   }
 
-  capsuleIntersect(capsule: Capsule): CapsuleCollisionResult | null {
+  /**
+   * @param {import('three/examples/jsm/math/Capsule.js').Capsule} capsule
+   * @returns {{ normal: THREE.Vector3, depth: number } | null}
+   */
+  capsuleIntersect(capsule) {
     const geometry = this.mesh.geometry;
     const position = this.positionAttr;
     if (!geometry || !position || position.count === 0) return null;
@@ -118,11 +118,11 @@ export class EnvironmentCollider {
     if (!boundingBox.intersectsBox(this.capsuleBox)) return null;
 
     let bestDepth = 0;
-    let bestNormal: THREE.Vector3 | null = null;
+    let bestNormal = null;
 
     const index = this.indexAttr;
 
-    const checkTriangle = (aIndex: number, bIndex: number, cIndex: number) => {
+    const checkTriangle = (aIndex, bIndex, cIndex) => {
       this.tmpVec0.fromBufferAttribute(position, aIndex);
       this.tmpVec1.fromBufferAttribute(position, bIndex);
       this.tmpVec2.fromBufferAttribute(position, cIndex);
@@ -184,17 +184,11 @@ export class EnvironmentCollider {
     };
   }
 
-  private closestPointsSegmentTriangle(
-    segment: THREE.Line3,
-    triangle: THREE.Triangle,
-    segPoint: THREE.Vector3,
-    triPoint: THREE.Vector3
-  ): number | null {
+  closestPointsSegmentTriangle(segment, triangle, segPoint, triPoint) {
     const a = triangle.a;
     const b = triangle.b;
     const c = triangle.c;
 
-    // Skip degenerate triangles
     this.tmpVec4.subVectors(b, a);
     this.tmpVec5.subVectors(c, a);
     const normal = this.tmpVec6.copy(this.tmpVec4).cross(this.tmpVec5);
@@ -268,14 +262,7 @@ export class EnvironmentCollider {
     return bestDistance;
   }
 
-  private testEdgeDistance(
-    segment: THREE.Line3,
-    edgeStart: THREE.Vector3,
-    edgeEnd: THREE.Vector3,
-    currentBest: number,
-    segPoint: THREE.Vector3,
-    triPoint: THREE.Vector3
-  ) {
+  testEdgeDistance(segment, edgeStart, edgeEnd, currentBest, segPoint, triPoint) {
     const dist = this.closestPointsSegmentSegment(
       segment.start,
       segment.end,
@@ -294,14 +281,7 @@ export class EnvironmentCollider {
     return currentBest;
   }
 
-  private closestPointsSegmentSegment(
-    p1: THREE.Vector3,
-    q1: THREE.Vector3,
-    p2: THREE.Vector3,
-    q2: THREE.Vector3,
-    target1: THREE.Vector3,
-    target2: THREE.Vector3
-  ) {
+  closestPointsSegmentSegment(p1, q1, p2, q2, target1, target2) {
     const d1 = this.tmpVec4.subVectors(q1, p1);
     const d2 = this.tmpVec5.subVectors(q2, p2);
     const r = this.tmpVec6.subVectors(p1, p2);

@@ -1,67 +1,33 @@
 import * as THREE from 'three';
 import { Capsule } from 'three/examples/jsm/math/Capsule.js';
-import type { InputMap } from '../input/InputMap';
-import type { EnvironmentCollider } from '../env/EnvironmentCollider';
-import type { Character } from '../characters/Character';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
-export interface PlayerOptions {
-  height?: number;
-  radius?: number;
-  camera?: THREE.Camera;
-}
-
-interface CapsuleCollisionResult {
-  normal: THREE.Vector3;
-  depth: number;
-}
+/**
+ * @typedef {{ height?: number, radius?: number, camera?: THREE.Camera }} PlayerOptions
+ */
 
 export class PlayerController {
-  public object = new THREE.Object3D();
+  /**
+   * @param {import('../input/InputMap.js').InputMap} input
+   * @param {import('../env/EnvironmentCollider.js').EnvironmentCollider} env
+   * @param {PlayerOptions} [opts]
+   */
+  constructor(input, env, opts = {}) {
+    this.object = new THREE.Object3D();
 
-  public moveSpeed = 4.0;
-  public sprintMult = 1.8;
-  public gravity = 12.0;
-  public jumpSpeed = 5.0;
-  public slopeLimit = 50;
+    this.moveSpeed = 4.0;
+    this.sprintMult = 1.8;
+    this.gravity = 12.0;
+    this.jumpSpeed = 5.0;
+    this.slopeLimit = 50;
 
-  private readonly input: InputMap;
-  private readonly env: EnvironmentCollider;
-  private readonly camera?: THREE.Camera;
-  private readonly height: number;
-  private readonly radius: number;
-  private readonly capsule: Capsule;
-
-  private velocity = new THREE.Vector3();
-  private groundNormal = new THREE.Vector3(0, 1, 0);
-  private grounded = false;
-  private jumpLocked = false;
-
-  private character?: Character;
-
-  private readonly desired = new THREE.Vector3();
-  private readonly tmpVec = new THREE.Vector3();
-  private readonly tmpVec2 = new THREE.Vector3();
-  private readonly tmpVec3 = new THREE.Vector3();
-  private readonly tmpVec4 = new THREE.Vector3();
-  private readonly tmpQuat = new THREE.Quaternion();
-
-  // damping used to smooth horizontal velocity on ground vs air
-  private readonly groundDamping = 16;
-  private readonly airDamping = 6;
-
-  constructor(
-    input: InputMap,
-    env: EnvironmentCollider,
-    opts: PlayerOptions = {}
-  ) {
     this.input = input;
     this.env = env;
     this.camera = opts.camera;
 
     this.height = opts.height ?? 1.8;
-    this.radius = opts.radius ?? 0.35; // Capsule alignment tip: tweak radius (~0.35-0.42) & height (~1.8) so feet meet the ground.
+    this.radius = opts.radius ?? 0.35;
 
     const topOffset = this.height - this.radius;
     this.capsule = new Capsule(
@@ -72,17 +38,42 @@ export class PlayerController {
 
     this.object.position.set(0, this.height * 0.5, 0);
     this.syncCapsuleToObject();
+
+    this.velocity = new THREE.Vector3();
+    this.groundNormal = new THREE.Vector3(0, 1, 0);
+    this.grounded = false;
+    this.jumpLocked = false;
+
+    this.character = undefined;
+
+    this.desired = new THREE.Vector3();
+    this.tmpVec = new THREE.Vector3();
+    this.tmpVec2 = new THREE.Vector3();
+    this.tmpVec3 = new THREE.Vector3();
+    this.tmpVec4 = new THREE.Vector3();
+    this.tmpQuat = new THREE.Quaternion();
+
+    this.groundDamping = 16;
+    this.airDamping = 6;
   }
 
-  get position() { return this.object.position; }
+  get position() {
+    return this.object.position;
+  }
 
-  attachCharacter(char: Character) {
+  /**
+   * @param {import('../characters/Character.js').Character} char
+   */
+  attachCharacter(char) {
     this.character = char;
     this.object.add(char);
     char.position.set(0, 0, 0);
   }
 
-  update(dt: number) {
+  /**
+   * @param {number} dt
+   */
+  update(dt) {
     if (!Number.isFinite(dt) || dt <= 0) return;
 
     const sprinting = this.input.sprint;
@@ -90,7 +81,6 @@ export class PlayerController {
 
     this.computeDesiredVelocity(speed);
 
-    // smooth horizontal velocity using exponential damping
     const damping = this.grounded ? this.groundDamping : this.airDamping;
     this.velocity.x = THREE.MathUtils.damp(
       this.velocity.x,
@@ -105,7 +95,6 @@ export class PlayerController {
       dt
     );
 
-    // apply friction-style damping when no input
     if (this.desired.lengthSq() === 0) {
       const friction = this.grounded ? 0.85 : 0.95;
       const decay = Math.pow(friction, dt);
@@ -142,7 +131,6 @@ export class PlayerController {
         this.character.rotation.y = yawFacing;
       }
 
-      // drive character animations
       const runThreshold = this.moveSpeed * 1.5;
       const swaggerThreshold = this.moveSpeed * 0.8;
 
@@ -162,7 +150,10 @@ export class PlayerController {
     }
   }
 
-  private computeDesiredVelocity(speed: number) {
+  /**
+   * @param {number} speed
+   */
+  computeDesiredVelocity(speed) {
     this.desired.set(0, 0, 0);
 
     const dirX = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
@@ -201,13 +192,11 @@ export class PlayerController {
     }
   }
 
-  private resolveCollisions(dt: number) {
-    const collider = this.env as unknown as {
-      capsuleIntersect?: (capsule: Capsule) => CapsuleCollisionResult | null | undefined;
-    };
+  resolveCollisions(dt) {
+    const collider = this.env;
 
     this.grounded = false;
-    let slopeNormal: THREE.Vector3 | null = null;
+    let slopeNormal = null;
 
     if (collider?.capsuleIntersect) {
       for (let i = 0; i < 3; i++) {
@@ -236,7 +225,6 @@ export class PlayerController {
         }
       }
     } else {
-      // Fallback to a flat plane at y = height * 0.5
       const center = this.getCapsuleCenter(this.tmpVec3);
       const minY = this.height * 0.5;
       if (center.y < minY) {
@@ -267,7 +255,6 @@ export class PlayerController {
     }
 
     if (!this.grounded && this.velocity.y > 0 && slopeNormal) {
-      // keep upward momentum but ensure we don't cling to slopes
       const normal = slopeNormal;
       const velDot = normal.dot(this.velocity);
       if (velDot < 0) {
@@ -280,7 +267,7 @@ export class PlayerController {
     }
   }
 
-  private syncCapsuleToObject() {
+  syncCapsuleToObject() {
     const center = this.object.position;
     const halfHeight = this.height * 0.5;
     this.capsule.start.set(
@@ -295,7 +282,10 @@ export class PlayerController {
     );
   }
 
-  private getCapsuleCenter(target: THREE.Vector3) {
+  /**
+   * @param {THREE.Vector3} target
+   */
+  getCapsuleCenter(target) {
     return target
       .copy(this.capsule.start)
       .add(this.capsule.end)
