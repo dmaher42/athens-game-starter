@@ -4,6 +4,9 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 
+const DEFAULT_BASIS_TRANSCODER_PATH =
+  "https://unpkg.com/three@0.160.0/examples/jsm/libs/basis/";
+
 // Reuse a single loader instance so we don't repeatedly allocate it whenever we
 // load a new landmark. GLTFLoader understands the .glb format which packages a
 // model and all of its textures into one binary file.
@@ -37,7 +40,26 @@ export function initializeAssetTranscoders(renderer) {
   }
 
   if (!ktx2Loader) {
-    ktx2Loader = new KTX2Loader().setTranscoderPath("/basis/");
+    let transcoderPath = null;
+
+    if (
+      typeof import.meta !== "undefined" &&
+      import.meta &&
+      import.meta.env &&
+      import.meta.env.VITE_BASIS_TRANSCODER_PATH
+    ) {
+      transcoderPath = import.meta.env.VITE_BASIS_TRANSCODER_PATH;
+    } else if (
+      typeof window !== "undefined" &&
+      window &&
+      window.__BASIS_TRANSCODER_PATH__
+    ) {
+      transcoderPath = window.__BASIS_TRANSCODER_PATH__;
+    } else {
+      transcoderPath = DEFAULT_BASIS_TRANSCODER_PATH;
+    }
+
+    ktx2Loader = new KTX2Loader().setTranscoderPath(transcoderPath);
   }
 
   try {
