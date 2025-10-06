@@ -95,6 +95,11 @@ export function createMoon(scene) {
 
   // Group keeps the light and mesh moving together around the world.
   const group = new Group();
+  // Flag the moon group as non-collidable so the environment collider ignores
+  // the temporary origin position before the animation loop relocates it.
+  // Otherwise the initial collider bake would merge the sphere geometry and
+  // the player capsule would immediately intersect it, preventing movement.
+  group.userData.noCollision = true;
   group.add(light);
   group.add(mesh);
 
