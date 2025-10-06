@@ -1,4 +1,4 @@
-const MOVEMENT_KEYS = new Set([
+const CONTROL_KEYS = new Set([
   "KeyW",
   "KeyA",
   "KeyS",
@@ -26,15 +26,8 @@ export class InputMap {
   constructor(canvas = null) {
     /** @private */
     this.keys = new Set();
-    /** @type {boolean} */
-    this.pointerLocked = false;
     /** @private */
     this.canvas = canvas;
-
-    /** @private */
-    this.lookYaw = 0;
-    /** @private */
-    this.lookPitch = 0;
 
     /** @private */
     this.flyToggleQueued = false;
@@ -45,14 +38,14 @@ export class InputMap {
       if (event.code === "KeyF" && !event.repeat) {
         this.flyToggleQueued = true;
       }
-      if (MOVEMENT_KEYS.has(event.code)) {
+      if (CONTROL_KEYS.has(event.code)) {
         event.preventDefault();
       }
     };
     /** @private */
     this.keyUpHandler = (event) => {
       this.keys.delete(event.code);
-      if (MOVEMENT_KEYS.has(event.code)) {
+      if (CONTROL_KEYS.has(event.code)) {
         event.preventDefault();
       }
     };
@@ -62,28 +55,10 @@ export class InputMap {
       this.flyToggleQueued = false;
     };
     /** @private */
-    this.pointerMoveHandler = (event) => {
-      this.onLook(event.movementX, event.movementY);
-    };
-    /** @private */
-    this.pointerLockChangeHandler = () => {
-      const locked = document.pointerLockElement === this.canvas;
-
-      if (locked && !this.pointerLocked) {
-        document.addEventListener("pointermove", this.pointerMoveHandler);
-      } else if (!locked && this.pointerLocked) {
-        document.removeEventListener("pointermove", this.pointerMoveHandler);
-        this.resetLookDelta();
-      }
-
-      this.pointerLocked = locked;
-    };
-
     window.addEventListener("keydown", this.keyDownHandler);
     window.addEventListener("keyup", this.keyUpHandler);
     window.addEventListener("blur", this.blurHandler);
     window.addEventListener("focus", this.blurHandler);
-    document.addEventListener("pointerlockchange", this.pointerLockChangeHandler);
   }
 
   dispose() {
@@ -91,46 +66,21 @@ export class InputMap {
     window.removeEventListener("keyup", this.keyUpHandler);
     window.removeEventListener("blur", this.blurHandler);
     window.removeEventListener("focus", this.blurHandler);
-    document.removeEventListener("pointerlockchange", this.pointerLockChangeHandler);
-    document.removeEventListener("pointermove", this.pointerMoveHandler);
-  }
-
-  requestPointerLock() {
-    this.canvas?.requestPointerLock?.();
-  }
-
-  releasePointerLock() {
-    if (document.pointerLockElement === this.canvas) {
-      document.exitPointerLock?.();
-    }
   }
 
   /**
-   * @param {number} dx
-   * @param {number} dy
-   */
-  onLook(dx, dy) {
-    const sensitivity = 0.0025;
-    this.lookYaw += dx * sensitivity;
-    this.lookPitch += dy * sensitivity;
-  }
-
-  /**
+   * @param {number} [dt=0]
    * @returns {LookDelta}
    */
-  consumeLookDelta() {
-    const yaw = this.lookYaw;
-    const pitch = this.lookPitch;
-    this.resetLookDelta();
-    return { yaw, pitch };
-  }
+  consumeLookDelta(dt = 0) {
+    const yawInput = (this.lookRight ? 1 : 0) - (this.lookLeft ? 1 : 0);
+    const pitchInput = (this.lookDown ? 1 : 0) - (this.lookUp ? 1 : 0);
+    const sensitivity = 1.8; // radians per second
 
-  get yawDelta() {
-    return this.lookYaw;
-  }
-
-  get pitchDelta() {
-    return this.lookPitch;
+    return {
+      yaw: yawInput * sensitivity * dt,
+      pitch: pitchInput * sensitivity * dt,
+    };
   }
 
   /**
@@ -141,19 +91,19 @@ export class InputMap {
   }
 
   get forward() {
-    return this.isDown("KeyW") || this.isDown("ArrowUp");
+    return this.isDown("KeyW");
   }
 
   get back() {
-    return this.isDown("KeyS") || this.isDown("ArrowDown");
+    return this.isDown("KeyS");
   }
 
   get left() {
-    return this.isDown("KeyA") || this.isDown("ArrowLeft");
+    return this.isDown("KeyA");
   }
 
   get right() {
-    return this.isDown("KeyD") || this.isDown("ArrowRight");
+    return this.isDown("KeyD");
   }
 
   get sprint() {
@@ -172,6 +122,22 @@ export class InputMap {
     return this.isDown("ControlLeft") || this.isDown("ControlRight");
   }
 
+  get lookLeft() {
+    return this.isDown("ArrowLeft");
+  }
+
+  get lookRight() {
+    return this.isDown("ArrowRight");
+  }
+
+  get lookUp() {
+    return this.isDown("ArrowUp");
+  }
+
+  get lookDown() {
+    return this.isDown("ArrowDown");
+  }
+
   consumeFlyToggle() {
     if (!this.flyToggleQueued) return false;
     this.flyToggleQueued = false;
@@ -183,11 +149,6 @@ export class InputMap {
     this.keys.clear();
   }
 
-  /** @private */
-  resetLookDelta() {
-    this.lookYaw = 0;
-    this.lookPitch = 0;
-  }
 }
 
 export default InputMap;
