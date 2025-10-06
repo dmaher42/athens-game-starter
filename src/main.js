@@ -213,26 +213,57 @@ async function mainApp() {
 
   const character = new Character();
   const heroPath = `${import.meta.env.BASE_URL}models/character/hero.glb`;
+  const heroFallbackPath =
+    "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Soldier/glTF-Binary/Soldier.glb";
   const attachFallbackAvatar = () => {
     const fallbackAvatar = createFallbackAvatar();
     player.object.add(fallbackAvatar);
     fallbackAvatar.position.set(0, 0, 0);
   };
 
-  if (await probeAsset(heroPath)) {
+  const heroCandidates = [
+    {
+      url: heroPath,
+      label: "project hero",
+      requireProbe: true,
+    },
+    {
+      url: heroFallbackPath,
+      label: "Khronos Soldier sample",
+      requireProbe: false,
+    },
+  ];
+
+  let heroLoaded = false;
+  for (const candidate of heroCandidates) {
+    if (candidate.requireProbe && !(await probeAsset(candidate.url))) {
+      console.info(
+        `Hero avatar not detected at "${candidate.url}". mainApp will try the next available source.`
+      );
+      continue;
+    }
+
     try {
-      await character.load(heroPath, renderer);
+      await character.load(candidate.url, renderer);
       player.attachCharacter(character);
+      heroLoaded = true;
+      if (candidate.url === heroFallbackPath) {
+        console.info(
+          "Using the Khronos Soldier sample as a temporary hero avatar. Run npm run download:hero to install a local model."
+        );
+      }
+      break;
     } catch (error) {
       console.error(
-        `⚠️ Unable to fetch hero GLB from "${heroPath}". mainApp will continue with a placeholder avatar.`,
+        `⚠️ Unable to fetch hero GLB from "${candidate.url}". mainApp will continue with the next option.`,
         error
       );
-      attachFallbackAvatar();
     }
-  } else {
-    console.info(
-      `Hero avatar not detected at "${heroPath}". Drop a model in public/models/character/hero.glb to enable the full character. mainApp will continue with a placeholder avatar.`
+  }
+
+  if (!heroLoaded) {
+    console.warn(
+      "⚠️ No hero avatar sources could be loaded. A placeholder capsule will be used instead."
     );
     attachFallbackAvatar();
   }

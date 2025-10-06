@@ -10,9 +10,11 @@ To run the project locally:
 The build step outputs self-contained static assets under `docs/`, suitable for
 hosting on GitHub Pages or any static site provider.
 
-> ℹ️ Drop a hero character model at `public/models/character/hero.glb` to see the
-> fully animated avatar. When the file is missing the app now spawns a simple
-> fallback capsule so movement and interactions remain testable.
+> ℹ️ Run `npm run download:hero` to fetch a sample character into
+> `public/models/character/hero.glb`. When the file is missing the app now spawns
+> a simple fallback capsule so movement and interactions remain testable. The
+> command accepts `--include-docs` when you also want the asset copied into a
+> prebuilt `docs/` directory for GitHub Pages deployments.
 
 > ⚠️ Opening `index.html` directly from the filesystem will not work. The source
 > imports bare modules (such as `three`) and TypeScript entry points that must be
@@ -98,4 +100,4 @@ After the first successful run, the site will be available at:
 
 ## Asset credits
 
-- **Hero character** – [Robot Hero (Poly Pizza)](https://poly.pizza/m/y9KWOVG21R) by [Quaternius](https://poly.pizza/u/Quaternius), licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Hero character** – [Soldier (glTF Sample Models)](https://github.com/KhronosGroup/glTF-Sample-Models/tree/master/2.0/Soldier) by [Khronos Group](https://www.khronos.org/), licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/).

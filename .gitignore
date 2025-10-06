@@ -2,4 +2,6 @@ node_modules/
 dist/
 public/basis/
 public/models/buildings/*.glb
+public/models/character/*.glb
+docs/models/character/*.glb
 public/favicon.ico
