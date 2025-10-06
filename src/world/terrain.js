@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { HARBOR_CENTER, HARBOR_SEA_LEVEL } from "./locations.js";
 
 // Utility: basic pseudo-random gradient noise using deterministic hashing so we can
 // produce repeatable rolling hills without pulling in an additional dependency.
@@ -58,10 +59,8 @@ function fbm(x, z, octaves, persistence, lacunarity) {
 
 // Cache vector instances so updateTerrain can reuse them without churn.
 const _scratchVec = new THREE.Vector3();
-const HARBOR_CENTER = new THREE.Vector2(-120, 80);
 const HARBOR_INNER_RADIUS = 18;
 const HARBOR_OUTER_RADIUS = 70;
-const HARBOR_SEA_LEVEL = -0.8;
 
 export function createTerrain(scene) {
   // A large subdivided plane gives us enough vertices to push around and create
