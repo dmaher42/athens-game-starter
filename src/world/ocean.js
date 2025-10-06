@@ -34,6 +34,7 @@ function createProceduralWaterNormals(size = 256) {
   const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
+  // Maintain conservative anisotropy to avoid potential mobile performance regressions.
   texture.anisotropy = 4;
   texture.needsUpdate = true;
   return texture;
