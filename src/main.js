@@ -62,6 +62,27 @@ function resolveBaseUrl() {
 
 const BASE_URL = resolveBaseUrl();
 
+// Creates a helper that converts elapsed seconds into the current time-of-day phase.
+// The default 20 minute day slows the cycle so lighting transitions linger longer.
+function startTimeOfDayCycle(options = {}) {
+  const minutesPerDayRaw = options.minutesPerDay ?? 20;
+  const minutesPerDay = Number.isFinite(minutesPerDayRaw)
+    ? Math.max(0, minutesPerDayRaw)
+    : 0;
+  const secondsPerDay = minutesPerDay * 60;
+
+  return {
+    secondsPerDay,
+    phaseAt(elapsedSeconds = 0) {
+      if (!Number.isFinite(elapsedSeconds) || secondsPerDay <= 0) {
+        return 0;
+      }
+      const wrapped = ((elapsedSeconds % secondsPerDay) + secondsPerDay) % secondsPerDay;
+      return wrapped / secondsPerDay;
+    },
+  };
+}
+
 async function mainApp() {
   console.log("🔧 Athens mainApp start");
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -408,7 +429,8 @@ async function mainApp() {
   const interactor = createInteractor(renderer, camera, scene);
 
   const clock = new THREE.Clock();
-  const dayDuration = 60; // seconds for full cycle
+  // Slow the sun/moon orbit so each in-game day lasts 20 real minutes by default.
+  const dayCycle = startTimeOfDayCycle();
 
   function animate() {
     requestAnimationFrame(animate);
@@ -416,7 +438,7 @@ async function mainApp() {
     // Keep track of time for smooth animation and frame-independent movement.
     const deltaTime = clock.getDelta();
     const elapsed = clock.elapsedTime;
-    const phase = (elapsed % dayDuration) / dayDuration;
+    const phase = dayCycle.phaseAt(elapsed);
 
     const theta = phase * Math.PI * 2;
     const sunDir = new THREE.Vector3(
