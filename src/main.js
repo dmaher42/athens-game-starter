@@ -107,6 +107,7 @@ async function mainApp() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap; // softer, stable penumbras
   configureRendererShadows(renderer);
+  renderer.outputColorSpace = THREE.SRGBColorSpace; // modern three.js
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
   initializeAssetTranscoders(renderer);
