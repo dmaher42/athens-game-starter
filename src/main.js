@@ -6,9 +6,11 @@ import { createLighting, updateLighting, createMoon, updateMoon } from "./world/
 import { createInteractor } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
-import { createOcean, updateOcean } from "./world/water.js";
+import { createOcean, updateOcean } from "./world/ocean.js";
 import { createHarbor } from "./world/harbor.js";
-import { HARBOR_CENTER_3D } from "./world/locations.js";
+import { createCity, updateCityLighting } from "./world/city.js";
+import { createRoad } from "./world/roads.js";
+import { HARBOR_CENTER_3D, SEA_LEVEL } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
 import { InputMap } from "./input/InputMap.js";
@@ -144,6 +146,34 @@ async function mainApp() {
     position: HARBOR_CENTER_3D.clone(),
   });
   createHarbor(scene, { center: HARBOR_CENTER_3D });
+
+  const city = createCity(scene, terrain, {
+    center: new THREE.Vector3(-70, SEA_LEVEL, 25),
+    seed: "harbor-town",
+  });
+
+  const roadControlPoints = [
+    new THREE.Vector3(-110, 0, 78),
+    new THREE.Vector3(-95, 0, 60),
+    new THREE.Vector3(-85, 0, 42),
+    new THREE.Vector3(-75, 0, 32),
+    new THREE.Vector3(-70, 0, 25),
+  ];
+  const sampleHeight = terrain.userData?.getHeightAt;
+  for (const point of roadControlPoints) {
+    let height = typeof sampleHeight === "function" ? sampleHeight(point.x, point.z) : null;
+    if (height == null) {
+      height = SEA_LEVEL;
+    }
+    point.y = height + 0.04;
+  }
+  createRoad(scene, roadControlPoints, {
+    width: 2.4,
+    thickness: 0.05,
+    color: 0x4a3d2e,
+    name: "HarborRoad",
+    noCollision: true,
+  });
 
   // Lay out a formal civic district with a central promenade, symmetrical
   // civic buildings, and decorative lighting to give the city a planned
@@ -443,6 +473,12 @@ async function mainApp() {
 
   const interactor = createInteractor(renderer, camera, scene);
 
+  const oceanMood = {
+    nightFactor: 0,
+    calm: 0,
+    tintColor: new THREE.Color(0x11263f),
+  };
+
   const clock = new THREE.Clock();
   // Slow the sun/moon orbit so each in-game day lasts 20 real minutes by default.
   const dayCycle = startTimeOfDayCycle();
@@ -465,6 +501,7 @@ async function mainApp() {
     // Update sky dome, atmospheric lighting, and celestial bodies each frame.
     updateSky(skyObj, sunDir);
     updateLighting(lights, sunDir);
+    updateCityLighting(city, lights.nightFactor);
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
@@ -472,7 +509,9 @@ async function mainApp() {
     // Dynamic terrain subtly sways, hinting at wind. Remove this call if you
     // prefer a static landscape without vertex animation.
     updateTerrain(terrain, elapsed);
-    updateOcean(ocean, deltaTime, sunDir);
+    oceanMood.nightFactor = lights.nightFactor;
+    oceanMood.calm = THREE.MathUtils.clamp(lights.nightFactor * 1.1, 0, 1);
+    updateOcean(ocean, deltaTime, sunDir, oceanMood);
 
     // Update player movement and drive the attached character animation.
     player.update(deltaTime);

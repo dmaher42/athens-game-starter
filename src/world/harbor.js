@@ -1,16 +1,9 @@
 import * as THREE from "three";
-import { HARBOR_CENTER_3D } from "./locations.js";
+import { HARBOR_CENTER_3D, SEA_LEVEL } from "./locations.js";
 
 function enableShadows(mesh) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-}
-
-function createSupportPost(material, height, radiusTop, radiusBottom) {
-  const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 12);
-  const post = new THREE.Mesh(geometry, material);
-  enableShadows(post);
-  return post;
 }
 
 function createWoodMaterial(color) {
@@ -21,32 +14,6 @@ function createWoodMaterial(color) {
   });
 }
 
-function populatePosts(group, options) {
-  const {
-    width,
-    length,
-    spacing,
-    offsetX = 0,
-    offsetZ = 0,
-    deckHeight,
-    postMaterial,
-  } = options;
-
-  const postHeight = deckHeight + 3;
-  const halfWidth = width / 2 - 0.6;
-  const halfLength = length / 2 - 0.6;
-
-  for (let z = -halfLength; z <= halfLength; z += spacing) {
-    const leftPost = createSupportPost(postMaterial, postHeight, 0.45, 0.55);
-    leftPost.position.set(offsetX - halfWidth, deckHeight - postHeight / 2, offsetZ + z);
-    group.add(leftPost);
-
-    const rightPost = createSupportPost(postMaterial, postHeight, 0.45, 0.55);
-    rightPost.position.set(offsetX + halfWidth, deckHeight - postHeight / 2, offsetZ + z);
-    group.add(rightPost);
-  }
-}
-
 function createCrate(size, material) {
   const geometry = new THREE.BoxGeometry(size, size, size);
   const crate = new THREE.Mesh(geometry, material);
@@ -54,8 +21,35 @@ function createCrate(size, material) {
   return crate;
 }
 
+const _postDummy = new THREE.Object3D();
+
+function createPostsMesh(postMaterial, positions, deckHeight) {
+  if (positions.length === 0) {
+    return null;
+  }
+
+  const postHeight = deckHeight + 3;
+  const postGeometry = new THREE.CylinderGeometry(0.45, 0.55, postHeight, 12);
+  const instanced = new THREE.InstancedMesh(postGeometry, postMaterial, positions.length);
+  instanced.castShadow = true;
+  instanced.receiveShadow = true;
+
+  for (let i = 0; i < positions.length; i++) {
+    const pos = positions[i];
+    _postDummy.position.copy(pos);
+    _postDummy.updateMatrix();
+    instanced.setMatrixAt(i, _postDummy.matrix);
+  }
+  instanced.instanceMatrix.needsUpdate = true;
+  instanced.name = "HarborPosts";
+  return instanced;
+}
+
 export function createHarbor(scene, options = {}) {
   const center = options.center ? options.center.clone() : HARBOR_CENTER_3D.clone();
+  if (!Number.isFinite(center.y)) {
+    center.y = SEA_LEVEL;
+  }
   const mainLength = options.mainLength ?? 70;
   const mainWidth = options.mainWidth ?? 9;
   const deckHeight = options.deckHeight ?? 1.4;
@@ -75,18 +69,21 @@ export function createHarbor(scene, options = {}) {
   harbor.name = "Harbor";
   harbor.position.copy(center);
 
+  const postPositions = [];
+
   const mainDeck = new THREE.Mesh(new THREE.BoxGeometry(mainWidth, 0.6, mainLength), deckMaterial);
   mainDeck.position.y = deckHeight;
   enableShadows(mainDeck);
   harbor.add(mainDeck);
 
-  populatePosts(harbor, {
-    width: mainWidth,
-    length: mainLength,
-    spacing: postSpacing,
-    deckHeight,
-    postMaterial,
-  });
+  const postHeight = deckHeight + 3;
+  const postBaseY = deckHeight - postHeight / 2;
+  const halfMainWidth = mainWidth / 2 - 0.6;
+  const halfMainLength = mainLength / 2 - 0.6;
+  for (let z = -halfMainLength; z <= halfMainLength; z += postSpacing) {
+    postPositions.push(new THREE.Vector3(-halfMainWidth, postBaseY, z));
+    postPositions.push(new THREE.Vector3(halfMainWidth, postBaseY, z));
+  }
 
   const approach = new THREE.Mesh(
     new THREE.BoxGeometry(approachLength, 0.5, mainWidth - 2),
@@ -96,49 +93,50 @@ export function createHarbor(scene, options = {}) {
   enableShadows(approach);
   harbor.add(approach);
 
-  const walkwaySupports = new THREE.Group();
   const walkwayHalfWidth = (mainWidth - 2) / 2 - 0.6;
-  const walkwayPostHeight = deckHeight + 3;
+  const walkwayCenterX = mainWidth / 2 + approachLength / 2;
   for (let x = -approachLength / 2; x <= approachLength / 2; x += postSpacing) {
-    const left = createSupportPost(postMaterial, walkwayPostHeight, 0.4, 0.5);
-    left.position.set(x, deckHeight - walkwayPostHeight / 2, -walkwayHalfWidth);
-    walkwaySupports.add(left);
-
-    const right = createSupportPost(postMaterial, walkwayPostHeight, 0.4, 0.5);
-    right.position.set(x, deckHeight - walkwayPostHeight / 2, walkwayHalfWidth);
-    walkwaySupports.add(right);
+    const worldX = walkwayCenterX + x;
+    postPositions.push(new THREE.Vector3(worldX, postBaseY, -walkwayHalfWidth));
+    postPositions.push(new THREE.Vector3(worldX, postBaseY, walkwayHalfWidth));
   }
-  walkwaySupports.position.x = mainWidth / 2 + approachLength / 2;
-  harbor.add(walkwaySupports);
 
   const northSpur = new THREE.Mesh(new THREE.BoxGeometry(mainWidth - 4, 0.45, spurLength), deckMaterial);
   northSpur.position.set(-mainWidth / 2 + 1.2, deckHeight, spurLength / 2 + 2);
   enableShadows(northSpur);
   harbor.add(northSpur);
 
-  populatePosts(harbor, {
-    width: mainWidth - 4,
-    length: spurLength,
-    spacing: postSpacing,
-    offsetX: -mainWidth / 2 + 1.2,
-    offsetZ: spurLength / 2 + 2,
-    deckHeight,
-    postMaterial,
-  });
+  const spurHalfWidth = (mainWidth - 4) / 2 - 0.6;
+  const spurHalfLength = spurLength / 2 - 0.6;
+  const spurOffsetX = -mainWidth / 2 + 1.2;
+  const northOffsetZ = spurLength / 2 + 2;
+  for (let z = -spurHalfLength; z <= spurHalfLength; z += postSpacing) {
+    postPositions.push(
+      new THREE.Vector3(spurOffsetX - spurHalfWidth, postBaseY, northOffsetZ + z)
+    );
+    postPositions.push(
+      new THREE.Vector3(spurOffsetX + spurHalfWidth, postBaseY, northOffsetZ + z)
+    );
+  }
 
   const southSpur = northSpur.clone();
   southSpur.position.z = -(spurLength / 2 + 2);
   harbor.add(southSpur);
 
-  populatePosts(harbor, {
-    width: mainWidth - 4,
-    length: spurLength,
-    spacing: postSpacing,
-    offsetX: -mainWidth / 2 + 1.2,
-    offsetZ: -(spurLength / 2 + 2),
-    deckHeight,
-    postMaterial,
-  });
+  const southOffsetZ = -(spurLength / 2 + 2);
+  for (let z = -spurHalfLength; z <= spurHalfLength; z += postSpacing) {
+    postPositions.push(
+      new THREE.Vector3(spurOffsetX - spurHalfWidth, postBaseY, southOffsetZ + z)
+    );
+    postPositions.push(
+      new THREE.Vector3(spurOffsetX + spurHalfWidth, postBaseY, southOffsetZ + z)
+    );
+  }
+
+  const postsMesh = createPostsMesh(postMaterial, postPositions, deckHeight);
+  if (postsMesh) {
+    harbor.add(postsMesh);
+  }
 
   const railingGeometry = new THREE.BoxGeometry(0.2, 1.1, mainLength);
   const railLeft = new THREE.Mesh(railingGeometry, trimMaterial);

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { Water } from "three/examples/jsm/objects/Water.js";
+import { SEA_LEVEL } from "./locations.js";
 
 function generateNormalComponent(x, y, octave) {
   const frequency = Math.pow(2, octave);
@@ -40,23 +41,35 @@ function createProceduralWaterNormals(size = 256) {
 }
 
 let cachedNormals = null;
+const BASE_WATER_COLOR = new THREE.Color(0x1a4e80);
+const NIGHT_WATER_COLOR = new THREE.Color(0x0b243d);
+const _color = new THREE.Color();
+const _tint = new THREE.Color();
 
 export async function createOcean(scene, options = {}) {
   const size = options.size ?? 800;
-  const position = options.position ?? new THREE.Vector3();
+  const position = options.position ? options.position.clone() : new THREE.Vector3();
+  if (!Number.isFinite(position.y)) {
+    position.y = SEA_LEVEL;
+  }
 
   if (!cachedNormals) {
     cachedNormals = createProceduralWaterNormals();
   }
 
+  const baseTextureSize = options.baseTextureSize ?? 1024;
+  const dpr = options.devicePixelRatio ?? (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1);
+  const dprScale = THREE.MathUtils.clamp(dpr, 1, 2.5);
+  const textureSize = Math.round(baseTextureSize * dprScale);
+
   const geometry = new THREE.PlaneGeometry(size, size, 1, 1);
   const water = new Water(geometry, {
-    textureWidth: 1024,
-    textureHeight: 1024,
+    textureWidth: textureSize,
+    textureHeight: textureSize,
     waterNormals: cachedNormals,
     sunDirection: new THREE.Vector3(0.707, 0.5, 0.5).normalize(),
     sunColor: 0xf2f8ff,
-    waterColor: new THREE.Color(0x1a4e80),
+    waterColor: BASE_WATER_COLOR.clone(),
     distortionScale: 3.2,
     fog: Boolean(scene.fog),
   });
@@ -75,7 +88,7 @@ export async function createOcean(scene, options = {}) {
   };
 }
 
-export function updateOcean(ocean, deltaSeconds = 0, sunDir) {
+export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = {}) {
   if (!ocean) return;
   const uniforms = ocean.uniforms ?? ocean.mesh?.material?.uniforms;
   if (!uniforms) return;
@@ -85,5 +98,18 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir) {
   }
   if (sunDir && uniforms.sunDirection) {
     uniforms.sunDirection.value.copy(sunDir);
+  }
+
+  const nightFactor = THREE.MathUtils.clamp(mood.nightFactor ?? 0, 0, 1);
+  const calmFactor = THREE.MathUtils.clamp(mood.calm ?? nightFactor, 0, 1);
+  const tintColor = mood.tintColor ? _tint.copy(mood.tintColor) : NIGHT_WATER_COLOR;
+
+  _color.copy(BASE_WATER_COLOR).lerp(tintColor, nightFactor);
+  if (uniforms.waterColor) {
+    uniforms.waterColor.value.copy(_color);
+  }
+  if (uniforms.distortionScale) {
+    const calmScale = THREE.MathUtils.lerp(3.2, 1.2, calmFactor);
+    uniforms.distortionScale.value = calmScale;
   }
 }
