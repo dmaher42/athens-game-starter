@@ -176,6 +176,7 @@ async function mainApp() {
   scene.add(envCollider.mesh);
   const player = new PlayerController(input, envCollider, { camera });
   scene.add(player.object);
+  player.object.position.set(0, 0, 10); // or your desired coordinates
 
   // Refresh the environment collider after major static additions like the
   // civic district so promenade geometry participates in collision checks.
