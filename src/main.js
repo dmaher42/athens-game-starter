@@ -8,6 +8,7 @@ import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { createOcean, updateOcean } from "./world/water.js";
 import { createHarbor } from "./world/harbor.js";
+import { HARBOR_CENTER_3D } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
 import { InputMap } from "./input/InputMap.js";
@@ -140,9 +141,9 @@ async function mainApp() {
   const terrain = createTerrain(scene);
   const ocean = await createOcean(scene, {
     size: 800,
-    position: new THREE.Vector3(-120, 0, 80),
+    position: HARBOR_CENTER_3D.clone(),
   });
-  createHarbor(scene, { center: new THREE.Vector3(-120, 0, 80) });
+  createHarbor(scene, { center: HARBOR_CENTER_3D });
 
   // Lay out a formal civic district with a central promenade, symmetrical
   // civic buildings, and decorative lighting to give the city a planned

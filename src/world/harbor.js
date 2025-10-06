@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { HARBOR_CENTER_3D } from "./locations.js";
 
 function enableShadows(mesh) {
   mesh.castShadow = true;
@@ -54,7 +55,7 @@ function createCrate(size, material) {
 }
 
 export function createHarbor(scene, options = {}) {
-  const center = options.center ? options.center.clone() : new THREE.Vector3(-120, 0, 80);
+  const center = options.center ? options.center.clone() : HARBOR_CENTER_3D.clone();
   const mainLength = options.mainLength ?? 70;
   const mainWidth = options.mainWidth ?? 9;
   const deckHeight = options.deckHeight ?? 1.4;
