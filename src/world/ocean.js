@@ -39,7 +39,28 @@ function createProceduralWaterNormals(size = 256) {
   return texture;
 }
 
+const _dayWaterColor = new THREE.Color(0x1a4e80);
+const _nightWaterColor = new THREE.Color(0x091c2a);
+const _moodWaterColor = new THREE.Color();
+
 let cachedNormals = null;
+
+function resolveDevicePixelRatio(options) {
+  if (options && Number.isFinite(options.devicePixelRatio)) {
+    return options.devicePixelRatio;
+  }
+  if (typeof window !== "undefined" && window.devicePixelRatio) {
+    return window.devicePixelRatio;
+  }
+  return 1;
+}
+
+function computeRenderTargetSize(options) {
+  const baseSize = options?.baseTextureSize ?? 512;
+  const dpr = THREE.MathUtils.clamp(resolveDevicePixelRatio(options), 0.75, 3);
+  const size = Math.round(baseSize * dpr);
+  return THREE.MathUtils.clamp(size, 256, 2048);
+}
 
 export async function createOcean(scene, options = {}) {
   const size = options.size ?? 800;
@@ -49,14 +70,16 @@ export async function createOcean(scene, options = {}) {
     cachedNormals = createProceduralWaterNormals();
   }
 
+  const renderTargetSize = computeRenderTargetSize(options);
+
   const geometry = new THREE.PlaneGeometry(size, size, 1, 1);
   const water = new Water(geometry, {
-    textureWidth: 1024,
-    textureHeight: 1024,
+    textureWidth: renderTargetSize,
+    textureHeight: renderTargetSize,
     waterNormals: cachedNormals,
     sunDirection: new THREE.Vector3(0.707, 0.5, 0.5).normalize(),
     sunColor: 0xf2f8ff,
-    waterColor: new THREE.Color(0x1a4e80),
+    waterColor: _dayWaterColor.clone(),
     distortionScale: 3.2,
     fog: Boolean(scene.fog),
   });
@@ -75,7 +98,7 @@ export async function createOcean(scene, options = {}) {
   };
 }
 
-export function updateOcean(ocean, deltaSeconds = 0, sunDir) {
+export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0) {
   if (!ocean) return;
   const uniforms = ocean.uniforms ?? ocean.mesh?.material?.uniforms;
   if (!uniforms) return;
@@ -85,5 +108,15 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir) {
   }
   if (sunDir && uniforms.sunDirection) {
     uniforms.sunDirection.value.copy(sunDir);
+  }
+
+  const calmFactor = THREE.MathUtils.clamp(typeof mood === "number" ? mood : 0, 0, 1);
+  if (uniforms.distortionScale) {
+    uniforms.distortionScale.value = THREE.MathUtils.lerp(3.2, 1.2, calmFactor);
+  }
+  if (uniforms.waterColor) {
+    uniforms.waterColor.value.copy(
+      _moodWaterColor.copy(_dayWaterColor).lerp(_nightWaterColor, calmFactor)
+    );
   }
 }

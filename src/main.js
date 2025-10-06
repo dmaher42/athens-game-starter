@@ -6,9 +6,10 @@ import { createLighting, updateLighting, createMoon, updateMoon } from "./world/
 import { createInteractor } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
-import { createOcean, updateOcean } from "./world/water.js";
-import { createHarbor } from "./world/harbor.js";
-import { HARBOR_CENTER_3D } from "./world/locations.js";
+import { createOcean, updateOcean } from "./world/ocean.js";
+import { createHarbor, updateHarborLighting } from "./world/harbor.js";
+import { createCity, updateCityLighting } from "./world/city.js";
+import { CITY_CHUNK_CENTER, HARBOR_CENTER_3D } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
 import { InputMap } from "./input/InputMap.js";
@@ -143,7 +144,10 @@ async function mainApp() {
     size: 800,
     position: HARBOR_CENTER_3D.clone(),
   });
-  createHarbor(scene, { center: HARBOR_CENTER_3D });
+  const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
+  const city = createCity(scene, terrain, {
+    origin: CITY_CHUNK_CENTER,
+  });
 
   // Lay out a formal civic district with a central promenade, symmetrical
   // civic buildings, and decorative lighting to give the city a planned
@@ -465,6 +469,8 @@ async function mainApp() {
     // Update sky dome, atmospheric lighting, and celestial bodies each frame.
     updateSky(skyObj, sunDir);
     updateLighting(lights, sunDir);
+    updateHarborLighting(harbor, lights.nightFactor);
+    updateCityLighting(city, lights.nightFactor);
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
@@ -472,7 +478,7 @@ async function mainApp() {
     // Dynamic terrain subtly sways, hinting at wind. Remove this call if you
     // prefer a static landscape without vertex animation.
     updateTerrain(terrain, elapsed);
-    updateOcean(ocean, deltaTime, sunDir);
+    updateOcean(ocean, deltaTime, sunDir, lights.nightFactor);
 
     // Update player movement and drive the attached character animation.
     player.update(deltaTime);
