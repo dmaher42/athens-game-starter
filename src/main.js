@@ -158,6 +158,16 @@ async function mainApp() {
     greensWidth: 9,
   });
 
+  const input = new InputMap(renderer.domElement);
+  const envCollider = new EnvironmentCollider();
+  scene.add(envCollider.mesh);
+  const player = new PlayerController(input, envCollider, { camera });
+  scene.add(player.object);
+
+  // Refresh the environment collider after major static additions like the
+  // civic district so promenade geometry participates in collision checks.
+  envCollider.fromStaticScene(scene);
+
   // Example interactable props. userData acts like a metadata bag so you can
   // describe behaviour without subclassing three.js meshes. Below we hook up a
   // swinging door and a street lamp that toggles its light.
@@ -226,11 +236,6 @@ async function mainApp() {
 
   scene.add(lamp);
 
-  const input = new InputMap(renderer.domElement);
-  const envCollider = new EnvironmentCollider();
-  scene.add(envCollider.mesh);
-  const player = new PlayerController(input, envCollider, { camera });
-  scene.add(player.object);
   envCollider.fromStaticScene(scene);
 
   const createFallbackAvatar = () => {
