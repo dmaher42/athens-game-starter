@@ -29,6 +29,18 @@ export class PlayerController {
     this.height = opts.height ?? 1.8;
     this.radius = opts.radius ?? 0.35;
 
+    this.cameraYaw = 0;
+    this.cameraPitch = THREE.MathUtils.degToRad(-15);
+    this.cameraMinPitch = THREE.MathUtils.degToRad(-80);
+    this.cameraMaxPitch = THREE.MathUtils.degToRad(60);
+    this.cameraDistance = 6;
+    this.cameraTargetHeight = this.height * 0.6;
+    this.cameraDamping = 10;
+    this.cameraTarget = new THREE.Vector3();
+    this.cameraDesired = new THREE.Vector3();
+    this.cameraEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+    this.cameraOffset = new THREE.Vector3();
+
     const topOffset = this.height - this.radius;
     this.capsule = new Capsule(
       new THREE.Vector3(0, this.radius, 0),
@@ -75,6 +87,19 @@ export class PlayerController {
    */
   update(dt) {
     if (!Number.isFinite(dt) || dt <= 0) return;
+
+    const lookDelta = this.input.consumeLookDelta();
+    if (this.camera) {
+      this.cameraYaw -= lookDelta.yaw;
+      this.cameraPitch -= lookDelta.pitch;
+      this.cameraPitch = THREE.MathUtils.clamp(
+        this.cameraPitch,
+        this.cameraMinPitch,
+        this.cameraMaxPitch
+      );
+      if (!Number.isFinite(this.cameraYaw)) this.cameraYaw = 0;
+      this.cameraYaw = THREE.MathUtils.euclideanModulo(this.cameraYaw + Math.PI, Math.PI * 2) - Math.PI;
+    }
 
     const sprinting = this.input.sprint;
     const speed = this.moveSpeed * (sprinting ? this.sprintMult : 1);
@@ -123,6 +148,8 @@ export class PlayerController {
     const center = this.getCapsuleCenter(this.tmpVec);
     this.object.position.copy(center);
 
+    this.updateCamera(dt);
+
     if (this.character) {
       const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
       const EPS = 0.05;
@@ -166,7 +193,9 @@ export class PlayerController {
     this.tmpVec2.set(dirX, 0, dirZ).normalize();
 
     if (this.camera) {
-      this.camera.getWorldQuaternion(this.tmpQuat);
+      this.tmpQuat.setFromEuler(
+        this.cameraEuler.set(this.cameraPitch, this.cameraYaw, 0, 'YXZ')
+      );
       const forward = this.tmpVec3.set(0, 0, -1).applyQuaternion(this.tmpQuat);
       forward.y = 0;
       if (forward.lengthSq() < 1e-6) {
@@ -190,6 +219,29 @@ export class PlayerController {
     } else {
       this.desired.copy(this.tmpVec2).multiplyScalar(speed);
     }
+  }
+
+  updateCamera(dt) {
+    if (!this.camera) return;
+
+    this.cameraTarget.copy(this.object.position);
+    this.cameraTarget.y += this.cameraTargetHeight;
+
+    this.tmpQuat.setFromEuler(
+      this.cameraEuler.set(this.cameraPitch, this.cameraYaw, 0, 'YXZ')
+    );
+
+    this.cameraOffset.set(0, 0, this.cameraDistance).applyQuaternion(this.tmpQuat);
+    this.cameraDesired.copy(this.cameraTarget).add(this.cameraOffset);
+
+    if (!Number.isFinite(dt) || dt <= 0) {
+      this.camera.position.copy(this.cameraDesired);
+    } else {
+      const t = 1 - Math.exp(-this.cameraDamping * dt);
+      this.camera.position.lerp(this.cameraDesired, t);
+    }
+
+    this.camera.lookAt(this.cameraTarget);
   }
 
   resolveCollisions(dt) {
