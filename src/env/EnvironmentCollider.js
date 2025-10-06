@@ -53,12 +53,23 @@ export class EnvironmentCollider {
     const material = this.mesh.material;
     material.visible = !!opts.debug;
 
+    const shouldInclude = (node) => {
+      let current = node;
+      while (current) {
+        if (current.userData?.noCollision === true) {
+          return false;
+        }
+        current = current.parent;
+      }
+      return true;
+    };
+
     root.traverse((child) => {
       if (!child.isMesh) return;
       if (child === this.mesh) return;
 
       const mesh = child;
-      if (mesh.userData?.noCollision === true) return;
+      if (!shouldInclude(mesh)) return;
       const geometry = mesh.geometry;
       if (!geometry || !geometry.attributes.position) return;
       if (!mesh.visible) return;
