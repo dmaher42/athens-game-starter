@@ -10,11 +10,12 @@ To run the project locally:
 The build step outputs self-contained static assets under `docs/`, suitable for
 hosting on GitHub Pages or any static site provider.
 
-> ℹ️ The repository intentionally omits large binary assets. Drop a hero
-> character model at `public/models/character/hero.glb` to see the fully animated
-> avatar. When the file is missing the runtime first tries the bundled
-> "Hooded Adventurer" sample before falling back to a simple capsule so movement
-> and interactions remain testable.
+> ℹ️ Drop a hero character model at `public/models/character/hero.glb` to see the
+> fully animated avatar. When the file is missing the runtime first tries the
+> bundled "Hooded Adventurer" sample before falling back to a simple capsule so
+> movement and interactions remain testable. The build output at
+> `docs/models/character/hero.glb` is tracked by Git so production deployments
+> served from the `docs/` folder (for example GitHub Pages) can fetch the model.
 
 ### Controls
 
@@ -40,9 +41,8 @@ loads your custom `hero.glb`:
    your file it logs a warning about the placeholder capsule; seeing the fully
    animated character without that warning confirms the GLB loaded correctly.
 4. When preparing a production build, make sure the same file ends up at
-   `docs/models/character/hero.glb` so your deployment can fetch it. Hosted
-   services that mirror the repository (such as GitHub Pages) expect the file in
-   that location.
+   `docs/models/character/hero.glb` and commit it. Hosted services that mirror the
+   repository (such as GitHub Pages) expect the file in that location.
 
 > ⚠️ Opening `index.html` directly from the filesystem will not work. The source
 > imports bare modules (such as `three`) and TypeScript entry points that must be
