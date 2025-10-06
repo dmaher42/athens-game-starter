@@ -15,6 +15,26 @@ hosting on GitHub Pages or any static site provider.
 > avatar. When the file is missing the app spawns a simple fallback capsule so
 > movement and interactions remain testable.
 
+### Verifying custom hero models without the CLI
+
+If you do not have access to a local terminal you can still confirm the runtime
+loads your custom `hero.glb`:
+
+1. Use your file manager to copy the model to
+   `public/models/character/hero.glb`. Keep the filename—`Character.ts` requests
+   that exact path when the app starts.
+2. Open the project folder in an editor with an integrated dev server (for
+   example VS Code + the Vite extension) or upload the repository to a platform
+   such as StackBlitz that can run Vite in the browser. Both options replicate
+   the standard `npm run dev` workflow without relying on your own terminal.
+3. Start the preview and watch the browser console. If the runtime cannot reach
+   your file it logs a warning about the placeholder capsule; seeing the fully
+   animated character without that warning confirms the GLB loaded correctly.
+4. When preparing a production build, make sure the same file ends up at
+   `docs/models/character/hero.glb` so your deployment can fetch it. Hosted
+   services that mirror the repository (such as GitHub Pages) expect the file in
+   that location.
+
 > ⚠️ Opening `index.html` directly from the filesystem will not work. The source
 > imports bare modules (such as `three`) and TypeScript entry points that must be
 > processed by Vite before they can run in the browser.
