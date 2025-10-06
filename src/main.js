@@ -315,7 +315,7 @@ async function mainApp() {
   };
   const buildingBase = `${import.meta.env.BASE_URL}models/buildings/`;
 
-  const tombUrl = `${buildingBase}aristotle-tomb.glb`;
+  const tombUrl = `${import.meta.env.BASE_URL}athens-game-starter/models/buildings/aristotle-tomb.gltf`;
   const fallbackUrl = `${buildingBase}Akropol.glb`;
   const fallbackAvailable = await probeAsset(fallbackUrl);
   const loadFallbackMonument = async () => {
