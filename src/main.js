@@ -7,11 +7,11 @@ import { createInteractor } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
-import { InputMap } from "./input/InputMap";
-import { EnvironmentCollider } from "./env/EnvironmentCollider";
-import { BuildingManager } from "./buildings/BuildingManager";
-import { PlayerController } from "./controls/PlayerController";
-import { Character } from "./characters/Character";
+import { InputMap } from "./input/InputMap.js";
+import { EnvironmentCollider } from "./env/EnvironmentCollider.js";
+import { BuildingManager } from "./buildings/BuildingManager.js";
+import { PlayerController } from "./controls/PlayerController.js";
+import { Character } from "./characters/Character.js";
 
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
