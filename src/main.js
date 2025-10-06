@@ -188,14 +188,15 @@ async function mainApp() {
   };
 
   const character = new Character();
+  const heroPath = `${import.meta.env.BASE_URL}models/character/hero.glb`;
   try {
-    await character.load(
-      `${import.meta.env.BASE_URL}models/character/hero.glb`,
-      renderer
-    );
+    await character.load(heroPath, renderer);
     player.attachCharacter(character);
   } catch (error) {
-    console.warn("Hero character failed to load; using fallback avatar.", error);
+    console.error(
+      `⚠️ Unable to fetch hero GLB from "${heroPath}". mainApp will continue with a placeholder avatar.`,
+      error
+    );
     const fallbackAvatar = createFallbackAvatar();
     player.object.add(fallbackAvatar);
     fallbackAvatar.position.set(0, 0, 0);
