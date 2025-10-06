@@ -58,6 +58,10 @@ function fbm(x, z, octaves, persistence, lacunarity) {
 
 // Cache vector instances so updateTerrain can reuse them without churn.
 const _scratchVec = new THREE.Vector3();
+const HARBOR_CENTER = new THREE.Vector2(-120, 80);
+const HARBOR_INNER_RADIUS = 18;
+const HARBOR_OUTER_RADIUS = 70;
+const HARBOR_SEA_LEVEL = -0.8;
 
 export function createTerrain(scene) {
   // A large subdivided plane gives us enough vertices to push around and create
@@ -90,7 +94,21 @@ export function createTerrain(scene) {
     const z = positionAttribute.getY(i);
 
     // Fractal noise builds interesting shapes while remaining deterministic.
-    const height = fbm(x * baseFrequency, z * baseFrequency, 5, 0.5, 2.1) * heightScale;
+    let height = fbm(x * baseFrequency, z * baseFrequency, 5, 0.5, 2.1) * heightScale;
+
+    const dx = x - HARBOR_CENTER.x;
+    const dz = z - HARBOR_CENTER.y;
+    const distance = Math.hypot(dx, dz);
+    if (distance < HARBOR_OUTER_RADIUS) {
+      const flatten = 1 - THREE.MathUtils.smoothstep(
+        distance,
+        HARBOR_INNER_RADIUS,
+        HARBOR_OUTER_RADIUS
+      );
+      if (flatten > 0) {
+        height = THREE.MathUtils.lerp(height, HARBOR_SEA_LEVEL, flatten);
+      }
+    }
     positionAttribute.setZ(i, height);
     baseHeights[i] = height;
 
