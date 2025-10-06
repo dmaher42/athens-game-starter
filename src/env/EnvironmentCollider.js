@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const EPSILON = 1e-6;
+const _instanceMatrix = new THREE.Matrix4();
+const _worldInstanceMatrix = new THREE.Matrix4();
 
 export class EnvironmentCollider {
   constructor() {
@@ -64,6 +66,19 @@ export class EnvironmentCollider {
       return true;
     };
 
+    const pushGeometry = (geometry, matrix) => {
+      const cloned = geometry.clone();
+
+      Object.keys(cloned.attributes).forEach((attrName) => {
+        if (attrName !== 'position') {
+          cloned.deleteAttribute(attrName);
+        }
+      });
+
+      cloned.applyMatrix4(matrix);
+      geometries.push(cloned);
+    };
+
     root.traverse((child) => {
       if (!child.isMesh) return;
       if (child === this.mesh) return;
@@ -74,16 +89,19 @@ export class EnvironmentCollider {
       if (!geometry || !geometry.attributes.position) return;
       if (!mesh.visible) return;
 
-      const cloned = geometry.clone();
+      if (mesh.isInstancedMesh) {
+        const count = mesh.count ?? 0;
+        if (count === 0) return;
 
-      Object.keys(cloned.attributes).forEach((attrName) => {
-        if (attrName !== 'position') {
-          cloned.deleteAttribute(attrName);
+        for (let i = 0; i < count; i++) {
+          mesh.getMatrixAt(i, _instanceMatrix);
+          _worldInstanceMatrix.multiplyMatrices(mesh.matrixWorld, _instanceMatrix);
+          pushGeometry(geometry, _worldInstanceMatrix);
         }
-      });
+        return;
+      }
 
-      cloned.applyMatrix4(mesh.matrixWorld);
-      geometries.push(cloned);
+      pushGeometry(geometry, mesh.matrixWorld);
     });
 
     let merged;
