@@ -289,11 +289,7 @@ async function mainApp() {
   if (heroAssetUrl) {
     if (heroAssetUrl !== heroPath) {
       console.info(
-        [
-          `Hero avatar not detected at "${heroPath}".`,
-          "Using the bundled \"Hooded Adventurer\" sample avatar instead.",
-          "Drop your own GLB at public/models/character/hero.glb to override it.",
-        ].join(" ")
+        `Hero GLB not found at ${heroPath}; using bundled sample avatar.`
       );
     }
     try {
@@ -307,9 +303,8 @@ async function mainApp() {
       attachFallbackAvatar();
     }
   } else {
-    console.info(
-      `Hero avatar not detected at "${heroPath}". Drop a model in public/models/character/hero.glb to enable the full character. mainApp will continue with a placeholder avatar.`
-    );
+    console.info(`Hero GLB not found at ${heroPath}; using placeholder avatar.`);
+    console.info(`Add your own hero model at ${heroPath}.`);
     attachFallbackAvatar();
   }
 
@@ -400,10 +395,9 @@ async function mainApp() {
   };
   const buildingBase = `${BASE_URL}models/buildings/`;
 
-  const tombUrlCandidates = [
-    `${buildingBase}aristotle-tomb.glb`,
-    `${BASE_URL}athens-game-starter/models/buildings/aristotle-tomb.gltf`,
-  ];
+  const tombPrimaryPath = `${buildingBase}aristotle-tomb.glb`;
+  const tombBundledPath = `${buildingBase}aristotle-tomb.gltf`;
+  const tombUrlCandidates = [tombPrimaryPath, tombBundledPath];
   const tombUrl = await resolveFirstAvailableAsset(tombUrlCandidates);
   const fallbackUrl = `${buildingBase}Akropol.glb`;
   const fallbackAvailable = await probeAsset(fallbackUrl);
@@ -417,10 +411,7 @@ async function mainApp() {
       }
     } else {
       console.info(
-        [
-          "Akropol fallback model not bundled to keep the repository lightweight.",
-          "Run npm run download:aristotle or place your own GLB in public/models/buildings/.",
-        ].join(" ")
+        `Akropol fallback not bundled; add ${fallbackUrl} or run npm run download:aristotle.`
       );
     }
 
@@ -430,11 +421,9 @@ async function mainApp() {
   if (tombUrl) {
     if (tombUrl !== tombUrlCandidates[0]) {
       console.info(
-        [
-          "Aristotle's Tomb premium asset not downloaded yet.",
-          "Rendering the bundled placeholder version until you run npm run download:aristotle.",
-        ].join(" ")
+        `Aristotle's Tomb missing at ${tombPrimaryPath}; using bundled placeholder.`
       );
+      console.info("Run npm run download:aristotle to install the premium asset.");
     }
     try {
       await buildingMgr.loadBuilding(tombUrl, tombOptions);
@@ -447,7 +436,7 @@ async function mainApp() {
     }
   } else {
     console.info(
-      "Aristotle's Tomb premium asset not detected. Install it with npm run download:aristotle."
+      `Aristotle's Tomb missing at ${tombPrimaryPath}; install it with npm run download:aristotle.`
     );
     await loadFallbackMonument();
   }
