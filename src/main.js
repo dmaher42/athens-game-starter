@@ -6,6 +6,8 @@ import { createLighting, updateLighting, createMoon, updateMoon } from "./world/
 import { createInteractor } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
+import { createOcean, updateOcean } from "./world/water.js";
+import { createHarbor } from "./world/harbor.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { InputMap } from "./input/InputMap.js";
 import { EnvironmentCollider } from "./env/EnvironmentCollider.js";
@@ -135,6 +137,11 @@ async function mainApp() {
   // a perfectly flat plane. We'll pass the mesh to the character so it can
   // query ground height during its update loop.
   const terrain = createTerrain(scene);
+  const ocean = await createOcean(scene, {
+    size: 800,
+    position: new THREE.Vector3(-120, 0, 80),
+  });
+  createHarbor(scene, { center: new THREE.Vector3(-120, 0, 80) });
 
   // Add a few simple boxes so you can test bumping into obstacles.
   const obstacleGeo = new THREE.BoxGeometry(2, 2, 2);
@@ -457,6 +464,7 @@ async function mainApp() {
     // Dynamic terrain subtly sways, hinting at wind. Remove this call if you
     // prefer a static landscape without vertex animation.
     updateTerrain(terrain, elapsed);
+    updateOcean(ocean, deltaTime, sunDir);
 
     // Update player movement and drive the attached character animation.
     player.update(deltaTime);
