@@ -12,8 +12,9 @@ hosting on GitHub Pages or any static site provider.
 
 > ℹ️ The repository intentionally omits large binary assets. Drop a hero
 > character model at `public/models/character/hero.glb` to see the fully animated
-> avatar. When the file is missing the app spawns a simple fallback capsule so
-> movement and interactions remain testable.
+> avatar. When the file is missing the runtime first tries the bundled
+> "Hooded Adventurer" sample before falling back to a simple capsule so movement
+> and interactions remain testable.
 
 ### Verifying custom hero models without the CLI
 
@@ -50,8 +51,9 @@ SKETCHFAB_TOKEN=<your token> npm run download:aristotle
 ```
 
 The GLB is saved to `public/models/buildings/aristotle-tomb.glb`. If the file is
-missing when the app boots the runtime now spawns a lightweight placeholder
-monument so you can continue exploring even before fetching the premium asset.
+missing when the app boots the runtime now renders a bundled placeholder glTF
+and, when that is not available, spawns a lightweight procedural monument so you
+can continue exploring even before fetching the premium asset.
 
 ## KTX2 textures
 

@@ -37,6 +37,15 @@ async function probeAsset(url) {
   }
 }
 
+async function resolveFirstAvailableAsset(urls) {
+  for (const url of urls) {
+    if (await probeAsset(url)) {
+      return url;
+    }
+  }
+  return null;
+}
+
 window.addEventListener("unhandledrejection", (ev) => {
   console.error("Unhandled promise rejection:", ev.reason);
 });
@@ -225,19 +234,36 @@ async function mainApp() {
 
   const character = new Character();
   const heroPath = `${BASE_URL}models/character/hero.glb`;
+  const bundledHeroPath = `${BASE_URL}models/character/${encodeURIComponent(
+    "Hooded Adventurer.glb"
+  )}`;
   const attachFallbackAvatar = () => {
     const fallbackAvatar = createFallbackAvatar();
     player.object.add(fallbackAvatar);
     fallbackAvatar.position.set(0, 0, 0);
   };
 
-  if (await probeAsset(heroPath)) {
+  const heroAssetUrl = await resolveFirstAvailableAsset([
+    heroPath,
+    bundledHeroPath,
+  ]);
+
+  if (heroAssetUrl) {
+    if (heroAssetUrl !== heroPath) {
+      console.info(
+        [
+          `Hero avatar not detected at "${heroPath}".`,
+          "Using the bundled \"Hooded Adventurer\" sample avatar instead.",
+          "Drop your own GLB at public/models/character/hero.glb to override it.",
+        ].join(" ")
+      );
+    }
     try {
-      await character.load(heroPath, renderer);
+      await character.load(heroAssetUrl, renderer);
       player.attachCharacter(character);
     } catch (error) {
       console.error(
-        `⚠️ Unable to fetch hero GLB from "${heroPath}". mainApp will continue with a placeholder avatar.`,
+        `⚠️ Unable to fetch hero GLB from "${heroAssetUrl}". mainApp will continue with a placeholder avatar.`,
         error
       );
       attachFallbackAvatar();
@@ -327,7 +353,11 @@ async function mainApp() {
   };
   const buildingBase = `${BASE_URL}models/buildings/`;
 
-  const tombUrl = `${BASE_URL}athens-game-starter/models/buildings/aristotle-tomb.gltf`;
+  const tombUrlCandidates = [
+    `${buildingBase}aristotle-tomb.glb`,
+    `${BASE_URL}athens-game-starter/models/buildings/aristotle-tomb.gltf`,
+  ];
+  const tombUrl = await resolveFirstAvailableAsset(tombUrlCandidates);
   const fallbackUrl = `${buildingBase}Akropol.glb`;
   const fallbackAvailable = await probeAsset(fallbackUrl);
   const loadFallbackMonument = async () => {
@@ -350,7 +380,15 @@ async function mainApp() {
     spawnPlaceholderMonument(tombOptions);
   };
 
-  if (await probeAsset(tombUrl)) {
+  if (tombUrl) {
+    if (tombUrl !== tombUrlCandidates[0]) {
+      console.info(
+        [
+          "Aristotle's Tomb premium asset not downloaded yet.",
+          "Rendering the bundled placeholder version until you run npm run download:aristotle.",
+        ].join(" ")
+      );
+    }
     try {
       await buildingMgr.loadBuilding(tombUrl, tombOptions);
     } catch (error) {
