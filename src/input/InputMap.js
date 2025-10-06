@@ -10,6 +10,9 @@ const MOVEMENT_KEYS = new Set([
   "ShiftLeft",
   "ShiftRight",
   "Space",
+  "ControlLeft",
+  "ControlRight",
+  "KeyF",
 ]);
 
 /**
@@ -34,8 +37,14 @@ export class InputMap {
     this.lookPitch = 0;
 
     /** @private */
+    this.flyToggleQueued = false;
+
+    /** @private */
     this.keyDownHandler = (event) => {
       this.keys.add(event.code);
+      if (event.code === "KeyF" && !event.repeat) {
+        this.flyToggleQueued = true;
+      }
       if (MOVEMENT_KEYS.has(event.code)) {
         event.preventDefault();
       }
@@ -50,6 +59,7 @@ export class InputMap {
     /** @private */
     this.blurHandler = () => {
       this.resetKeys();
+      this.flyToggleQueued = false;
     };
     /** @private */
     this.pointerMoveHandler = (event) => {
@@ -152,6 +162,20 @@ export class InputMap {
 
   get jump() {
     return this.isDown("Space");
+  }
+
+  get flyUp() {
+    return this.isDown("Space");
+  }
+
+  get flyDown() {
+    return this.isDown("ControlLeft") || this.isDown("ControlRight");
+  }
+
+  consumeFlyToggle() {
+    if (!this.flyToggleQueued) return false;
+    this.flyToggleQueued = false;
+    return true;
   }
 
   /** @private */
