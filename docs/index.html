@@ -4,11 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Athens Game Starter</title>
-    <script type="module" crossorigin src="/athens-game-starter/assets/index-B5Qt9EMX.js"></script>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://esm.sh/three@0.160.0",
+          "three/": "https://esm.sh/three@0.160.0/",
+          "three/examples/": "https://esm.sh/three@0.160.0/examples/"
+        }
+      }
+    </script>
+    <script type="module" crossorigin src="/athens-game-starter/assets/index-DHRXFBHN.js"></script>
+    <link rel="stylesheet" crossorigin href="/athens-game-starter/assets/index-DqyMaXi4.css">
   </head>
   <body>
     <div id="app"></div>
-    <!-- Let Vite inject the correct script -->
-    <script type="module"></script>
   </body>
 </html>

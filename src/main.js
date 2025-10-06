@@ -238,6 +238,75 @@ async function mainApp() {
   }
 
   const buildingMgr = new BuildingManager(envCollider);
+  const spawnPlaceholderMonument = (options = {}) => {
+    const placeholder = new THREE.Group();
+    placeholder.name = "PlaceholderMonument";
+
+    const shouldCollide = Boolean(options.collision);
+    const applySharedProps = (mesh) => {
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData.noCollision = !shouldCollide;
+    };
+
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(4.2, 4.6, 1, 36),
+      new THREE.MeshStandardMaterial({ color: 0xe0d6c5, roughness: 0.7 })
+    );
+    base.position.y = 0.5;
+    applySharedProps(base);
+    placeholder.add(base);
+
+    const columnGeometry = new THREE.CylinderGeometry(0.45, 0.5, 4.5, 20);
+    const columnMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd4c2a3,
+      roughness: 0.55,
+      metalness: 0.05,
+    });
+    for (let i = 0; i < 6; i++) {
+      const column = new THREE.Mesh(columnGeometry, columnMaterial);
+      const angle = (i / 6) * Math.PI * 2;
+      column.position.set(Math.cos(angle) * 2.9, 2.75, Math.sin(angle) * 2.9);
+      applySharedProps(column);
+      placeholder.add(column);
+    }
+
+    const cap = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.8, 4, 0.6, 36),
+      new THREE.MeshStandardMaterial({ color: 0xe8dcc7, roughness: 0.6 })
+    );
+    cap.position.y = 5.05;
+    applySharedProps(cap);
+    placeholder.add(cap);
+
+    const statue = new THREE.Mesh(
+      new THREE.ConeGeometry(1.1, 2.4, 24),
+      new THREE.MeshStandardMaterial({ color: 0xc9b48a, roughness: 0.4 })
+    );
+    statue.position.y = 6.5;
+    statue.castShadow = true;
+    statue.receiveShadow = true;
+    statue.userData.noCollision = true;
+    placeholder.add(statue);
+
+    if (options.position) {
+      placeholder.position.copy(options.position);
+    }
+    if (typeof options.rotateY === "number") {
+      placeholder.rotation.y = options.rotateY;
+    }
+    if (options.scale) {
+      placeholder.scale.setScalar(options.scale);
+    }
+
+    scene.add(placeholder);
+
+    if (shouldCollide) {
+      envCollider.fromStaticScene(scene);
+    }
+
+    return placeholder;
+  };
   const tombOptions = {
     scale: 1.2,
     position: new THREE.Vector3(6, 0, -28),
@@ -248,6 +317,27 @@ async function mainApp() {
 
   const tombUrl = `${buildingBase}aristotle-tomb.glb`;
   const fallbackUrl = `${buildingBase}Akropol.glb`;
+  const fallbackAvailable = await probeAsset(fallbackUrl);
+  const loadFallbackMonument = async () => {
+    if (fallbackAvailable) {
+      try {
+        await buildingMgr.loadBuilding(fallbackUrl, tombOptions);
+        return;
+      } catch (fallbackError) {
+        console.error('Akropol fallback model also failed to load.', fallbackError);
+      }
+    } else {
+      console.info(
+        [
+          "Akropol fallback model not bundled to keep the repository lightweight.",
+          "Run npm run download:aristotle or place your own GLB in public/models/buildings/.",
+        ].join(" ")
+      );
+    }
+
+    spawnPlaceholderMonument(tombOptions);
+  };
+
   if (await probeAsset(tombUrl)) {
     try {
       await buildingMgr.loadBuilding(tombUrl, tombOptions);
@@ -256,21 +346,13 @@ async function mainApp() {
         "Aristotle's Tomb failed to load. Download it with npm run download:aristotle.",
         error
       );
-      try {
-        await buildingMgr.loadBuilding(fallbackUrl, tombOptions);
-      } catch (fallbackError) {
-        console.error('Akropol fallback model also failed to load.', fallbackError);
-      }
+      await loadFallbackMonument();
     }
   } else {
     console.info(
       "Aristotle's Tomb premium asset not detected. Install it with npm run download:aristotle."
     );
-    try {
-      await buildingMgr.loadBuilding(fallbackUrl, tombOptions);
-    } catch (fallbackError) {
-      console.error('Akropol fallback model also failed to load.', fallbackError);
-    }
+    await loadFallbackMonument();
   }
 
   console.log("Scene children:", scene.children);
