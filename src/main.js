@@ -208,17 +208,28 @@ async function mainApp() {
 
   const character = new Character();
   const heroPath = `${import.meta.env.BASE_URL}models/character/hero.glb`;
-  try {
-    await character.load(heroPath, renderer);
-    player.attachCharacter(character);
-  } catch (error) {
-    console.error(
-      `⚠️ Unable to fetch hero GLB from "${heroPath}". mainApp will continue with a placeholder avatar.`,
-      error
-    );
+  const attachFallbackAvatar = () => {
     const fallbackAvatar = createFallbackAvatar();
     player.object.add(fallbackAvatar);
     fallbackAvatar.position.set(0, 0, 0);
+  };
+
+  if (await probeAsset(heroPath)) {
+    try {
+      await character.load(heroPath, renderer);
+      player.attachCharacter(character);
+    } catch (error) {
+      console.error(
+        `⚠️ Unable to fetch hero GLB from "${heroPath}". mainApp will continue with a placeholder avatar.`,
+        error
+      );
+      attachFallbackAvatar();
+    }
+  } else {
+    console.info(
+      `Hero avatar not detected at "${heroPath}". Drop a model in public/models/character/hero.glb to enable the full character. mainApp will continue with a placeholder avatar.`
+    );
+    attachFallbackAvatar();
   }
 
   const buildingMgr = new BuildingManager(envCollider);
