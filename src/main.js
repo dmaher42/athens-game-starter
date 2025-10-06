@@ -41,6 +41,18 @@ window.addEventListener("unhandledrejection", (ev) => {
   console.error("Unhandled promise rejection:", ev.reason);
 });
 
+function resolveBaseUrl() {
+  if (typeof import.meta !== "undefined" && import.meta && import.meta.env) {
+    const value = import.meta.env.BASE_URL;
+    if (typeof value === "string" && value.length > 0) {
+      return value.endsWith("/") ? value : `${value}/`;
+    }
+  }
+  return "/";
+}
+
+const BASE_URL = resolveBaseUrl();
+
 async function mainApp() {
   console.log("🔧 Athens mainApp start");
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -212,7 +224,7 @@ async function mainApp() {
   };
 
   const character = new Character();
-  const heroPath = `${import.meta.env.BASE_URL}models/character/hero.glb`;
+  const heroPath = `${BASE_URL}models/character/hero.glb`;
   const attachFallbackAvatar = () => {
     const fallbackAvatar = createFallbackAvatar();
     player.object.add(fallbackAvatar);
@@ -313,9 +325,9 @@ async function mainApp() {
     rotateY: Math.PI * 0.15,
     collision: true,
   };
-  const buildingBase = `${import.meta.env.BASE_URL}models/buildings/`;
+  const buildingBase = `${BASE_URL}models/buildings/`;
 
-  const tombUrl = `${import.meta.env.BASE_URL}athens-game-starter/models/buildings/aristotle-tomb.gltf`;
+  const tombUrl = `${BASE_URL}athens-game-starter/models/buildings/aristotle-tomb.gltf`;
   const fallbackUrl = `${buildingBase}Akropol.glb`;
   const fallbackAvailable = await probeAsset(fallbackUrl);
   const loadFallbackMonument = async () => {
