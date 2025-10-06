@@ -15,6 +15,7 @@ export class PlayerController {
    */
   constructor(input, env, opts = {}) {
     this.object = new THREE.Object3D();
+    this.object.userData.noCollision = true;
 
     this.moveSpeed = 4.0;
     this.sprintMult = 1.8;
