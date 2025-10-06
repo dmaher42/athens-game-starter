@@ -16,6 +16,14 @@ hosting on GitHub Pages or any static site provider.
 > "Hooded Adventurer" sample before falling back to a simple capsule so movement
 > and interactions remain testable.
 
+### Controls
+
+- **W / A / S / D** (or arrow keys) – Move across the terrain.
+- **Shift** – Sprint while grounded or flying.
+- **Space** – Jump when on the ground; ascend while flying.
+- **Ctrl** – Descend while flying.
+- **F** – Toggle flight mode on or off.
+
 ### Verifying custom hero models without the CLI
 
 If you do not have access to a local terminal you can still confirm the runtime

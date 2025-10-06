@@ -57,6 +57,10 @@ export class PlayerController {
     this.grounded = false;
     this.jumpLocked = false;
 
+    this.flying = false;
+    this.flySpeed = 8.0;
+    this.flyIdleDecay = 0.9;
+
     this.character = undefined;
 
     this.desired = new THREE.Vector3();
@@ -89,6 +93,19 @@ export class PlayerController {
   update(dt) {
     if (!Number.isFinite(dt) || dt <= 0) return;
 
+    const toggledFly =
+      typeof this.input.consumeFlyToggle === 'function'
+        ? this.input.consumeFlyToggle()
+        : false;
+    if (toggledFly) {
+      this.flying = !this.flying;
+      this.grounded = false;
+      this.velocity.y = 0;
+      if (!this.flying) {
+        this.jumpLocked = true;
+      }
+    }
+
     const lookDelta = this.input.consumeLookDelta();
     if (this.camera) {
       this.cameraYaw -= lookDelta.yaw;
@@ -103,11 +120,12 @@ export class PlayerController {
     }
 
     const sprinting = this.input.sprint;
-    const speed = this.moveSpeed * (sprinting ? this.sprintMult : 1);
+    const baseSpeed = this.flying ? this.flySpeed : this.moveSpeed;
+    const speed = baseSpeed * (sprinting ? this.sprintMult : 1);
 
-    this.computeDesiredVelocity(speed);
+    this.computeDesiredVelocity(speed, this.flying);
 
-    const damping = this.grounded ? this.groundDamping : this.airDamping;
+    const damping = this.flying || !this.grounded ? this.airDamping : this.groundDamping;
     this.velocity.x = THREE.MathUtils.damp(
       this.velocity.x,
       this.desired.x,
@@ -121,25 +139,43 @@ export class PlayerController {
       dt
     );
 
+    if (this.flying) {
+      this.velocity.y = THREE.MathUtils.damp(
+        this.velocity.y,
+        this.desired.y,
+        this.airDamping,
+        dt
+      );
+    }
+
     if (this.desired.lengthSq() === 0) {
-      const friction = this.grounded ? 0.85 : 0.95;
-      const decay = Math.pow(friction, dt);
-      this.velocity.x *= decay;
-      this.velocity.z *= decay;
+      if (this.flying) {
+        const decay = Math.pow(this.flyIdleDecay, dt);
+        this.velocity.multiplyScalar(decay);
+      } else {
+        const friction = this.grounded ? 0.85 : 0.95;
+        const decay = Math.pow(friction, dt);
+        this.velocity.x *= decay;
+        this.velocity.z *= decay;
+      }
     }
 
-    if (this.grounded && this.input.jump && !this.jumpLocked) {
-      this.velocity.y = this.jumpSpeed;
-      this.grounded = false;
-      this.jumpLocked = true;
-    }
+    if (!this.flying) {
+      if (this.grounded && this.input.jump && !this.jumpLocked) {
+        this.velocity.y = this.jumpSpeed;
+        this.grounded = false;
+        this.jumpLocked = true;
+      }
 
-    if (!this.input.jump) {
+      if (!this.input.jump) {
+        this.jumpLocked = false;
+      }
+
+      if (!this.grounded) {
+        this.velocity.y -= this.gravity * dt;
+      }
+    } else if (!this.input.flyUp) {
       this.jumpLocked = false;
-    }
-
-    if (!this.grounded) {
-      this.velocity.y -= this.gravity * dt;
     }
 
     const delta = this.tmpVec.copy(this.velocity).multiplyScalar(dt);
@@ -162,7 +198,9 @@ export class PlayerController {
       const runThreshold = this.moveSpeed * 1.5;
       const swaggerThreshold = this.moveSpeed * 0.8;
 
-      if (!this.grounded) {
+      if (this.flying) {
+        this.character.play('Jump', 0.1);
+      } else if (!this.grounded) {
         this.character.play('Jump', 0.1);
       } else if (horizontalSpeed > runThreshold) {
         this.character.play('Run', 0.1);
@@ -181,45 +219,55 @@ export class PlayerController {
   /**
    * @param {number} speed
    */
-  computeDesiredVelocity(speed) {
+  computeDesiredVelocity(speed, allowVertical = false) {
     this.desired.set(0, 0, 0);
 
     const dirX = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
     const dirZ = (this.input.forward ? 1 : 0) - (this.input.back ? 1 : 0);
+    const dirY = allowVertical
+      ? (this.input.flyUp ? 1 : 0) - (this.input.flyDown ? 1 : 0)
+      : 0;
 
-    if (dirX === 0 && dirZ === 0) {
+    if (dirX !== 0 || dirZ !== 0) {
+      this.tmpVec2.set(dirX, 0, dirZ).normalize();
+
+      if (this.camera) {
+        this.tmpQuat.setFromEuler(
+          this.cameraEuler.set(this.cameraPitch, this.cameraYaw, 0, 'YXZ')
+        );
+        const forward = this.tmpVec3.set(0, 0, -1).applyQuaternion(this.tmpQuat);
+        forward.y = 0;
+        if (forward.lengthSq() < 1e-6) {
+          forward.set(0, 0, -1);
+        } else {
+          forward.normalize();
+        }
+
+        const right = this.tmpVec.copy(forward).cross(UP);
+        if (right.lengthSq() < 1e-6) {
+          right.set(1, 0, 0);
+        } else {
+          right.normalize();
+        }
+
+        this.desired
+          .copy(forward)
+          .multiplyScalar(this.tmpVec2.z)
+          .addScaledVector(right, this.tmpVec2.x);
+      } else {
+        this.desired.copy(this.tmpVec2);
+      }
+    }
+
+    if (allowVertical && dirY !== 0) {
+      this.desired.y = dirY;
+    }
+
+    if (this.desired.lengthSq() === 0) {
       return;
     }
 
-    this.tmpVec2.set(dirX, 0, dirZ).normalize();
-
-    if (this.camera) {
-      this.tmpQuat.setFromEuler(
-        this.cameraEuler.set(this.cameraPitch, this.cameraYaw, 0, 'YXZ')
-      );
-      const forward = this.tmpVec3.set(0, 0, -1).applyQuaternion(this.tmpQuat);
-      forward.y = 0;
-      if (forward.lengthSq() < 1e-6) {
-        forward.set(0, 0, -1);
-      } else {
-        forward.normalize();
-      }
-
-      const right = this.tmpVec.copy(forward).cross(UP);
-      if (right.lengthSq() < 1e-6) {
-        right.set(1, 0, 0);
-      } else {
-        right.normalize();
-      }
-
-      this.desired
-        .copy(forward).multiplyScalar(this.tmpVec2.z)
-        .addScaledVector(right, this.tmpVec2.x)
-        .normalize()
-        .multiplyScalar(speed);
-    } else {
-      this.desired.copy(this.tmpVec2).multiplyScalar(speed);
-    }
+    this.desired.normalize().multiplyScalar(speed);
   }
 
   updateCamera(dt) {
@@ -248,6 +296,7 @@ export class PlayerController {
   resolveCollisions(dt) {
     const collider = this.env;
 
+    const allowGrounding = !this.flying;
     this.grounded = false;
     let slopeNormal = null;
 
@@ -271,8 +320,10 @@ export class PlayerController {
         if (normal.y > 0) {
           if (slopeNormal === null) slopeNormal = this.tmpVec4;
           slopeNormal.copy(normal);
-          if (slopeAngle <= this.slopeLimit) {
+          if (allowGrounding && slopeAngle <= this.slopeLimit) {
             this.grounded = true;
+            this.groundNormal.copy(normal);
+          } else if (!allowGrounding) {
             this.groundNormal.copy(normal);
           }
         }
@@ -284,12 +335,14 @@ export class PlayerController {
         this.tmpVec.set(0, minY - center.y, 0);
         this.capsule.translate(this.tmpVec);
         if (this.velocity.y < 0) this.velocity.y = 0;
-        this.grounded = true;
+        if (allowGrounding) {
+          this.grounded = true;
+        }
         this.groundNormal.set(0, 1, 0);
       }
     }
 
-    if (this.grounded) {
+    if (allowGrounding && this.grounded) {
       if (this.velocity.y < 0) this.velocity.y = 0;
       const cosSlope = THREE.MathUtils.clamp(this.groundNormal.dot(UP), -1, 1);
       const angle = THREE.MathUtils.radToDeg(Math.acos(cosSlope));
@@ -298,7 +351,7 @@ export class PlayerController {
       }
     }
 
-    if (!this.grounded && slopeNormal) {
+    if (allowGrounding && !this.grounded && slopeNormal) {
       const slide = this.tmpVec.copy(slopeNormal).projectOnPlane(UP);
       if (slide.lengthSq() > 1e-6) {
         slide.normalize();
@@ -307,7 +360,7 @@ export class PlayerController {
       this.groundNormal.copy(slopeNormal);
     }
 
-    if (!this.grounded && this.velocity.y > 0 && slopeNormal) {
+    if (allowGrounding && !this.grounded && this.velocity.y > 0 && slopeNormal) {
       const normal = slopeNormal;
       const velDot = normal.dot(this.velocity);
       if (velDot < 0) {
