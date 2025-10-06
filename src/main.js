@@ -157,13 +157,49 @@ async function mainApp() {
   const player = new PlayerController(input, envCollider, { camera });
   scene.add(player.object);
 
+  const createFallbackAvatar = () => {
+    const group = new THREE.Group();
+    group.name = "FallbackAvatar";
+
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+      color: 0x4e8ef7,
+      metalness: 0.2,
+      roughness: 0.6,
+    });
+
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.35, 0.35, 1.2, 16),
+      bodyMaterial
+    );
+    body.castShadow = true;
+    body.receiveShadow = true;
+    body.position.y = 0.6;
+    group.add(body);
+
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xf4f7ff, roughness: 0.4 })
+    );
+    head.castShadow = true;
+    head.position.y = 1.32;
+    group.add(head);
+
+    return group;
+  };
+
   const character = new Character();
-  scene.add(character);
-  await character.load(
-    `${import.meta.env.BASE_URL}models/character/hero.glb`,
-    renderer
-  );
-  player.attachCharacter(character);
+  try {
+    await character.load(
+      `${import.meta.env.BASE_URL}models/character/hero.glb`,
+      renderer
+    );
+    player.attachCharacter(character);
+  } catch (error) {
+    console.warn("Hero character failed to load; using fallback avatar.", error);
+    const fallbackAvatar = createFallbackAvatar();
+    player.object.add(fallbackAvatar);
+    fallbackAvatar.position.set(0, 0, 0);
+  }
 
   const buildingMgr = new BuildingManager(envCollider);
   const tombOptions = {

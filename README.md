@@ -10,6 +10,10 @@ To run the project locally:
 The build step outputs self-contained static assets under `docs/`, suitable for
 hosting on GitHub Pages or any static site provider.
 
+> ℹ️ Drop a hero character model at `public/models/character/hero.glb` to see the
+> fully animated avatar. When the file is missing the app now spawns a simple
+> fallback capsule so movement and interactions remain testable.
+
 > ⚠️ Opening `index.html` directly from the filesystem will not work. The source
 > imports bare modules (such as `three`) and TypeScript entry points that must be
 > processed by Vite before they can run in the browser.
