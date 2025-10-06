@@ -13,16 +13,21 @@ import { BuildingManager } from "./buildings/BuildingManager";
 import { PlayerController } from "./controls/PlayerController";
 import { Character } from "./characters/Character";
 
+function isHtmlResponse(response) {
+  const contentType = response.headers.get("content-type") || "";
+  return contentType.includes("text/html");
+}
+
 async function probeAsset(url) {
   try {
     const response = await fetch(url, { method: "HEAD" });
-    if (response.ok) {
+    if (response.ok && !isHtmlResponse(response)) {
       return true;
     }
 
     if (response.status === 405 || response.status === 501) {
       const getResponse = await fetch(url, { method: "GET" });
-      return getResponse.ok;
+      return getResponse.ok && !isHtmlResponse(getResponse);
     }
 
     return false;
