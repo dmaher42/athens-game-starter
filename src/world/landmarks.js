@@ -3,9 +3,10 @@ import { LOD } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
-
-const DEFAULT_BASIS_TRANSCODER_PATH =
-  "https://unpkg.com/three@0.160.0/examples/jsm/libs/basis/";
+import {
+  resolveKTX2TranscoderPath,
+  DEFAULT_BASIS_TRANSCODER_PATH,
+} from "../utils/ktx2.js";
 
 // Reuse a single loader instance so we don't repeatedly allocate it whenever we
 // load a new landmark. GLTFLoader understands the .glb format which packages a
@@ -17,6 +18,8 @@ const loader = new GLTFLoader();
 let ktx2Loader = null;
 let supportsKTX2 = false;
 let hasWarnedUnsupportedKTX2 = false;
+let currentTranscoderPath = null;
+let hasLoggedCdnFallback = false;
 
 /**
  * Initialise everything related to landmark loading.
@@ -39,27 +42,25 @@ export function initializeAssetTranscoders(renderer) {
     return;
   }
 
+  const transcoderPath = resolveKTX2TranscoderPath();
+
   if (!ktx2Loader) {
-    let transcoderPath = null;
+    ktx2Loader = new KTX2Loader();
+  }
+
+  if (transcoderPath && transcoderPath !== currentTranscoderPath) {
+    ktx2Loader.setTranscoderPath(transcoderPath);
+    currentTranscoderPath = transcoderPath;
 
     if (
-      typeof import.meta !== "undefined" &&
-      import.meta &&
-      import.meta.env &&
-      import.meta.env.VITE_BASIS_TRANSCODER_PATH
+      !hasLoggedCdnFallback &&
+      transcoderPath === DEFAULT_BASIS_TRANSCODER_PATH
     ) {
-      transcoderPath = import.meta.env.VITE_BASIS_TRANSCODER_PATH;
-    } else if (
-      typeof window !== "undefined" &&
-      window &&
-      window.__BASIS_TRANSCODER_PATH__
-    ) {
-      transcoderPath = window.__BASIS_TRANSCODER_PATH__;
-    } else {
-      transcoderPath = DEFAULT_BASIS_TRANSCODER_PATH;
+      console.info(
+        "KTX2 transcoder path not configured; falling back to the three.js CDN. Add public/basis/ or set VITE_BASIS_TRANSCODER_PATH to avoid extra requests."
+      );
+      hasLoggedCdnFallback = true;
     }
-
-    ktx2Loader = new KTX2Loader().setTranscoderPath(transcoderPath);
   }
 
   try {

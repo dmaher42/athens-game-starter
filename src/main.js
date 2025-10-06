@@ -68,6 +68,18 @@ function resolveBaseUrl() {
 
 const BASE_URL = resolveBaseUrl();
 
+function configureRendererShadows(renderer) {
+  if (!renderer) return;
+
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  if (renderer.shadowMap) {
+    renderer.shadowMap.autoUpdate = true;
+    renderer.shadowMap.needsUpdate = true;
+  }
+}
+
 // Creates a helper that converts elapsed seconds into the current time-of-day phase.
 // The default 20 minute day slows the cycle so lighting transitions linger longer.
 function startTimeOfDayCycle(options = {}) {
@@ -92,8 +104,7 @@ function startTimeOfDayCycle(options = {}) {
 async function mainApp() {
   console.log("🔧 Athens mainApp start");
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  configureRendererShadows(renderer);
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
   initializeAssetTranscoders(renderer);
@@ -168,7 +179,7 @@ async function mainApp() {
 
   // Refresh the environment collider after major static additions like the
   // civic district so promenade geometry participates in collision checks.
-  envCollider.fromStaticScene(scene);
+  envCollider.refresh();
 
   // Example interactable props. userData acts like a metadata bag so you can
   // describe behaviour without subclassing three.js meshes. Below we hook up a
@@ -238,7 +249,7 @@ async function mainApp() {
 
   scene.add(lamp);
 
-  envCollider.fromStaticScene(scene);
+  envCollider.refresh();
 
   const createFallbackAvatar = () => {
     const group = new THREE.Group();
@@ -382,7 +393,7 @@ async function mainApp() {
     scene.add(placeholder);
 
     if (shouldCollide) {
-      envCollider.fromStaticScene(scene);
+      envCollider.refresh();
     }
 
     return placeholder;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
+import { createKTX2Loader } from '../utils/ktx2.js';
 
 /** @typedef {'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump'} AnimName */
 
@@ -21,9 +21,7 @@ export class Character extends THREE.Object3D {
     const loader = new GLTFLoader();
 
     if (renderer) {
-      const ktx2 = new KTX2Loader()
-        .setTranscoderPath('/basis/')
-        .detectSupport(renderer);
+      const ktx2 = createKTX2Loader(renderer);
       loader.setKTX2Loader(ktx2);
     }
 
