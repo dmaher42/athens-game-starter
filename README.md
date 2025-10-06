@@ -10,9 +10,10 @@ To run the project locally:
 The build step outputs self-contained static assets under `docs/`, suitable for
 hosting on GitHub Pages or any static site provider.
 
-> ℹ️ Drop a hero character model at `public/models/character/hero.glb` to see the
-> fully animated avatar. When the file is missing the app now spawns a simple
-> fallback capsule so movement and interactions remain testable.
+> ℹ️ The repository intentionally omits large binary assets. Drop a hero
+> character model at `public/models/character/hero.glb` to see the fully animated
+> avatar. When the file is missing the app spawns a simple fallback capsule so
+> movement and interactions remain testable.
 
 > ⚠️ Opening `index.html` directly from the filesystem will not work. The source
 > imports bare modules (such as `three`) and TypeScript entry points that must be
@@ -29,8 +30,8 @@ SKETCHFAB_TOKEN=<your token> npm run download:aristotle
 ```
 
 The GLB is saved to `public/models/buildings/aristotle-tomb.glb`. If the file is
-missing when the app boots the code falls back to the existing Akropol model,
-so you can continue exploring even before fetching the new landmark.
+missing when the app boots the runtime now spawns a lightweight placeholder
+monument so you can continue exploring even before fetching the premium asset.
 
 ## KTX2 textures
 
