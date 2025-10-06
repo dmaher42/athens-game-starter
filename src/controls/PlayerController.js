@@ -106,7 +106,7 @@ export class PlayerController {
       }
     }
 
-    const lookDelta = this.input.consumeLookDelta();
+    const lookDelta = this.input.consumeLookDelta(dt);
     if (this.camera) {
       this.cameraYaw -= lookDelta.yaw;
       this.cameraPitch -= lookDelta.pitch;
