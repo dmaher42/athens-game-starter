@@ -103,6 +103,11 @@ export async function createOcean(scene, options = {}) {
   const cz = HARBOR_WATER_CENTER.z;
 
   // Planes: keep inside the box [x ∈ (cx±halfX), z ∈ (cz-halfZFront … cz+halfZBack)]
+  const left = cx - halfX;
+  const right = cx + halfX;
+  const front = cz - halfZFront; // seaward extent (smaller Z)
+  const back = cz + halfZBack; // inland extent (larger Z)
+
   const planes = [
     new THREE.Plane(new THREE.Vector3(1, 0, 0), -(cx - halfX)), // left:  x >= cx - halfX
     new THREE.Plane(new THREE.Vector3(-1, 0, 0), cx + halfX), // right: x <= cx + halfX
