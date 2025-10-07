@@ -97,6 +97,45 @@ function configureRendererShadows(renderer) {
   }
 }
 
+const TRUE_VALUES = new Set(["", "1", "true", "on", "yes", "y"]);
+const FALSE_VALUES = new Set(["0", "false", "off", "no", "n"]);
+
+function parseToggleValue(value, defaultValue = true) {
+  if (value == null) return defaultValue;
+  const normalized = String(value).trim().toLowerCase();
+  if (TRUE_VALUES.has(normalized)) return true;
+  if (FALSE_VALUES.has(normalized)) return false;
+  return defaultValue;
+}
+
+function shouldShowOverlay({
+  queryKey,
+  windowFlagKey,
+  defaultValue = true,
+  devDefault = true,
+} = {}) {
+  if (typeof window === "undefined") return defaultValue;
+
+  if (queryKey) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has(queryKey)) {
+      return parseToggleValue(params.get(queryKey), defaultValue);
+    }
+  }
+
+  if (windowFlagKey && typeof window[windowFlagKey] !== "undefined") {
+    const flagValue = window[windowFlagKey];
+    if (typeof flagValue === "boolean") return flagValue;
+    return parseToggleValue(flagValue, defaultValue);
+  }
+
+  if (devDefault && import.meta.env?.DEV) {
+    return true;
+  }
+
+  return defaultValue;
+}
+
 // Creates a helper that converts elapsed seconds into the current time-of-day phase.
 // The default 20 minute day slows the cycle so lighting transitions linger longer.
 function startTimeOfDayCycle(options = {}) {
@@ -224,8 +263,12 @@ async function mainApp() {
   await soundscape.initFromManifest("audio/manifest.json");
   await soundscape.ensureUserGestureResume();
 
-  // Dev-only mixer (F10)
-  if (import.meta.env?.DEV) {
+  // Volume mixer overlay (F10 toggles visibility)
+  const SHOW_AUDIO_MIXER = shouldShowOverlay({
+    queryKey: "audio",
+    windowFlagKey: "SHOW_AUDIO_MIXER",
+  });
+  if (SHOW_AUDIO_MIXER) {
     mountAudioMixer(soundscape);
   }
 
@@ -987,11 +1030,10 @@ async function mainApp() {
   };
 
   // Mount HUD in dev OR if a global flag is set (useful in prod previews)
-  const SHOW_HUD =
-    import.meta.env?.DEV ||
-    (typeof window !== "undefined" &&
-      (window.SHOW_HUD === true ||
-        new URLSearchParams(window.location.search).has("hud")));
+  const SHOW_HUD = shouldShowOverlay({
+    queryKey: "hud",
+    windowFlagKey: "SHOW_HUD",
+  });
   if (SHOW_HUD) {
     console.log("[HUD] mounting…");
     mountDevHUD({ getPosition, getDirection, onPin });
