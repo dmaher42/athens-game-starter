@@ -2,6 +2,11 @@
 
 Drop optional royalty-free or CC0 audio loops/one-shots in this folder.
 
+The default build only bundles the clips that actually ship with the
+repository (currently the sea ambience and gulls loop). Any additional
+files you add locally can be referenced from `manifest.json` to enable them
+in the game without modifying the code.
+
 Expected filenames:
 
 - `ambient_sea.ogg` – gentle shore/waves ambience

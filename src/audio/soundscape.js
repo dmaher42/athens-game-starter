@@ -120,26 +120,40 @@ export class Soundscape {
   }
 
   async initFromManifest(manifestUrl = "audio/manifest.json") {
+    const resolveAssetPath = (path) => {
+      if (!path) return path;
+      const ABSOLUTE = /^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|\/)/;
+      if (ABSOLUTE.test(path)) return path;
+      const base = import.meta?.env?.BASE_URL ?? "/";
+      const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+      const normalizedPath = path.replace(/^\.?\//, "");
+      return `${normalizedBase}${normalizedPath}`;
+    };
+
+    const resolvedManifestUrl = resolveAssetPath(manifestUrl);
     let mf;
     try {
-      mf = await (await fetch(manifestUrl)).json();
+      mf = await (await fetch(resolvedManifestUrl)).json();
     } catch {
       console.warn("[audio] manifest.json not found. Using default empty manifest.");
       mf = { ambient: {}, effects: {} };
     }
 
+    const ambient = mf.ambient ?? {};
+    const effects = mf.effects ?? {};
+
     // Ambient layers
-    const sea = await this.loadBuffer("sea", mf.ambient.sea);
-    const gulls = await this.loadBuffer("gulls", mf.ambient.gulls);
-    const wind = await this.loadBuffer("wind", mf.ambient.wind);
-    const market = await this.loadBuffer("market", mf.ambient.market);
-    const fountain = await this.loadBuffer("fountain", mf.ambient.fountain);
-    const lyre = await this.loadBuffer("lyre", mf.ambient.lyre);
+    const sea = await this.loadBuffer("sea", resolveAssetPath(ambient.sea));
+    const gulls = await this.loadBuffer("gulls", resolveAssetPath(ambient.gulls));
+    const wind = await this.loadBuffer("wind", resolveAssetPath(ambient.wind));
+    const market = await this.loadBuffer("market", resolveAssetPath(ambient.market));
+    const fountain = await this.loadBuffer("fountain", resolveAssetPath(ambient.fountain));
+    const lyre = await this.loadBuffer("lyre", resolveAssetPath(ambient.lyre));
 
     // Effects / one-shots
-    const blacksmith = await this.loadBuffer("blacksmith", mf.effects.blacksmith);
-    const goats = await this.loadBuffer("goats", mf.effects.goats);
-    const cart = await this.loadBuffer("cart", mf.effects.cart);
+    const blacksmith = await this.loadBuffer("blacksmith", resolveAssetPath(effects.blacksmith));
+    const goats = await this.loadBuffer("goats", resolveAssetPath(effects.goats));
+    const cart = await this.loadBuffer("cart", resolveAssetPath(effects.cart));
 
     // Global ambient: sea + wind (wind mixed more at night)
     this._makeGlobal(sea, "ambience", { volume: 0.25 })?.play();

@@ -2,15 +2,15 @@
   "ambient": {
     "sea": "audio/ambient_sea.ogg",
     "gulls": "audio/gulls.ogg",
-    "wind": "audio/wind.ogg",
-    "fountain": "audio/fountain.ogg",
-    "lyre": "audio/lyre.ogg",
-    "market": "audio/market_chatter.ogg"
+    "wind": null,
+    "fountain": null,
+    "lyre": null,
+    "market": null
   },
   "effects": {
-    "blacksmith": "audio/blacksmith.ogg",
-    "goats": "audio/goats.ogg",
-    "cart": "audio/cart.ogg",
-    "footsteps": "audio/footsteps.ogg"
+    "blacksmith": null,
+    "goats": null,
+    "cart": null,
+    "footsteps": null
   }
 }
