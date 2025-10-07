@@ -14,6 +14,8 @@ import {
 import { createRoad } from "./roads.js";
 import { addFoundationPad } from "./foundations.js";
 
+const SURFACE_OFFSET = 0.05;
+
 const _matrix = new THREE.Matrix4();
 const _quaternion = new THREE.Quaternion();
 const _scale = new THREE.Vector3();
@@ -132,7 +134,10 @@ export function createCity(scene, terrain, options = {}) {
         continue;
       }
 
-      const groundHeight = Math.max(lot.height, SEA_LEVEL_Y + 0.05);
+      const groundHeight = Math.max(
+        lot.height + SURFACE_OFFSET,
+        SEA_LEVEL_Y + SURFACE_OFFSET
+      );
       placements.push({
         x: centerX,
         y: groundHeight,
@@ -157,7 +162,7 @@ export function createCity(scene, terrain, options = {}) {
     const alpha = i / 4;
     const x = origin.x - walkwaySpan * 0.5 + walkwaySpan * alpha;
     const z = origin.z + Math.sin(alpha * Math.PI * 1.2 - Math.PI * 0.3) * (gridSize.y * 0.45);
-    const y = sampleHeight(terrain, x, z, SEA_LEVEL_Y) + 0.02;
+    const y = sampleHeight(terrain, x, z, SEA_LEVEL_Y) + SURFACE_OFFSET;
     walkwayPoints.push(new THREE.Vector3(x, y, z));
   }
   if (walkwayPoints.length >= 2) {
@@ -342,7 +347,10 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
 
     // foundation: clamp EVERY placement to terrain sample AFTER any nudges
     const ySample = getH ? getH(p.x, p.z) : p.y;
-    const baseY = Math.max(Number.isFinite(ySample) ? ySample : p.y, SEA_LEVEL_Y + MIN_ABOVE_SEA);
+    const liftedSample = Number.isFinite(ySample)
+      ? ySample + SURFACE_OFFSET
+      : p.y + SURFACE_OFFSET;
+    const baseY = Math.max(liftedSample, SEA_LEVEL_Y + MIN_ABOVE_SEA + SURFACE_OFFSET);
 
     const buildingScale = 0.9 + rng() * 0.3;
     const padRadius = Math.max(2.0, 1.8 * buildingScale);

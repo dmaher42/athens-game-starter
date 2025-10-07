@@ -6,6 +6,8 @@ import {
   ACROPOLIS_PEAK_3D,
 } from "./locations.js";
 
+const SURFACE_OFFSET = 0.05;
+
 // scene + terrain required so we can drape to ground
 export function createMainHillRoad(scene, terrain) {
   // Gentle S-curve from harbor → agora → acropolis
@@ -47,7 +49,7 @@ export function createMainHillRoad(scene, terrain) {
       const z = p.z + dir.z;
       let y = getH ? getH(x, z) : p.y;
       if (!Number.isFinite(y)) y = p.y;
-      y += 0.03; // small lift to avoid z-fighting with ground
+      y += SURFACE_OFFSET; // lift to avoid z-fighting with ground
       pos.setXYZ(vertexIndex, x, y, z);
     }
   }
