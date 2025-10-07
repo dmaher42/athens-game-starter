@@ -107,7 +107,9 @@ export async function createOcean(scene, options = {}) {
   const cx = HARBOR_WATER_CENTER.x;
   const cz = HARBOR_WATER_CENTER.z;
 
+  // The water area is clipped to [westLimit, eastLimit]. By default, these are symmetric about the center.
   const westLimit = cx - halfX;
+  // If HARBOR_WATER_EAST_LIMIT is finite, use the smaller of that or the default east edge; otherwise, use the default.
   const eastLimit = Number.isFinite(HARBOR_WATER_EAST_LIMIT)
     ? Math.min(HARBOR_WATER_EAST_LIMIT, cx + halfX)
     : cx + halfX;
