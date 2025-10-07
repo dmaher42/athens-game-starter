@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { MAIN_ROAD_WIDTH, HARBOR_CENTER_3D, AGORA_CENTER_3D, ACROPOLIS_PEAK_3D } from './locations.js';
 
+const _dummy = new THREE.Object3D();
+const _up = new THREE.Vector3(0, 1, 0);
+const _side = new THREE.Vector3();
+
 export function createMainHillRoad(scene) {
   // Gentle S-curve from harbor → agora → acropolis
   const pts = [
@@ -45,7 +49,86 @@ export function createMainHillRoad(scene) {
   const group = new THREE.Group();
   group.name = 'Roads';
   group.add(mesh);
+
+  const lamps = createLamppostsAlongRoad({ curve, width });
+  if (lamps) {
+    group.add(lamps.group);
+    group.userData.lampHeadMaterial = lamps.headMaterial;
+  }
+
   scene.add(group);
 
   return { group, curve, mesh };
+}
+
+function createLamppostsAlongRoad({ curve, width }) {
+  if (!curve) return null;
+
+  const totalLength = curve.getLength();
+  const spacing = 20;
+  const count = Math.max(1, Math.floor(totalLength / spacing));
+  if (!Number.isFinite(count) || count <= 0) {
+    return null;
+  }
+
+  const group = new THREE.Group();
+  group.name = 'HillRoadLampposts';
+
+  const postGeometry = new THREE.CylinderGeometry(0.12, 0.14, 3, 10);
+  postGeometry.translate(0, 1.5, 0);
+  const headGeometry = new THREE.SphereGeometry(0.28, 16, 12);
+  headGeometry.translate(0, 3.1, 0);
+
+  const postMaterial = new THREE.MeshStandardMaterial({
+    color: 0x4f473a,
+    roughness: 0.85,
+    metalness: 0.25,
+  });
+  const headMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffe9b0,
+    emissive: new THREE.Color(0xffd18c),
+    emissiveIntensity: 0,
+  });
+  headMaterial.toneMapped = false;
+
+  const posts = new THREE.InstancedMesh(postGeometry, postMaterial, count);
+  posts.castShadow = true;
+  posts.receiveShadow = false;
+  posts.name = 'HillRoadLampPosts';
+
+  const heads = new THREE.InstancedMesh(headGeometry, headMaterial, count);
+  heads.castShadow = false;
+  heads.receiveShadow = false;
+  heads.name = 'HillRoadLampHeads';
+
+  const lateralOffset = width * 0.55;
+
+  for (let i = 0; i < count; i++) {
+    const t = (i + 0.5) / count;
+    const position = curve.getPoint(Math.min(1, Math.max(0, t)));
+    const tangent = curve.getTangent(Math.min(1, Math.max(0, t))).normalize();
+    _side.copy(_up).cross(tangent).normalize().multiplyScalar(lateralOffset);
+
+    _dummy.position.copy(position).add(_side);
+    _dummy.rotation.set(0, 0, 0);
+    _dummy.updateMatrix();
+    posts.setMatrixAt(i, _dummy.matrix);
+    heads.setMatrixAt(i, _dummy.matrix);
+  }
+
+  posts.instanceMatrix.needsUpdate = true;
+  heads.instanceMatrix.needsUpdate = true;
+
+  group.add(posts);
+  group.add(heads);
+
+  return { group, headMaterial };
+}
+
+export function updateMainHillRoadLighting(roadGroup, nightFactor = 0) {
+  if (!roadGroup) return;
+  const material = roadGroup.userData?.lampHeadMaterial;
+  if (!material) return;
+  const clamped = THREE.MathUtils.clamp(nightFactor, 0, 1);
+  material.emissiveIntensity = THREE.MathUtils.lerp(0.1, 1.4, clamped);
 }
