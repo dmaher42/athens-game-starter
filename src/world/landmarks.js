@@ -133,7 +133,7 @@ function applyTransform(object, options) {
 }
 
 function liftObjectAboveGround(scene, object, offset = 0.05) {
-  if (!scene || !object) return;
+  if (!scene || !object) return null;
 
   const candidates = [];
   const sceneUserData = scene.userData || {};
@@ -159,24 +159,26 @@ function liftObjectAboveGround(scene, object, offset = 0.05) {
   }
 
   if (!sampler || !object.position) {
-    return;
+    return null;
   }
 
   const { x, z } = object.position;
   if (!Number.isFinite(x) || !Number.isFinite(z)) {
-    return;
+    return null;
   }
 
   const ground = sampler(x, z);
   if (!Number.isFinite(ground)) {
-    return;
+    return null;
   }
 
   const currentY = Number.isFinite(object.position.y) ? object.position.y : 0;
   const desiredY = Math.max(currentY, ground + offset);
   if (Number.isFinite(desiredY)) {
     object.position.y = desiredY;
+    return desiredY;
   }
+  return null;
 }
 
 function disposeObject(object, scene) {
@@ -237,7 +239,7 @@ export async function loadLandmark(scene, url, options = {}) {
   placeholder.name = "LandmarkPlaceholder";
 
   applyTransform(placeholder, { position: options.position });
-  liftObjectAboveGround(scene, placeholder);
+  liftObjectAboveGround(scene, placeholder, 0.05);
 
   // Beginners tip: showing a simple glowing box makes it obvious to the player
   // that something will appear here soon. It also gives feedback while large
@@ -296,7 +298,13 @@ export async function loadLandmark(scene, url, options = {}) {
       return null;
     }
 
-    liftObjectAboveGround(scene, finalObject);
+    const initialY = Number.isFinite(finalObject?.position?.y)
+      ? finalObject.position.y
+      : 0;
+    const liftedY = liftObjectAboveGround(scene, finalObject, 0.05);
+    if (Number.isFinite(liftedY)) {
+      finalObject.position.y = Math.max(initialY, liftedY);
+    }
     scene.add(finalObject);
     entry.object = finalObject;
 
