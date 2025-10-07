@@ -93,6 +93,7 @@ export function createRoad(parent, points, options = {}) {
   mesh.receiveShadow = true;
   mesh.castShadow = false;
   mesh.userData.noCollision = options.noCollision ?? true;
+  mesh.renderOrder = 1;
 
   if (parent) {
     parent.add(mesh);
