@@ -31,7 +31,7 @@ export function createMainHillRoad(scene, terrain) {
   const dir = new THREE.Vector3();
 
   // helper for height sampling
-  const getH = (x, z) => terrain?.userData?.getHeightAt?.(x, z);
+  const getH = terrain?.userData?.getHeightAt?.bind(terrain?.userData);
 
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
@@ -49,7 +49,7 @@ export function createMainHillRoad(scene, terrain) {
       );
       const x = p.x + dir.x;
       const z = p.z + dir.z;
-      let y = getH?.(x, z);
+      let y = getH ? getH(x, z) : p.y;
       if (!Number.isFinite(y)) y = p.y;
       y += 0.03; // small lift to avoid z-fighting with ground
       pos.setXYZ(idx / 3, x, y, z);
