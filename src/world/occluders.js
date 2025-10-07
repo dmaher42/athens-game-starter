@@ -72,14 +72,8 @@ export function addDepthOccluderRibbon(scene, terrain, p1XZ, p2XZ, width = 6, se
     transparent: false,
     depthWrite: true,
     depthTest: true,
+    colorWrite: false, // Only write depth, not color
   });
-  // Disable color writes via onBeforeCompile
-  mat.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      'gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
-      'gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);'
-    );
-  };
 
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = 'WaterDepthOccluderRibbon';
