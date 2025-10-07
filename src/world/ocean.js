@@ -103,16 +103,21 @@ export async function createOcean(scene, options = {}) {
   const cz = HARBOR_WATER_CENTER.z;
 
   // Planes: keep inside the box [x ∈ (cx±halfX), z ∈ (cz-halfZFront … cz+halfZBack)]
+  const left = cx - halfX;
+  const right = cx + halfX;
+  const front = cz - halfZFront; // seaward extent (smaller Z)
+  const back = cz + halfZBack; // inland extent (larger Z)
+
   const planes = [
-    new THREE.Plane(new THREE.Vector3(1, 0, 0), -(cx - halfX)), // left:  x >= cx - halfX
-    new THREE.Plane(new THREE.Vector3(-1, 0, 0), cx + halfX), // right: x <= cx + halfX
-    new THREE.Plane(new THREE.Vector3(0, 0, 1), -(cz + halfZBack)), // back (inland):  z <= cz + 0
-    new THREE.Plane(new THREE.Vector3(0, 0, -1), cz - halfZFront), // front (sea):    z >= cz - halfZFront
+    new THREE.Plane(new THREE.Vector3(-1, 0, 0), left), // x >= left
+    new THREE.Plane(new THREE.Vector3(1, 0, 0), -right), // x <= right
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), front), // z >= front (toward sea)
+    new THREE.Plane(new THREE.Vector3(0, 0, 1), -back), // z <= back (toward city)
   ];
 
   if (water.material) {
-    water.material.clipping = true;
     water.material.clippingPlanes = planes;
+    water.material.clipIntersection = true;
     water.material.depthWrite = true;
     water.material.transparent = true;
     water.material.needsUpdate = true;

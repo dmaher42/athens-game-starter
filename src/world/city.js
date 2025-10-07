@@ -344,12 +344,14 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     const ySample = getH ? getH(p.x, p.z) : p.y;
     const baseY = Math.max(Number.isFinite(ySample) ? ySample : p.y, SEA_LEVEL_Y + MIN_ABOVE_SEA);
 
-    addFoundationPad(scene, p.x, baseY, p.z, 2.2);
+    const buildingScale = 0.9 + rng() * 0.3;
+    const padRadius = Math.max(2.0, 1.8 * buildingScale);
+    addFoundationPad(scene, p.x, baseY, p.z, padRadius);
 
     // walls
     dummy.position.set(p.x, baseY + 1.0, p.z);
     dummy.rotation.set(0, yaw, 0);
-    dummy.scale.setScalar(0.9 + rng() * 0.3);
+    dummy.scale.setScalar(buildingScale);
     dummy.updateMatrix();
     walls.setMatrixAt(i, dummy.matrix);
 
