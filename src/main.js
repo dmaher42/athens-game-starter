@@ -9,6 +9,7 @@ import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { createOcean, updateOcean } from "./world/ocean.js";
 import { createHarbor, updateHarborLighting } from "./world/harbor.js";
 import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hillcity.js";
+import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
 import { createCity, updateCityLighting, createHillCity } from "./world/city.js";
 import { CITY_CHUNK_CENTER, HARBOR_CENTER_3D } from "./world/locations.js";
@@ -215,6 +216,7 @@ async function mainApp() {
 
   // 1) Road from harbor → agora → acropolis
   const { group: roadGroup, curve: mainRoad } = createMainHillRoad(scene);
+  mountHillCityDebug(scene, mainRoad);
 
   // 2) Plazas (agora + acropolis terraces)
   const plazas = createPlazas(scene);
