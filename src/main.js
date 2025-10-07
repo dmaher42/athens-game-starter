@@ -225,9 +225,6 @@ async function mainApp() {
     buildingCount: 140,
   });
 
-  // 4) Rebuild static collider ONCE after adding these big groups
-  envCollider.fromStaticScene(scene);
-
   // Lay out a formal civic district with a central promenade, symmetrical
   // civic buildings, and decorative lighting to give the city a planned
   // character rather than scattered props.
@@ -241,10 +238,6 @@ async function mainApp() {
   const player = new PlayerController(input, envCollider, { camera });
   scene.add(player.object);
   player.object.position.set(0, 0, 10); // or your desired coordinates
-
-  // Refresh the environment collider after major static additions like the
-  // civic district so promenade geometry participates in collision checks.
-  envCollider.refresh();
 
   // Example interactable props. userData acts like a metadata bag so you can
   // describe behaviour without subclassing three.js meshes. Below we hook up a
@@ -314,7 +307,10 @@ async function mainApp() {
 
   scene.add(lamp);
 
-  envCollider.refresh();
+  // 4) Rebuild the static environment collider once after placing roads,
+  // plazas, the hill city, and civic fixtures so the player can't walk
+  // through them.
+  envCollider.fromStaticScene(scene);
 
   const createFallbackAvatar = () => {
     const group = new THREE.Group();
