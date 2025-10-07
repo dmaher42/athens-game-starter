@@ -4,7 +4,6 @@ import {
   HARBOR_WATER_CENTER,
   HARBOR_WATER_EAST_LIMIT,
   HARBOR_WATER_SIZE,
-  HARBOR_WATER_BACK,
   SEA_LEVEL_Y,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
@@ -108,12 +107,17 @@ export async function createOcean(scene, options = {}) {
   const cx = HARBOR_WATER_CENTER.x;
   const cz = HARBOR_WATER_CENTER.z;
 
+  // The water area is clipped to [westLimit, eastLimit]. By default, these are symmetric about the center.
   const westLimit = cx - halfX;
+  // If HARBOR_WATER_EAST_LIMIT is finite, use the smaller of that or the default east edge; otherwise, use the default.
   const eastLimit = Number.isFinite(HARBOR_WATER_EAST_LIMIT)
     ? Math.min(HARBOR_WATER_EAST_LIMIT, cx + halfX)
     : cx + halfX;
   const frontLimit = cz - halfZFront; // seaward extent (smaller Z)
   const backLimit = cz + halfZBack; // inland extent (larger Z)
+
+  console.log("[water clip]",
+    { cx, cz, westLimit, eastLimit, frontLimit, backLimit });
 
   // Planes: keep inside the box [x ∈ (westLimit … eastLimit), z ∈ (frontLimit … backLimit)]
 
