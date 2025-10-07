@@ -18,6 +18,7 @@ import { BuildingManager } from "./buildings/BuildingManager.js";
 import { PlayerController } from "./controls/PlayerController.js";
 import { Character } from "./characters/Character.js";
 import { spawnCitizenCrowd } from "./world/npcs.js";
+import { mountExposureSlider } from "./ui/exposureSlider.js";
 
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -110,6 +111,8 @@ async function mainApp() {
   configureRendererShadows(renderer);
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
+  // Mount the exposure control (F9 toggles visibility)
+  mountExposureSlider(renderer, { min: 0.2, max: 2.0, step: 0.01, key: "F9" });
   initializeAssetTranscoders(renderer);
   attachCrosshair();
 
