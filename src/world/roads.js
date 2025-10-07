@@ -86,7 +86,7 @@ export function createRoad(parent, points, options = {}) {
   geometry.computeVertexNormals();
 
   const material = new THREE.MeshStandardMaterial({
-    color: options.color ?? 0x393024,
+    color: options.color ?? 0xF0AD4E,
     roughness: 0.95,
     metalness: 0.05,
     side: THREE.DoubleSide,
