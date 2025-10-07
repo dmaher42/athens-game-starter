@@ -1,6 +1,8 @@
 // main.js
 
 import * as THREE from "three";
+import { Soundscape } from "./audio/soundscape.js";
+import { mountAudioMixer } from "./ui/audioMixer.js";
 import { createSky, updateSky, createStars, updateStars } from "./world/sky.js";
 import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
 import { createInteractor } from "./world/interactions.js";
@@ -17,6 +19,7 @@ import {
   HARBOR_CENTER_3D,
   HARBOR_EXCLUDE_RADIUS,
   CITY_AREA_RADIUS,
+  ACROPOLIS_PEAK_3D,
 } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
@@ -207,6 +210,25 @@ async function mainApp() {
   // Sky, stars & lighting
   const skyObj = createSky(scene);
   const lights = createLighting(scene);
+  // ---- Living City Soundscape ----
+  const soundscape = new Soundscape(
+    scene,
+    camera,
+    { getNightFactor: () => lights.nightFactor },
+    {
+      harbor: HARBOR_CENTER_3D,
+      agora: AGORA_CENTER_3D,
+      acropolis: ACROPOLIS_PEAK_3D,
+    }
+  );
+  await soundscape.initFromManifest("audio/manifest.json");
+  await soundscape.ensureUserGestureResume();
+
+  // Dev-only mixer (F10)
+  if (import.meta.env?.DEV) {
+    mountAudioMixer(soundscape);
+  }
+
   // Create a star field with 1000 tiny points so nights feel alive.
   const stars = createStars(scene, 1000);
   const moon = createMoon(scene);
@@ -579,6 +601,9 @@ async function mainApp() {
     // prefer a static landscape without vertex animation.
     updateTerrain(terrain, elapsed);
     updateOcean(ocean, deltaTime, sunDir, lights.nightFactor);
+
+    // Update soundscape once per frame (player position optional)
+    soundscape.update(player?.position);
 
     // Update player movement and drive the attached character animation.
     player.update(deltaTime);
