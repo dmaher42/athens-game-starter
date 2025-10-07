@@ -119,23 +119,44 @@ export class Soundscape {
     return src;
   }
 
-  async initFromManifest(manifestUrl = "audio/manifest.json") {
+  async initFromManifest(manifestUrl = "public/audio/manifest.json") {
+    const makeBaseUrl = () => {
+      const rawBase = import.meta?.env?.BASE_URL ?? "/";
+      const origin =
+        typeof window !== "undefined" && window.location?.origin
+          ? window.location.origin
+          : "http://localhost";
+      try {
+        return new URL(rawBase, origin);
+      } catch {
+        return new URL("/", origin);
+      }
+    };
+
+    const baseUrl = makeBaseUrl();
     const resolveAssetPath = (path) => {
       if (!path) return path;
-      const ABSOLUTE = /^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|\/)/;
-      if (ABSOLUTE.test(path)) return path;
-      const base = import.meta?.env?.BASE_URL ?? "/";
-      const normalizedBase = base.endsWith("/") ? base : `${base}/`;
-      const normalizedPath = path.replace(/^\.?\//, "");
-      return `${normalizedBase}${normalizedPath}`;
+      try {
+        return new URL(path, baseUrl).toString();
+      } catch {
+        console.warn(`[audio] Failed to resolve asset path: ${path}. Using as-is.`);
+        return path;
+      }
     };
 
     const resolvedManifestUrl = resolveAssetPath(manifestUrl);
     let mf;
     try {
-      mf = await (await fetch(resolvedManifestUrl)).json();
-    } catch {
-      console.warn("[audio] manifest.json not found. Using default empty manifest.");
+      const response = await fetch(resolvedManifestUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      mf = await response.json();
+    } catch (err) {
+      console.warn(
+        `[audio] manifest.json not found at ${resolvedManifestUrl}. Using default empty manifest.`,
+        err
+      );
       mf = { ambient: {}, effects: {} };
     }
 
