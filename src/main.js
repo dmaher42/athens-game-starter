@@ -446,45 +446,385 @@ async function mainApp() {
       mesh.userData.noCollision = !shouldCollide;
     };
 
-    const base = new THREE.Mesh(
-      new THREE.CylinderGeometry(4.2, 4.6, 1, 36),
-      new THREE.MeshStandardMaterial({ color: 0xe0d6c5, roughness: 0.7 })
-    );
-    base.position.y = 0.5;
-    applySharedProps(base);
-    placeholder.add(base);
+    const adjustColor = (hex, amount = 0) => {
+      const color = new THREE.Color(hex);
+      if (amount > 0) {
+        color.lerp(new THREE.Color(0xffffff), Math.min(1, amount));
+      } else if (amount < 0) {
+        color.lerp(new THREE.Color(0x000000), Math.min(1, Math.abs(amount)));
+      }
+      return `#${color.getHexString()}`;
+    };
 
-    const columnGeometry = new THREE.CylinderGeometry(0.45, 0.5, 4.5, 20);
-    const columnMaterial = new THREE.MeshStandardMaterial({
-      color: 0xd4c2a3,
-      roughness: 0.55,
-      metalness: 0.05,
-    });
-    for (let i = 0; i < 6; i++) {
-      const column = new THREE.Mesh(columnGeometry, columnMaterial);
-      const angle = (i / 6) * Math.PI * 2;
-      column.position.set(Math.cos(angle) * 2.9, 2.75, Math.sin(angle) * 2.9);
-      applySharedProps(column);
-      placeholder.add(column);
+    const colorToRgba = (hex, alpha = 1) => {
+      const color = new THREE.Color(hex);
+      const r = Math.round(color.r * 255);
+      const g = Math.round(color.g * 255);
+      const b = Math.round(color.b * 255);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    };
+
+    const createMarbleTextures = ({
+      tint,
+      veinColor,
+      speckColor,
+      size = 256,
+      veinCount = 18,
+      repeat = new THREE.Vector2(2.5, 2.5),
+    }) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const baseGradient = ctx.createLinearGradient(0, 0, size, size);
+      baseGradient.addColorStop(0, adjustColor(tint, 0.18));
+      baseGradient.addColorStop(0.5, adjustColor(tint, -0.05));
+      baseGradient.addColorStop(1, adjustColor(tint, 0.1));
+      ctx.fillStyle = baseGradient;
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = colorToRgba(veinColor, 0.32);
+      ctx.globalAlpha = 0.85;
+      for (let i = 0; i < veinCount; i++) {
+        const startX = Math.random() * size;
+        const cp1x = startX + (Math.random() - 0.5) * size * 0.25;
+        const cp2x = startX + (Math.random() - 0.5) * size * 0.35;
+        ctx.beginPath();
+        ctx.moveTo(startX, 0);
+        ctx.bezierCurveTo(cp1x, size * 0.3, cp2x, size * 0.7, startX + (Math.random() - 0.5) * size * 0.2, size);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = colorToRgba(speckColor, 0.06);
+      for (let i = 0; i < size * 2; i++) {
+        const radius = Math.random() * 1.4 + 0.2;
+        ctx.beginPath();
+        ctx.arc(Math.random() * size, Math.random() * size, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      const colorTexture = new THREE.CanvasTexture(canvas);
+      colorTexture.wrapS = THREE.RepeatWrapping;
+      colorTexture.wrapT = THREE.RepeatWrapping;
+      colorTexture.repeat.copy(repeat);
+      colorTexture.colorSpace = THREE.SRGBColorSpace;
+
+      const roughCanvas = document.createElement("canvas");
+      roughCanvas.width = roughCanvas.height = size;
+      const roughCtx = roughCanvas.getContext("2d");
+      const roughData = roughCtx.createImageData(size, size);
+      for (let i = 0; i < size * size; i++) {
+        const random = 170 + Math.random() * 60;
+        const idx = i * 4;
+        roughData.data[idx] = random;
+        roughData.data[idx + 1] = random;
+        roughData.data[idx + 2] = random;
+        roughData.data[idx + 3] = 255;
+      }
+      roughCtx.putImageData(roughData, 0, 0);
+      const roughnessTexture = new THREE.CanvasTexture(roughCanvas);
+      roughnessTexture.wrapS = THREE.RepeatWrapping;
+      roughnessTexture.wrapT = THREE.RepeatWrapping;
+      roughnessTexture.repeat.copy(repeat);
+      roughnessTexture.colorSpace = THREE.NoColorSpace;
+
+      const anisotropy = renderer?.capabilities?.getMaxAnisotropy?.() ?? 1;
+      colorTexture.anisotropy = anisotropy;
+      roughnessTexture.anisotropy = anisotropy;
+
+      return { map: colorTexture, roughnessMap: roughnessTexture };
+    };
+
+    const createMonumentMaterials = () => {
+      const stoneTint = 0xded6c6;
+      const baseTextures = createMarbleTextures({
+        tint: stoneTint,
+        veinColor: 0xb9b0a0,
+        speckColor: 0x7d7464,
+        repeat: new THREE.Vector2(2.8, 2.8),
+      });
+
+      const baseMaterial = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0xffffff),
+        map: baseTextures.map,
+        roughness: 0.42,
+        metalness: 0.08,
+        roughnessMap: baseTextures.roughnessMap,
+        envMapIntensity: 0.9,
+      });
+
+      const trimMaterial = baseMaterial.clone();
+      trimMaterial.color = new THREE.Color(0xd4c9b7);
+      trimMaterial.roughness = 0.38;
+      trimMaterial.envMapIntensity = 0.85;
+
+      const insetMaterial = baseMaterial.clone();
+      insetMaterial.color = new THREE.Color(0xc3b59e);
+      insetMaterial.roughness = 0.35;
+
+      const statueMaterial = new THREE.MeshStandardMaterial({
+        color: 0xc9b48a,
+        roughness: 0.32,
+        metalness: 0.18,
+        envMapIntensity: 1.1,
+      });
+
+      return { baseMaterial, trimMaterial, insetMaterial, statueMaterial };
+    };
+
+    const { baseMaterial, trimMaterial, insetMaterial, statueMaterial } =
+      createMonumentMaterials();
+
+    let currentHeight = 0;
+    const stepDefinitions = [
+      { radiusTop: 5.4, radiusBottom: 5.8, height: 0.34 },
+      { radiusTop: 5.0, radiusBottom: 5.3, height: 0.28 },
+      { radiusTop: 4.6, radiusBottom: 5.0, height: 0.26 },
+    ];
+
+    for (const step of stepDefinitions) {
+      const geometry = new THREE.CylinderGeometry(
+        step.radiusTop,
+        step.radiusBottom,
+        step.height,
+        64
+      );
+      const mesh = new THREE.Mesh(geometry, baseMaterial);
+      currentHeight += step.height / 2;
+      mesh.position.y = currentHeight;
+      currentHeight += step.height / 2;
+      applySharedProps(mesh);
+      placeholder.add(mesh);
     }
 
-    const cap = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.8, 4, 0.6, 36),
-      new THREE.MeshStandardMaterial({ color: 0xe8dcc7, roughness: 0.6 })
+    const daisHeight = 1.2;
+    const dais = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.9, 4.2, daisHeight, 64),
+      baseMaterial
     );
-    cap.position.y = 5.05;
-    applySharedProps(cap);
-    placeholder.add(cap);
+    dais.position.y = currentHeight + daisHeight / 2;
+    currentHeight += daisHeight;
+    applySharedProps(dais);
+    placeholder.add(dais);
+
+    const daisTrim = new THREE.Mesh(
+      new THREE.TorusGeometry(3.9, 0.1, 24, 96),
+      trimMaterial
+    );
+    daisTrim.rotation.x = Math.PI / 2;
+    daisTrim.position.y = dais.position.y + daisHeight / 2 - 0.08;
+    applySharedProps(daisTrim);
+    placeholder.add(daisTrim);
+
+    const plinthHeight = 0.6;
+    const plinth = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.6, 3.7, plinthHeight, 48),
+      insetMaterial
+    );
+    plinth.position.y = currentHeight + plinthHeight / 2;
+    currentHeight += plinthHeight;
+    applySharedProps(plinth);
+    placeholder.add(plinth);
+
+    const friezeMaterial = trimMaterial.clone();
+    friezeMaterial.side = THREE.DoubleSide;
+    const frieze = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.45, 3.55, 0.4, 64, 1, true),
+      friezeMaterial
+    );
+    frieze.position.y = plinth.position.y + plinthHeight / 2 - 0.2;
+    applySharedProps(frieze);
+    placeholder.add(frieze);
+
+    const reliefBand = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.3, 3.35, 0.18, 64),
+      insetMaterial
+    );
+    reliefBand.position.y = plinth.position.y + plinthHeight / 2 + 0.1;
+    applySharedProps(reliefBand);
+    placeholder.add(reliefBand);
+
+    const columnBaseHeight = 0.4;
+    const columnBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.2, 3.3, columnBaseHeight, 48),
+      baseMaterial
+    );
+    columnBase.position.y = currentHeight + columnBaseHeight / 2;
+    currentHeight += columnBaseHeight;
+    applySharedProps(columnBase);
+    placeholder.add(columnBase);
+
+    const columnGeometry = new THREE.CylinderGeometry(0.52, 0.58, 4.6, 36, 1, false);
+    columnGeometry.computeVertexNormals();
+    const columnMaterial = baseMaterial.clone();
+    columnMaterial.roughness = 0.36;
+    columnMaterial.envMapIntensity = 1.05;
+
+    const columnCapGeometry = new THREE.CylinderGeometry(0.7, 0.7, 0.25, 32);
+    const columnBaseGeometry = new THREE.CylinderGeometry(0.68, 0.68, 0.2, 32);
+    const columnCount = 8;
+    const columnRadius = 2.65;
+    for (let i = 0; i < columnCount; i++) {
+      const angle = (i / columnCount) * Math.PI * 2;
+      const columnGroup = new THREE.Group();
+
+      const column = new THREE.Mesh(columnGeometry, columnMaterial);
+      column.position.y = currentHeight + 2.3;
+      applySharedProps(column);
+      columnGroup.add(column);
+
+      const baseCap = new THREE.Mesh(columnBaseGeometry, trimMaterial);
+      baseCap.position.y = currentHeight + 0.1;
+      applySharedProps(baseCap);
+      columnGroup.add(baseCap);
+
+      const topCap = new THREE.Mesh(columnCapGeometry, trimMaterial);
+      topCap.position.y = currentHeight + 4.5;
+      applySharedProps(topCap);
+      columnGroup.add(topCap);
+
+      columnGroup.position.set(
+        Math.cos(angle) * columnRadius,
+        0,
+        Math.sin(angle) * columnRadius
+      );
+
+      applySharedProps(columnGroup);
+      placeholder.add(columnGroup);
+    }
+
+    currentHeight += 4.6;
+
+    const entablatureHeight = 0.7;
+    const entablature = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.2, 3.25, entablatureHeight, 48),
+      trimMaterial
+    );
+    entablature.position.y = currentHeight + entablatureHeight / 2;
+    applySharedProps(entablature);
+    placeholder.add(entablature);
+    currentHeight += entablatureHeight;
+
+    const cornice = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.05, 3.2, 0.5, 64),
+      baseMaterial
+    );
+    cornice.position.y = currentHeight + 0.25;
+    applySharedProps(cornice);
+    placeholder.add(cornice);
+    currentHeight += 0.5;
+
+    const capLower = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.5, 3.1, 0.45, 64),
+      trimMaterial
+    );
+    capLower.position.y = currentHeight + 0.225;
+    applySharedProps(capLower);
+    placeholder.add(capLower);
+    currentHeight += 0.45;
+
+    const capUpper = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.7, 3.4, 0.4, 64),
+      baseMaterial
+    );
+    capUpper.position.y = currentHeight + 0.2;
+    applySharedProps(capUpper);
+    placeholder.add(capUpper);
+    currentHeight += 0.4;
+
+    const capMedallion = new THREE.Mesh(
+      new THREE.CircleGeometry(2.1, 48),
+      insetMaterial
+    );
+    capMedallion.rotation.x = -Math.PI / 2;
+    capMedallion.position.y = currentHeight + 0.01;
+    applySharedProps(capMedallion);
+    placeholder.add(capMedallion);
+
+    const capTorus = new THREE.Mesh(
+      new THREE.TorusGeometry(2.6, 0.08, 24, 96),
+      trimMaterial
+    );
+    capTorus.rotation.x = Math.PI / 2;
+    capTorus.position.y = currentHeight;
+    applySharedProps(capTorus);
+    placeholder.add(capTorus);
+
+    const statuePedestalHeight = 0.9;
+    const statuePedestal = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.25, 1.6, statuePedestalHeight, 48),
+      baseMaterial
+    );
+    statuePedestal.position.y = currentHeight + statuePedestalHeight / 2 + 0.1;
+    applySharedProps(statuePedestal);
+    placeholder.add(statuePedestal);
+
+    currentHeight += statuePedestalHeight + 0.2;
 
     const statue = new THREE.Mesh(
-      new THREE.ConeGeometry(1.1, 2.4, 24),
-      new THREE.MeshStandardMaterial({ color: 0xc9b48a, roughness: 0.4 })
+      new THREE.ConeGeometry(1.05, 2.5, 6, 1, false),
+      statueMaterial
     );
-    statue.position.y = 6.5;
+    statue.position.y = currentHeight + 1.25;
     statue.castShadow = true;
     statue.receiveShadow = true;
     statue.userData.noCollision = true;
     placeholder.add(statue);
+
+    const statueCrown = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 24, 18),
+      trimMaterial
+    );
+    statueCrown.position.y = statue.position.y + 1.5;
+    applySharedProps(statueCrown);
+    statueCrown.userData.noCollision = true;
+    placeholder.add(statueCrown);
+
+    const occlusionRing = new THREE.Mesh(
+      new THREE.RingGeometry(3.2, 5.6, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0x000000,
+        transparent: true,
+        opacity: 0.14,
+        side: THREE.DoubleSide,
+      })
+    );
+    occlusionRing.rotation.x = -Math.PI / 2;
+    occlusionRing.position.y = 0.02;
+    occlusionRing.castShadow = false;
+    occlusionRing.receiveShadow = false;
+    occlusionRing.material.depthWrite = false;
+    occlusionRing.renderOrder = 1;
+    occlusionRing.userData.noCollision = true;
+    placeholder.add(occlusionRing);
+
+    const monumentKeyLight = new THREE.SpotLight(0xffedd2, 1.25, 40, Math.PI / 5, 0.4, 1.2);
+    monumentKeyLight.position.set(6, 10, 6);
+    monumentKeyLight.castShadow = true;
+    monumentKeyLight.shadow.mapSize.set(1024, 1024);
+    monumentKeyLight.shadow.bias = -0.0006;
+    monumentKeyLight.userData.noCollision = true;
+    placeholder.add(monumentKeyLight);
+    const keyTarget = new THREE.Object3D();
+    keyTarget.position.set(0, 4, 0);
+    keyTarget.userData.noCollision = true;
+    placeholder.add(keyTarget);
+    monumentKeyLight.target = keyTarget;
+
+    const monumentFillLight = new THREE.PointLight(0xc5d6ff, 0.38, 18, 1.6);
+    monumentFillLight.position.set(-4, 6.8, -3);
+    monumentFillLight.castShadow = false;
+    monumentFillLight.userData.noCollision = true;
+    placeholder.add(monumentFillLight);
+
+    const monumentAccentLight = new THREE.PointLight(0xfff6db, 0.62, 16, 1.4);
+    monumentAccentLight.position.set(0, 7.6, 0);
+    monumentAccentLight.castShadow = true;
+    monumentAccentLight.shadow.mapSize.set(512, 512);
+    monumentAccentLight.shadow.bias = -0.0007;
+    monumentAccentLight.userData.noCollision = true;
+    placeholder.add(monumentAccentLight);
 
     if (options.position) {
       placeholder.position.copy(options.position);
