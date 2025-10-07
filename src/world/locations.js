@@ -34,3 +34,8 @@ export const HARBOR_SEA_LEVEL = SEA_LEVEL_Y;
 export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, 0, 25);
 export const CITY_CHUNK_SIZE = new THREE.Vector2(72, 54);
 export const CITY_SEED = 0x4d534349;
+
+// Harbor water extents (limit the ocean to the bay only)
+export const HARBOR_WATER_CENTER = HARBOR_CENTER.clone(); // same XZ as harbor in 2D
+export const HARBOR_WATER_SIZE = new THREE.Vector2(320, 240); // width (X), depth (Z) in world units
+export const HARBOR_WATER_RADIUS = 170; // if using circular water
