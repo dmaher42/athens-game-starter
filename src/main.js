@@ -28,6 +28,8 @@ import { Character } from "./characters/Character.js";
 import { spawnCitizenCrowd } from "./world/npcs.js";
 import { mountExposureSlider } from "./ui/exposureSlider.js";
 import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
+import { mountDevHUD } from "./ui/devHud.js";
+import { createPin } from "./world/pins.js";
 import { attachHeightSampler } from "./world/terrainHeight.js";
 
 function isHtmlResponse(response) {
@@ -586,6 +588,33 @@ async function mainApp() {
   }
 
   animate();
+
+  // Utility getters for HUD
+  const getPosition = () => {
+    // Prefer player avatar; fallback to camera
+    if (typeof player?.position?.x === "number") return player.position;
+    return camera.position;
+  };
+  const getDirection = () => {
+    const v = new THREE.Vector3(0, 0, -1);
+    v.applyQuaternion(camera.quaternion);
+    v.y = 0; // flatten to ground plane for compass
+    v.normalize();
+    return v;
+  };
+
+  // Optional: drop a 3D pin with "P"
+  const onPin = (p) => {
+    const pin = createPin(scene, p);
+    // auto-lift pin to ground if sampler exists
+    const y = terrain?.userData?.getHeightAt?.(p.x, p.z);
+    if (Number.isFinite(y)) pin.position.y = y;
+  };
+
+  // Mount dev HUD in development builds only
+  if (import.meta.env?.DEV) {
+    mountDevHUD({ getPosition, getDirection, onPin });
+  }
 
   // Simple controls: clicking the canvas or pressing E will run the onUse
   // callback attached to whatever we are currently looking at.
