@@ -40,19 +40,15 @@ export function createMainHillRoad(scene, terrain) {
     tangent.subVectors(next, p).normalize();
     const angle = Math.atan2(tangent.x, tangent.z);
     for (let j = 0; j < 2; j++) {
-      const idx = (i * 2 + j) * 3;
+      const vertexIndex = i * 2 + j;
       const side = j === 0 ? -0.5 : 0.5;
-      dir.set(
-        Math.sin(angle) * side * width,
-        0,
-        Math.cos(angle) * side * width
-      );
+      dir.set(Math.sin(angle) * side * width, 0, Math.cos(angle) * side * width);
       const x = p.x + dir.x;
       const z = p.z + dir.z;
       let y = getH ? getH(x, z) : p.y;
       if (!Number.isFinite(y)) y = p.y;
       y += 0.03; // small lift to avoid z-fighting with ground
-      pos.setXYZ(idx / 3, x, y, z);
+      pos.setXYZ(vertexIndex, x, y, z);
     }
   }
   pos.needsUpdate = true;

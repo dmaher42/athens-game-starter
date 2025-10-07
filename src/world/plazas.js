@@ -17,6 +17,7 @@ function makeDisc(center, radius, color) {
   const mesh = new THREE.Mesh(geo, mat);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.copy(center);
+  mesh.position.y += 0.05;
   mesh.renderOrder = 1;
   mesh.receiveShadow = true;
   mesh.name = "Plaza";
