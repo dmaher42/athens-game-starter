@@ -39,9 +39,9 @@ export const CITY_SEED = 0x4d534349;
 export const HARBOR_WATER_RADIUS = 170; // if using circular water
 
 // Harbor water extents (rectangle) and seaward offset
-export const HARBOR_WATER_SIZE = new THREE.Vector2(260, 120); // reduce Z extent (depth)
-export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, -80); // push water toward open sea (−Z)
-export const HARBOR_WATER_BACK = 12; // max inland distance allowed (in Z half-extent)
+export const HARBOR_WATER_SIZE = new THREE.Vector2(260, 100); // reduce Z extent (depth)
+export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, -100); // push water toward open sea (−Z)
+export const HARBOR_WATER_BACK = 0; // max inland distance allowed (in Z half-extent)
 
 // Convenience centers
 export const HARBOR_WATER_CENTER = new THREE.Vector3(

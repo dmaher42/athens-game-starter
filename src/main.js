@@ -120,6 +120,7 @@ async function mainApp() {
   renderer.toneMappingExposure = 1.0;
   // Enable local clipping so ocean clip planes work
   renderer.localClippingEnabled = true;
+
   configureRendererShadows(renderer);
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
