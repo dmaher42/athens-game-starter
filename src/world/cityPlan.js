@@ -184,6 +184,8 @@ export function createCivicDistrict(scene, options = {}) {
     options.terrainSampler ??
     options.terrain?.userData?.getHeightAt;
 
+  const surfaceOffset = options.surfaceOffset ?? 0.05;
+
   const center = centerOption instanceof THREE.Vector3
     ? centerOption.clone()
     : new THREE.Vector3(
@@ -207,10 +209,10 @@ export function createCivicDistrict(scene, options = {}) {
       const worldZ = center.z + offsetZ;
       const sampled = terrainSampler(worldX, worldZ);
       if (Number.isFinite(sampled)) {
-        return sampled - baseHeight;
+        return sampled - baseHeight + surfaceOffset;
       }
     }
-    return fallback;
+    return fallback + surfaceOffset;
   };
 
   const promenade = createPavedStrip(promenadeWidth, plazaLength, 0xc3c2bb);
@@ -225,7 +227,7 @@ export function createCivicDistrict(scene, options = {}) {
 
   const greenRight = greenLeft.clone();
   greenRight.position.x = (promenadeWidth + greensWidth) / 2;
-  greenRight.position.y = sampleLocalHeight(greenRight.position.x, 0, greenRight.position.y ?? 0);
+  greenRight.position.y = sampleLocalHeight(greenRight.position.x, 0, 0);
   group.add(greenRight);
 
   const plazaNorth = createPavedStrip(promenadeWidth + greensWidth * 2, 18, 0xbdb8ac);
@@ -235,7 +237,7 @@ export function createCivicDistrict(scene, options = {}) {
 
   const plazaSouth = plazaNorth.clone();
   plazaSouth.position.z = -(plazaLength / 2 + 9);
-  plazaSouth.position.y = sampleLocalHeight(0, plazaSouth.position.z, plazaSouth.position.y ?? 0);
+  plazaSouth.position.y = sampleLocalHeight(0, plazaSouth.position.z, 0);
   group.add(plazaSouth);
 
   const fountain = createFountain();

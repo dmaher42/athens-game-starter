@@ -6,6 +6,8 @@ import {
   ACROPOLIS_PEAK_3D,
 } from "./locations.js";
 
+const SURFACE_OFFSET = 0.05;
+
 // scene + terrain required so we can drape to ground
 export function createMainHillRoad(scene, terrain) {
   // Gentle S-curve from harbor → agora → acropolis
