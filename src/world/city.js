@@ -256,21 +256,38 @@ export function updateCityLighting(city, nightFactor = 0) {
   lighting.material.emissiveIntensity = target;
 }
 
+/**
+ * Distribute buildings in three tiers: Harbor Quarter (low), Agora District (mid), Acropolis Crown (high).
+ * - Enforces min height above sea
+ * - Skips steep slope
+ * - Orients facades to face along the main road (or toward harbor if far)
+ */
 export function createHillCity(scene, terrain, curve, opts = {}) {
   const {
     seed = 20251007,
-    buildingCount = 140,
+    buildingCount = 120,
     spacing = 5.5,
-    harborBand = [SEA_LEVEL_Y + 2.0, SEA_LEVEL_Y + 4.5], // keep comfortably above splash zone
+    harborBand = [SEA_LEVEL_Y + 2.0, SEA_LEVEL_Y + 4.5],
     agoraBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 8.0],
     acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
-    avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 8,
   } = opts;
+
+  const { group, walls, roofs, _dummy, capacity } = ensureInstancedSets(scene, buildingCount);
 
   const rng = makeRng(seed);
   const lots = [];
   const center2 = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
-  const getH = (x, z) => terrain?.userData?.getHeightAt?.(x, z);
+  const agoraToHarborDir = new THREE.Vector2(
+    HARBOR_CENTER_3D.x - AGORA_CENTER_3D.x,
+    HARBOR_CENTER_3D.z - AGORA_CENTER_3D.z,
+  );
+  if (agoraToHarborDir.lengthSq() > 0) {
+    agoraToHarborDir.normalize();
+  } else {
+    agoraToHarborDir.set(0, 1);
+  }
+  const viewCorridorCos = Math.cos(THREE.MathUtils.degToRad(10));
+  const viewVector = new THREE.Vector2();
 
   const targets = [
     { band: harborBand, tries: Math.floor(buildingCount * 0.35) },
@@ -279,6 +296,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
   ];
 
   const tmp2 = new THREE.Vector2();
+  const harbor2 = new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z);
   let placed = 0;
 
   for (const { band, tries } of targets) {
@@ -289,41 +307,133 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       const x = center2.x + Math.cos(t) * r;
       const z = center2.y + Math.sin(t) * r;
 
-      // keep shoreline clear (radius-aware)
-      const distHarbor = tmp2
-        .set(x, z)
-        .distanceTo(new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z));
-      if (distHarbor < avoidHarborRadius) continue;
+      const width = THREE.MathUtils.lerp(3.6, 6.6, rng());
+      const depth = THREE.MathUtils.lerp(3.4, 6.4, rng());
+      const wallHeight = THREE.MathUtils.lerp(2.7, 4.4, rng());
+      const roofHeight = wallHeight * THREE.MathUtils.lerp(0.32, 0.55, rng());
+      const radius = Math.max(width, depth) * 0.5;
 
-      const h = getH?.(x, z);
-      if (!Number.isFinite(h)) continue;
+      if (tmp2.set(x, z).distanceTo(harbor2) < radius + HARBOR_EXCLUDE_RADIUS) {
+        continue;
+      }
+
+      const h = terrain?.userData?.getHeightAt?.(x, z);
+      if (h == null) continue;
       if (h < band[0] || h > band[1]) continue;
       if (h < SEA_LEVEL_Y + MIN_ABOVE_SEA) continue;
 
-      // slope check (1m samples)
-      const hX = getH(x + 1.2, z);
-      const hZ = getH(x, z + 1.2);
-      if (!Number.isFinite(hX) || !Number.isFinite(hZ)) continue;
+      const hX = terrain.userData.getHeightAt(x + 1.2, z);
+      const hZ = terrain.userData.getHeightAt(x, z + 1.2);
+      if (hX == null || hZ == null) continue;
       const slope = Math.max(Math.abs(hX - h), Math.abs(hZ - h));
       if (slope > MAX_SLOPE_DELTA) continue;
 
-      lots.push(new THREE.Vector3(x, h, z));
+      const lot = {
+        position: new THREE.Vector3(x, h, z),
+        width,
+        depth,
+        wallHeight,
+        roofHeight,
+        wallHue: THREE.MathUtils.lerp(0.08, 0.13, rng()),
+        wallLightness: THREE.MathUtils.lerp(0.6, 0.76, rng()),
+        roofHue: THREE.MathUtils.lerp(0.02, 0.045, rng()),
+        roofLightness: THREE.MathUtils.lerp(0.24, 0.34, rng()),
+        radius,
+      };
+
+      lots.push(lot);
       placed++;
     }
   }
 
-  // Instantiate using your existing instanced meshes (reuse materials/geometry)
-  const { group, walls, roofs, dummy } = ensureInstancedSets(scene);
+  lots.sort(() => rng() - 0.5);
 
   const tangent = new THREE.Vector3();
+  const roadPoint = new THREE.Vector3();
+  const roadNext = new THREE.Vector3();
+  const roadSide = new THREE.Vector2();
+  const roadDelta = new THREE.Vector2();
   const down = new THREE.Vector3().subVectors(HARBOR_CENTER_3D, AGORA_CENTER_3D).normalize();
+  const dummy = _dummy;
+  const placements = [];
+
+  const separation = Math.max(0, spacing);
+  for (const lot of lots) {
+    if (placements.length >= capacity) break;
+    const p = lot.position;
+
+    viewVector.set(center2.x - p.x, center2.y - p.z);
+    const agoraDistance = viewVector.length();
+    if (agoraDistance < 25) {
+      if (agoraDistance < 1e-3) {
+        continue;
+      }
+      viewVector.multiplyScalar(1 / agoraDistance);
+      const angleCos = viewVector.dot(agoraToHarborDir);
+      if (angleCos > viewCorridorCos) {
+        continue;
+      }
+    }
+
+    if (curve) {
+      const t = nearestTOnCurve(curve, p, 180);
+      roadPoint.copy(curve.getPoint(t));
+      roadDelta.set(p.x - roadPoint.x, p.z - roadPoint.z);
+      const distSq = roadDelta.lengthSq();
+      if (distSq < 16) {
+        roadNext.copy(curve.getPoint(Math.min(1, t + 1e-3)));
+        tangent.subVectors(roadNext, roadPoint);
+        tangent.y = 0;
+        if (tangent.lengthSq() > 1e-6) {
+          tangent.normalize();
+          roadSide.set(-tangent.z, tangent.x).normalize();
+          if (roadSide.lengthSq() > 0) {
+            if (distSq > 1e-6 && roadSide.dot(roadDelta) < 0) {
+              roadSide.negate();
+            }
+            p.x += roadSide.x * 1.2;
+            p.z += roadSide.y * 1.2;
+
+            const adjustedHeight = terrain?.userData?.getHeightAt?.(p.x, p.z);
+            if (Number.isFinite(adjustedHeight)) {
+              if (adjustedHeight < SEA_LEVEL_Y + MIN_ABOVE_SEA) {
+                continue;
+              }
+              lot.position.y = adjustedHeight;
+            }
+          }
+        }
+      }
+    }
+
+    const sampledHeight = terrain?.userData?.getHeightAt?.(p.x, p.z);
+    if (!Number.isFinite(sampledHeight)) {
+      continue;
+    }
+    if (sampledHeight < SEA_LEVEL_Y + MIN_ABOVE_SEA) {
+      continue;
+    }
+    lot.position.y = Math.max(sampledHeight, SEA_LEVEL_Y + MIN_ABOVE_SEA);
+
+    let blocked = false;
+    for (const other of placements) {
+      const desired = lot.radius + other.radius + separation;
+      if (lot.position.distanceToSquared(other.position) < desired * desired) {
+        blocked = true;
+        break;
+      }
+    }
+    if (!blocked) {
+      placements.push(lot);
+    }
+  }
+
   let i = 0;
+  const wallColor = new THREE.Color();
+  const roofColor = new THREE.Color();
+  for (const lot of placements) {
+    const p = lot.position;
 
-  for (const p of lots) {
-    // spacing: skip too-close neighbors
-    if (lots.some((o) => o !== p && o.distanceToSquared(p) < spacing * spacing)) continue;
-
-    // orientation by road tangent if nearby, else face downhill
     let yaw = 0;
     if (curve) {
       const t = nearestTOnCurve(curve, p, 180);
@@ -335,29 +445,37 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       yaw = Math.atan2(down.x, down.z);
     }
 
-    // foundation: clamp EVERY placement to terrain sample AFTER any nudges
-    const y = Math.max(getH?.(p.x, p.z) ?? p.y, SEA_LEVEL_Y + MIN_ABOVE_SEA);
-
-    // walls
-    dummy.position.set(p.x, y + 1.0, p.z);
+    dummy.position.set(p.x, p.y, p.z);
     dummy.rotation.set(0, yaw, 0);
-    dummy.scale.setScalar(0.9 + rng() * 0.3);
+    dummy.scale.set(lot.width, lot.wallHeight, lot.depth);
     dummy.updateMatrix();
     walls.setMatrixAt(i, dummy.matrix);
+    if (walls.instanceColor) {
+      wallColor.setHSL(lot.wallHue, 0.45, lot.wallLightness);
+      walls.setColorAt(i, wallColor);
+    }
 
-    // roof
-    dummy.position.set(p.x, y + 2.0, p.z);
+    dummy.position.set(p.x, p.y + lot.wallHeight, p.z);
     dummy.rotation.set(0, yaw, 0);
+    dummy.scale.set(lot.width * 1.04, lot.roofHeight, lot.depth * 1.04);
     dummy.updateMatrix();
     roofs.setMatrixAt(i, dummy.matrix);
+    if (roofs.instanceColor) {
+      roofColor.setHSL(lot.roofHue, 0.55, lot.roofLightness);
+      roofs.setColorAt(i, roofColor);
+    }
 
     i++;
+    if (i >= capacity) break;
   }
 
   walls.count = roofs.count = i;
   walls.instanceMatrix.needsUpdate = true;
   roofs.instanceMatrix.needsUpdate = true;
+  if (walls.instanceColor) walls.instanceColor.needsUpdate = true;
+  if (roofs.instanceColor) roofs.instanceColor.needsUpdate = true;
 
+  group.visible = i > 0;
   return group;
 }
 
@@ -367,12 +485,7 @@ function makeRng(seed = 1337) {
 }
 
 function ensureInstancedSets(scene, capacity = 120) {
-  const cache = __ensureInstancedSets(scene, capacity);
-  if (cache && !cache.dummy) {
-    cache.dummy = cache._dummy ?? new THREE.Object3D();
-    cache._dummy = cache.dummy;
-  }
-  return cache;
+  return __ensureInstancedSets(scene, capacity);
 }
 
 function nearestTOnCurve(curve, p, samples) {
@@ -402,10 +515,6 @@ function __ensureInstancedSets(scene, capacity = DEFAULT_CAPACITY) {
   if (_instancedCache && _instancedCache.capacity >= effectiveCapacity) {
     if (_instancedCache.group.parent !== scene) {
       scene.add(_instancedCache.group);
-    }
-    if (!_instancedCache.dummy) {
-      _instancedCache.dummy = _instancedCache._dummy ?? new THREE.Object3D();
-      _instancedCache._dummy = _instancedCache.dummy;
     }
     resetInstancedMeshes(_instancedCache);
     return _instancedCache;
@@ -437,13 +546,11 @@ function __ensureInstancedSets(scene, capacity = DEFAULT_CAPACITY) {
   group.add(walls);
   group.add(roofs);
 
-  const dummy = new THREE.Object3D();
   const cache = {
     group,
     walls,
     roofs,
-    dummy,
-    _dummy: dummy,
+    _dummy: new THREE.Object3D(),
     capacity: effectiveCapacity,
   };
 

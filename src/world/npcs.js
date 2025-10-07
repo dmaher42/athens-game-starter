@@ -90,9 +90,10 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       const tangent = pathCurve.getTangentAt(progress);
 
       group.position.copy(position);
-      const getH = getHeightAt;
-      const y = getH ? getH(group.position.x, group.position.z) : group.position.y;
-      if (Number.isFinite(y)) group.position.y = y + 0.05;
+      const sampled = getHeightAt
+        ? getHeightAt(group.position.x, group.position.z)
+        : position.y;
+      group.position.y = Number.isFinite(sampled) ? sampled + 0.05 : position.y + 0.05;
 
       const yaw = Math.atan2(tangent.x, tangent.z);
       group.rotation.set(0, yaw, 0);

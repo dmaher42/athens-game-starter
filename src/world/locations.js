@@ -6,24 +6,25 @@ const EXISTING_SEA_LEVEL_Y =
     ? globalThis.SEA_LEVEL_Y
     : undefined;
 
+// HILL-CITY (Archetype 1) constants
 export const SEA_LEVEL_Y =
-  typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 0; // can tweak later
-// export const SEA_LEVEL_Y = -0.3; // uncomment to lower globally
+  typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 0; // keep existing if defined
+// export const SEA_LEVEL_Y = -0.3; // uncomment to lower globally if shoreline splashes
 
-// Key anchors (coastal → uphill)
+// Key anchors
 export const HARBOR_CENTER_3D = new THREE.Vector3(-120, SEA_LEVEL_Y, 80);
-export const AGORA_CENTER_3D = new THREE.Vector3(-80, 8, 40); // slightly higher than sea
-export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, 14, 10); // hill crown
+export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, 14, 10); // elevated inland focal point
+export const AGORA_CENTER_3D = new THREE.Vector3(-80, 8, 40); // mid-terrace civic plaza
 
-// Zones
-export const HARBOR_EXCLUDE_RADIUS = 110; // keep shoreline clear
-export const AGORA_RADIUS = 22;
-export const ACROPOLIS_RADIUS = 18;
-export const CITY_AREA_RADIUS = 180;
+// Zones (radius in world units)
+export const HARBOR_EXCLUDE_RADIUS = 110; // keep water clear
+export const AGORA_RADIUS = 22; // flat(ish) plaza
+export const ACROPOLIS_RADIUS = 18; // temple/council terrace
 
-// Placement safety
-export const MIN_ABOVE_SEA = 2.0; // minimum building base above water
-export const MAX_SLOPE_DELTA = 0.35; // 1m sample slope threshold
+// Terrain/placement rules
+export const MIN_ABOVE_SEA = 2.0; // buildings must be above water by this margin
+export const MAX_SLOPE_DELTA = 0.35; // max allowed height change over ~1m sample
+export const CITY_AREA_RADIUS = 180; // overall distribution radius
 
 // Road
 export const MAIN_ROAD_WIDTH = 3.2;
