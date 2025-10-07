@@ -261,19 +261,19 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     seed = 20251007,
     buildingCount = 140,
     spacing = 5.5,
-    harborBand = [SEA_LEVEL_Y + 3.5, SEA_LEVEL_Y + 6.0], // +1m headroom near water
+    harborBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 5.5],
     agoraBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 8.0],
     acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
-    avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 24,
+    avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 18,
   } = opts;
 
   const rng = makeRng(seed);
   const lots = [];
+  const getH = terrain?.userData?.getHeightAt?.bind(terrain?.userData);
   const cell = (spacing || 6) * 0.8; // slightly tighter than visual spacing
   const hash = new Map();
   const keyFrom = (x, z) => `${Math.round(x / cell)}_${Math.round(z / cell)}`;
   const center2 = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
-  const getH = (x, z) => terrain?.userData?.getHeightAt?.(x, z);
 
   const targets = [
     { band: harborBand, tries: Math.floor(buildingCount * 0.35) },
@@ -298,20 +298,21 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
         .distanceTo(new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z));
       if (distHarbor < avoidHarborRadius) continue;
 
-      const h = getH?.(x, z);
+      const h = getH ? getH(x, z) : undefined;
       if (!Number.isFinite(h)) continue;
       if (h < band[0] || h > band[1]) continue;
       if (h < SEA_LEVEL_Y + MIN_ABOVE_SEA) continue;
 
+      const k = keyFrom(x, z);
+      if (hash.has(k)) continue; // avoid duplicates early
+
       // slope check (1m samples)
-      const hX = getH(x + 1.2, z);
-      const hZ = getH(x, z + 1.2);
+      const hX = getH ? getH(x + 1.2, z) : h;
+      const hZ = getH ? getH(x, z + 1.2) : h;
       if (!Number.isFinite(hX) || !Number.isFinite(hZ)) continue;
       const slope = Math.max(Math.abs(hX - h), Math.abs(hZ - h));
       if (slope > MAX_SLOPE_DELTA) continue;
 
-      const k = keyFrom(x, z);
-      if (hash.has(k)) continue; // already occupied nearby
       hash.set(k, true);
       lots.push(new THREE.Vector3(x, h, z));
       placed++;
@@ -339,17 +340,21 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     }
 
     // foundation: clamp EVERY placement to terrain sample AFTER any nudges
-    const y = Math.max(getH?.(p.x, p.z) ?? p.y, SEA_LEVEL_Y + MIN_ABOVE_SEA);
+    const ySample = getH ? getH(p.x, p.z) : p.y;
+    const baseY = Math.max(
+      Number.isFinite(ySample) ? ySample : p.y,
+      SEA_LEVEL_Y + MIN_ABOVE_SEA
+    );
 
     // walls
-    dummy.position.set(p.x, y + 1.0, p.z);
+    dummy.position.set(p.x, baseY + 1.0, p.z);
     dummy.rotation.set(0, yaw, 0);
     dummy.scale.setScalar(0.9 + rng() * 0.3);
     dummy.updateMatrix();
     walls.setMatrixAt(i, dummy.matrix);
 
     // roof
-    dummy.position.set(p.x, y + 2.0, p.z);
+    dummy.position.set(p.x, baseY + 2.0, p.z);
     dummy.rotation.set(0, yaw, 0);
     dummy.updateMatrix();
     roofs.setMatrixAt(i, dummy.matrix);

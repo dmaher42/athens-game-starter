@@ -28,6 +28,7 @@ import { Character } from "./characters/Character.js";
 import { spawnCitizenCrowd } from "./world/npcs.js";
 import { mountExposureSlider } from "./ui/exposureSlider.js";
 import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
+import { attachHeightSampler } from "./world/terrainHeight.js";
 
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -209,6 +210,7 @@ async function mainApp() {
   // a perfectly flat plane. We'll pass the mesh to the character so it can
   // query ground height during its update loop.
   const terrain = createTerrain(scene);
+  attachHeightSampler(terrain, scene);
   const ocean = await createOcean(scene, {
     position: HARBOR_CENTER_3D.clone(),
     bounds: {
@@ -221,20 +223,20 @@ async function mainApp() {
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
+  // OLD CITY BUILDER OFF
   // const city = createCity(scene, terrain, { origin: CITY_CHUNK_CENTER });
-  const city = null; // legacy grid city disabled to prevent overlap with hill build
 
-  // 1) Road from harbor → agora → acropolis
+  // Roads first (needs terrain sampler)
   const { group: roadGroup, curve: mainRoad } = createMainHillRoad(scene, terrain);
   if (import.meta.env?.DEV) {
     mountHillCityDebug(scene, mainRoad);
   }
 
-  // 2) Plazas (agora + acropolis terraces)
-  const plazas = createPlazas(scene);
+  // Plazas (agora + acropolis terraces)
+  createPlazas(scene);
 
-  // 3) City built in three tiers, oriented along the road
-  const hillCity = createHillCity(scene, terrain, mainRoad, {
+  // Hill-city buildings (uses terrain sampler + road curve)
+  createHillCity(scene, terrain, mainRoad, {
     seed: 42,
     buildingCount: 140,
   });
