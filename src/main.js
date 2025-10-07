@@ -42,6 +42,8 @@ import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
 
+const WORLD_ROOT_NAME = "WorldRoot";
+
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
   return contentType.includes("text/html");
@@ -493,6 +495,59 @@ async function mainApp() {
   let lastDisplayedTime = "";
 
   const scene = new THREE.Scene();
+  scene.userData = scene.userData || {};
+
+  const disposeMaterial = (material) => {
+    if (!material) return;
+    const materials = Array.isArray(material) ? material : [material];
+    for (const mat of materials) {
+      if (!mat) continue;
+      for (const value of Object.values(mat)) {
+        if (value && value.isTexture && typeof value.dispose === "function") {
+          value.dispose();
+        }
+      }
+      if (typeof mat.dispose === "function") {
+        mat.dispose();
+      }
+    }
+  };
+
+  const disposeObject = (object) => {
+    if (!object) return;
+    object.traverse((child) => {
+      if (child.isMesh) {
+        if (child.geometry && typeof child.geometry.dispose === "function") {
+          child.geometry.dispose();
+        }
+        disposeMaterial(child.material);
+      }
+    });
+  };
+
+  const disposeGroupChildren = (group) => {
+    if (!group) return;
+    const children = [...group.children];
+    for (const child of children) {
+      disposeObject(child);
+      group.remove(child);
+    }
+  };
+
+  const refreshWorldRoot = () => {
+    const existing = scene.userData?.worldRoot ?? scene.getObjectByName(WORLD_ROOT_NAME);
+    if (existing) {
+      disposeGroupChildren(existing);
+      existing.parent?.remove(existing);
+    }
+
+    const root = new THREE.Group();
+    root.name = WORLD_ROOT_NAME;
+    scene.add(root);
+    scene.userData.worldRoot = root;
+    return root;
+  };
+
   // Light atmospheric fog increases depth perception so the far mountains blend
   // into the horizon. Adjust near/far distances to taste.
   scene.fog = new THREE.Fog(0xa0a0a0, 50, 400);
@@ -539,6 +594,11 @@ async function mainApp() {
   // query ground height during its update loop.
   const terrain = createTerrain(scene);
   attachHeightSampler(terrain);
+  scene.userData.terrain = terrain;
+  scene.userData.getHeightAt = terrain?.userData?.getHeightAt;
+  if (typeof terrain?.userData?.getHeightAt === "function") {
+    scene.userData.terrainHeightSampler = terrain.userData.getHeightAt;
+  }
   // Add an occluder ribbon along the troublesome band the user reported.
   // The user provided two endpoints in X,Z. We interpret them as:
   //   P1 = (-0.4, -0.3)
@@ -554,17 +614,19 @@ async function mainApp() {
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
 
+  const worldRoot = refreshWorldRoot();
+
   // Roads first (needs terrain sampler)
-  const { group: roadGroup, curve: mainRoad } = createMainHillRoad(scene, terrain);
+  const { group: roadGroup, curve: mainRoad } = createMainHillRoad(worldRoot, terrain);
   if (import.meta.env?.DEV) {
     mountHillCityDebug(scene, mainRoad);
   }
 
   // Plazas (agora + acropolis terraces)
-  createPlazas(scene);
+  createPlazas(worldRoot);
 
   // Hill-city buildings (uses terrain sampler + road curve)
-  const hillCity = createHillCity(scene, terrain, mainRoad, {
+  const hillCity = createHillCity(worldRoot, terrain, mainRoad, {
     seed: 42,
     buildingCount: 140,
   });
@@ -576,7 +638,7 @@ async function mainApp() {
   // Lay out a formal civic district with a central promenade, symmetrical
   // civic buildings, and decorative lighting to give the city a planned
   // character rather than scattered props.
-  const civicDistrict = createCivicDistrict(scene, {
+  const civicDistrict = createCivicDistrict(worldRoot, {
     plazaLength: 90,
     promenadeWidth: 16,
     greensWidth: 9,
@@ -586,7 +648,7 @@ async function mainApp() {
 
   const input = new InputMap(renderer.domElement);
   const player = new PlayerController(input, envCollider, { camera });
-  scene.add(player.object);
+  worldRoot.add(player.object);
   player.object.position.set(0, 0, 10); // or your desired coordinates
 
   // Example interactable props. userData acts like a metadata bag so you can
@@ -615,7 +677,7 @@ async function mainApp() {
     console.log(`Door ${willOpen ? "opened" : "closed"}`);
   };
 
-  scene.add(doorPivot);
+  worldRoot.add(doorPivot);
 
   const lamp = new THREE.Group();
   lamp.name = "DemoLamp";
@@ -655,7 +717,7 @@ async function mainApp() {
     console.log(`Lamp ${isOn ? "turned off" : "turned on"}`);
   };
 
-  scene.add(lamp);
+  worldRoot.add(lamp);
 
   const createFallbackAvatar = () => {
     const group = new THREE.Group();
@@ -685,34 +747,6 @@ async function mainApp() {
     group.add(head);
 
     return group;
-  };
-
-  const disposeMaterial = (material) => {
-    if (!material) return;
-    const materials = Array.isArray(material) ? material : [material];
-    for (const mat of materials) {
-      if (!mat) continue;
-      for (const value of Object.values(mat)) {
-        if (value && value.isTexture && typeof value.dispose === "function") {
-          value.dispose();
-        }
-      }
-      if (typeof mat.dispose === "function") {
-        mat.dispose();
-      }
-    }
-  };
-
-  const disposeObject = (object) => {
-    if (!object) return;
-    object.traverse((child) => {
-      if (child.isMesh) {
-        if (child.geometry && typeof child.geometry.dispose === "function") {
-          child.geometry.dispose();
-        }
-        disposeMaterial(child.material);
-      }
-    });
   };
 
   const removeExistingAvatar = () => {
@@ -791,10 +825,10 @@ async function mainApp() {
 
   const buildingsRoot = new THREE.Group();
   buildingsRoot.name = "BuildingsRoot";
-  scene.add(buildingsRoot);
+  worldRoot.add(buildingsRoot);
   const npcUpdaters = [];
   if (civicDistrict.walkingLoop) {
-    const crowd = spawnCitizenCrowd(scene, civicDistrict.walkingLoop, {
+    const crowd = spawnCitizenCrowd(worldRoot, civicDistrict.walkingLoop, {
       count: 8,
       minSpeed: 0.7,
       maxSpeed: 1.4,
@@ -1030,7 +1064,7 @@ async function mainApp() {
       minAboveSea: 0.02,
     });
 
-    scene.add(monument);
+    worldRoot.add(monument);
 
     if (shouldCollide) {
       envCollider.refresh();
@@ -1253,7 +1287,7 @@ async function mainApp() {
       if (!url) return null;
       try {
         const transformOptions = resolveTransformOptions();
-        const object = await loadLandmark(scene, url, transformOptions);
+        const object = await loadLandmark(worldRoot, url, transformOptions);
         if (!object) {
           return null;
         }
@@ -1456,7 +1490,7 @@ async function mainApp() {
 
   // Optional: drop a 3D pin with "P"
   const onPin = (p) => {
-    const pin = createPin(scene, p);
+    const pin = createPin(worldRoot, p);
     // auto-lift pin to ground if sampler exists
     const y = terrain?.userData?.getHeightAt?.(p.x, p.z);
     if (Number.isFinite(y)) pin.position.y = y;
