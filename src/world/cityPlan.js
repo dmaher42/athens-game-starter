@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { AGORA_CENTER_3D } from './locations.js';
 
 function createPavedStrip(width, depth, color) {
   const geometry = new THREE.PlaneGeometry(width, depth);
@@ -177,29 +178,68 @@ export function createCivicDistrict(scene, options = {}) {
   const plazaLength = options.plazaLength ?? 80;
   const promenadeWidth = options.promenadeWidth ?? 14;
   const greensWidth = options.greensWidth ?? 10;
+  const centerOption = options.center ?? AGORA_CENTER_3D;
+  const terrainSampler =
+    options.heightSampler ??
+    options.terrainSampler ??
+    options.terrain?.userData?.getHeightAt;
+
+  const center = centerOption instanceof THREE.Vector3
+    ? centerOption.clone()
+    : new THREE.Vector3(
+        centerOption?.x ?? 0,
+        centerOption?.y ?? 0,
+        centerOption?.z ?? 0
+      );
+  let baseHeight = Number.isFinite(center.y) ? center.y : 0;
+  if (typeof terrainSampler === 'function') {
+    const sampled = terrainSampler(center.x, center.z);
+    if (Number.isFinite(sampled)) {
+      baseHeight = sampled;
+    }
+  }
+
+  group.position.set(center.x, baseHeight, center.z);
+
+  const sampleLocalHeight = (offsetX = 0, offsetZ = 0, fallback = 0) => {
+    if (typeof terrainSampler === 'function') {
+      const worldX = center.x + offsetX;
+      const worldZ = center.z + offsetZ;
+      const sampled = terrainSampler(worldX, worldZ);
+      if (Number.isFinite(sampled)) {
+        return sampled - baseHeight;
+      }
+    }
+    return fallback;
+  };
 
   const promenade = createPavedStrip(promenadeWidth, plazaLength, 0xc3c2bb);
   promenade.receiveShadow = true;
+  promenade.position.y = sampleLocalHeight(0, 0, promenade.position.y ?? 0);
   group.add(promenade);
 
   const greenLeft = createGreenStrip(greensWidth, plazaLength, 0x6b8a6f);
   greenLeft.position.x = -(promenadeWidth + greensWidth) / 2;
+  greenLeft.position.y = sampleLocalHeight(greenLeft.position.x, 0, greenLeft.position.y ?? 0);
   group.add(greenLeft);
 
   const greenRight = greenLeft.clone();
   greenRight.position.x = (promenadeWidth + greensWidth) / 2;
+  greenRight.position.y = sampleLocalHeight(greenRight.position.x, 0, greenRight.position.y ?? 0);
   group.add(greenRight);
 
   const plazaNorth = createPavedStrip(promenadeWidth + greensWidth * 2, 18, 0xbdb8ac);
   plazaNorth.position.z = plazaLength / 2 + 9;
+  plazaNorth.position.y = sampleLocalHeight(0, plazaNorth.position.z, plazaNorth.position.y ?? 0);
   group.add(plazaNorth);
 
   const plazaSouth = plazaNorth.clone();
   plazaSouth.position.z = -(plazaLength / 2 + 9);
+  plazaSouth.position.y = sampleLocalHeight(0, plazaSouth.position.z, plazaSouth.position.y ?? 0);
   group.add(plazaSouth);
 
   const fountain = createFountain();
-  fountain.position.set(0, 0, 0);
+  fountain.position.set(0, sampleLocalHeight(0, 0, fountain.position.y ?? 0), 0);
   group.add(fountain);
 
   const buildingConfigs = [
@@ -229,7 +269,8 @@ export function createCivicDistrict(scene, options = {}) {
       accentColor: paletteEntry.accent,
       roofColor: paletteEntry.roof,
     });
-    building.position.copy(cfg.position);
+    const localHeight = sampleLocalHeight(cfg.position.x, cfg.position.z, cfg.position.y ?? 0);
+    building.position.set(cfg.position.x, localHeight, cfg.position.z);
     building.rotation.y = cfg.rotation;
     group.add(building);
   }
@@ -239,19 +280,42 @@ export function createCivicDistrict(scene, options = {}) {
   for (let i = 0; i <= lampCount; i++) {
     const offset = -plazaLength / 2 + i * lampSpacing;
     const leftLamp = createLampPost();
-    leftLamp.position.set(-promenadeWidth / 2 + 1.2, 0, offset);
+    const leftX = -promenadeWidth / 2 + 1.2;
+    leftLamp.position.set(leftX, sampleLocalHeight(leftX, offset, leftLamp.position.y ?? 0), offset);
     group.add(leftLamp);
 
     const rightLamp = createLampPost();
-    rightLamp.position.set(promenadeWidth / 2 - 1.2, 0, offset + lampSpacing / 2);
+    const rightX = promenadeWidth / 2 - 1.2;
+    const rightZ = offset + lampSpacing / 2;
+    rightLamp.position.set(
+      rightX,
+      sampleLocalHeight(rightX, rightZ, rightLamp.position.y ?? 0),
+      rightZ
+    );
     group.add(rightLamp);
   }
 
   const curvePoints = [
-    new THREE.Vector3(-promenadeWidth * 0.35, 0, -plazaLength / 2 - 6),
-    new THREE.Vector3(-promenadeWidth * 0.35, 0, plazaLength / 2 + 6),
-    new THREE.Vector3(promenadeWidth * 0.35, 0, plazaLength / 2 + 6),
-    new THREE.Vector3(promenadeWidth * 0.35, 0, -plazaLength / 2 - 6),
+    new THREE.Vector3(
+      -promenadeWidth * 0.35,
+      sampleLocalHeight(-promenadeWidth * 0.35, -plazaLength / 2 - 6, 0),
+      -plazaLength / 2 - 6
+    ),
+    new THREE.Vector3(
+      -promenadeWidth * 0.35,
+      sampleLocalHeight(-promenadeWidth * 0.35, plazaLength / 2 + 6, 0),
+      plazaLength / 2 + 6
+    ),
+    new THREE.Vector3(
+      promenadeWidth * 0.35,
+      sampleLocalHeight(promenadeWidth * 0.35, plazaLength / 2 + 6, 0),
+      plazaLength / 2 + 6
+    ),
+    new THREE.Vector3(
+      promenadeWidth * 0.35,
+      sampleLocalHeight(promenadeWidth * 0.35, -plazaLength / 2 - 6, 0),
+      -plazaLength / 2 - 6
+    ),
   ];
   const walkingLoop = new THREE.CatmullRomCurve3(curvePoints, true, 'catmullrom', 0.1);
 

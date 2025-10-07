@@ -12,7 +12,7 @@ import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hi
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
 import { updateCityLighting, createHillCity } from "./world/city.js";
-import { HARBOR_CENTER_3D } from "./world/locations.js";
+import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
 import { InputMap } from "./input/InputMap.js";
@@ -233,6 +233,8 @@ async function mainApp() {
     plazaLength: 90,
     promenadeWidth: 16,
     greensWidth: 9,
+    center: AGORA_CENTER_3D,
+    terrain,
   });
 
   const input = new InputMap(renderer.domElement);
