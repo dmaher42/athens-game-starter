@@ -12,7 +12,12 @@ import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hi
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
 import { updateCityLighting, createHillCity } from "./world/city.js";
-import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from "./world/locations.js";
+import {
+  AGORA_CENTER_3D,
+  HARBOR_CENTER_3D,
+  HARBOR_EXCLUDE_RADIUS,
+  CITY_AREA_RADIUS,
+} from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
 import { InputMap } from "./input/InputMap.js";
@@ -204,8 +209,13 @@ async function mainApp() {
   // query ground height during its update loop.
   const terrain = createTerrain(scene);
   const ocean = await createOcean(scene, {
-    size: 800,
     position: HARBOR_CENTER_3D.clone(),
+    bounds: {
+      west: HARBOR_CENTER_3D.x - CITY_AREA_RADIUS * 4,
+      east: HARBOR_CENTER_3D.x + HARBOR_EXCLUDE_RADIUS * 0.4,
+      south: HARBOR_CENTER_3D.z - CITY_AREA_RADIUS * 2,
+      north: HARBOR_CENTER_3D.z + CITY_AREA_RADIUS * 2,
+    },
   });
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
   const envCollider = new EnvironmentCollider();
