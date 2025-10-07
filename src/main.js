@@ -12,7 +12,11 @@ import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hi
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
 import { updateCityLighting, createHillCity } from "./world/city.js";
-import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from "./world/locations.js";
+import {
+  AGORA_CENTER_3D,
+  HARBOR_CENTER_3D,
+  HARBOR_EXCLUDE_RADIUS,
+} from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
 import { InputMap } from "./input/InputMap.js";
@@ -23,6 +27,15 @@ import { Character } from "./characters/Character.js";
 import { spawnCitizenCrowd } from "./world/npcs.js";
 import { mountExposureSlider } from "./ui/exposureSlider.js";
 import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
+
+const OCEAN_SIZE = 1200;
+const OCEAN_EAST_LIMIT = HARBOR_CENTER_3D.x + HARBOR_EXCLUDE_RADIUS * 0.15;
+const OCEAN_NORTH_LIMIT = HARBOR_CENTER_3D.z + HARBOR_EXCLUDE_RADIUS * 0.7;
+const OCEAN_CENTER = new THREE.Vector3(
+  OCEAN_EAST_LIMIT - OCEAN_SIZE * 0.5,
+  HARBOR_CENTER_3D.y,
+  OCEAN_NORTH_LIMIT - OCEAN_SIZE * 0.5
+);
 
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -204,8 +217,8 @@ async function mainApp() {
   // query ground height during its update loop.
   const terrain = createTerrain(scene);
   const ocean = await createOcean(scene, {
-    size: 800,
-    position: HARBOR_CENTER_3D.clone(),
+    size: OCEAN_SIZE,
+    position: OCEAN_CENTER.clone(),
   });
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
   const envCollider = new EnvironmentCollider();
