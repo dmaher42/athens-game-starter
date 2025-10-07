@@ -342,10 +342,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
 
     // foundation: clamp EVERY placement to terrain sample AFTER any nudges
     const ySample = getH ? getH(p.x, p.z) : p.y;
-    const baseY = Math.max(
-      Number.isFinite(ySample) ? ySample : p.y,
-      SEA_LEVEL_Y + MIN_ABOVE_SEA
-    );
+    const baseY = Math.max(Number.isFinite(ySample) ? ySample : p.y, SEA_LEVEL_Y + MIN_ABOVE_SEA);
 
     addFoundationPad(scene, p.x, baseY, p.z, 2.2);
 
@@ -382,6 +379,20 @@ function ensureInstancedSets(scene, capacity = 120) {
   if (cache && !cache.dummy) {
     cache.dummy = cache._dummy ?? new THREE.Object3D();
     cache._dummy = cache.dummy;
+  }
+  if (cache?.walls?.material) {
+    cache.walls.material.depthWrite = true;
+    cache.walls.material.transparent = false;
+  }
+  if (cache?.roofs?.material) {
+    cache.roofs.material.depthWrite = true;
+    cache.roofs.material.transparent = false;
+  }
+  if (cache?.walls) {
+    cache.walls.renderOrder = 2;
+  }
+  if (cache?.roofs) {
+    cache.roofs.renderOrder = 2;
   }
   return cache;
 }
