@@ -47,7 +47,7 @@ export function createMainHillRoad(scene, terrain) {
       const z = p.z + dir.z;
       let y = getH ? getH(x, z) : p.y;
       if (!Number.isFinite(y)) y = p.y;
-      y += 0.03; // small lift to avoid z-fighting with ground
+      y += 0.08; // increased lift to avoid z-fighting with ground
       pos.setXYZ(vertexIndex, x, y, z);
     }
   }
@@ -55,7 +55,7 @@ export function createMainHillRoad(scene, terrain) {
   geo.computeVertexNormals();
 
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x575757,
+    color: 0x8a8a8a,
     roughness: 1,
     metalness: 0,
     side: THREE.DoubleSide,
