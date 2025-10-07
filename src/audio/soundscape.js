@@ -144,19 +144,39 @@ export class Soundscape {
       }
     };
 
-    const resolvedManifestUrl = resolveAssetPath(manifestUrl);
-    let mf;
-    try {
-      const response = await fetch(resolvedManifestUrl);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+    function isHtmlResponse(response) {
+      const ct = response.headers.get("content-type") || "";
+      return ct.includes("text/html");
+    }
+
+    async function tryFetchJson(url) {
+      try {
+        const res = await fetch(url, { method: "GET" });
+        if (!res.ok || isHtmlResponse(res)) return null;
+        const ct = res.headers.get("content-type") || "";
+        if (!ct.includes("json")) return null;
+        return await res.json();
+      } catch {
+        return null;
       }
-      mf = await response.json();
-    } catch (err) {
-      console.warn(
-        `[audio] manifest.json not found at ${resolvedManifestUrl}. Using default empty manifest.`,
-        err
-      );
+    }
+
+    const candidates = [
+      resolveAssetPath(manifestUrl),
+      resolveAssetPath(`${import.meta?.env?.BASE_URL ?? "/"}audio/manifest.json`)
+    ];
+
+    let mf = null;
+    for (const url of candidates) {
+      console.log("[audio] manifest probe:", url);
+      const json = await tryFetchJson(url);
+      if (json) {
+        mf = json;
+        break;
+      }
+    }
+    if (!mf) {
+      console.warn("[audio] manifest.json not found via candidates:", candidates);
       mf = { ambient: {}, effects: {} };
     }
 
