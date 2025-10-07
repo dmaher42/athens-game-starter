@@ -111,8 +111,19 @@ async function mainApp() {
   configureRendererShadows(renderer);
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-  // Mount the exposure control (F9 toggles visibility)
-  mountExposureSlider(renderer, { min: 0.2, max: 2.0, step: 0.01, key: "F9" });
+  const shouldMountExposureSlider = (() => {
+    if (typeof import.meta !== "undefined" && import.meta?.env) {
+      if (typeof import.meta.env.DEV === "boolean") {
+        return import.meta.env.DEV;
+      }
+    }
+    return true;
+  })();
+
+  if (shouldMountExposureSlider) {
+    // Mount the exposure control (F9 toggles visibility)
+    mountExposureSlider(renderer, { min: 0.2, max: 2.0, step: 0.01, key: "F9" });
+  }
   initializeAssetTranscoders(renderer);
   attachCrosshair();
 
