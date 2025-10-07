@@ -109,10 +109,12 @@ export async function createOcean(scene, options = {}) {
   const back = cz + halfZBack; // inland extent (larger Z)
 
   const planes = [
-    new THREE.Plane(new THREE.Vector3(-1, 0, 0), left), // x >= left
-    new THREE.Plane(new THREE.Vector3(1, 0, 0), -right), // x <= right
-    new THREE.Plane(new THREE.Vector3(0, 0, -1), front), // z >= front (toward sea)
-    new THREE.Plane(new THREE.Vector3(0, 0, 1), -back), // z <= back (toward city)
+    new THREE.Plane(new THREE.Vector3(1, 0, 0), -(cx - halfX)), // left:  x >= cx - halfX
+    new THREE.Plane(new THREE.Vector3(-1, 0, 0), cx + halfX), // right: x <= cx + halfX
+    // back (inland limit)
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), cz + halfZBack),
+    // front (sea)
+    new THREE.Plane(new THREE.Vector3(0, 0, 1), -(cz - halfZFront)),
   ];
 
   if (water.material) {
