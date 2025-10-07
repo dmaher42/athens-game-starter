@@ -20,6 +20,7 @@ import {
   CITY_AREA_RADIUS,
   ACROPOLIS_PEAK_3D,
   HARBOR_WATER_BOUNDS,
+  SEA_LEVEL_Y,
 } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
@@ -35,6 +36,7 @@ import { mountDevHUD } from "./ui/devHud.js";
 import { createPin } from "./world/pins.js";
 import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
+import { snapAboveGround } from "./world/ground.js";
 
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -479,413 +481,231 @@ async function mainApp() {
     npcUpdaters.push(...crowd.updaters);
   }
   const spawnPlaceholderMonument = (options = {}) => {
-    const placeholder = new THREE.Group();
-    placeholder.name = "PlaceholderMonument";
+    const {
+      baseRadius = 2.6,
+      columnHeight = 4.8,
+      capHeight = 0.9,
+      textures = {},
+    } = options;
+
+    const monument = new THREE.Group();
+    monument.name = "PlaceholderMonument";
 
     const shouldCollide = Boolean(options.collision);
-    const applySharedProps = (mesh) => {
+    monument.userData.noCollision = !shouldCollide;
+
+    const applySharedProps = (mesh, { collidable = shouldCollide } = {}) => {
       mesh.castShadow = true;
       mesh.receiveShadow = true;
-      mesh.userData.noCollision = !shouldCollide;
+      mesh.userData.noCollision = !collidable;
     };
 
-    const adjustColor = (hex, amount = 0) => {
-      const color = new THREE.Color(hex);
-      if (amount > 0) {
-        color.lerp(new THREE.Color(0xffffff), Math.min(1, amount));
-      } else if (amount < 0) {
-        color.lerp(new THREE.Color(0x000000), Math.min(1, Math.abs(amount)));
-      }
-      return `#${color.getHexString()}`;
-    };
-
-    const colorToRgba = (hex, alpha = 1) => {
-      const color = new THREE.Color(hex);
-      const r = Math.round(color.r * 255);
-      const g = Math.round(color.g * 255);
-      const b = Math.round(color.b * 255);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-
-    const createMarbleTextures = ({
-      tint,
-      veinColor,
-      speckColor,
-      size = 256,
-      veinCount = 18,
-      repeat = new THREE.Vector2(2.5, 2.5),
-    }) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      const baseGradient = ctx.createLinearGradient(0, 0, size, size);
-      baseGradient.addColorStop(0, adjustColor(tint, 0.18));
-      baseGradient.addColorStop(0.5, adjustColor(tint, -0.05));
-      baseGradient.addColorStop(1, adjustColor(tint, 0.1));
-      ctx.fillStyle = baseGradient;
-      ctx.fillRect(0, 0, size, size);
-
-      ctx.lineWidth = 1.6;
-      ctx.strokeStyle = colorToRgba(veinColor, 0.32);
-      ctx.globalAlpha = 0.85;
-      for (let i = 0; i < veinCount; i++) {
-        const startX = Math.random() * size;
-        const cp1x = startX + (Math.random() - 0.5) * size * 0.25;
-        const cp2x = startX + (Math.random() - 0.5) * size * 0.35;
-        ctx.beginPath();
-        ctx.moveTo(startX, 0);
-        ctx.bezierCurveTo(cp1x, size * 0.3, cp2x, size * 0.7, startX + (Math.random() - 0.5) * size * 0.2, size);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-
-      ctx.fillStyle = colorToRgba(speckColor, 0.06);
-      for (let i = 0; i < size * 2; i++) {
-        const radius = Math.random() * 1.4 + 0.2;
-        ctx.beginPath();
-        ctx.arc(Math.random() * size, Math.random() * size, radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      const colorTexture = new THREE.CanvasTexture(canvas);
-      colorTexture.wrapS = THREE.RepeatWrapping;
-      colorTexture.wrapT = THREE.RepeatWrapping;
-      colorTexture.repeat.copy(repeat);
-      colorTexture.colorSpace = THREE.SRGBColorSpace;
-
-      const roughCanvas = document.createElement("canvas");
-      roughCanvas.width = roughCanvas.height = size;
-      const roughCtx = roughCanvas.getContext("2d");
-      const roughData = roughCtx.createImageData(size, size);
-      for (let i = 0; i < size * size; i++) {
-        const random = 170 + Math.random() * 60;
-        const idx = i * 4;
-        roughData.data[idx] = random;
-        roughData.data[idx + 1] = random;
-        roughData.data[idx + 2] = random;
-        roughData.data[idx + 3] = 255;
-      }
-      roughCtx.putImageData(roughData, 0, 0);
-      const roughnessTexture = new THREE.CanvasTexture(roughCanvas);
-      roughnessTexture.wrapS = THREE.RepeatWrapping;
-      roughnessTexture.wrapT = THREE.RepeatWrapping;
-      roughnessTexture.repeat.copy(repeat);
-      roughnessTexture.colorSpace = THREE.NoColorSpace;
-
-      const anisotropy = renderer?.capabilities?.getMaxAnisotropy?.() ?? 1;
-      colorTexture.anisotropy = anisotropy;
-      roughnessTexture.anisotropy = anisotropy;
-
-      return { map: colorTexture, roughnessMap: roughnessTexture };
-    };
-
-    const createMonumentMaterials = () => {
-      const stoneTint = 0xded6c6;
-      const baseTextures = createMarbleTextures({
-        tint: stoneTint,
-        veinColor: 0xb9b0a0,
-        speckColor: 0x7d7464,
-        repeat: new THREE.Vector2(2.8, 2.8),
+    const baseMaterial =
+      options.baseMaterial ??
+      new THREE.MeshStandardMaterial({
+        color: 0xded7c9,
+        roughness: 0.45,
+        metalness: 0.05,
+        map: textures.map,
+        normalMap: textures.normalMap,
+        aoMap: textures.aoMap,
+        roughnessMap: textures.roughnessMap,
       });
 
-      const baseMaterial = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(0xffffff),
-        map: baseTextures.map,
-        roughness: 0.42,
-        metalness: 0.08,
-        roughnessMap: baseTextures.roughnessMap,
-        envMapIntensity: 0.9,
-      });
+    const baseRoughness =
+      typeof baseMaterial.roughness === "number" ? baseMaterial.roughness : 0.45;
+    const baseMetalness =
+      typeof baseMaterial.metalness === "number" ? baseMaterial.metalness : 0.05;
 
-      const trimMaterial = baseMaterial.clone();
-      trimMaterial.color = new THREE.Color(0xd4c9b7);
-      trimMaterial.roughness = 0.38;
-      trimMaterial.envMapIntensity = 0.85;
+    const accentMaterial =
+      options.accentMaterial ??
+      (() => {
+        if (typeof baseMaterial.clone === "function") {
+          const mat = baseMaterial.clone();
+          mat.color = new THREE.Color(options.accentColor ?? 0xcbb79e);
+          mat.roughness =
+            options.accentRoughness ?? Math.max(0, baseRoughness - 0.05);
+          return mat;
+        }
+        return new THREE.MeshStandardMaterial({
+          color: options.accentColor ?? 0xcbb79e,
+          roughness: options.accentRoughness ?? Math.max(0, baseRoughness - 0.05),
+          metalness: baseMetalness,
+          map: textures.map,
+          normalMap: textures.normalMap,
+          aoMap: textures.aoMap,
+          roughnessMap: textures.roughnessMap,
+        });
+      })();
 
-      const insetMaterial = baseMaterial.clone();
-      insetMaterial.color = new THREE.Color(0xc3b59e);
-      insetMaterial.roughness = 0.35;
+    const geometries = [];
 
-      const statueMaterial = new THREE.MeshStandardMaterial({
-        color: 0xc9b48a,
-        roughness: 0.32,
-        metalness: 0.18,
-        envMapIntensity: 1.1,
-      });
-
-      return { baseMaterial, trimMaterial, insetMaterial, statueMaterial };
-    };
-
-    const { baseMaterial, trimMaterial, insetMaterial, statueMaterial } =
-      createMonumentMaterials();
-
-    let currentHeight = 0;
-    const stepDefinitions = [
-      { radiusTop: 5.4, radiusBottom: 5.8, height: 0.34 },
-      { radiusTop: 5.0, radiusBottom: 5.3, height: 0.28 },
-      { radiusTop: 4.6, radiusBottom: 5.0, height: 0.26 },
-    ];
-
-    for (const step of stepDefinitions) {
+    const stepHeights = [0.28, 0.24, 0.2];
+    const stepScales = [1.35, 1.22, 1.1];
+    let heightCursor = 0;
+    stepHeights.forEach((height, i) => {
+      const scale = stepScales[i] ?? 1;
       const geometry = new THREE.CylinderGeometry(
-        step.radiusTop,
-        step.radiusBottom,
-        step.height,
-        64
+        baseRadius * scale,
+        baseRadius * (scale + 0.08),
+        height,
+        48
       );
-      const mesh = new THREE.Mesh(geometry, baseMaterial);
-      currentHeight += step.height / 2;
-      mesh.position.y = currentHeight;
-      currentHeight += step.height / 2;
-      applySharedProps(mesh);
-      placeholder.add(mesh);
-    }
+      geometries.push(geometry);
+      const step = new THREE.Mesh(geometry, baseMaterial);
+      applySharedProps(step);
+      const h = geometry.parameters?.height ?? height;
+      heightCursor += h / 2;
+      step.position.y = heightCursor;
+      heightCursor += h / 2;
+      monument.add(step);
+    });
 
-    const daisHeight = 1.2;
-    const dais = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.9, 4.2, daisHeight, 64),
-      baseMaterial
+    const plinthHeight = 0.5;
+    const plinthGeometry = new THREE.CylinderGeometry(
+      baseRadius * 1.02,
+      baseRadius * 1.08,
+      plinthHeight,
+      48
     );
-    dais.position.y = currentHeight + daisHeight / 2;
-    currentHeight += daisHeight;
-    applySharedProps(dais);
-    placeholder.add(dais);
-
-    const daisTrim = new THREE.Mesh(
-      new THREE.TorusGeometry(3.9, 0.1, 24, 96),
-      trimMaterial
-    );
-    daisTrim.rotation.x = Math.PI / 2;
-    daisTrim.position.y = dais.position.y + daisHeight / 2 - 0.08;
-    applySharedProps(daisTrim);
-    placeholder.add(daisTrim);
-
-    const plinthHeight = 0.6;
-    const plinth = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.6, 3.7, plinthHeight, 48),
-      insetMaterial
-    );
-    plinth.position.y = currentHeight + plinthHeight / 2;
-    currentHeight += plinthHeight;
+    geometries.push(plinthGeometry);
+    const plinth = new THREE.Mesh(plinthGeometry, accentMaterial);
     applySharedProps(plinth);
-    placeholder.add(plinth);
+    const plinthHalf = plinthGeometry.parameters?.height ?? plinthHeight;
+    heightCursor += plinthHalf / 2;
+    plinth.position.y = heightCursor;
+    heightCursor += plinthHalf / 2;
+    monument.add(plinth);
 
-    const friezeMaterial = trimMaterial.clone();
-    friezeMaterial.side = THREE.DoubleSide;
-    const frieze = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.45, 3.55, 0.4, 64, 1, true),
-      friezeMaterial
+    const columnGeometry = new THREE.CylinderGeometry(
+      baseRadius * 0.85,
+      baseRadius * 0.9,
+      columnHeight,
+      64,
+      1
     );
-    frieze.position.y = plinth.position.y + plinthHeight / 2 - 0.2;
-    applySharedProps(frieze);
-    placeholder.add(frieze);
+    geometries.push(columnGeometry);
+    const column = new THREE.Mesh(columnGeometry, baseMaterial);
+    applySharedProps(column);
+    column.position.y = heightCursor + columnHeight / 2;
+    heightCursor += columnHeight;
+    monument.add(column);
 
-    const reliefBand = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.3, 3.35, 0.18, 64),
-      insetMaterial
+    const capitalGeometry = new THREE.CylinderGeometry(
+      baseRadius * 1.0,
+      baseRadius * 1.2,
+      capHeight * 0.55,
+      48
     );
-    reliefBand.position.y = plinth.position.y + plinthHeight / 2 + 0.1;
-    applySharedProps(reliefBand);
-    placeholder.add(reliefBand);
+    geometries.push(capitalGeometry);
+    const capital = new THREE.Mesh(capitalGeometry, accentMaterial);
+    applySharedProps(capital);
+    const capitalHeight = capitalGeometry.parameters?.height ?? capHeight * 0.55;
+    capital.position.y = heightCursor + capitalHeight / 2;
+    heightCursor += capitalHeight;
+    monument.add(capital);
 
-    const columnBaseHeight = 0.4;
-    const columnBase = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.2, 3.3, columnBaseHeight, 48),
-      baseMaterial
-    );
-    columnBase.position.y = currentHeight + columnBaseHeight / 2;
-    currentHeight += columnBaseHeight;
-    applySharedProps(columnBase);
-    placeholder.add(columnBase);
+    const capTopHeight = capHeight * 0.75;
+    const capTopGeometry = new THREE.ConeGeometry(baseRadius * 1.05, capTopHeight, 48, 1, false);
+    geometries.push(capTopGeometry);
+    const capTop = new THREE.Mesh(capTopGeometry, baseMaterial);
+    applySharedProps(capTop);
+    capTop.position.y = heightCursor + capTopHeight / 2;
+    heightCursor += capTopHeight;
+    monument.add(capTop);
 
-    const columnGeometry = new THREE.CylinderGeometry(0.52, 0.58, 4.6, 36, 1, false);
-    columnGeometry.computeVertexNormals();
-    const columnMaterial = baseMaterial.clone();
-    columnMaterial.roughness = 0.36;
-    columnMaterial.envMapIntensity = 1.05;
+    const finialGeometry = new THREE.SphereGeometry(baseRadius * 0.22, 24, 16);
+    geometries.push(finialGeometry);
+    const finial = new THREE.Mesh(finialGeometry, accentMaterial);
+    applySharedProps(finial, { collidable: false });
+    finial.position.y = heightCursor + baseRadius * 0.22;
+    heightCursor += baseRadius * 0.22 * 2;
+    monument.add(finial);
 
-    const columnCapGeometry = new THREE.CylinderGeometry(0.7, 0.7, 0.25, 32);
-    const columnBaseGeometry = new THREE.CylinderGeometry(0.68, 0.68, 0.2, 32);
-    const columnCount = 8;
-    const columnRadius = 2.65;
-    for (let i = 0; i < columnCount; i++) {
-      const angle = (i / columnCount) * Math.PI * 2;
-      const columnGroup = new THREE.Group();
-
-      const column = new THREE.Mesh(columnGeometry, columnMaterial);
-      column.position.y = currentHeight + 2.3;
-      applySharedProps(column);
-      columnGroup.add(column);
-
-      const baseCap = new THREE.Mesh(columnBaseGeometry, trimMaterial);
-      baseCap.position.y = currentHeight + 0.1;
-      applySharedProps(baseCap);
-      columnGroup.add(baseCap);
-
-      const topCap = new THREE.Mesh(columnCapGeometry, trimMaterial);
-      topCap.position.y = currentHeight + 4.5;
-      applySharedProps(topCap);
-      columnGroup.add(topCap);
-
-      columnGroup.position.set(
-        Math.cos(angle) * columnRadius,
-        0,
-        Math.sin(angle) * columnRadius
-      );
-
-      applySharedProps(columnGroup);
-      placeholder.add(columnGroup);
-    }
-
-    currentHeight += 4.6;
-
-    const entablatureHeight = 0.7;
-    const entablature = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.2, 3.25, entablatureHeight, 48),
-      trimMaterial
-    );
-    entablature.position.y = currentHeight + entablatureHeight / 2;
-    applySharedProps(entablature);
-    placeholder.add(entablature);
-    currentHeight += entablatureHeight;
-
-    const cornice = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.05, 3.2, 0.5, 64),
-      baseMaterial
-    );
-    cornice.position.y = currentHeight + 0.25;
-    applySharedProps(cornice);
-    placeholder.add(cornice);
-    currentHeight += 0.5;
-
-    const capLower = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.5, 3.1, 0.45, 64),
-      trimMaterial
-    );
-    capLower.position.y = currentHeight + 0.225;
-    applySharedProps(capLower);
-    placeholder.add(capLower);
-    currentHeight += 0.45;
-
-    const capUpper = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.7, 3.4, 0.4, 64),
-      baseMaterial
-    );
-    capUpper.position.y = currentHeight + 0.2;
-    applySharedProps(capUpper);
-    placeholder.add(capUpper);
-    currentHeight += 0.4;
-
-    const capMedallion = new THREE.Mesh(
-      new THREE.CircleGeometry(2.1, 48),
-      insetMaterial
-    );
-    capMedallion.rotation.x = -Math.PI / 2;
-    capMedallion.position.y = currentHeight + 0.01;
-    applySharedProps(capMedallion);
-    placeholder.add(capMedallion);
-
-    const capTorus = new THREE.Mesh(
-      new THREE.TorusGeometry(2.6, 0.08, 24, 96),
-      trimMaterial
-    );
-    capTorus.rotation.x = Math.PI / 2;
-    capTorus.position.y = currentHeight;
-    applySharedProps(capTorus);
-    placeholder.add(capTorus);
-
-    const statuePedestalHeight = 0.9;
-    const statuePedestal = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.25, 1.6, statuePedestalHeight, 48),
-      baseMaterial
-    );
-    statuePedestal.position.y = currentHeight + statuePedestalHeight / 2 + 0.1;
-    applySharedProps(statuePedestal);
-    placeholder.add(statuePedestal);
-
-    currentHeight += statuePedestalHeight + 0.2;
-
-    const statue = new THREE.Mesh(
-      new THREE.ConeGeometry(1.05, 2.5, 6, 1, false),
-      statueMaterial
-    );
-    statue.position.y = currentHeight + 1.25;
-    statue.castShadow = true;
-    statue.receiveShadow = true;
-    statue.userData.noCollision = true;
-    placeholder.add(statue);
-
-    const statueCrown = new THREE.Mesh(
-      new THREE.SphereGeometry(0.32, 24, 18),
-      trimMaterial
-    );
-    statueCrown.position.y = statue.position.y + 1.5;
-    applySharedProps(statueCrown);
-    statueCrown.userData.noCollision = true;
-    placeholder.add(statueCrown);
+    geometries.forEach((geometry) => {
+      const uv = geometry.attributes?.uv;
+      if (uv) {
+        geometry.setAttribute("uv2", uv.clone());
+      }
+    });
 
     const occlusionRing = new THREE.Mesh(
-      new THREE.RingGeometry(3.2, 5.6, 64),
+      new THREE.RingGeometry(baseRadius * 1.1, baseRadius * 1.75, 64),
       new THREE.MeshBasicMaterial({
         color: 0x000000,
         transparent: true,
-        opacity: 0.14,
+        opacity: 0.12,
         side: THREE.DoubleSide,
+        depthWrite: false,
       })
     );
     occlusionRing.rotation.x = -Math.PI / 2;
-    occlusionRing.position.y = 0.02;
+    occlusionRing.position.y = 0.015;
+    occlusionRing.renderOrder = 1;
     occlusionRing.castShadow = false;
     occlusionRing.receiveShadow = false;
-    occlusionRing.material.depthWrite = false;
-    occlusionRing.renderOrder = 1;
     occlusionRing.userData.noCollision = true;
-    placeholder.add(occlusionRing);
+    monument.add(occlusionRing);
 
-    const monumentKeyLight = new THREE.SpotLight(0xffedd2, 1.25, 40, Math.PI / 5, 0.4, 1.2);
-    monumentKeyLight.position.set(6, 10, 6);
-    monumentKeyLight.castShadow = true;
-    monumentKeyLight.shadow.mapSize.set(1024, 1024);
-    monumentKeyLight.shadow.bias = -0.0006;
-    monumentKeyLight.userData.noCollision = true;
-    placeholder.add(monumentKeyLight);
+    const keyLight = new THREE.SpotLight(0xfff0d8, 1.15, 42, Math.PI / 5, 0.35, 1.2);
+    keyLight.position.set(6, heightCursor * 0.5 + 5, 6);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.bias = -0.0005;
+    keyLight.userData.noCollision = true;
+    monument.add(keyLight);
     const keyTarget = new THREE.Object3D();
-    keyTarget.position.set(0, 4, 0);
+    keyTarget.position.set(0, heightCursor * 0.5, 0);
     keyTarget.userData.noCollision = true;
-    placeholder.add(keyTarget);
-    monumentKeyLight.target = keyTarget;
+    monument.add(keyTarget);
+    keyLight.target = keyTarget;
 
-    const monumentFillLight = new THREE.PointLight(0xc5d6ff, 0.38, 18, 1.6);
-    monumentFillLight.position.set(-4, 6.8, -3);
-    monumentFillLight.castShadow = false;
-    monumentFillLight.userData.noCollision = true;
-    placeholder.add(monumentFillLight);
+    const fillLight = new THREE.PointLight(0xc8d6ff, 0.36, 20, 1.6);
+    fillLight.position.set(-4, heightCursor * 0.4 + 3.5, -3);
+    fillLight.castShadow = false;
+    fillLight.userData.noCollision = true;
+    monument.add(fillLight);
 
-    const monumentAccentLight = new THREE.PointLight(0xfff6db, 0.62, 16, 1.4);
-    monumentAccentLight.position.set(0, 7.6, 0);
-    monumentAccentLight.castShadow = true;
-    monumentAccentLight.shadow.mapSize.set(512, 512);
-    monumentAccentLight.shadow.bias = -0.0007;
-    monumentAccentLight.userData.noCollision = true;
-    placeholder.add(monumentAccentLight);
+    const accentLight = new THREE.PointLight(0xfff7dc, 0.58, 18, 1.4);
+    accentLight.position.set(0, heightCursor * 0.6 + 2.4, 0);
+    accentLight.castShadow = true;
+    accentLight.shadow.mapSize.set(512, 512);
+    accentLight.shadow.bias = -0.0006;
+    accentLight.userData.noCollision = true;
+    monument.add(accentLight);
 
-    if (options.position) {
-      placeholder.position.copy(options.position);
+    if (options.position instanceof THREE.Vector3) {
+      monument.position.copy(options.position);
+    } else if (options.position && typeof options.position === "object") {
+      const { x = 0, y = 0, z = 0 } = options.position;
+      monument.position.set(x, y, z);
     }
+
     if (typeof options.rotateY === "number") {
-      placeholder.rotation.y = options.rotateY;
-    }
-    if (options.scale) {
-      placeholder.scale.setScalar(options.scale);
+      monument.rotation.y = options.rotateY;
     }
 
-    scene.add(placeholder);
+    if (options.scale instanceof THREE.Vector3) {
+      monument.scale.copy(options.scale);
+    } else if (typeof options.scale === "number") {
+      monument.scale.setScalar(options.scale);
+    }
+
+    const worldX = monument.position.x;
+    const worldZ = monument.position.z;
+    snapAboveGround(monument, terrain, worldX, worldZ, 0.05, {
+      clampToSea: true,
+      seaLevel: SEA_LEVEL_Y,
+      minAboveSea: 0.02,
+    });
+
+    scene.add(monument);
 
     if (shouldCollide) {
       envCollider.refresh();
     }
 
-    return placeholder;
+    return monument;
   };
   const tombOptions = {
     scale: 1.2,
