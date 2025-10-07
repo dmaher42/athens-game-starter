@@ -12,6 +12,7 @@ import {
   AGORA_CENTER_3D,
 } from "./locations.js";
 import { createRoad } from "./roads.js";
+import { addFoundationPad } from "./foundations.js";
 
 const _matrix = new THREE.Matrix4();
 const _quaternion = new THREE.Quaternion();
@@ -345,6 +346,8 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       Number.isFinite(ySample) ? ySample : p.y,
       SEA_LEVEL_Y + MIN_ABOVE_SEA
     );
+
+    addFoundationPad(scene, p.x, baseY, p.z, 2.2);
 
     // walls
     dummy.position.set(p.x, baseY + 1.0, p.z);

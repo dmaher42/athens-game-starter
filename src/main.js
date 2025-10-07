@@ -211,7 +211,7 @@ async function mainApp() {
   // a perfectly flat plane. We'll pass the mesh to the character so it can
   // query ground height during its update loop.
   const terrain = createTerrain(scene);
-  attachHeightSampler(terrain, scene);
+  attachHeightSampler(terrain);
   const ocean = await createOcean(scene, {
     position: HARBOR_CENTER_3D.clone(),
     bounds: {
@@ -224,11 +224,9 @@ async function mainApp() {
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
-  // OLD CITY BUILDER OFF
-  // const city = createCity(scene, terrain, { origin: CITY_CHUNK_CENTER });
 
   // Roads first (needs terrain sampler)
-  const { group: roadGroup, curve: mainRoad } = createMainHillRoad(scene, terrain);
+  const { curve: mainRoad } = createMainHillRoad(scene, terrain);
   if (import.meta.env?.DEV) {
     mountHillCityDebug(scene, mainRoad);
   }
