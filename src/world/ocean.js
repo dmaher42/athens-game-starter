@@ -5,6 +5,7 @@ import {
   HARBOR_WATER_SIZE,
   HARBOR_WATER_BACK,
 } from "./locations.js";
+import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
 
 function generateNormalComponent(x, y, octave) {
   const frequency = Math.pow(2, octave);
@@ -96,6 +97,40 @@ export async function createOcean(scene, options = {}) {
 
   water.rotation.x = -Math.PI / 2;
   water.position.copy(HARBOR_WATER_CENTER);
+
+  // ---- Rectangular clipping bounds (axis-aligned in world space) ----
+  const halfX = HARBOR_WATER_SIZE.x * 0.5;
+  const halfZFront = HARBOR_WATER_SIZE.y * 0.5; // seaward half
+  const halfZBack = Math.min(HARBOR_WATER_BACK, halfZFront); // inland half (short)
+
+  const cx = HARBOR_WATER_CENTER.x;
+  const cz = HARBOR_WATER_CENTER.z;
+
+  // Three.Plane uses: plane.normal (n), plane.constant = -n·p0
+  const leftEdge = new THREE.Vector3(cx - halfX, water.position.y, cz);
+  const rightEdge = new THREE.Vector3(cx + halfX, water.position.y, cz);
+  const backEdge = new THREE.Vector3(cx, water.position.y, cz + halfZBack); // inland cutoff
+  const frontEdge = new THREE.Vector3(cx, water.position.y, cz - halfZFront); // seaward cutoff
+
+  const planes = [
+    // left boundary: keep x >= cx - halfX → normal = +X
+    new THREE.Plane(new THREE.Vector3(1, 0, 0), -leftEdge.x),
+    // right boundary: keep x <= cx + halfX → normal = -X
+    new THREE.Plane(new THREE.Vector3(-1, 0, 0), rightEdge.x),
+    // back (inland) boundary: keep z <= cz + halfZBack → normal = +Z
+    new THREE.Plane(new THREE.Vector3(0, 0, 1), -backEdge.z),
+    // front (seaward) boundary: keep z >= cz - halfZFront → normal = -Z
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), frontEdge.z),
+  ];
+
+  if (water.material) {
+    water.material.clipping = true;
+    water.material.clippingPlanes = planes;
+    water.material.depthWrite = true;
+    water.material.transparent = true;
+    water.material.needsUpdate = true; // ensure shader recompiles with clipping
+  }
+
   water.receiveShadow = true;
   water.name = "AegeanOcean";
   water.userData.noCollision = true;
@@ -103,32 +138,11 @@ export async function createOcean(scene, options = {}) {
 
   // Draw behind world but still write depth
   water.renderOrder = -1;
-  if (water.material) {
-    water.material.depthWrite = true;
-    water.material.transparent = true;
-  }
-
-  // Build 4 clipping planes around the rectangle
-  const halfX = HARBOR_WATER_SIZE.x * 0.5;
-  const halfZFront = HARBOR_WATER_SIZE.y * 0.5;
-  const halfZBack = Math.min(HARBOR_WATER_BACK, halfZFront);
-
-  const cx = HARBOR_WATER_CENTER.x;
-  const cz = HARBOR_WATER_CENTER.z;
-
-  const planes = [
-    new THREE.Plane(new THREE.Vector3(1, 0, 0), -(cx - halfX)),
-    new THREE.Plane(new THREE.Vector3(-1, 0, 0), cx + halfX),
-    new THREE.Plane(new THREE.Vector3(0, 0, 1), -(cz + halfZBack)),
-    new THREE.Plane(new THREE.Vector3(0, 0, -1), cz - halfZFront),
-  ];
-
-  if (water.material) {
-    water.material.clipping = true;
-    water.material.clippingPlanes = planes;
-  }
 
   scene.add(water);
+  if (import.meta.env?.DEV) {
+    mountWaterBoundsDebug(scene, HARBOR_WATER_CENTER, HARBOR_WATER_SIZE);
+  }
 
   return {
     mesh: water,
