@@ -102,7 +102,7 @@ export async function createOcean(scene, options = {}) {
   // Rectangular clipping: no inland water
   const halfX = HARBOR_WATER_SIZE.x * 0.5;
   const halfZFront = HARBOR_WATER_SIZE.y * 0.5; // seaward half
-  const halfZBack = 0; // inland half (hard 0)
+  const halfZBack = THREE.MathUtils.clamp(HARBOR_WATER_BACK, 0, halfZFront);
 
   const cx = HARBOR_WATER_CENTER.x;
   const cz = HARBOR_WATER_CENTER.z;
@@ -145,9 +145,6 @@ export async function createOcean(scene, options = {}) {
       mountWaterClipDebug(scene, westLimit, eastLimit, frontLimit, backLimit);
     }
   }
-
-  // Draw behind world but still write depth
-  water.renderOrder = -1;
 
   water.receiveShadow = true;
   water.name = "AegeanOcean";
