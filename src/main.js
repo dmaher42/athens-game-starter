@@ -19,7 +19,7 @@ import {
   HARBOR_CENTER_3D,
   CITY_AREA_RADIUS,
   ACROPOLIS_PEAK_3D,
-  HARBOR_WATER_EAST_LIMIT,
+  HARBOR_WATER_BOUNDS,
 } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
@@ -248,15 +248,7 @@ async function mainApp() {
 
   // Width 6m; increase if needed (e.g., 8–10) to fully cover the area.
   addDepthOccluderRibbon(scene, terrain, P1, P2, 6 /* width */, 140 /* segments */);
-  const ocean = await createOcean(scene, {
-    position: HARBOR_CENTER_3D.clone(),
-    bounds: {
-      west: HARBOR_CENTER_3D.x - CITY_AREA_RADIUS * 4,
-      east: HARBOR_WATER_EAST_LIMIT,
-      south: HARBOR_CENTER_3D.z - CITY_AREA_RADIUS * 2,
-      north: HARBOR_CENTER_3D.z + CITY_AREA_RADIUS * 2,
-    },
-  });
+  const ocean = await createOcean(scene, { bounds: HARBOR_WATER_BOUNDS });
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
