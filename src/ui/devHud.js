@@ -1,12 +1,15 @@
 // Dev HUD: compass + coordinates + pin hotkey (P)
 export function mountDevHUD({ getPosition, getDirection, onPin } = {}) {
-  if (!import.meta.env?.DEV) return null;
+  const allowHud =
+    import.meta.env?.DEV ||
+    (typeof window !== "undefined" && window.SHOW_HUD === true);
+  if (!allowHud) return null;
 
   // --- DOM
   const wrap = document.createElement("div");
   Object.assign(wrap.style, {
     position: "fixed", top: "12px", right: "12px",
-    zIndex: 10000, color: "#fff",
+    zIndex: 999999, color: "#fff",
     font: "12px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto",
     textShadow: "0 1px 2px rgba(0,0,0,0.45)",
     userSelect: "none", pointerEvents: "none",
@@ -23,7 +26,9 @@ export function mountDevHUD({ getPosition, getDirection, onPin } = {}) {
   Object.assign(needle.style, {
     position: "absolute", left: "50%", top: "50%",
     width: "2px", height: "40px", background: "rgba(255,0,0,0.9)",
-    transformOrigin: "50% 100%", translate: "-1px -40px", borderRadius: "2px",
+    transformOrigin: "50% 100%", borderRadius: "2px",
+    // Use transform, not the nonstandard 'translate' style:
+    transform: "translate(-1px, -40px) rotate(0deg)",
   });
   comp.appendChild(needle);
   const labels = { N:0, E:90, S:180, W:270 };
@@ -41,7 +46,7 @@ export function mountDevHUD({ getPosition, getDirection, onPin } = {}) {
   // Readout
   const read = document.createElement("div");
   read.style.pointerEvents = "auto"; // allow copy selection
-  read.style.background = "rgba(0,0,0,0.45)";
+  read.style.background = "rgba(0,0,0,0.55)";
   read.style.backdropFilter = "blur(3px)";
   read.style.padding = "8px 10px";
   read.style.borderRadius = "8px";

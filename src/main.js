@@ -591,16 +591,23 @@ async function mainApp() {
 
   // Utility getters for HUD
   const getPosition = () => {
-    // Prefer player avatar; fallback to camera
-    if (typeof player?.position?.x === "number") return player.position;
-    return camera.position;
+    try {
+      if (player && player.position && Number.isFinite(player.position.x)) {
+        return player.position;
+      }
+    } catch {}
+    return camera?.position ?? { x: 0, y: 0, z: 0 };
   };
   const getDirection = () => {
-    const v = new THREE.Vector3(0, 0, -1);
-    v.applyQuaternion(camera.quaternion);
-    v.y = 0; // flatten to ground plane for compass
-    v.normalize();
-    return v;
+    try {
+      const v = new THREE.Vector3(0, 0, -1);
+      v.applyQuaternion(camera.quaternion);
+      v.y = 0; // flatten to ground plane for compass
+      v.normalize();
+      return v;
+    } catch {
+      return { x: 0, y: 0, z: 1 };
+    }
   };
 
   // Optional: drop a 3D pin with "P"
@@ -611,8 +618,12 @@ async function mainApp() {
     if (Number.isFinite(y)) pin.position.y = y;
   };
 
-  // Mount dev HUD in development builds only
-  if (import.meta.env?.DEV) {
+  // Mount HUD in dev OR if a global flag is set (useful in prod previews)
+  const SHOW_HUD =
+    (typeof window !== "undefined" && window.SHOW_HUD === true) ||
+    import.meta.env?.DEV;
+  if (SHOW_HUD) {
+    console.log("[HUD] mounting…");
     mountDevHUD({ getPosition, getDirection, onPin });
   }
 
