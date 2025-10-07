@@ -683,12 +683,57 @@ async function mainApp() {
     return group;
   };
 
+  const disposeMaterial = (material) => {
+    if (!material) return;
+    const materials = Array.isArray(material) ? material : [material];
+    for (const mat of materials) {
+      if (!mat) continue;
+      for (const value of Object.values(mat)) {
+        if (value && value.isTexture && typeof value.dispose === "function") {
+          value.dispose();
+        }
+      }
+      if (typeof mat.dispose === "function") {
+        mat.dispose();
+      }
+    }
+  };
+
+  const disposeObject = (object) => {
+    if (!object) return;
+    object.traverse((child) => {
+      if (child.isMesh) {
+        if (child.geometry && typeof child.geometry.dispose === "function") {
+          child.geometry.dispose();
+        }
+        disposeMaterial(child.material);
+      }
+    });
+  };
+
+  const removeExistingAvatar = () => {
+    if (player.character) {
+      disposeObject(player.character);
+      player.object.remove(player.character);
+      player.character = undefined;
+    }
+
+    const fallbackAvatar = player.object.children.find(
+      (child) => child.name === "FallbackAvatar"
+    );
+    if (fallbackAvatar) {
+      disposeObject(fallbackAvatar);
+      player.object.remove(fallbackAvatar);
+    }
+  };
+
   const character = new Character();
   const heroPath = `${BASE_URL}models/character/hero.glb`;
   const bundledHeroPath = `${BASE_URL}models/character/${encodeURIComponent(
     "Hooded Adventurer.glb"
   )}`;
   const attachFallbackAvatar = () => {
+    removeExistingAvatar();
     const fallbackAvatar = createFallbackAvatar();
     player.object.add(fallbackAvatar);
     fallbackAvatar.position.set(0, 0, 0);
@@ -707,6 +752,7 @@ async function mainApp() {
     }
     try {
       await character.load(heroAssetUrl, renderer);
+      removeExistingAvatar();
       player.attachCharacter(character);
     } catch (error) {
       console.error(
