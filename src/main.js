@@ -8,7 +8,9 @@ import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { createOcean, updateOcean } from "./world/ocean.js";
 import { createHarbor, updateHarborLighting } from "./world/harbor.js";
-import { createCity, updateCityLighting } from "./world/city.js";
+import { createMainHillRoad } from "./world/roads_hillcity.js";
+import { createPlazas } from "./world/plazas.js";
+import { createCity, updateCityLighting, createHillCity } from "./world/city.js";
 import { CITY_CHUNK_CENTER, HARBOR_CENTER_3D } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
@@ -205,9 +207,26 @@ async function mainApp() {
     position: HARBOR_CENTER_3D.clone(),
   });
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
+  const envCollider = new EnvironmentCollider();
+  scene.add(envCollider.mesh);
   const city = createCity(scene, terrain, {
     origin: CITY_CHUNK_CENTER,
   });
+
+  // 1) Road from harbor → agora → acropolis
+  const { group: roadGroup, curve: mainRoad } = createMainHillRoad(scene);
+
+  // 2) Plazas (agora + acropolis terraces)
+  const plazas = createPlazas(scene);
+
+  // 3) City built in three tiers, oriented along the road
+  const hillCity = createHillCity(scene, terrain, mainRoad, {
+    seed: 42,
+    buildingCount: 140,
+  });
+
+  // 4) Rebuild static collider ONCE after adding these big groups
+  envCollider.fromStaticScene(scene);
 
   // Lay out a formal civic district with a central promenade, symmetrical
   // civic buildings, and decorative lighting to give the city a planned
@@ -219,8 +238,6 @@ async function mainApp() {
   });
 
   const input = new InputMap(renderer.domElement);
-  const envCollider = new EnvironmentCollider();
-  scene.add(envCollider.mesh);
   const player = new PlayerController(input, envCollider, { camera });
   scene.add(player.object);
   player.object.position.set(0, 0, 10); // or your desired coordinates
