@@ -46,6 +46,13 @@ export const PIER_EDGE_OFFSET = 4.5; // distance from harbor center to pier edge
 export const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x - PIER_EDGE_OFFSET; // align with western (seaward) edge of pier
 export const HARBOR_WATER_BACK = 0; // max inland distance allowed (in Z half-extent)
 
+export const HARBOR_WATER_BOUNDS = {
+  west: -190,
+  east: -117,
+  north: -120,
+  south: 0,
+};
+
 // Convenience centers
 export const HARBOR_WATER_CENTER = new THREE.Vector3(
   HARBOR_CENTER_3D.x + HARBOR_WATER_OFFSET.x,
