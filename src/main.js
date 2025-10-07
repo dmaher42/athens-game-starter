@@ -31,6 +31,7 @@ import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
 import { mountDevHUD } from "./ui/devHud.js";
 import { createPin } from "./world/pins.js";
 import { attachHeightSampler } from "./world/terrainHeight.js";
+import { addDepthOccluderRibbon } from "./world/occluders.js";
 
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -215,6 +216,16 @@ async function mainApp() {
   // query ground height during its update loop.
   const terrain = createTerrain(scene);
   attachHeightSampler(terrain);
+  // Add an occluder ribbon along the troublesome band the user reported.
+  // The user provided two endpoints in X,Z. We interpret them as:
+  //   P1 = (-0.4, -0.3)
+  //   P2 = (-95.7, -3.1)
+  // If those were meant as slightly different values, we can adjust later.
+  const P1 = new THREE.Vector2(-0.4, -0.3);
+  const P2 = new THREE.Vector2(-95.7, -3.1);
+
+  // Width 6m; increase if needed (e.g., 8–10) to fully cover the area.
+  addDepthOccluderRibbon(scene, terrain, P1, P2, 6 /* width */, 140 /* segments */);
   const ocean = await createOcean(scene, {
     position: HARBOR_CENTER_3D.clone(),
     bounds: {
