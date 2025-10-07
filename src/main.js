@@ -147,6 +147,34 @@ async function mainApp() {
   });
   document.body.appendChild(interactPrompt);
 
+  const timeOfDayDisplay = document.createElement("div");
+  Object.assign(timeOfDayDisplay.style, {
+    position: "fixed",
+    right: "16px",
+    bottom: "16px",
+    padding: "6px 10px",
+    borderRadius: "6px",
+    background: "rgba(0, 0, 0, 0.6)",
+    color: "#fff",
+    fontFamily: "sans-serif",
+    fontSize: "14px",
+    letterSpacing: "0.05em",
+    pointerEvents: "none",
+    textTransform: "uppercase",
+  });
+  document.body.appendChild(timeOfDayDisplay);
+
+  function formatPhaseAsTime(phaseValue = 0) {
+    const totalMinutes = Math.max(0, Math.min(1, phaseValue)) * 24 * 60;
+    const hours = Math.floor(totalMinutes / 60) % 24;
+    const minutes = Math.floor(totalMinutes % 60);
+    return `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}`;
+  }
+
+  let lastDisplayedTime = "";
+
   const scene = new THREE.Scene();
   // Light atmospheric fog increases depth perception so the far mountains blend
   // into the horizon. Adjust near/far distances to taste.
@@ -513,6 +541,12 @@ async function mainApp() {
     // highlight anything marked as interactable via userData.
     const hovered = interactor.updateHover();
     interactPrompt.style.opacity = hovered ? "1" : "0";
+
+    const formattedTime = formatPhaseAsTime(phase);
+    if (formattedTime !== lastDisplayedTime) {
+      timeOfDayDisplay.textContent = `Time: ${formattedTime}`;
+      lastDisplayedTime = formattedTime;
+    }
 
     renderer.render(scene, camera);
   }
