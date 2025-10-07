@@ -11,8 +11,8 @@ import { createHarbor, updateHarborLighting } from "./world/harbor.js";
 import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hillcity.js";
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
-import { createCity, updateCityLighting, createHillCity } from "./world/city.js";
-import { CITY_CHUNK_CENTER, HARBOR_CENTER_3D } from "./world/locations.js";
+import { updateCityLighting, createHillCity } from "./world/city.js";
+import { HARBOR_CENTER_3D } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
 import { InputMap } from "./input/InputMap.js";
@@ -210,12 +210,11 @@ async function mainApp() {
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
-  const city = createCity(scene, terrain, {
-    origin: CITY_CHUNK_CENTER,
-  });
+  // const city = createCity(scene, terrain, { origin: CITY_CHUNK_CENTER });
+  const city = null;
 
   // 1) Road from harbor → agora → acropolis
-  const { group: roadGroup, curve: mainRoad } = createMainHillRoad(scene);
+  const { group: roadGroup, curve: mainRoad } = createMainHillRoad(scene, terrain);
   mountHillCityDebug(scene, mainRoad);
 
   // 2) Plazas (agora + acropolis terraces)
@@ -389,6 +388,7 @@ async function mainApp() {
       count: 8,
       minSpeed: 0.7,
       maxSpeed: 1.4,
+      terrain,
     });
     npcUpdaters.push(...crowd.updaters);
   }
