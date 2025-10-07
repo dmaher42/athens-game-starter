@@ -41,19 +41,18 @@ export function createMainHillRoad(scene, terrain) {
       let worldY = p.y;
       if (typeof heightSampler === 'function') {
         const sampled = heightSampler(worldX, worldZ);
-        if (Number.isFinite(sampled)) {
-          worldY = sampled;
-        }
+        worldY = Number.isFinite(sampled) ? sampled : worldY;
       }
+      worldY += 0.03;
       pos.setXYZ(idx / 3, worldX, worldY, worldZ);
     }
   }
   pos.needsUpdate = true;
   geo.computeVertexNormals();
 
-  const mat = new THREE.MeshStandardMaterial({ color: 0x6a6a6a, roughness: 1, metalness: 0, side: THREE.DoubleSide });
+  const mat = new THREE.MeshStandardMaterial({ color: 0x575757, roughness: 1, metalness: 0, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
+  mesh.renderOrder = 1;
   mesh.receiveShadow = true;
   mesh.name = 'MainHillRoad';
 
@@ -61,7 +60,7 @@ export function createMainHillRoad(scene, terrain) {
   group.name = 'Roads';
   group.add(mesh);
 
-  const lamps = createLamppostsAlongRoad({ curve, width });
+  const lamps = createLamppostsAlongRoad({ curve, width, heightSampler });
   if (lamps) {
     group.add(lamps.group);
     group.userData.lampHeadMaterial = lamps.headMaterial;
@@ -72,7 +71,7 @@ export function createMainHillRoad(scene, terrain) {
   return { group, curve, mesh };
 }
 
-function createLamppostsAlongRoad({ curve, width }) {
+function createLamppostsAlongRoad({ curve, width, heightSampler }) {
   if (!curve) return null;
 
   const totalLength = curve.getLength();
@@ -120,7 +119,16 @@ function createLamppostsAlongRoad({ curve, width }) {
     const tangent = curve.getTangent(Math.min(1, Math.max(0, t))).normalize();
     _side.copy(_up).cross(tangent).normalize().multiplyScalar(lateralOffset);
 
-    _dummy.position.copy(position).add(_side);
+    const worldX = position.x + _side.x;
+    const worldZ = position.z + _side.z;
+    let worldY = position.y;
+    if (typeof heightSampler === 'function') {
+      const sampled = heightSampler(worldX, worldZ);
+      worldY = Number.isFinite(sampled) ? sampled : worldY;
+    }
+    worldY += 0.03;
+
+    _dummy.position.set(worldX, worldY, worldZ);
     _dummy.rotation.set(0, 0, 0);
     _dummy.updateMatrix();
     posts.setMatrixAt(i, _dummy.matrix);
