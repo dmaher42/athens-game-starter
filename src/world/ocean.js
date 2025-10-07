@@ -84,7 +84,18 @@ export async function createOcean(scene, options = {}) {
     }
   });
 
-  const geometry = new THREE.PlaneGeometry(HARBOR_WATER_SIZE.x, HARBOR_WATER_SIZE.y, 1, 1);
+  const targetCenter = new THREE.Vector3(
+    Number.isFinite(options.position?.x) ? options.position.x : HARBOR_WATER_CENTER.x,
+    SEA_LEVEL_Y,
+    Number.isFinite(options.position?.z) ? options.position.z : HARBOR_WATER_CENTER.z
+  );
+
+  const baseSize = new THREE.Vector2(
+    Number.isFinite(options.size?.x) ? options.size.x : HARBOR_WATER_SIZE.x,
+    Number.isFinite(options.size?.y) ? options.size.y : HARBOR_WATER_SIZE.y
+  );
+
+  const geometry = new THREE.PlaneGeometry(baseSize.x, baseSize.y, 1, 1);
   const water = new Water(geometry, {
     textureWidth: renderTargetSize,
     textureHeight: renderTargetSize,
@@ -97,27 +108,52 @@ export async function createOcean(scene, options = {}) {
   });
 
   water.rotation.x = -Math.PI / 2;
-  water.position.copy(HARBOR_WATER_CENTER);
+  water.position.copy(targetCenter);
 
   // Rectangular clipping: no inland water
-  const halfX = HARBOR_WATER_SIZE.x * 0.5;
-  const halfZFront = HARBOR_WATER_SIZE.y * 0.5; // seaward half
+  const halfX = baseSize.x * 0.5;
+  const halfZFront = baseSize.y * 0.5; // seaward half
   const halfZBack = THREE.MathUtils.clamp(HARBOR_WATER_BACK, 0, halfZFront);
 
-  const cx = HARBOR_WATER_CENTER.x;
-  const cz = HARBOR_WATER_CENTER.z;
+  const bounds = options.bounds ?? {};
+  let westLimit = targetCenter.x - halfX;
+  let eastLimit = targetCenter.x + halfX;
+  let frontLimit = targetCenter.z - halfZFront; // seaward extent (smaller Z)
+  let backLimit = targetCenter.z + halfZBack; // inland extent (larger Z)
 
-  // The water area is clipped to [westLimit, eastLimit]. By default, these are symmetric about the center.
-  const westLimit = cx - halfX;
-  // If HARBOR_WATER_EAST_LIMIT is finite, use the smaller of that or the default east edge; otherwise, use the default.
-  const eastLimit = Number.isFinite(HARBOR_WATER_EAST_LIMIT)
-    ? Math.min(HARBOR_WATER_EAST_LIMIT, cx + halfX)
-    : cx + halfX;
-  const frontLimit = cz - halfZFront; // seaward extent (smaller Z)
-  const backLimit = cz + halfZBack; // inland extent (larger Z)
+  if (Number.isFinite(bounds.west)) {
+    westLimit = bounds.west;
+  }
+  if (Number.isFinite(bounds.east)) {
+    eastLimit = bounds.east;
+  }
+  if (Number.isFinite(bounds.south)) {
+    frontLimit = bounds.south;
+  }
+  if (Number.isFinite(bounds.north)) {
+    backLimit = bounds.north;
+  }
 
-  console.log("[water clip]",
-    { cx, cz, westLimit, eastLimit, frontLimit, backLimit });
+  // If HARBOR_WATER_EAST_LIMIT is finite, use the smaller of that or the resolved east edge; otherwise, use the resolved value.
+  if (Number.isFinite(HARBOR_WATER_EAST_LIMIT)) {
+    eastLimit = Math.min(eastLimit, HARBOR_WATER_EAST_LIMIT);
+  }
+
+  if (westLimit > eastLimit) {
+    [westLimit, eastLimit] = [eastLimit, westLimit];
+  }
+
+  if (frontLimit > backLimit) {
+    [frontLimit, backLimit] = [backLimit, frontLimit];
+  }
+
+  console.log("[water clip]", {
+    center: { x: targetCenter.x, z: targetCenter.z },
+    westLimit,
+    eastLimit,
+    frontLimit,
+    backLimit,
+  });
 
   // Planes: keep inside the box [x ∈ (westLimit … eastLimit), z ∈ (frontLimit … backLimit)]
 
@@ -156,7 +192,16 @@ export async function createOcean(scene, options = {}) {
 
   scene.add(water);
   if (import.meta.env?.DEV) {
-    mountWaterBoundsDebug(scene, HARBOR_WATER_CENTER, HARBOR_WATER_SIZE);
+    const debugCenter = new THREE.Vector3(
+      (westLimit + eastLimit) * 0.5,
+      targetCenter.y,
+      (frontLimit + backLimit) * 0.5
+    );
+    const debugSize = new THREE.Vector2(
+      Math.max(0.001, eastLimit - westLimit),
+      Math.max(0.001, backLimit - frontLimit)
+    );
+    mountWaterBoundsDebug(scene, debugCenter, debugSize);
   }
 
   return {

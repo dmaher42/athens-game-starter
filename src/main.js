@@ -17,9 +17,9 @@ import { updateCityLighting, createHillCity } from "./world/city.js";
 import {
   AGORA_CENTER_3D,
   HARBOR_CENTER_3D,
-  HARBOR_EXCLUDE_RADIUS,
   CITY_AREA_RADIUS,
   ACROPOLIS_PEAK_3D,
+  HARBOR_WATER_EAST_LIMIT,
 } from "./world/locations.js";
 import { initializeAssetTranscoders } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
@@ -252,7 +252,7 @@ async function mainApp() {
     position: HARBOR_CENTER_3D.clone(),
     bounds: {
       west: HARBOR_CENTER_3D.x - CITY_AREA_RADIUS * 4,
-      east: HARBOR_CENTER_3D.x + HARBOR_EXCLUDE_RADIUS * 0.4,
+      east: HARBOR_WATER_EAST_LIMIT,
       south: HARBOR_CENTER_3D.z - CITY_AREA_RADIUS * 2,
       north: HARBOR_CENTER_3D.z + CITY_AREA_RADIUS * 2,
     },
