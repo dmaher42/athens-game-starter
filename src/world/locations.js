@@ -36,6 +36,16 @@ export const CITY_CHUNK_SIZE = new THREE.Vector2(72, 54);
 export const CITY_SEED = 0x4d534349;
 
 // Harbor water extents (limit the ocean to the bay only)
-export const HARBOR_WATER_CENTER = HARBOR_CENTER_3D.clone(); // same XZ as harbor
-export const HARBOR_WATER_SIZE = new THREE.Vector2(320, 240); // width (X), depth (Z) in world units
 export const HARBOR_WATER_RADIUS = 170; // if using circular water
+
+// Harbor water extents (rectangle) and seaward offset
+export const HARBOR_WATER_SIZE = new THREE.Vector2(260, 180); // width (X), depth (Z)
+export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, -60); // push water toward open sea (−Z)
+export const HARBOR_WATER_BACK = 40; // max inland distance allowed (in Z half-extent)
+
+// Convenience centers
+export const HARBOR_WATER_CENTER = new THREE.Vector3(
+  HARBOR_CENTER_3D.x + HARBOR_WATER_OFFSET.x,
+  SEA_LEVEL_Y,
+  HARBOR_CENTER_3D.z + HARBOR_WATER_OFFSET.y
+);

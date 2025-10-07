@@ -261,10 +261,10 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     seed = 20251007,
     buildingCount = 140,
     spacing = 5.5,
-    harborBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 5.5], // +1m headroom near water
+    harborBand = [SEA_LEVEL_Y + 3.5, SEA_LEVEL_Y + 6.0], // +1m headroom near water
     agoraBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 8.0],
     acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
-    avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 18,
+    avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 24,
   } = opts;
 
   const rng = makeRng(seed);
