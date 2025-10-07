@@ -211,11 +211,13 @@ async function mainApp() {
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
   // const city = createCity(scene, terrain, { origin: CITY_CHUNK_CENTER });
-  const city = null;
+  const city = null; // legacy grid city disabled to prevent overlap with hill build
 
   // 1) Road from harbor → agora → acropolis
   const { group: roadGroup, curve: mainRoad } = createMainHillRoad(scene, terrain);
-  mountHillCityDebug(scene, mainRoad);
+  if (import.meta.env?.DEV) {
+    mountHillCityDebug(scene, mainRoad);
+  }
 
   // 2) Plazas (agora + acropolis terraces)
   const plazas = createPlazas(scene);
@@ -225,6 +227,10 @@ async function mainApp() {
     seed: 42,
     buildingCount: 140,
   });
+
+  // Rebuild the static environment collider once after placing roads, plazas,
+  // and the hill city so the player can't walk through them.
+  envCollider.fromStaticScene(scene);
 
   // Lay out a formal civic district with a central promenade, symmetrical
   // civic buildings, and decorative lighting to give the city a planned
@@ -309,11 +315,6 @@ async function mainApp() {
   };
 
   scene.add(lamp);
-
-  // 4) Rebuild the static environment collider once after placing roads,
-  // plazas, the hill city, and civic fixtures so the player can't walk
-  // through them.
-  envCollider.fromStaticScene(scene);
 
   const createFallbackAvatar = () => {
     const group = new THREE.Group();
