@@ -1,6 +1,11 @@
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
-import { HARBOR_WATER_CENTER, HARBOR_WATER_SIZE, SEA_LEVEL_Y } from "./locations.js";
+import {
+  HARBOR_WATER_CENTER,
+  HARBOR_WATER_EAST_LIMIT,
+  HARBOR_WATER_SIZE,
+  SEA_LEVEL_Y,
+} from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
 
 function generateNormalComponent(x, y, octave) {
@@ -102,23 +107,25 @@ export async function createOcean(scene, options = {}) {
   const cx = HARBOR_WATER_CENTER.x;
   const cz = HARBOR_WATER_CENTER.z;
 
-  console.log("[water clip]",
-    { cx, cz, halfX, halfZFront, halfZBack,
-      zMin: cz - halfZFront, zMax: cz + halfZBack });
+  const westLimit = cx - halfX;
+  const eastLimit = Number.isFinite(HARBOR_WATER_EAST_LIMIT)
+    ? Math.min(HARBOR_WATER_EAST_LIMIT, cx + halfX)
+    : cx + halfX;
+  const frontLimit = cz - halfZFront; // seaward extent (smaller Z)
+  const backLimit = cz + halfZBack; // inland extent (larger Z)
 
-  // Planes: keep inside the box [x ∈ (cx±halfX), z ∈ (cz-halfZFront … cz+halfZBack)]
-  const left = cx - halfX;
-  const right = cx + halfX;
-  const front = cz - halfZFront; // seaward extent (smaller Z)
-  const back = cz + halfZBack; // inland extent (larger Z)
+  console.log("[water clip]",
+    { cx, cz, westLimit, eastLimit, frontLimit, backLimit });
+
+  // Planes: keep inside the box [x ∈ (westLimit … eastLimit), z ∈ (frontLimit … backLimit)]
 
   const planes = [
-    new THREE.Plane(new THREE.Vector3(1, 0, 0), -(cx - halfX)), // left:  x >= cx - halfX
-    new THREE.Plane(new THREE.Vector3(-1, 0, 0), cx + halfX), // right: x <= cx + halfX
+    new THREE.Plane(new THREE.Vector3(1, 0, 0), -westLimit), // left:  x >= westLimit
+    new THREE.Plane(new THREE.Vector3(-1, 0, 0), eastLimit), // right: x <= eastLimit
     // back (inland limit)
-    new THREE.Plane(new THREE.Vector3(0, 0, -1), cz + halfZBack),
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), backLimit),
     // front (sea)
-    new THREE.Plane(new THREE.Vector3(0, 0, 1), -(cz - halfZFront)),
+    new THREE.Plane(new THREE.Vector3(0, 0, 1), -frontLimit),
   ];
 
   if (water.material) {
@@ -133,7 +140,7 @@ export async function createOcean(scene, options = {}) {
       if (existing) {
         scene.remove(existing);
       }
-      mountWaterClipDebug(scene, cx, cz, halfX, halfZFront, halfZBack);
+      mountWaterClipDebug(scene, westLimit, eastLimit, frontLimit, backLimit);
     }
   }
 
@@ -159,13 +166,13 @@ export async function createOcean(scene, options = {}) {
   };
 }
 
-export function mountWaterClipDebug(scene, cx, cz, halfX, halfZFront, halfZBack) {
+export function mountWaterClipDebug(scene, westLimit, eastLimit, frontLimit, backLimit) {
   const g = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(cx - halfX, 0, cz - halfZFront),
-    new THREE.Vector3(cx + halfX, 0, cz - halfZFront),
-    new THREE.Vector3(cx + halfX, 0, cz + halfZBack),
-    new THREE.Vector3(cx - halfX, 0, cz + halfZBack),
-    new THREE.Vector3(cx - halfX, 0, cz - halfZFront),
+    new THREE.Vector3(westLimit, 0, frontLimit),
+    new THREE.Vector3(eastLimit, 0, frontLimit),
+    new THREE.Vector3(eastLimit, 0, backLimit),
+    new THREE.Vector3(westLimit, 0, backLimit),
+    new THREE.Vector3(westLimit, 0, frontLimit),
   ]);
   const line = new THREE.Line(g, new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 }));
   line.position.y = SEA_LEVEL_Y + 0.02;
