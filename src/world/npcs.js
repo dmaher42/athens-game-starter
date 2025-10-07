@@ -54,6 +54,7 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
   const count = options.count ?? 6;
   const minSpeed = options.minSpeed ?? 0.6;
   const maxSpeed = options.maxSpeed ?? 1.2;
+  const terrain = options.terrain ?? null;
   const palette = options.palette ?? [
     { primary: 0x4e8ef7, secondary: 0xf5f5f5 },
     { primary: 0xf06292, secondary: 0xffecb3 },
@@ -63,6 +64,7 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
   ];
 
   const { totalLength } = createCurveLengthLookup(pathCurve);
+  const heightSampler = terrain?.userData?.getHeightAt;
 
   const citizens = [];
   const updaters = [];
@@ -88,7 +90,14 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       const tangent = pathCurve.getTangentAt(progress);
 
       group.position.copy(position);
-      group.position.y += 0.05;
+      let groundY = position.y;
+      if (typeof heightSampler === 'function') {
+        const sampled = heightSampler(group.position.x, group.position.z);
+        if (Number.isFinite(sampled)) {
+          groundY = sampled;
+        }
+      }
+      group.position.y = groundY + 0.05;
 
       const yaw = Math.atan2(tangent.x, tangent.z);
       group.rotation.set(0, yaw, 0);

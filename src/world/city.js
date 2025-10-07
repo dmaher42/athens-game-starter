@@ -267,10 +267,9 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     seed = 20251007,
     buildingCount = 120,
     spacing = 5.5,
-    harborBand = [SEA_LEVEL_Y + MIN_ABOVE_SEA, SEA_LEVEL_Y + 3.5],
+    harborBand = [SEA_LEVEL_Y + 2.0, SEA_LEVEL_Y + 4.5],
     agoraBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 8.0],
     acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
-    avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 8,
   } = opts;
 
   const { group, walls, roofs, _dummy, capacity } = ensureInstancedSets(scene, buildingCount);
@@ -308,7 +307,15 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       const x = center2.x + Math.cos(t) * r;
       const z = center2.y + Math.sin(t) * r;
 
-      if (tmp2.set(x, z).distanceTo(harbor2) < avoidHarborRadius) continue;
+      const width = THREE.MathUtils.lerp(3.6, 6.6, rng());
+      const depth = THREE.MathUtils.lerp(3.4, 6.4, rng());
+      const wallHeight = THREE.MathUtils.lerp(2.7, 4.4, rng());
+      const roofHeight = wallHeight * THREE.MathUtils.lerp(0.32, 0.55, rng());
+      const radius = Math.max(width, depth) * 0.5;
+
+      if (tmp2.set(x, z).distanceTo(harbor2) < radius + HARBOR_EXCLUDE_RADIUS) {
+        continue;
+      }
 
       const h = terrain?.userData?.getHeightAt?.(x, z);
       if (h == null) continue;
@@ -321,10 +328,6 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       const slope = Math.max(Math.abs(hX - h), Math.abs(hZ - h));
       if (slope > MAX_SLOPE_DELTA) continue;
 
-      const width = THREE.MathUtils.lerp(3.6, 6.6, rng());
-      const depth = THREE.MathUtils.lerp(3.4, 6.4, rng());
-      const wallHeight = THREE.MathUtils.lerp(2.7, 4.4, rng());
-      const roofHeight = wallHeight * THREE.MathUtils.lerp(0.32, 0.55, rng());
       const lot = {
         position: new THREE.Vector3(x, h, z),
         width,
@@ -335,7 +338,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
         wallLightness: THREE.MathUtils.lerp(0.6, 0.76, rng()),
         roofHue: THREE.MathUtils.lerp(0.02, 0.045, rng()),
         roofLightness: THREE.MathUtils.lerp(0.24, 0.34, rng()),
-        radius: Math.max(width, depth) * 0.5,
+        radius,
       };
 
       lots.push(lot);
@@ -402,6 +405,15 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
         }
       }
     }
+
+    const sampledHeight = terrain?.userData?.getHeightAt?.(p.x, p.z);
+    if (!Number.isFinite(sampledHeight)) {
+      continue;
+    }
+    if (sampledHeight < SEA_LEVEL_Y + MIN_ABOVE_SEA) {
+      continue;
+    }
+    lot.position.y = Math.max(sampledHeight, SEA_LEVEL_Y + MIN_ABOVE_SEA);
 
     let blocked = false;
     for (const other of placements) {

@@ -5,7 +5,7 @@ const _dummy = new THREE.Object3D();
 const _up = new THREE.Vector3(0, 1, 0);
 const _side = new THREE.Vector3();
 
-export function createMainHillRoad(scene) {
+export function createMainHillRoad(scene, terrain) {
   // Gentle S-curve from harbor → agora → acropolis
   const pts = [
     HARBOR_CENTER_3D.clone().add(new THREE.Vector3(8, 0, -10)),
@@ -24,6 +24,8 @@ export function createMainHillRoad(scene) {
   const tangent = new THREE.Vector3();
   const dir = new THREE.Vector3();
 
+  const heightSampler = terrain?.userData?.getHeightAt;
+
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     const p = curve.getPoint(t);
@@ -34,7 +36,16 @@ export function createMainHillRoad(scene) {
       const idx = (i * 2 + j) * 3;
       const side = j === 0 ? -0.5 : 0.5;
       dir.set(Math.sin(angle) * side * width, 0, Math.cos(angle) * side * width);
-      pos.setXYZ(idx / 3, p.x + dir.x, p.y, p.z + dir.z);
+      const worldX = p.x + dir.x;
+      const worldZ = p.z + dir.z;
+      let worldY = p.y;
+      if (typeof heightSampler === 'function') {
+        const sampled = heightSampler(worldX, worldZ);
+        if (Number.isFinite(sampled)) {
+          worldY = sampled;
+        }
+      }
+      pos.setXYZ(idx / 3, worldX, worldY, worldZ);
     }
   }
   pos.needsUpdate = true;

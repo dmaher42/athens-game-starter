@@ -12,16 +12,16 @@ export const SEA_LEVEL_Y =
 
 // Key anchors
 export const HARBOR_CENTER_3D = new THREE.Vector3(-120, SEA_LEVEL_Y, 80);
-export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, 12, 10); // elevated inland focal point
-export const AGORA_CENTER_3D = new THREE.Vector3(-80, 6, 40); // mid-terrace civic plaza
+export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, 14, 10); // elevated inland focal point
+export const AGORA_CENTER_3D = new THREE.Vector3(-80, 8, 40); // mid-terrace civic plaza
 
 // Zones (radius in world units)
-export const HARBOR_EXCLUDE_RADIUS = 70; // keep water clear
+export const HARBOR_EXCLUDE_RADIUS = 110; // keep water clear
 export const AGORA_RADIUS = 22; // flat(ish) plaza
 export const ACROPOLIS_RADIUS = 18; // temple/council terrace
 
 // Terrain/placement rules
-export const MIN_ABOVE_SEA = 1.0; // buildings must be above water by this margin
+export const MIN_ABOVE_SEA = 2.0; // buildings must be above water by this margin
 export const MAX_SLOPE_DELTA = 0.35; // max allowed height change over ~1m sample
 export const CITY_AREA_RADIUS = 180; // overall distribution radius
 
