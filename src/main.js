@@ -19,6 +19,7 @@ import { PlayerController } from "./controls/PlayerController.js";
 import { Character } from "./characters/Character.js";
 import { spawnCitizenCrowd } from "./world/npcs.js";
 import { mountExposureSlider } from "./ui/exposureSlider.js";
+import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
 
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -126,6 +127,7 @@ async function mainApp() {
   }
   initializeAssetTranscoders(renderer);
   attachCrosshair();
+  mountHotkeyOverlay({ toggleKey: "KeyH" });
 
   const interactPrompt = document.createElement("div");
   interactPrompt.textContent = "Press E to interact";
