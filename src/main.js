@@ -226,7 +226,7 @@ async function mainApp() {
   scene.add(envCollider.mesh);
 
   // Roads first (needs terrain sampler)
-  const { curve: mainRoad } = createMainHillRoad(scene, terrain);
+  const { group: roadGroup, curve: mainRoad } = createMainHillRoad(scene, terrain);
   if (import.meta.env?.DEV) {
     mountHillCityDebug(scene, mainRoad);
   }
