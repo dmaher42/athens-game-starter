@@ -4,6 +4,12 @@ import {
   CITY_CHUNK_SIZE,
   CITY_SEED,
   SEA_LEVEL_Y,
+  MIN_ABOVE_SEA,
+  MAX_SLOPE_DELTA,
+  CITY_AREA_RADIUS,
+  HARBOR_EXCLUDE_RADIUS,
+  HARBOR_CENTER_3D,
+  AGORA_CENTER_3D,
 } from "./locations.js";
 import { createRoad } from "./roads.js";
 
@@ -248,4 +254,290 @@ export function updateCityLighting(city, nightFactor = 0) {
   const factor = THREE.MathUtils.clamp(nightFactor, 0, 1);
   const target = THREE.MathUtils.lerp(lighting.dayIntensity, lighting.nightIntensity, factor);
   lighting.material.emissiveIntensity = target;
+}
+
+/**
+ * Distribute buildings in three tiers: Harbor Quarter (low), Agora District (mid), Acropolis Crown (high).
+ * - Enforces min height above sea
+ * - Skips steep slope
+ * - Orients facades to face along the main road (or toward harbor if far)
+ */
+export function createHillCity(scene, terrain, curve, opts = {}) {
+  const {
+    seed = 20251007,
+    buildingCount = 120,
+    spacing = 5.5,
+    harborBand = [SEA_LEVEL_Y + MIN_ABOVE_SEA, SEA_LEVEL_Y + 3.5],
+    agoraBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 8.0],
+    acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
+    avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 8,
+  } = opts;
+
+  const { group, walls, roofs, _dummy, capacity } = ensureInstancedSets(scene, buildingCount);
+
+  const rng = makeRng(seed);
+  const lots = [];
+  const center2 = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
+
+  const targets = [
+    { band: harborBand, tries: Math.floor(buildingCount * 0.35) },
+    { band: agoraBand, tries: Math.floor(buildingCount * 0.45) },
+    { band: acroBand, tries: Math.floor(buildingCount * 0.2) },
+  ];
+
+  const tmp2 = new THREE.Vector2();
+  const harbor2 = new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z);
+  let placed = 0;
+
+  for (const { band, tries } of targets) {
+    let attempts = 0;
+    while (attempts++ < tries && placed < buildingCount) {
+      const r = Math.sqrt(rng()) * CITY_AREA_RADIUS;
+      const t = rng() * Math.PI * 2;
+      const x = center2.x + Math.cos(t) * r;
+      const z = center2.y + Math.sin(t) * r;
+
+      if (tmp2.set(x, z).distanceTo(harbor2) < avoidHarborRadius) continue;
+
+      const h = terrain?.userData?.getHeightAt?.(x, z);
+      if (h == null) continue;
+      if (h < band[0] || h > band[1]) continue;
+      if (h < SEA_LEVEL_Y + MIN_ABOVE_SEA) continue;
+
+      const hX = terrain.userData.getHeightAt(x + 1.2, z);
+      const hZ = terrain.userData.getHeightAt(x, z + 1.2);
+      if (hX == null || hZ == null) continue;
+      const slope = Math.max(Math.abs(hX - h), Math.abs(hZ - h));
+      if (slope > MAX_SLOPE_DELTA) continue;
+
+      const width = THREE.MathUtils.lerp(3.6, 6.6, rng());
+      const depth = THREE.MathUtils.lerp(3.4, 6.4, rng());
+      const wallHeight = THREE.MathUtils.lerp(2.7, 4.4, rng());
+      const roofHeight = wallHeight * THREE.MathUtils.lerp(0.32, 0.55, rng());
+      const lot = {
+        position: new THREE.Vector3(x, h, z),
+        width,
+        depth,
+        wallHeight,
+        roofHeight,
+        wallHue: THREE.MathUtils.lerp(0.08, 0.13, rng()),
+        wallLightness: THREE.MathUtils.lerp(0.6, 0.76, rng()),
+        roofHue: THREE.MathUtils.lerp(0.02, 0.045, rng()),
+        roofLightness: THREE.MathUtils.lerp(0.24, 0.34, rng()),
+        radius: Math.max(width, depth) * 0.5,
+      };
+
+      lots.push(lot);
+      placed++;
+    }
+  }
+
+  lots.sort(() => rng() - 0.5);
+
+  const tangent = new THREE.Vector3();
+  const down = new THREE.Vector3().subVectors(HARBOR_CENTER_3D, AGORA_CENTER_3D).normalize();
+  const dummy = _dummy;
+  const placements = [];
+
+  const separation = Math.max(0, spacing);
+  for (const lot of lots) {
+    if (placements.length >= capacity) break;
+    let blocked = false;
+    for (const other of placements) {
+      const desired = lot.radius + other.radius + separation;
+      if (lot.position.distanceToSquared(other.position) < desired * desired) {
+        blocked = true;
+        break;
+      }
+    }
+    if (!blocked) {
+      placements.push(lot);
+    }
+  }
+
+  let i = 0;
+  const wallColor = new THREE.Color();
+  const roofColor = new THREE.Color();
+  for (const lot of placements) {
+    const p = lot.position;
+
+    let yaw = 0;
+    if (curve) {
+      const t = nearestTOnCurve(curve, p, 180);
+      const pt = curve.getPoint(t);
+      const nxt = curve.getPoint(Math.min(1, t + 1e-2));
+      tangent.subVectors(nxt, pt).normalize();
+      yaw = Math.atan2(tangent.x, tangent.z);
+    } else {
+      yaw = Math.atan2(down.x, down.z);
+    }
+
+    dummy.position.set(p.x, p.y, p.z);
+    dummy.rotation.set(0, yaw, 0);
+    dummy.scale.set(lot.width, lot.wallHeight, lot.depth);
+    dummy.updateMatrix();
+    walls.setMatrixAt(i, dummy.matrix);
+    if (walls.instanceColor) {
+      wallColor.setHSL(lot.wallHue, 0.45, lot.wallLightness);
+      walls.setColorAt(i, wallColor);
+    }
+
+    dummy.position.set(p.x, p.y + lot.wallHeight, p.z);
+    dummy.rotation.set(0, yaw, 0);
+    dummy.scale.set(lot.width * 1.04, lot.roofHeight, lot.depth * 1.04);
+    dummy.updateMatrix();
+    roofs.setMatrixAt(i, dummy.matrix);
+    if (roofs.instanceColor) {
+      roofColor.setHSL(lot.roofHue, 0.55, lot.roofLightness);
+      roofs.setColorAt(i, roofColor);
+    }
+
+    i++;
+    if (i >= capacity) break;
+  }
+
+  walls.count = roofs.count = i;
+  walls.instanceMatrix.needsUpdate = true;
+  roofs.instanceMatrix.needsUpdate = true;
+  if (walls.instanceColor) walls.instanceColor.needsUpdate = true;
+  if (roofs.instanceColor) roofs.instanceColor.needsUpdate = true;
+
+  group.visible = i > 0;
+  return group;
+}
+
+function makeRng(seed = 1337) {
+  let s = (seed >>> 0) || 1;
+  return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 0xffffffff);
+}
+
+function ensureInstancedSets(scene, capacity = 120) {
+  return __ensureInstancedSets(scene, capacity);
+}
+
+function nearestTOnCurve(curve, p, samples) {
+  let bestT = 0;
+  let bestD = Infinity;
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const c = curve.getPoint(t);
+    const d = (c.x - p.x) * (c.x - p.x) + (c.z - p.z) * (c.z - p.z);
+    if (d < bestD) {
+      bestD = d;
+      bestT = t;
+    }
+  }
+  return bestT;
+}
+
+const DEFAULT_CAPACITY = 240;
+let _instancedCache = null;
+
+function __ensureInstancedSets(scene, capacity = DEFAULT_CAPACITY) {
+  if (!scene) {
+    throw new Error("Scene is required for hill city instancing");
+  }
+
+  const effectiveCapacity = Math.max(1, Math.min(1024, capacity | 0 || DEFAULT_CAPACITY));
+  if (_instancedCache && _instancedCache.capacity >= effectiveCapacity) {
+    if (_instancedCache.group.parent !== scene) {
+      scene.add(_instancedCache.group);
+    }
+    resetInstancedMeshes(_instancedCache);
+    return _instancedCache;
+  }
+
+  if (_instancedCache) {
+    if (_instancedCache.group.parent) {
+      _instancedCache.group.parent.remove(_instancedCache.group);
+    }
+  }
+
+  const wallGeometry = getSharedWallGeometry();
+  const roofGeometry = getSharedRoofGeometry();
+
+  const wallsMaterial = createWallsMaterial();
+  const roofsMaterial = createRoofsMaterial();
+
+  const walls = new THREE.InstancedMesh(wallGeometry, wallsMaterial, effectiveCapacity);
+  const roofs = new THREE.InstancedMesh(roofGeometry, roofsMaterial, effectiveCapacity);
+  walls.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  roofs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  walls.castShadow = true;
+  walls.receiveShadow = true;
+  roofs.castShadow = true;
+  roofs.receiveShadow = false;
+
+  const group = new THREE.Group();
+  group.name = "HillCity";
+  group.add(walls);
+  group.add(roofs);
+
+  const cache = {
+    group,
+    walls,
+    roofs,
+    _dummy: new THREE.Object3D(),
+    capacity: effectiveCapacity,
+  };
+
+  walls.userData.capacity = effectiveCapacity;
+  roofs.userData.capacity = effectiveCapacity;
+
+  _instancedCache = cache;
+  resetInstancedMeshes(cache);
+  scene.add(group);
+  return cache;
+}
+
+function resetInstancedMeshes(cache) {
+  cache.walls.count = 0;
+  cache.roofs.count = 0;
+  cache.group.visible = false;
+  cache.walls.instanceMatrix.needsUpdate = true;
+  cache.roofs.instanceMatrix.needsUpdate = true;
+  if (cache.walls.instanceColor) cache.walls.instanceColor.needsUpdate = true;
+  if (cache.roofs.instanceColor) cache.roofs.instanceColor.needsUpdate = true;
+}
+
+let _sharedWallGeometry = null;
+let _sharedRoofGeometry = null;
+
+function getSharedWallGeometry() {
+  if (!_sharedWallGeometry) {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    geometry.translate(0, 0.5, 0);
+    _sharedWallGeometry = geometry;
+  }
+  return _sharedWallGeometry;
+}
+
+function getSharedRoofGeometry() {
+  if (!_sharedRoofGeometry) {
+    const geometry = new THREE.CylinderGeometry(0, 0.5, 1, 4, 1, false);
+    geometry.rotateY(Math.PI / 4);
+    geometry.translate(0, 0.5, 0);
+    _sharedRoofGeometry = geometry;
+  }
+  return _sharedRoofGeometry;
+}
+
+function createWallsMaterial() {
+  return new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    vertexColors: true,
+    roughness: 0.6,
+    metalness: 0.08,
+    emissive: new THREE.Color(0xffdfa1),
+    emissiveIntensity: 0.08,
+  });
+}
+
+function createRoofsMaterial() {
+  return new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    vertexColors: true,
+    roughness: 0.85,
+    metalness: 0.05,
+  });
 }
