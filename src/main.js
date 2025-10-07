@@ -968,58 +968,207 @@ async function mainApp() {
 
     return monument;
   };
-  const tombOptions = {
-    scale: 1.2,
-    position: new THREE.Vector3(6, 0, -28),
-    rotateY: Math.PI * 0.15,
-    collision: true,
-  };
   const buildingBase = `${BASE_URL}models/buildings/`;
 
-  const tombPrimaryPath = `${buildingBase}aristotle-tomb.glb`;
-  const tombBundledPath = `${buildingBase}aristotle-tomb.gltf`;
-  const tombUrlCandidates = [tombPrimaryPath, tombBundledPath];
-  const tombUrl = await resolveFirstAvailableAsset(tombUrlCandidates);
-  const fallbackUrl = `${buildingBase}Akropol.glb`;
-  const fallbackAvailable = await probeAsset(fallbackUrl);
-  const loadFallbackMonument = async () => {
-    if (fallbackAvailable) {
-      try {
-        await buildingMgr.loadBuilding(fallbackUrl, tombOptions);
-        return;
-      } catch (fallbackError) {
-        console.error('Akropol fallback model also failed to load.', fallbackError);
-      }
-    } else {
-      console.info(
-        `Akropol fallback not bundled; add ${fallbackUrl} or run npm run download:aristotle.`
-      );
+  const cloneVector3Like = (value) => {
+    if (!value) return null;
+    if (value.isVector3) return value.clone();
+    if (Array.isArray(value)) {
+      return new THREE.Vector3(value[0] ?? 0, value[1] ?? 0, value[2] ?? 0);
     }
-
-    spawnPlaceholderMonument(tombOptions);
+    if (typeof value === "object") {
+      const { x = 0, y = 0, z = 0 } = value;
+      return new THREE.Vector3(x, y, z);
+    }
+    return new THREE.Vector3(0, 0, 0);
   };
 
-  if (tombUrl) {
-    if (tombUrl !== tombUrlCandidates[0]) {
-      console.info(
-        `Aristotle's Tomb missing at ${tombPrimaryPath}; using bundled placeholder.`
-      );
-      console.info("Run npm run download:aristotle to install the premium asset.");
+  const preparePlacementOptions = (options = {}, spec = {}) => {
+    const prepared = { ...options };
+    if (options.position) {
+      const position = cloneVector3Like(options.position);
+      if (position) {
+        const sampler = terrain?.userData?.getHeightAt;
+        const offset = spec.surfaceOffset ?? 0.05;
+        const shouldAlign = spec.alignToTerrain !== false;
+        if (shouldAlign && typeof sampler === "function") {
+          const sampled = sampler(position.x, position.z);
+          if (Number.isFinite(sampled)) {
+            position.y = sampled + offset;
+          } else if (!Number.isFinite(position.y)) {
+            position.y = offset;
+          }
+        } else if (!Number.isFinite(position.y)) {
+          position.y = offset;
+        }
+      }
+      prepared.position = position;
     }
-    try {
-      await buildingMgr.loadBuilding(tombUrl, tombOptions);
-    } catch (error) {
-      console.warn(
-        "Aristotle's Tomb failed to load. Download it with npm run download:aristotle.",
-        error
-      );
-      await loadFallbackMonument();
-    }
-  } else {
-    console.info(
-      `Aristotle's Tomb missing at ${tombPrimaryPath}; install it with npm run download:aristotle.`
+    return prepared;
+  };
+
+  const resolveCandidateUrls = (files = []) =>
+    files
+      .map((file) => {
+        if (!file) return null;
+        if (/^https?:/i.test(file) || file.startsWith(BASE_URL)) {
+          return file;
+        }
+        if (file.startsWith("/")) {
+          return file;
+        }
+        return `${buildingBase}${file}`;
+      })
+      .filter(Boolean);
+
+  const loadBuildingPlacement = async (spec) => {
+    const displayName = spec.displayName ?? spec.name ?? "Building";
+    const placementOptions = preparePlacementOptions(spec.options ?? {}, spec);
+    const placeholderOptions = preparePlacementOptions(
+      { ...(spec.options ?? {}), ...(spec.placeholderOptions ?? {}) },
+      spec
     );
-    await loadFallbackMonument();
+
+    const candidateUrls = resolveCandidateUrls(spec.files ?? []);
+    const fallbackUrls = resolveCandidateUrls(spec.fallbackFiles ?? []);
+
+    const snapAndRefresh = (object) => {
+      if (!object || spec.snapToGround === false) return;
+      if (!placementOptions?.position) return;
+      const { x, z } = placementOptions.position;
+      const snapOffset = spec.surfaceOffset ?? 0.05;
+      const snapSettings = {
+        clampToSea: true,
+        seaLevel: SEA_LEVEL_Y,
+        minAboveSea: spec.minAboveSea ?? 0.02,
+        ...(spec.snapOptions ?? {}),
+      };
+      snapAboveGround(object, terrain, x, z, snapOffset, snapSettings);
+      if (placementOptions?.collision) {
+        envCollider.refresh();
+      }
+    };
+
+    const attemptLoad = async (urls, label) => {
+      if (!urls.length) return null;
+      const url = await resolveFirstAvailableAsset(urls);
+      if (!url) return null;
+      try {
+        const object = await buildingMgr.loadBuilding(url, placementOptions);
+        if (spec.name && (!object.name || object.name === "")) {
+          object.name = spec.name;
+        }
+        snapAndRefresh(object);
+        if (typeof spec.onLoaded === "function") {
+          try {
+            spec.onLoaded(object, { url, label });
+          } catch (hookError) {
+            console.warn(`loadBuildingPlacement onLoaded hook failed for ${displayName}`, hookError);
+          }
+        }
+        return object;
+      } catch (error) {
+        const prefix = label === "fallback" ? "Fallback" : "";
+        console.error(
+          `${prefix ? `${prefix} ` : ""}${displayName} failed to load from ${url}`,
+          error
+        );
+        return null;
+      }
+    };
+
+    let object = await attemptLoad(candidateUrls, "primary");
+
+    if (!object && fallbackUrls.length) {
+      if (spec.missingPrimaryMessage) {
+        console.info(spec.missingPrimaryMessage);
+      }
+      object = await attemptLoad(fallbackUrls, "fallback");
+      if (object) {
+        if (spec.fallbackMessage) {
+          console.info(spec.fallbackMessage);
+        }
+      } else if (spec.fallbackFailureMessage) {
+        console.error(spec.fallbackFailureMessage);
+      }
+    }
+
+    if (!object) {
+      if (!fallbackUrls.length && spec.missingPrimaryMessage) {
+        console.info(spec.missingPrimaryMessage);
+      }
+      if (spec.allMissingMessage) {
+        console.info(spec.allMissingMessage);
+      }
+      if (spec.spawnPlaceholder !== false) {
+        spawnPlaceholderMonument({
+          ...placeholderOptions,
+          collision:
+            spec.placeholderCollision ??
+            placeholderOptions.collision ??
+            placementOptions.collision,
+        });
+      }
+    }
+
+    return object;
+  };
+
+  const tombPrimaryUrl = `${buildingBase}aristotle-tomb.glb`;
+  const akropolUrl = `${buildingBase}Akropol.glb`;
+  const poseidonUrl = `${buildingBase}poseidon_temple_at_sounion_greece.glb`;
+
+  const buildingPlacements = [
+    {
+      name: "aristotle-tomb",
+      displayName: "Aristotle's Tomb",
+      files: ["aristotle-tomb.glb", "aristotle-tomb.gltf"],
+      fallbackFiles: ["Akropol.glb"],
+      options: {
+        scale: 1.2,
+        position: new THREE.Vector3(6, 0, -28),
+        rotateY: Math.PI * 0.15,
+        collision: true,
+      },
+      surfaceOffset: 0.05,
+      snapOptions: { minAboveSea: 0.02 },
+      missingPrimaryMessage: `Aristotle's Tomb missing at ${tombPrimaryUrl}; run npm run download:aristotle to install the premium asset.`,
+      fallbackMessage: "Using Akropol.glb as a fallback for Aristotle's Tomb.",
+      fallbackFailureMessage: "Akropol fallback model also failed to load.",
+      allMissingMessage: `Aristotle's Tomb missing at ${tombPrimaryUrl}; install it with npm run download:aristotle.`,
+    },
+    {
+      name: "acropolis",
+      displayName: "Acropolis",
+      files: ["Akropol.glb"],
+      options: {
+        position: ACROPOLIS_PEAK_3D.clone(),
+        rotateY: Math.PI * 0.22,
+        scale: 0.45,
+        collision: true,
+      },
+      surfaceOffset: 0.18,
+      snapOptions: { minAboveSea: 0.5 },
+      missingPrimaryMessage: `Akropol asset missing at ${akropolUrl}; add it under public/models/buildings/ to replace the placeholder.`,
+    },
+    {
+      name: "poseidon-temple",
+      displayName: "Temple of Poseidon",
+      files: ["poseidon_temple_at_sounion_greece.glb"],
+      options: {
+        position: new THREE.Vector3(-150, 0, 42),
+        rotateY: -Math.PI * 0.35,
+        scale: 0.38,
+        collision: true,
+      },
+      surfaceOffset: 0.08,
+      snapOptions: { minAboveSea: 0.05 },
+      missingPrimaryMessage: `Poseidon temple model missing at ${poseidonUrl}; add it under public/models/buildings/ to replace the placeholder.`,
+    },
+  ];
+
+  for (const spec of buildingPlacements) {
+    await loadBuildingPlacement(spec);
   }
 
   const interactor = createInteractor(renderer, camera, scene);
