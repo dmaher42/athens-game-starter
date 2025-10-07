@@ -1,5 +1,10 @@
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
+import {
+  HARBOR_SEA_LEVEL,
+  HARBOR_WATER_CENTER,
+  HARBOR_WATER_SIZE,
+} from "./locations.js";
 
 function generateNormalComponent(x, y, octave) {
   const frequency = Math.pow(2, octave);
@@ -146,8 +151,12 @@ export async function createOcean(scene, options = {}) {
     centerZ: position.z,
   };
   const bounds = resolveBounds(options.bounds, defaults);
-  const width = bounds ? Math.max(1, Math.abs(bounds.east - bounds.west)) : size.width;
-  const depth = bounds ? Math.max(1, Math.abs(bounds.north - bounds.south)) : size.depth;
+  const resolvedWidth = bounds
+    ? Math.max(1, Math.abs(bounds.east - bounds.west))
+    : size.width;
+  const resolvedDepth = bounds
+    ? Math.max(1, Math.abs(bounds.north - bounds.south))
+    : size.depth;
 
   if (bounds) {
     position.x = (bounds.west + bounds.east) * 0.5;
@@ -160,7 +169,42 @@ export async function createOcean(scene, options = {}) {
 
   const renderTargetSize = computeRenderTargetSize(options);
 
-  const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
+  let width = HARBOR_WATER_SIZE.x;
+  let depth = HARBOR_WATER_SIZE.y;
+  const terrainBounds = options?.terrain?.userData?.bounds;
+  if (terrainBounds) {
+    const minX = terrainBounds.minX;
+    const maxX = terrainBounds.maxX;
+    const minZ = terrainBounds.minZ;
+    const maxZ = terrainBounds.maxZ;
+
+    const halfWidth = width * 0.5;
+    let maxHalfWidth = halfWidth;
+    if (Number.isFinite(maxX)) {
+      maxHalfWidth = Math.min(maxHalfWidth, Math.max(0, maxX - HARBOR_WATER_CENTER.x));
+    }
+    if (Number.isFinite(minX)) {
+      maxHalfWidth = Math.min(maxHalfWidth, Math.max(0, HARBOR_WATER_CENTER.x - minX));
+    }
+    width = Math.max(1, maxHalfWidth * 2);
+
+    const halfDepth = depth * 0.5;
+    let maxHalfDepth = halfDepth;
+    if (Number.isFinite(maxZ)) {
+      maxHalfDepth = Math.min(maxHalfDepth, Math.max(0, maxZ - HARBOR_WATER_CENTER.z));
+    }
+    if (Number.isFinite(minZ)) {
+      maxHalfDepth = Math.min(maxHalfDepth, Math.max(0, HARBOR_WATER_CENTER.z - minZ));
+    }
+    depth = Math.max(1, maxHalfDepth * 2);
+  }
+
+  const geometry = new THREE.PlaneGeometry(
+    width,
+    depth,
+    1,
+    1
+  );
   const water = new Water(geometry, {
     textureWidth: renderTargetSize,
     textureHeight: renderTargetSize,
@@ -173,8 +217,15 @@ export async function createOcean(scene, options = {}) {
   });
 
   water.rotation.x = -Math.PI / 2;
-  water.position.copy(position);
+  water.position.set(
+    HARBOR_WATER_CENTER.x,
+    HARBOR_SEA_LEVEL,
+    HARBOR_WATER_CENTER.z
+  );
+
   water.receiveShadow = true;
+  water.renderOrder = -1;
+  if (water.material) water.material.depthWrite = true;
   water.name = "AegeanOcean";
   water.userData.noCollision = true;
 

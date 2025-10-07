@@ -261,14 +261,17 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     seed = 20251007,
     buildingCount = 140,
     spacing = 5.5,
-    harborBand = [SEA_LEVEL_Y + 2.0, SEA_LEVEL_Y + 4.5], // keep comfortably above splash zone
+    harborBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 5.5], // +1m headroom near water
     agoraBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 8.0],
     acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
-    avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 8,
+    avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 18,
   } = opts;
 
   const rng = makeRng(seed);
   const lots = [];
+  const cell = (spacing || 6) * 0.8; // slightly tighter than visual spacing
+  const hash = new Map();
+  const keyFrom = (x, z) => `${Math.round(x / cell)}_${Math.round(z / cell)}`;
   const center2 = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
   const getH = (x, z) => terrain?.userData?.getHeightAt?.(x, z);
 
@@ -307,6 +310,9 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       const slope = Math.max(Math.abs(hX - h), Math.abs(hZ - h));
       if (slope > MAX_SLOPE_DELTA) continue;
 
+      const k = keyFrom(x, z);
+      if (hash.has(k)) continue; // already occupied nearby
+      hash.set(k, true);
       lots.push(new THREE.Vector3(x, h, z));
       placed++;
     }
@@ -320,9 +326,6 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
   let i = 0;
 
   for (const p of lots) {
-    // spacing: skip too-close neighbors
-    if (lots.some((o) => o !== p && o.distanceToSquared(p) < spacing * spacing)) continue;
-
     // orientation by road tangent if nearby, else face downhill
     let yaw = 0;
     if (curve) {
