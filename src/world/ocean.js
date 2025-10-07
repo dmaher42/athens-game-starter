@@ -63,9 +63,96 @@ function computeRenderTargetSize(options) {
   return THREE.MathUtils.clamp(size, 256, 2048);
 }
 
+function resolveVector3(option, fallback = new THREE.Vector3()) {
+  if (option instanceof THREE.Vector3) {
+    return option.clone();
+  }
+  if (option && typeof option === "object") {
+    const { x, y, z } = option;
+    return new THREE.Vector3(
+      Number.isFinite(x) ? x : fallback.x,
+      Number.isFinite(y) ? y : fallback.y,
+      Number.isFinite(z) ? z : fallback.z
+    );
+  }
+  return fallback.clone();
+}
+
+function resolveSize(option, fallback = 800) {
+  if (typeof option === "number" && Number.isFinite(option) && option > 0) {
+    return { width: option, depth: option };
+  }
+  if (Array.isArray(option) && option.length > 0) {
+    const width = option[0];
+    const depth = option.length > 1 ? option[1] : option[0];
+    return {
+      width: Number.isFinite(width) && width > 0 ? width : fallback,
+      depth: Number.isFinite(depth) && depth > 0 ? depth : fallback,
+    };
+  }
+  if (option && typeof option === "object") {
+    const width = option.width ?? option.x ?? option.w;
+    const depth = option.depth ?? option.height ?? option.z ?? option.y ?? option.h;
+    return {
+      width: Number.isFinite(width) && width > 0 ? width : fallback,
+      depth: Number.isFinite(depth) && depth > 0 ? depth : fallback,
+    };
+  }
+  return { width: fallback, depth: fallback };
+}
+
+function resolveBounds(bounds, defaults) {
+  if (!bounds || typeof bounds !== "object") {
+    return null;
+  }
+
+  const hasWest = Number.isFinite(bounds.west);
+  const hasEast = Number.isFinite(bounds.east);
+  const hasSouth = Number.isFinite(bounds.south);
+  const hasNorth = Number.isFinite(bounds.north);
+
+  if (!hasWest && !hasEast && !hasSouth && !hasNorth) {
+    return null;
+  }
+
+  const resolved = {
+    west: hasWest
+      ? bounds.west
+      : hasEast
+      ? bounds.east - defaults.width
+      : defaults.centerX - defaults.width * 0.5,
+    east: 0,
+    south: hasSouth
+      ? bounds.south
+      : hasNorth
+      ? bounds.north - defaults.depth
+      : defaults.centerZ - defaults.depth * 0.5,
+    north: 0,
+  };
+
+  resolved.east = hasEast ? bounds.east : resolved.west + defaults.width;
+  resolved.north = hasNorth ? bounds.north : resolved.south + defaults.depth;
+
+  return resolved;
+}
+
 export async function createOcean(scene, options = {}) {
-  const size = options.size ?? 800;
-  const position = options.position ?? new THREE.Vector3();
+  const size = resolveSize(options.size, 800);
+  const position = resolveVector3(options.position, new THREE.Vector3());
+  const defaults = {
+    width: size.width,
+    depth: size.depth,
+    centerX: position.x,
+    centerZ: position.z,
+  };
+  const bounds = resolveBounds(options.bounds, defaults);
+  const width = bounds ? Math.max(1, Math.abs(bounds.east - bounds.west)) : size.width;
+  const depth = bounds ? Math.max(1, Math.abs(bounds.north - bounds.south)) : size.depth;
+
+  if (bounds) {
+    position.x = (bounds.west + bounds.east) * 0.5;
+    position.z = (bounds.south + bounds.north) * 0.5;
+  }
 
   if (!cachedNormals) {
     cachedNormals = createProceduralWaterNormals();
@@ -73,7 +160,7 @@ export async function createOcean(scene, options = {}) {
 
   const renderTargetSize = computeRenderTargetSize(options);
 
-  const geometry = new THREE.PlaneGeometry(size, size, 1, 1);
+  const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
   const water = new Water(geometry, {
     textureWidth: renderTargetSize,
     textureHeight: renderTargetSize,
