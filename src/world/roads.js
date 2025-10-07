@@ -36,7 +36,7 @@ export function createRoad(parent, points, options = {}) {
   let uvOffset = 0;
 
   // Add a small Y offset to prevent roads from being buried or z-fighting
-  const yOffset = options.yOffset ?? 0.05;
+  const yOffset = options.yOffset ?? 0.2;
 
   for (let i = 0; i <= segmentCount; i++) {
     const t = i / segmentCount;
