@@ -41,19 +41,18 @@ export function createMainHillRoad(scene, terrain) {
       let worldY = p.y;
       if (typeof heightSampler === 'function') {
         const sampled = heightSampler(worldX, worldZ);
-        if (Number.isFinite(sampled)) {
-          worldY = sampled;
-        }
+        worldY = Number.isFinite(sampled) ? sampled : worldY;
       }
+      worldY += 0.03;
       pos.setXYZ(idx / 3, worldX, worldY, worldZ);
     }
   }
   pos.needsUpdate = true;
   geo.computeVertexNormals();
 
-  const mat = new THREE.MeshStandardMaterial({ color: 0x6a6a6a, roughness: 1, metalness: 0, side: THREE.DoubleSide });
+  const mat = new THREE.MeshStandardMaterial({ color: 0x575757, roughness: 1, metalness: 0, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
+  mesh.renderOrder = 1;
   mesh.receiveShadow = true;
   mesh.name = 'MainHillRoad';
 
