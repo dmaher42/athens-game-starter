@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
-import { HARBOR_WATER_CENTER, HARBOR_WATER_SIZE } from "./locations.js";
+import { HARBOR_WATER_CENTER, HARBOR_WATER_SIZE, SEA_LEVEL_Y } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
 
 function generateNormalComponent(x, y, octave) {
@@ -102,6 +102,10 @@ export async function createOcean(scene, options = {}) {
   const cx = HARBOR_WATER_CENTER.x;
   const cz = HARBOR_WATER_CENTER.z;
 
+  console.log("[water clip]",
+    { cx, cz, halfX, halfZFront, halfZBack,
+      zMin: cz - halfZFront, zMax: cz + halfZBack });
+
   // Planes: keep inside the box [x ∈ (cx±halfX), z ∈ (cz-halfZFront … cz+halfZBack)]
   const left = cx - halfX;
   const right = cx + halfX;
@@ -123,6 +127,14 @@ export async function createOcean(scene, options = {}) {
     water.material.depthWrite = true;
     water.material.transparent = true;
     water.material.needsUpdate = true;
+
+    if (typeof window !== "undefined" && window.location?.search?.includes("waterdbg=1")) {
+      const existing = scene.getObjectByName("WaterClipDebug");
+      if (existing) {
+        scene.remove(existing);
+      }
+      mountWaterClipDebug(scene, cx, cz, halfX, halfZFront, halfZBack);
+    }
   }
 
   // Draw behind world but still write depth
@@ -145,6 +157,21 @@ export async function createOcean(scene, options = {}) {
     mesh: water,
     uniforms: water.material.uniforms,
   };
+}
+
+export function mountWaterClipDebug(scene, cx, cz, halfX, halfZFront, halfZBack) {
+  const g = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(cx - halfX, 0, cz - halfZFront),
+    new THREE.Vector3(cx + halfX, 0, cz - halfZFront),
+    new THREE.Vector3(cx + halfX, 0, cz + halfZBack),
+    new THREE.Vector3(cx - halfX, 0, cz + halfZBack),
+    new THREE.Vector3(cx - halfX, 0, cz - halfZFront),
+  ]);
+  const line = new THREE.Line(g, new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 }));
+  line.position.y = SEA_LEVEL_Y + 0.02;
+  line.name = "WaterClipDebug";
+  scene.add(line);
+  return line;
 }
 
 export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0) {
