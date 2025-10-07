@@ -35,6 +35,9 @@ export function createRoad(parent, points, options = {}) {
   let posOffset = 0;
   let uvOffset = 0;
 
+  // Add a small Y offset to prevent roads from being buried or z-fighting
+  const yOffset = options.yOffset ?? 0.05;
+
   for (let i = 0; i <= segmentCount; i++) {
     const t = i / segmentCount;
     curve.getPointAt(t, _point);
@@ -50,11 +53,12 @@ export function createRoad(parent, points, options = {}) {
     _left.copy(_point).addScaledVector(_side, halfWidth);
     _right.copy(_point).addScaledVector(_side, -halfWidth);
 
+    // Apply the Y offset here
     positions[posOffset++] = _left.x;
-    positions[posOffset++] = _left.y;
+    positions[posOffset++] = _left.y + yOffset;
     positions[posOffset++] = _left.z;
     positions[posOffset++] = _right.x;
-    positions[posOffset++] = _right.y;
+    positions[posOffset++] = _right.y + yOffset;
     positions[posOffset++] = _right.z;
 
     const v = t * (options.uvScale ?? 1);
