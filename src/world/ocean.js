@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
 import {
   HARBOR_WATER_CENTER,
+  HARBOR_WATER_BACK,
   HARBOR_WATER_EAST_LIMIT,
   HARBOR_WATER_SIZE,
   SEA_LEVEL_Y,
