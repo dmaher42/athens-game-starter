@@ -768,6 +768,24 @@ async function mainApp() {
   }
 
   const buildingMgr = new BuildingManager(envCollider);
+  const terrainHeightSampler = terrain?.userData?.getHeightAt;
+
+  scene.userData = scene.userData || {};
+  if (!scene.userData.terrain) {
+    scene.userData.terrain = terrain;
+  }
+  if (typeof terrainHeightSampler === "function") {
+    scene.userData.terrainHeightSampler = terrainHeightSampler;
+    if (typeof scene.userData.getHeightAt !== "function") {
+      scene.userData.getHeightAt = terrainHeightSampler;
+    }
+  }
+
+  buildingMgr.clearBuildings();
+
+  const buildingsRoot = new THREE.Group();
+  buildingsRoot.name = "BuildingsRoot";
+  scene.add(buildingsRoot);
   const npcUpdaters = [];
   if (civicDistrict.walkingLoop) {
     const crowd = spawnCitizenCrowd(scene, civicDistrict.walkingLoop, {
@@ -1050,8 +1068,85 @@ async function mainApp() {
       }
       prepared.position = position;
     }
+    if (!prepared.parent && buildingsRoot) {
+      prepared.parent = buildingsRoot;
+    }
+    if (!prepared.heightSampler) {
+      prepared.heightSampler =
+        options.heightSampler ??
+        options.terrainSampler ??
+        terrainHeightSampler ??
+        terrain?.userData?.getHeightAt;
+    }
     return prepared;
   };
+
+  const createTerrainAlignedPosition = (x, z, offset = 0.05) => {
+    let y = offset;
+    if (typeof terrainHeightSampler === "function") {
+      const sampled = terrainHeightSampler(x, z);
+      if (Number.isFinite(sampled)) {
+        y = sampled + offset;
+      }
+    }
+    return new THREE.Vector3(x, y, z);
+  };
+
+  const sampleBuildingSpecs = [
+    {
+      url: `${buildingBase}aristotle-tomb.glb`,
+      position: createTerrainAlignedPosition(18, -26),
+      rotateY: Math.PI * 0.18,
+      scale: 0.72,
+      collision: true,
+      name: "SampleAristotleTomb",
+    },
+    {
+      url: `${buildingBase}poseidon_temple_at_sounion_greece.glb`,
+      position: createTerrainAlignedPosition(-34, -12),
+      rotateY: -Math.PI * 0.12,
+      scale: 0.32,
+      collision: true,
+      name: "SamplePoseidonTemple",
+    },
+    {
+      url: `${buildingBase}Akropol.glb`,
+      position: createTerrainAlignedPosition(6, -42),
+      rotateY: Math.PI * 0.08,
+      scale: 0.24,
+      collision: false,
+      name: "SampleAkropol",
+    },
+  ];
+
+  const sampleBuildingResults = await Promise.allSettled(
+    sampleBuildingSpecs.map((spec) =>
+      buildingMgr
+        .loadBuilding(spec.url, {
+          position: spec.position,
+          rotateY: spec.rotateY,
+          scale: spec.scale,
+          collision: spec.collision,
+          parent: buildingsRoot,
+          heightSampler: terrainHeightSampler,
+        })
+        .then((object) => {
+          if (object && spec.name) {
+            object.name = spec.name;
+          }
+          return object;
+        })
+    )
+  );
+
+  sampleBuildingResults.forEach((result, index) => {
+    if (result.status === "rejected") {
+      console.error(
+        `Sample building failed to load: ${sampleBuildingSpecs[index].url}`,
+        result.reason
+      );
+    }
+  });
 
   const resolveCandidateUrls = (files = []) =>
     files
