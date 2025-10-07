@@ -7,8 +7,8 @@ const EXISTING_SEA_LEVEL_Y =
     : undefined;
 
 export const SEA_LEVEL_Y =
-  typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 0; // can tweak later
-// export const SEA_LEVEL_Y = -0.3; // uncomment to lower globally
+  typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 0; // keep existing if defined
+// export const SEA_LEVEL_Y = -0.3; // uncomment to lower globally if shoreline splashes
 
 // Key anchors (coastal → uphill)
 export const HARBOR_CENTER_3D = new THREE.Vector3(-120, SEA_LEVEL_Y, 80);
