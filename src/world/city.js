@@ -278,6 +278,17 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
   const rng = makeRng(seed);
   const lots = [];
   const center2 = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
+  const agoraToHarborDir = new THREE.Vector2(
+    HARBOR_CENTER_3D.x - AGORA_CENTER_3D.x,
+    HARBOR_CENTER_3D.z - AGORA_CENTER_3D.z,
+  );
+  if (agoraToHarborDir.lengthSq() > 0) {
+    agoraToHarborDir.normalize();
+  } else {
+    agoraToHarborDir.set(0, 1);
+  }
+  const viewCorridorCos = Math.cos(THREE.MathUtils.degToRad(10));
+  const viewVector = new THREE.Vector2();
 
   const targets = [
     { band: harborBand, tries: Math.floor(buildingCount * 0.35) },
@@ -335,6 +346,10 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
   lots.sort(() => rng() - 0.5);
 
   const tangent = new THREE.Vector3();
+  const roadPoint = new THREE.Vector3();
+  const roadNext = new THREE.Vector3();
+  const roadSide = new THREE.Vector2();
+  const roadDelta = new THREE.Vector2();
   const down = new THREE.Vector3().subVectors(HARBOR_CENTER_3D, AGORA_CENTER_3D).normalize();
   const dummy = _dummy;
   const placements = [];
@@ -342,6 +357,52 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
   const separation = Math.max(0, spacing);
   for (const lot of lots) {
     if (placements.length >= capacity) break;
+    const p = lot.position;
+
+    viewVector.set(center2.x - p.x, center2.y - p.z);
+    const agoraDistance = viewVector.length();
+    if (agoraDistance < 25) {
+      if (agoraDistance < 1e-3) {
+        continue;
+      }
+      viewVector.multiplyScalar(1 / agoraDistance);
+      const angleCos = viewVector.dot(agoraToHarborDir);
+      if (angleCos > viewCorridorCos) {
+        continue;
+      }
+    }
+
+    if (curve) {
+      const t = nearestTOnCurve(curve, p, 180);
+      roadPoint.copy(curve.getPoint(t));
+      roadDelta.set(p.x - roadPoint.x, p.z - roadPoint.z);
+      const distSq = roadDelta.lengthSq();
+      if (distSq < 16) {
+        roadNext.copy(curve.getPoint(Math.min(1, t + 1e-3)));
+        tangent.subVectors(roadNext, roadPoint);
+        tangent.y = 0;
+        if (tangent.lengthSq() > 1e-6) {
+          tangent.normalize();
+          roadSide.set(-tangent.z, tangent.x).normalize();
+          if (roadSide.lengthSq() > 0) {
+            if (distSq > 1e-6 && roadSide.dot(roadDelta) < 0) {
+              roadSide.negate();
+            }
+            p.x += roadSide.x * 1.2;
+            p.z += roadSide.y * 1.2;
+
+            const adjustedHeight = terrain?.userData?.getHeightAt?.(p.x, p.z);
+            if (Number.isFinite(adjustedHeight)) {
+              if (adjustedHeight < SEA_LEVEL_Y + MIN_ABOVE_SEA) {
+                continue;
+              }
+              lot.position.y = adjustedHeight;
+            }
+          }
+        }
+      }
+    }
+
     let blocked = false;
     for (const other of placements) {
       const desired = lot.radius + other.radius + separation;
