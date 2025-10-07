@@ -22,7 +22,11 @@ import {
   HARBOR_WATER_BOUNDS,
   SEA_LEVEL_Y,
 } from "./world/locations.js";
-import { initializeAssetTranscoders } from "./world/landmarks.js";
+import {
+  initializeAssetTranscoders,
+  loadLandmark,
+  disposeLandmarks,
+} from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
 import { InputMap } from "./input/InputMap.js";
 import { EnvironmentCollider } from "./env/EnvironmentCollider.js";
@@ -783,6 +787,8 @@ async function mainApp() {
 
   buildingMgr.clearBuildings();
 
+  disposeLandmarks();
+
   const buildingsRoot = new THREE.Group();
   buildingsRoot.name = "BuildingsRoot";
   scene.add(buildingsRoot);
@@ -1185,7 +1191,58 @@ async function mainApp() {
         ...(spec.snapOptions ?? {}),
       };
       snapAboveGround(object, terrain, x, z, snapOffset, snapSettings);
-      if (placementOptions?.collision) {
+    };
+
+    const resolveTransformOptions = () => {
+      const transform = {};
+
+      if (placementOptions.position) {
+        transform.position = placementOptions.position;
+      }
+
+      if (placementOptions.scale !== undefined) {
+        transform.scale = placementOptions.scale;
+      }
+
+      if (placementOptions.rotation) {
+        const { x, y, z } = placementOptions.rotation;
+        if ([x, y, z].some((value) => Number.isFinite(value))) {
+          transform.rotation = { x, y, z };
+        }
+      } else {
+        const euler = {};
+        let hasRotation = false;
+        const axisMap = [
+          ["rotateX", "x"],
+          ["rotateY", "y"],
+          ["rotateZ", "z"],
+        ];
+
+        for (const [key, axis] of axisMap) {
+          const value = placementOptions[key];
+          if (Number.isFinite(value)) {
+            euler[axis] = value;
+            hasRotation = true;
+          }
+        }
+
+        if (hasRotation) {
+          transform.rotation = euler;
+        }
+      }
+
+      return transform;
+    };
+
+    const applyCollisionSettings = (object) => {
+      if (!object) return;
+      const shouldCollide = Boolean(placementOptions?.collision);
+      object.traverse?.((child) => {
+        if (!child?.isMesh) return;
+        child.userData = child.userData || {};
+        child.userData.noCollision = !shouldCollide;
+      });
+      if (shouldCollide && typeof envCollider?.refresh === "function") {
         envCollider.refresh();
       }
     };
@@ -1195,11 +1252,16 @@ async function mainApp() {
       const url = await resolveFirstAvailableAsset(urls);
       if (!url) return null;
       try {
-        const object = await buildingMgr.loadBuilding(url, placementOptions);
+        const transformOptions = resolveTransformOptions();
+        const object = await loadLandmark(scene, url, transformOptions);
+        if (!object) {
+          return null;
+        }
         if (spec.name && (!object.name || object.name === "")) {
           object.name = spec.name;
         }
         snapAndRefresh(object);
+        applyCollisionSettings(object);
         if (typeof spec.onLoaded === "function") {
           try {
             spec.onLoaded(object, { url, label });
