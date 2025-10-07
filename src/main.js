@@ -8,7 +8,7 @@ import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { createOcean, updateOcean } from "./world/ocean.js";
 import { createHarbor, updateHarborLighting } from "./world/harbor.js";
-import { createMainHillRoad } from "./world/roads_hillcity.js";
+import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
 import { createCity, updateCityLighting, createHillCity } from "./world/city.js";
 import { CITY_CHUNK_CENTER, HARBOR_CENTER_3D } from "./world/locations.js";
@@ -543,6 +543,7 @@ async function mainApp() {
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
     updateCityLighting(city, lights.nightFactor);
+    updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
