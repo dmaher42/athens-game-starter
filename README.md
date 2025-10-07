@@ -63,6 +63,14 @@ missing when the app boots the runtime now renders a bundled placeholder glTF
 and, when that is not available, spawns a lightweight procedural monument so you
 can continue exploring even before fetching the premium asset.
 
+### Sample landmark buildings
+
+Two bundled landmarks – `Akropol.glb` and
+`poseidon_temple_at_sounion_greece.glb` – now load automatically to replace the
+Acropolis and seaside placeholders. You can swap them out (or add your own
+landmarks) by dropping GLBs in `public/models/buildings/` and updating the
+placement list in `src/main.js`.
+
 ## KTX2 textures
 
 Models loaded through `GLTFLoader` expect textures in the KTX2 (Basis Universal)
