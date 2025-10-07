@@ -43,7 +43,7 @@ export const HARBOR_WATER_SIZE = new THREE.Vector2(260, 100); // reduce Z extent
 export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, -100); // push water toward open sea (−Z)
 // Keep the harbor water strictly on the seaward (western) side of the pier
 export const PIER_EDGE_OFFSET = 4.5; // distance from harbor center to pier edge
-export const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x - PIER_EDGE_OFFSET; // align with pier edge
+export const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x - PIER_EDGE_OFFSET; // align with western (seaward) edge of pier
 export const HARBOR_WATER_BACK = 0; // max inland distance allowed (in Z half-extent)
 
 // Convenience centers
