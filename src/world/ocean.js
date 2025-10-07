@@ -106,13 +106,15 @@ export async function createOcean(scene, options = {}) {
   const planes = [
     new THREE.Plane(new THREE.Vector3(1, 0, 0), -(cx - halfX)), // left:  x >= cx - halfX
     new THREE.Plane(new THREE.Vector3(-1, 0, 0), cx + halfX), // right: x <= cx + halfX
-    new THREE.Plane(new THREE.Vector3(0, 0, 1), -(cz + halfZBack)), // back (inland):  z <= cz + 0
-    new THREE.Plane(new THREE.Vector3(0, 0, -1), cz - halfZFront), // front (sea):    z >= cz - halfZFront
+    // back (inland limit)
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), cz + halfZBack),
+    // front (sea)
+    new THREE.Plane(new THREE.Vector3(0, 0, 1), -(cz - halfZFront)),
   ];
 
   if (water.material) {
-    water.material.clipping = true;
     water.material.clippingPlanes = planes;
+    water.material.clipIntersection = true;
     water.material.depthWrite = true;
     water.material.transparent = true;
     water.material.needsUpdate = true;

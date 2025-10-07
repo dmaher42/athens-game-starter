@@ -631,8 +631,10 @@ async function mainApp() {
 
   // Mount HUD in dev OR if a global flag is set (useful in prod previews)
   const SHOW_HUD =
-    (typeof window !== "undefined" && window.SHOW_HUD === true) ||
-    import.meta.env?.DEV;
+    import.meta.env?.DEV ||
+    (typeof window !== "undefined" &&
+      (window.SHOW_HUD === true ||
+        new URLSearchParams(window.location.search).has("hud")));
   if (SHOW_HUD) {
     console.log("[HUD] mounting…");
     mountDevHUD({ getPosition, getDirection, onPin });
