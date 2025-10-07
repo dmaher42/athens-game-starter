@@ -236,7 +236,7 @@ async function mainApp() {
   createPlazas(scene);
 
   // Hill-city buildings (uses terrain sampler + road curve)
-  createHillCity(scene, terrain, mainRoad, {
+  const hillCity = createHillCity(scene, terrain, mainRoad, {
     seed: 42,
     buildingCount: 140,
   });
@@ -556,7 +556,7 @@ async function mainApp() {
     updateSky(skyObj, sunDir);
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
-    updateCityLighting(city, lights.nightFactor);
+    updateCityLighting(hillCity, lights.nightFactor);
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
