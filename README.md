@@ -1,6 +1,17 @@
 # athens-game-starter
 
-## Quick start
+## Development & Deployment
+
+### How to update (Lane A — Preview first)
+
+1. In GitHub, open the file you want to change → **Edit** → “Commit changes” → **Create a new branch** (GitHub will make a PR).
+2. On the PR page, wait for **Deployments** to show a **GitHub Pages** preview → **click the link** to play and test.
+   - If you like it: click **Merge** → the live site updates automatically.
+   - If you don’t: just **Close** the PR. No harm done.
+
+> You do **not** need Codespaces or a dev server for this flow.
+
+### Quick start
 
 To run the project locally:
 
@@ -145,12 +156,11 @@ glTF/glb assets before importing them into the project.
 
 ## Deployment — GitHub Pages
 
-This project deploys automatically on push to `main` using GitHub Actions.
+This project deploys automatically on **push to `main`** and now also provides **PR preview links**.
 
-- Vite `base` is set to `/athens-game-starter/` in `vite.config.ts` (required for GH Pages).
-- Workflow: `.github/workflows/deploy.yml` builds with Vite and publishes whichever output directory is produced
-  (`dist/` or `docs/`) to GitHub Pages.
-- SPA fallback: `404.html` is copied from `index.html` during the workflow to support deep links.
+- Vite `base` is set to `./` in `vite.config.ts` so the built site runs at the domain root (GitHub Pages).
+- Workflow: `.github/workflows/deploy.yml` builds with Vite and publishes `docs/` to GitHub Pages.
+- For PRs, the same workflow attaches a **preview deployment** to the PR under “Deployments”.
 
 After the first successful run, the site will be available at:
 `https://<your-username>.github.io/athens-game-starter/`
