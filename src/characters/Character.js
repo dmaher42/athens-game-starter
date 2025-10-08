@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { createKTX2Loader } from '../utils/ktx2.js';
+import { loadGLBWithFallbacks } from '../utils/glbSafeLoader.js';
 
 /** @typedef {'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump'} AnimName */
 
@@ -14,43 +13,49 @@ export class Character extends THREE.Object3D {
   }
 
   /**
-   * @param {string} url
+   * @param {string | string[]} url
    * @param {THREE.WebGLRenderer} [renderer]
    */
-  async load(url, renderer) {
-    const loader = new GLTFLoader();
+  async load(url, renderer, { targetHeight = 1.8 } = {}) {
+    const urls = Array.isArray(url) ? url : [url];
+    const { gltf, root } = await loadGLBWithFallbacks({
+      renderer,
+      urls,
+      targetHeight,
+    });
 
-    if (renderer) {
-      const ktx2 = createKTX2Loader(renderer);
-      loader.setKTX2Loader(ktx2);
+    this.initializeFromGLTF(root, gltf.animations);
+  }
+
+  initializeFromGLTF(root, animations = []) {
+    if (!root) {
+      throw new Error('Character.initializeFromGLTF requires a root object');
     }
 
-    const gltf = await loader.loadAsync(url);
+    if (this.model) {
+      this.remove(this.model);
+    }
 
-    this.model = gltf.scene;
+    this.model = root;
     this.model.traverse((o) => {
       if (o.isMesh) {
         o.castShadow = true;
+        o.receiveShadow = true;
         o.frustumCulled = false;
       }
     });
 
     this.model.rotation.y = Math.PI;
-
-    const box = new THREE.Box3().setFromObject(this.model);
-    const height = box.max.y - box.min.y;
-    const target = 1.8;
-    if (height > 0) {
-      const s = target / height;
-      this.model.scale.setScalar(s);
-    }
-
     this.add(this.model);
 
     this.mixer = new THREE.AnimationMixer(this.model);
-    const clips = gltf.animations || [];
+    const clips = Array.isArray(animations) ? animations : [];
     const byName = new Map();
-    for (const c of clips) byName.set(c.name, c);
+    for (const clip of clips) {
+      if (clip?.name) {
+        byName.set(clip.name, clip);
+      }
+    }
 
     const mapName = (n) => {
       const L = n.toLowerCase();
@@ -62,6 +67,8 @@ export class Character extends THREE.Object3D {
       if (L.includes('jump')) return 'Jump';
       return null;
     };
+
+    this.actions = new Map();
 
     for (const [name, clip] of byName) {
       const mapped = mapName(name);

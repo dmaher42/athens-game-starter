@@ -58,7 +58,7 @@ pull the binary. Run the helper script and pass your token via the environment:
 SKETCHFAB_TOKEN=<your token> npm run download:aristotle
 ```
 
-The GLB is saved to `public/models/buildings/aristotle-tomb.glb`. If the file is
+The GLB is saved to `public/models/landmarks/aristotle_tomb.glb`. If the file is
 missing when the app boots the runtime now renders a bundled placeholder glTF
 and, when that is not available, spawns a lightweight procedural monument so you
 can continue exploring even before fetching the premium asset.

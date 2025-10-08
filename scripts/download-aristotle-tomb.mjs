@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const MODEL_UID = '2e13d16efef94632a478afb2efb39704';
-const DESTINATION = path.join('public', 'models', 'buildings', 'aristotle-tomb.glb');
+const DESTINATION = path.join('public', 'models', 'landmarks', 'aristotle_tomb.glb');
 
 async function downloadTomb() {
   const token = process.env.SKETCHFAB_TOKEN;

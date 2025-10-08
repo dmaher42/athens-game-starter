@@ -41,6 +41,7 @@ import { createPin } from "./world/pins.js";
 import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
+import { loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
 
 const WORLD_ROOT_NAME = "WorldRoot";
 
@@ -767,7 +768,11 @@ async function mainApp() {
 
   const character = new Character();
   const heroPath = `${BASE_URL}models/character/hero.glb`;
+  const heroRootPath = `/models/character/hero.glb`;
   const bundledHeroPath = `${BASE_URL}models/character/${encodeURIComponent(
+    "Hooded Adventurer.glb"
+  )}`;
+  const bundledHeroRootPath = `/models/character/${encodeURIComponent(
     "Hooded Adventurer.glb"
   )}`;
   const attachFallbackAvatar = () => {
@@ -777,30 +782,35 @@ async function mainApp() {
     fallbackAvatar.position.set(0, 0, 0);
   };
 
-  const heroAssetUrl = await resolveFirstAvailableAsset([
+  const heroCandidates = [
     heroPath,
+    heroRootPath,
     bundledHeroPath,
-  ]);
+    bundledHeroRootPath,
+  ].filter((value, index, array) => value && array.indexOf(value) === index);
 
-  if (heroAssetUrl) {
-    if (heroAssetUrl !== heroPath) {
+  try {
+    const { url, gltf, root } = await loadGLBWithFallbacks({
+      renderer,
+      urls: heroCandidates,
+      targetHeight: 1.8,
+    });
+
+    removeExistingAvatar();
+    character.initializeFromGLTF(root, gltf.animations);
+    player.attachCharacter(character);
+
+    if (url !== heroPath && url !== heroRootPath) {
       console.info(
-        `Hero GLB not found at ${heroPath}; using bundled sample avatar.`
+        `Hero GLB not found at ${heroPath}; using fallback avatar from ${url}.`
       );
     }
-    try {
-      await character.load(heroAssetUrl, renderer);
-      removeExistingAvatar();
-      player.attachCharacter(character);
-    } catch (error) {
-      console.error(
-        `⚠️ Unable to fetch hero GLB from "${heroAssetUrl}". mainApp will continue with a placeholder avatar.`,
-        error
-      );
-      attachFallbackAvatar();
-    }
-  } else {
-    console.info(`Hero GLB not found at ${heroPath}; using placeholder avatar.`);
+    console.log("[Hero] Loaded:", url);
+  } catch (error) {
+    console.error(
+      `[Hero] All candidates failed, using fallback avatar:`,
+      error?.message || error
+    );
     console.info(`Add your own hero model at ${heroPath}.`);
     attachFallbackAvatar();
   }
@@ -1134,14 +1144,6 @@ async function mainApp() {
 
   const sampleBuildingSpecs = [
     {
-      url: `${buildingBase}aristotle-tomb.glb`,
-      position: createTerrainAlignedPosition(18, -26),
-      rotateY: Math.PI * 0.18,
-      scale: 0.72,
-      collision: true,
-      name: "SampleAristotleTomb",
-    },
-    {
       url: `${buildingBase}poseidon_temple_at_sounion_greece.glb`,
       position: createTerrainAlignedPosition(-34, -12),
       rotateY: -Math.PI * 0.12,
@@ -1187,6 +1189,68 @@ async function mainApp() {
       );
     }
   });
+
+  async function addAristotleTomb(scene, renderer, x, z) {
+    if (!scene) return null;
+
+    const { getHeightAt } = scene.userData || {};
+    const heightSample =
+      typeof getHeightAt === "function" ? getHeightAt(x, z) : null;
+    const y = Number.isFinite(heightSample) ? heightSample + 0.05 : 0;
+
+    const tombCandidates = [
+      `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
+      "/models/landmarks/aristotle_tomb.glb",
+      `${BASE_URL}models/buildings/aristotle-tomb.glb`,
+      "/models/buildings/aristotle-tomb.glb",
+      `${BASE_URL}models/buildings/Akropol.glb`,
+      "/models/buildings/Akropol.glb",
+    ];
+
+    try {
+      const { url, root } = await loadGLBWithFallbacks({
+        renderer,
+        urls: tombCandidates,
+        targetHeight: 4.0,
+      });
+
+      root.position.set(x, y, z);
+      root.traverse((o) => {
+        if (o?.isMesh) {
+          o.castShadow = true;
+          o.receiveShadow = true;
+        }
+      });
+      root.name = "AristotleTomb";
+      scene.add(root);
+
+      if (
+        !url.includes("aristotle_tomb.glb") &&
+        !url.includes("aristotle-tomb.glb")
+      ) {
+        console.info(
+          `Aristotle's Tomb loaded from fallback candidate ${url}.`
+        );
+      } else {
+        console.log("[Landmark] Aristotle's Tomb loaded from", url);
+      }
+
+      return root;
+    } catch (error) {
+      const message = error?.message || error;
+      console.error("[Landmark] Failed to load Aristotle's Tomb model:", message);
+      spawnPlaceholderMonument({
+        name: "PlaceholderAristotleTomb",
+        position: new THREE.Vector3(x, y, z),
+        rotateY: Math.PI * 0.15,
+        scale: 1.2,
+        collision: true,
+      });
+      return null;
+    }
+  }
+
+  await addAristotleTomb(scene, renderer, 6, -28);
 
   const resolveCandidateUrls = (files = []) =>
     files
@@ -1351,29 +1415,10 @@ async function mainApp() {
     return object;
   };
 
-  const tombPrimaryUrl = `${buildingBase}aristotle-tomb.glb`;
   const akropolUrl = `${buildingBase}Akropol.glb`;
   const poseidonUrl = `${buildingBase}poseidon_temple_at_sounion_greece.glb`;
 
   const buildingPlacements = [
-    {
-      name: "aristotle-tomb",
-      displayName: "Aristotle's Tomb",
-      files: ["aristotle-tomb.glb", "aristotle-tomb.gltf"],
-      fallbackFiles: ["Akropol.glb"],
-      options: {
-        scale: 1.2,
-        position: new THREE.Vector3(6, 0, -28),
-        rotateY: Math.PI * 0.15,
-        collision: true,
-      },
-      surfaceOffset: 0.05,
-      snapOptions: { minAboveSea: 0.02 },
-      missingPrimaryMessage: `Aristotle's Tomb missing at ${tombPrimaryUrl}; run npm run download:aristotle to install the premium asset.`,
-      fallbackMessage: "Using Akropol.glb as a fallback for Aristotle's Tomb.",
-      fallbackFailureMessage: "Akropol fallback model also failed to load.",
-      allMissingMessage: `Aristotle's Tomb missing at ${tombPrimaryUrl}; install it with npm run download:aristotle.`,
-    },
     {
       name: "acropolis",
       displayName: "Acropolis",
