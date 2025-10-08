@@ -1,5 +1,11 @@
 // Dev HUD: compass + coordinates + pin hotkey (P)
-export function mountDevHUD({ getPosition, getDirection, onPin } = {}) {
+export function mountDevHUD({
+  getPosition,
+  getDirection,
+  onPin,
+  onSetLightingPreset,
+  lightingPresets,
+} = {}) {
   const allowHud =
     import.meta.env?.DEV ||
     (typeof window !== "undefined" && window.SHOW_HUD === true);
@@ -57,6 +63,115 @@ export function mountDevHUD({ getPosition, getDirection, onPin } = {}) {
     `<div style="opacity:.8">Press <b>P</b> to drop a pin</div>`
   ].join("");
 
+  const defaultPresetOrder = [
+    { name: "dawn", label: "Dawn" },
+    { name: "noon", label: "High Noon" },
+    { name: "dusk", label: "Dusk" },
+    { name: "night", label: "Night" },
+  ];
+  const availablePresets = defaultPresetOrder.filter(({ name }) => {
+    if (!lightingPresets) return true;
+    return lightingPresets[name] != null;
+  });
+
+  if (availablePresets.length && !read.querySelector(".hud-lighting-presets")) {
+    const section = document.createElement("div");
+    section.className = "hud-lighting-presets";
+    Object.assign(section.style, {
+      marginTop: "8px",
+      paddingTop: "6px",
+      borderTop: "1px solid rgba(255,255,255,0.15)",
+      pointerEvents: "auto",
+    });
+
+    const heading = document.createElement("div");
+    heading.textContent = "Lighting Presets";
+    Object.assign(heading.style, {
+      fontWeight: 600,
+      letterSpacing: "0.08em",
+      fontSize: "11px",
+      opacity: "0.85",
+      textTransform: "uppercase",
+    });
+    section.appendChild(heading);
+
+    const buttonRow = document.createElement("div");
+    Object.assign(buttonRow.style, {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "6px",
+      marginTop: "6px",
+    });
+
+    const presetHotkeyConfig = [
+      { name: "dawn", codes: ["Digit1", "Numpad1"], keys: ["1"] },
+      { name: "noon", codes: ["Digit2", "Numpad2"], keys: ["2"] },
+      { name: "dusk", codes: ["Digit3", "Numpad3"], keys: ["3"] },
+      { name: "night", codes: ["Digit4", "Numpad4"], keys: ["4"] },
+    ];
+    const activePresetNames = new Set(availablePresets.map((preset) => preset.name));
+    const presetKeyBindings = new Map();
+
+    for (const preset of availablePresets) {
+      const presetMeta = lightingPresets?.[preset.name] || {};
+      const button = document.createElement("button");
+      button.type = "button";
+      const displayLabel = presetMeta.label || preset.label;
+      button.textContent = displayLabel;
+      Object.assign(button.style, {
+        padding: "4px 8px",
+        borderRadius: "4px",
+        border: "1px solid rgba(255,255,255,0.35)",
+        background: "rgba(0,0,0,0.35)",
+        color: "inherit",
+        font: "inherit",
+        cursor: "pointer",
+        pointerEvents: "auto",
+        transition: "background 0.2s ease, border-color 0.2s ease",
+      });
+      button.addEventListener("mouseenter", () => {
+        button.style.background = "rgba(255,255,255,0.18)";
+        button.style.borderColor = "rgba(255,255,255,0.55)";
+      });
+      button.addEventListener("mouseleave", () => {
+        button.style.background = "rgba(0,0,0,0.35)";
+        button.style.borderColor = "rgba(255,255,255,0.35)";
+      });
+
+      const hotkeyLabel = presetMeta.hotkey || "";
+      if (hotkeyLabel) {
+        button.title = `Set ${displayLabel} lighting (Hotkey ${hotkeyLabel})`;
+      } else {
+        button.title = `Set ${displayLabel} lighting`;
+      }
+
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (typeof onSetLightingPreset === "function") {
+          onSetLightingPreset(preset.name);
+        }
+      });
+
+      buttonRow.appendChild(button);
+    }
+
+    presetHotkeyConfig
+      .filter((entry) => activePresetNames.has(entry.name))
+      .forEach((entry) => {
+        for (const code of entry.codes) {
+          presetKeyBindings.set(code, entry.name);
+        }
+        for (const key of entry.keys) {
+          presetKeyBindings.set(key, entry.name);
+        }
+      });
+
+    section.appendChild(buttonRow);
+    read.appendChild(section);
+
+    read._presetKeyBindings = presetKeyBindings;
+  }
+
   wrap.appendChild(comp);
   wrap.appendChild(read);
   document.body.appendChild(wrap);
@@ -96,6 +211,13 @@ export function mountDevHUD({ getPosition, getDirection, onPin } = {}) {
   loop();
 
   // pin hotkey (P) to drop a marker and log coords
+  const getPresetKeyBindings = () => {
+    if (read?._presetKeyBindings instanceof Map) {
+      return read._presetKeyBindings;
+    }
+    return null;
+  };
+
   const onKey = (e) => {
     if (e.key?.toLowerCase() === "p") {
       const p = getPosition?.();
@@ -105,6 +227,15 @@ export function mountDevHUD({ getPosition, getDirection, onPin } = {}) {
         // Always log a copy-paste line
         console.log(`[PIN] @ (${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`);
       }
+    }
+
+    const bindings = getPresetKeyBindings();
+    if (!bindings || typeof onSetLightingPreset !== "function") return;
+    if (e.repeat) return;
+    const presetName = bindings.get(e.code) || bindings.get(e.key);
+    if (presetName) {
+      e.preventDefault();
+      onSetLightingPreset(presetName);
     }
   };
   window.addEventListener("keydown", onKey);

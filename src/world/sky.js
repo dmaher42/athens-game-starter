@@ -30,7 +30,30 @@ export function createSky(scene) {
   return { sky };
 }
 
-export function updateSky(skyObj, sunDir) {
+const scratchSunDirection = new THREE.Vector3(0, 1, 0);
+
+function clamp01(value) {
+  if (!Number.isFinite(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 1) return 1;
+  return value;
+}
+
+export function setTimeOfDayPhase(state, phase01) {
+  if (!state || typeof state !== "object") return 0;
+  const clamped = clamp01(phase01);
+  state.timeOfDayPhase = clamped;
+  return clamped;
+}
+
+export function getSunDirectionFromPhase(phase01, target = scratchSunDirection) {
+  const phase = clamp01(phase01);
+  const theta = phase * Math.PI * 2;
+  target.set(Math.cos(theta), Math.sin(theta), 0);
+  return target;
+}
+
+export function updateSky(skyObj, state) {
   // Guard against missing uniforms or objects so runtime stays safe.
   const { sky } = skyObj || {};
   if (
@@ -42,7 +65,10 @@ export function updateSky(skyObj, sunDir) {
     return;
   }
   // Copy normalized sun direction into the shader uniform
+  const phase = state?.timeOfDayPhase ?? 0;
+  const sunDir = getSunDirectionFromPhase(phase, scratchSunDirection);
   sky.material.uniforms.sunPosition.value.copy(sunDir).normalize();
+  return sunDir;
 }
 
 export function createStars(scene, count) {
