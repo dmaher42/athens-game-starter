@@ -1551,6 +1551,7 @@ async function mainApp() {
   };
 
   // Mount HUD in dev OR if a global flag is set (useful in prod previews)
+<<<<<<< HEAD
   const SHOW_HUD = shouldShowOverlay({
     queryKey: "hud",
     windowFlagKey: "SHOW_HUD",
@@ -1565,6 +1566,12 @@ async function mainApp() {
       onSetLightingPreset: applyLightingPreset,
     });
   }
+=======
+  // Force HUD to always show
+  const SHOW_HUD = true;
+  console.log("[HUD] mounting…");
+  mountDevHUD({ getPosition, getDirection, onPin });
+>>>>>>> 3cd1c7d (Your commit message here)
 
   // Simple controls: clicking the canvas or pressing E will run the onUse
   // callback attached to whatever we are currently looking at.
