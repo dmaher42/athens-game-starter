@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   CITY_CHUNK_CENTER,
   CITY_CHUNK_SIZE,
@@ -17,10 +18,13 @@ import { addFoundationPad } from "./foundations.js";
 // Create a short "ribbon" road between two points. The ribbon is draped to terrain
 // by sampling height along the segment, including both left/right edges so it
 // tilts with local slope. Uses only built-in materials (no textures).
+// If options.collectGeometries is an array, we push geometry there (for a later merge)
+// and DO NOT add a standalone mesh. Otherwise, we add the mesh directly to `scene`.
 function createVisibleRoad(start, end, scene, terrain, options = {}) {
   const width = options.width ?? 2.8;
-  const yOffset = options.yOffset ?? 0.05;
-  const color = options.color ?? 0x2f2f2f;
+  const yOffset = options.yOffset ?? 0.05; // sit slightly above terrain
+  const color = options.color ?? 0x2f2f2f; // dark gray
+  const collect = Array.isArray(options.collectGeometries) ? options.collectGeometries : null;
 
   const length = start.distanceTo(end);
   const segments = options.segments ?? Math.max(8, Math.ceil(length * 1.5));
@@ -97,11 +101,17 @@ function createVisibleRoad(start, end, scene, terrain, options = {}) {
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeVertexNormals();
 
+  // If we’re collecting, return geometry for a later merge (no per-segment mesh).
+  if (collect) {
+    collect.push(geometry);
+    return null;
+  }
+
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = "CityRoadSegment";
   mesh.castShadow = false;
   mesh.receiveShadow = true;
-  mesh.userData.noCollision = true;
+  mesh.userData.noCollision = true; // visual only; terrain handles collision
   mesh.renderOrder = 1;
   scene.add(mesh);
   return mesh;
@@ -268,6 +278,9 @@ export function createCity(scene, terrain, options = {}) {
     roadGrid.push(row);
   }
 
+  // --- Collect all road segment geometries for one merged mesh (perf + fewer draw calls)
+  const roadGeometries = [];
+
   for (let iz = 0; iz < roadGrid.length; iz++) {
     const row = roadGrid[iz];
     for (let ix = 0; ix < row.length - 1; ix++) {
@@ -276,7 +289,7 @@ export function createCity(scene, terrain, options = {}) {
       if (!start || !end) {
         continue;
       }
-      createVisibleRoad(start, end, city, terrain);
+      createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
     }
   }
 
@@ -288,8 +301,25 @@ export function createCity(scene, terrain, options = {}) {
       if (!start || !end) {
         continue;
       }
-      createVisibleRoad(start, end, city, terrain);
+      createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
     }
+  }
+
+  // Merge all ribbon pieces into a single, draped road mesh
+  if (roadGeometries.length > 0) {
+    const merged = mergeGeometries(roadGeometries, false) || new THREE.BufferGeometry();
+    // dispose the temp pieces
+    for (const g of roadGeometries) g.dispose();
+    const roadMaterial =
+      createVisibleRoad._material ||
+      new THREE.MeshStandardMaterial({ color: 0x2f2f2f, roughness: 1.0, metalness: 0.0, side: THREE.DoubleSide });
+    const roadsMesh = new THREE.Mesh(merged, roadMaterial);
+    roadsMesh.name = "CityRoads";
+    roadsMesh.renderOrder = 1;        // win depth vs semi-transparent water
+    roadsMesh.userData.noCollision = true; // visual only
+    roadsMesh.castShadow = false;
+    roadsMesh.receiveShadow = true;
+    city.add(roadsMesh);
   }
 
   const walkwayPoints = [];
