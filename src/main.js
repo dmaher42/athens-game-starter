@@ -19,7 +19,7 @@ import { createHarbor, updateHarborLighting } from "./world/harbor.js";
 import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hillcity.js";
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
-import { updateCityLighting, createHillCity } from "./world/city.js";
+import { updateCityLighting, createHillCity, createCity } from "./world/city.js";
 import {
   AGORA_CENTER_3D,
   HARBOR_CENTER_3D,
@@ -618,6 +618,10 @@ async function mainApp() {
 
   // Plazas (agora + acropolis terraces)
   createPlazas(worldRoot);
+
+  const harborCity = createCity(worldRoot, terrain, {
+    roadsVisible,
+  });
 
   // Hill-city buildings (uses terrain sampler + road curve)
   const hillCity = createHillCity(worldRoot, terrain, mainRoad, {
@@ -1496,6 +1500,7 @@ async function mainApp() {
     const sunDir = updateSky(skyObj, timeOfDayState);
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
+    updateCityLighting(harborCity, lights.nightFactor);
     updateCityLighting(hillCity, lights.nightFactor);
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     updateStars(stars, phase);
@@ -1531,6 +1536,7 @@ async function mainApp() {
     // Update sky dome, atmospheric lighting, and celestial bodies each frame.
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
+    updateCityLighting(harborCity, lights.nightFactor);
     updateCityLighting(hillCity, lights.nightFactor);
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     // Fade the stars in and out depending on the time of day.
