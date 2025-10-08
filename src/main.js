@@ -1530,8 +1530,7 @@ async function mainApp() {
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
 
-    // Dynamic terrain subtly sways, hinting at wind. Remove this call if you
-    // prefer a static landscape without vertex animation.
+    // Advance the GPU-driven terrain sway (no CPU vertex updates required).
     updateTerrain(terrain, elapsed);
     updateOcean(ocean, deltaTime, sunDir, lights.nightFactor);
 

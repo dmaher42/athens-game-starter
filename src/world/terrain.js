@@ -162,12 +162,76 @@ export function createTerrain(scene) {
   geometry.userData.segmentCount = segments;
   geometry.userData.size = size;
 
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x556b2f,
+  // --- GPU sway setup: capture the original positions so the shader can gently
+  // displace them at runtime without mutating the CPU-side buffers.
+  if (!geometry.getAttribute("basePos")) {
+    const basePos = new THREE.BufferAttribute(
+      new Float32Array(positionAttribute.array),
+      3,
+    );
+    geometry.setAttribute("basePos", basePos);
+  }
+
+  const terrainMaterial = new THREE.MeshStandardMaterial({
+    color: 0x9aa382,
+    roughness: 1.0,
+    metalness: 0.0,
     vertexColors: true,
   });
 
-  const terrain = new THREE.Mesh(geometry, material);
+  const swayUniforms = {
+    uTime: { value: 0 },
+    uWindStrength: { value: 0.75 },
+    uWindFreq: { value: 0.15 },
+    uCityCenter: {
+      value: new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z),
+    },
+    uCityInner: { value: Math.max(40, CITY_AREA_RADIUS * 0.55) },
+    uCityOuter: { value: CITY_AREA_RADIUS },
+  };
+
+  terrainMaterial.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = swayUniforms.uTime;
+    shader.uniforms.uWindStrength = swayUniforms.uWindStrength;
+    shader.uniforms.uWindFreq = swayUniforms.uWindFreq;
+    shader.uniforms.uCityCenter = swayUniforms.uCityCenter;
+    shader.uniforms.uCityInner = swayUniforms.uCityInner;
+    shader.uniforms.uCityOuter = swayUniforms.uCityOuter;
+
+    shader.vertexShader = `
+      uniform float uTime;
+      uniform float uWindStrength;
+      uniform float uWindFreq;
+      uniform vec2 uCityCenter;
+      uniform float uCityInner;
+      uniform float uCityOuter;
+      attribute vec3 basePos;
+    ` + shader.vertexShader;
+
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <begin_vertex>",
+      `
+        vec3 transformed = basePos;
+
+        float dx = transformed.x - uCityCenter.x;
+        float dz = transformed.z - uCityCenter.y;
+        float dCity = sqrt(dx * dx + dz * dz);
+
+        float cityFactor = 1.0;
+        if (dCity <= uCityInner) {
+          cityFactor = 0.0;
+        } else if (dCity < uCityOuter) {
+          float t = (dCity - uCityInner) / max(0.0001, (uCityOuter - uCityInner));
+          cityFactor = clamp(t, 0.0, 1.0);
+        }
+
+        float sway = sin((transformed.x + transformed.z) * uWindFreq + uTime * 0.5) * 0.3;
+        transformed.y += sway * uWindStrength * cityFactor;
+      `,
+    );
+  };
+
+  const terrain = new THREE.Mesh(geometry, terrainMaterial);
   terrain.rotation.x = -Math.PI / 2; // Rotate so the plane lies flat on the XZ axis.
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
@@ -206,56 +270,25 @@ export function createTerrain(scene) {
     const index01 = z1 * stride + x0;
     const index11 = z1 * stride + x1;
 
-    const h00 = positionAttribute.getZ(index00);
-    const h10 = positionAttribute.getZ(index10);
-    const h01 = positionAttribute.getZ(index01);
-    const h11 = positionAttribute.getZ(index11);
+    const h00 = baseHeights[index00];
+    const h10 = baseHeights[index10];
+    const h01 = baseHeights[index01];
+    const h11 = baseHeights[index11];
 
     const h0 = h00 + (h10 - h00) * sx;
     const h1 = h01 + (h11 - h01) * sx;
     return h0 + (h1 - h0) * sz;
   };
 
+  terrain.userData.swayUniforms = swayUniforms;
+
   return terrain;
 }
 
 export function updateTerrain(terrain, time) {
   if (!terrain) return;
-
-  const geometry = terrain.geometry;
-  const positionAttribute = geometry.attributes.position;
-  const baseHeights = geometry.userData.baseHeights;
-  if (!baseHeights) return;
-
-  const vertexCount = positionAttribute.count;
-  const windStrength = 0.75; // general landscape motion
-  const windFrequency = 0.15; // Higher frequency = faster ripples.
-  // Reduce/disable sway within the city plateau so streets/buildings feel stable.
-  // Mirror the constants from createTerrain so behavior matches.
-  const CITY_CENTER_XZ = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
-  const CITY_INNER = Math.max(40, CITY_AREA_RADIUS * 0.55);
-  const CITY_OUTER = CITY_AREA_RADIUS;
-
-  for (let i = 0; i < vertexCount; i++) {
-    const baseHeight = baseHeights[i];
-    const x = positionAttribute.getX(i);
-    const z = positionAttribute.getY(i);
-    // Distance to city center in XZ (remember geometry is on XY before rotation).
-    const dxCity = x - CITY_CENTER_XZ.x;
-    const dzCity = z - CITY_CENTER_XZ.y;
-    const dCity = Math.hypot(dxCity, dzCity);
-    // Inside inner radius, no sway. Between inner→outer, linearly fade in sway.
-    let citySwayFactor = 1.0;
-    if (dCity <= CITY_INNER) citySwayFactor = 0.0;
-    else if (dCity < CITY_OUTER) {
-      const t = (dCity - CITY_INNER) / (CITY_OUTER - CITY_INNER);
-      citySwayFactor = THREE.MathUtils.clamp(t, 0, 1);
-    }
-
-    const sway = Math.sin((x + z) * windFrequency + time * 0.5) * 0.3;
-    positionAttribute.setZ(i, baseHeight + sway * windStrength * citySwayFactor);
+  const uniforms = terrain.userData.swayUniforms;
+  if (uniforms) {
+    uniforms.uTime.value = time;
   }
-
-  positionAttribute.needsUpdate = true;
-  geometry.computeVertexNormals();
 }
