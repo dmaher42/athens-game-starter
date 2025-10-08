@@ -545,6 +545,23 @@ async function mainApp() {
     root.name = WORLD_ROOT_NAME;
     scene.add(root);
     scene.userData.worldRoot = root;
+    const sceneUserData = scene.userData || {};
+    root.userData = root.userData || {};
+    if (sceneUserData.getHeightAt) {
+      root.userData.getHeightAt = sceneUserData.getHeightAt;
+    }
+    if (sceneUserData.terrainHeightSampler) {
+      root.userData.terrainHeightSampler = sceneUserData.terrainHeightSampler;
+    }
+    if (sceneUserData.heightSampler) {
+      root.userData.heightSampler = sceneUserData.heightSampler;
+    }
+    if (sceneUserData.terrainSampler) {
+      root.userData.terrainSampler = sceneUserData.terrainSampler;
+    }
+    if (sceneUserData.terrain) {
+      root.userData.terrain = sceneUserData.terrain;
+    }
     return root;
   };
 
