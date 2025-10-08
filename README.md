@@ -85,7 +85,7 @@ decoding. When decoding is unavailable, assets are transcoded on the fly and
 fall back to standard uncompressed textures so the scene continues to render.
 
 By default the loader pulls the Basis transcoder worker and WASM binary from the
-[three.js CDN](https://unpkg.com/three@0.160.0/examples/jsm/libs/basis/). If you
+[three.js CDN](https://unpkg.com/three@0.180.0/examples/jsm/libs/basis/). If you
 prefer to host the decoder assets yourself you can either:
 
 1. Download `basis_transcoder.js` and `basis_transcoder.wasm` from the same CDN
