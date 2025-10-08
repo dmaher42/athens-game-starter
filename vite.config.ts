@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: './', // ✅ relative base — works locally AND on root-hosted Pages
+  base: './',
   build: {
     outDir: 'docs',     // ✅ GH Pages expects the built site here
     emptyOutDir: true,  // ✅ clears old builds before rebuilding
