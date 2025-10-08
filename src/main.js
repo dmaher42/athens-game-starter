@@ -622,32 +622,30 @@ async function mainApp() {
   // At runtime we try both the site base (for GitHub Pages) and root (for dev).
   // If found, we stream it via loadLandmark(); the loader will auto-raise it
   // ~5cm above ground and handle KTX2 texture support transparently.
-  (async () => {
-    try {
-      const aristotleCandidates = [
-        `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
-        `/models/landmarks/aristotle_tomb.glb`,
-      ];
-      const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
-      if (aristotleUrl) {
-        await loadLandmark(worldRoot, aristotleUrl, {
-          // Use a named location that already exists in the scene constants.
-          // The landmark loader will call the scene/terrain height sampler and
-          // lift the model slightly so it rests on the ground.
-          position: ACROPOLIS_PEAK_3D,
-          // Optional: adjust if your GLB is tiny/huge
-          // scale: 1.0,
-        });
-      } else {
-        console.warn(
-          "Aristotle's Tomb not found. Expected at:",
-          aristotleCandidates
-        );
-      }
-    } catch (err) {
-      console.error("Failed to load Aristotle's Tomb:", err);
+  try {
+    const aristotleCandidates = [
+      `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
+      `/models/landmarks/aristotle_tomb.glb`,
+    ];
+    const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
+    if (aristotleUrl) {
+      await loadLandmark(worldRoot, aristotleUrl, {
+        // Use a named location that already exists in the scene constants.
+        // The landmark loader will call the scene/terrain height sampler and
+        // lift the model slightly so it rests on the ground.
+        position: ACROPOLIS_PEAK_3D,
+        // Optional: adjust if your GLB is tiny/huge
+        // scale: 1.0,
+      });
+    } else {
+      console.warn(
+        "Aristotle's Tomb not found. Expected at:",
+        aristotleCandidates
+      );
     }
-  })();
+  } catch (err) {
+    console.error("Failed to load Aristotle's Tomb:", err);
+  }
   // --------------------------------------------------------------------------
 
   // Plazas (agora + acropolis terraces)
