@@ -1,5 +1,10 @@
 import * as THREE from "three";
-import { HARBOR_CENTER, HARBOR_SEA_LEVEL } from "./locations.js";
+import {
+  HARBOR_CENTER,
+  HARBOR_SEA_LEVEL,
+  AGORA_CENTER_3D,
+  CITY_AREA_RADIUS,
+} from "./locations.js";
 
 // Utility: basic pseudo-random gradient noise using deterministic hashing so we can
 // produce repeatable rolling hills without pulling in an additional dependency.
@@ -86,6 +91,15 @@ export function createTerrain(scene) {
   const heightScale = 25; // Raise this for taller peaks, lower for gentle plains.
   const baseFrequency = 0.01; // Higher frequency = more, smaller details.
 
+  // --- City plateau targets (flatter core around the Agora with smooth edges)
+  // We use the Agora's Y as the "target" plateau elevation and create a smooth
+  // falloff so the terrain blends into surrounding hills. Inner radius is
+  // mostly flat, outer radius blends back to normal terrain.
+  const CITY_CENTER_XZ = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
+  const CITY_INNER = Math.max(40, CITY_AREA_RADIUS * 0.55); // largely flat
+  const CITY_OUTER = CITY_AREA_RADIUS; // blend back to hills
+  const CITY_TARGET_Y = AGORA_CENTER_3D.y; // gentle, believable city elevation
+
   for (let i = 0; i < vertexCount; i++) {
     // PlaneGeometry is built on the XY plane. We'll treat x as east-west and
     // y as north-south; z will become height once we rotate the mesh.
@@ -106,6 +120,21 @@ export function createTerrain(scene) {
       );
       if (flatten > 0) {
         height = THREE.MathUtils.lerp(height, HARBOR_SEA_LEVEL, flatten);
+      }
+    }
+
+    // --- City plateau flattening (softly level the urban core)
+    {
+      const dxCity = x - CITY_CENTER_XZ.x;
+      const dzCity = z - CITY_CENTER_XZ.y;
+      const dCity = Math.hypot(dxCity, dzCity);
+      if (dCity < CITY_OUTER) {
+        // 0 in inner ring (full flatten), 1 outside the outer ring (no change).
+        const t = THREE.MathUtils.smoothstep(dCity, CITY_INNER, CITY_OUTER);
+        // Blend original 'height' toward city target elevation.
+        // Inside inner radius, t≈0 → almost perfectly flat at CITY_TARGET_Y.
+        // Between inner and outer, gradually blend back to natural terrain.
+        height = THREE.MathUtils.lerp(CITY_TARGET_Y, height, t);
       }
     }
     positionAttribute.setZ(i, height);
@@ -199,15 +228,32 @@ export function updateTerrain(terrain, time) {
   if (!baseHeights) return;
 
   const vertexCount = positionAttribute.count;
-  const windStrength = 0.75; // Dial this down for calmer terrain swaying.
+  const windStrength = 0.75; // general landscape motion
   const windFrequency = 0.15; // Higher frequency = faster ripples.
+  // Reduce/disable sway within the city plateau so streets/buildings feel stable.
+  // Mirror the constants from createTerrain so behavior matches.
+  const CITY_CENTER_XZ = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
+  const CITY_INNER = Math.max(40, CITY_AREA_RADIUS * 0.55);
+  const CITY_OUTER = CITY_AREA_RADIUS;
 
   for (let i = 0; i < vertexCount; i++) {
     const baseHeight = baseHeights[i];
     const x = positionAttribute.getX(i);
     const z = positionAttribute.getY(i);
+    // Distance to city center in XZ (remember geometry is on XY before rotation).
+    const dxCity = x - CITY_CENTER_XZ.x;
+    const dzCity = z - CITY_CENTER_XZ.y;
+    const dCity = Math.hypot(dxCity, dzCity);
+    // Inside inner radius, no sway. Between inner→outer, linearly fade in sway.
+    let citySwayFactor = 1.0;
+    if (dCity <= CITY_INNER) citySwayFactor = 0.0;
+    else if (dCity < CITY_OUTER) {
+      const t = (dCity - CITY_INNER) / (CITY_OUTER - CITY_INNER);
+      citySwayFactor = THREE.MathUtils.clamp(t, 0, 1);
+    }
+
     const sway = Math.sin((x + z) * windFrequency + time * 0.5) * 0.3;
-    positionAttribute.setZ(i, baseHeight + sway * windStrength);
+    positionAttribute.setZ(i, baseHeight + sway * windStrength * citySwayFactor);
   }
 
   positionAttribute.needsUpdate = true;
