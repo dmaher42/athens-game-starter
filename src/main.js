@@ -620,7 +620,15 @@ async function mainApp() {
   const input = new InputMap(renderer.domElement);
   const player = new PlayerController(input, envCollider, { camera });
   worldRoot.add(player.object);
-  player.object.position.set(0, 0, 10); // or your desired coordinates
+
+  const spawnPosition = new THREE.Vector3(0, 0, 10);
+  player.object.position.copy(spawnPosition);
+  snapAboveGround(player.object, terrain, spawnPosition.x, spawnPosition.z, 0.1, {
+    clampToSea: true,
+    seaLevel: SEA_LEVEL_Y,
+    minAboveSea: 0.25,
+  });
+  player.syncCapsuleToObject();
 
   // Example interactable props. userData acts like a metadata bag so you can
   // describe behaviour without subclassing three.js meshes. Below we hook up a
