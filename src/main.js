@@ -1154,7 +1154,9 @@ async function mainApp() {
       url: `${buildingBase}poseidon_temple_at_sounion_greece.glb`,
       position: createTerrainAlignedPosition(-34, -12),
       rotateY: -Math.PI * 0.12,
-      scale: 0.32,
+      // Preserve the authored dimensions (≈13.8m span, 4.5m tall) so the
+      // landmark reads close to its real-world size.
+      scale: 1,
       collision: true,
       name: "SamplePoseidonTemple",
     },
@@ -1162,7 +1164,9 @@ async function mainApp() {
       url: `${buildingBase}Akropol.glb`,
       position: createTerrainAlignedPosition(6, -42),
       rotateY: Math.PI * 0.08,
-      scale: 0.24,
+      // Match the mesh's original scale to avoid shrinking the Acropolis model
+      // below a believable footprint.
+      scale: 1,
       collision: false,
       name: "SampleAkropol",
     },
@@ -1218,7 +1222,10 @@ async function mainApp() {
       const { url, root } = await loadGLBWithFallbacks({
         renderer,
         urls: tombCandidates,
-        targetHeight: 4.0,
+        // The de-compressed landmark mesh stands ~16.7m tall in its source
+        // coordinates. Keep the landmark at that scale in-game so it reads at a
+        // believable height next to the 1.8m avatar.
+        targetHeight: 16.7,
       });
 
       root.position.set(x, y, z);
