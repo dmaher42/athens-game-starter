@@ -591,8 +591,27 @@ async function mainApp() {
 
   const worldRoot = refreshWorldRoot();
 
+  const roadsVisible = (() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("roads")) {
+        return true;
+      }
+      return parseToggleValue(params.get("roads"), true);
+    } catch (error) {
+      console.warn("Failed to parse roads visibility from query string:", error);
+      return true;
+    }
+  })();
+
   // Roads first (needs terrain sampler)
   const { group: roadGroup, curve: mainRoad } = createMainHillRoad(worldRoot, terrain);
+  if (roadGroup) {
+    roadGroup.visible = roadsVisible;
+  }
   if (import.meta.env?.DEV) {
     mountHillCityDebug(scene, mainRoad);
   }
