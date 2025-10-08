@@ -14,6 +14,78 @@ import {
 import { createRoad } from "./roads.js";
 import { addFoundationPad } from "./foundations.js";
 
+function createVisibleRoad(start, end, scene, terrain) {
+  const material =
+    createVisibleRoad._material ||
+    (createVisibleRoad._material = new THREE.MeshStandardMaterial({
+      color: 0x2f2f2f,
+      roughness: 1.0,
+    }));
+
+  const startPoint = start.clone();
+  const endPoint = end.clone();
+  const getHeightAt = terrain?.userData?.getHeightAt?.bind(terrain?.userData);
+
+  const offset = 0.05;
+
+  if (getHeightAt) {
+    const startHeight = getHeightAt(startPoint.x, startPoint.z);
+    if (Number.isFinite(startHeight)) {
+      startPoint.y = startHeight + offset;
+    } else {
+      startPoint.y += offset;
+    }
+
+    const endHeight = getHeightAt(endPoint.x, endPoint.z);
+    if (Number.isFinite(endHeight)) {
+      endPoint.y = endHeight + offset;
+    } else {
+      endPoint.y += offset;
+    }
+  } else {
+    startPoint.y += offset;
+    endPoint.y += offset;
+  }
+
+  const direction = endPoint.clone().sub(startPoint);
+  const length = direction.length();
+  if (length <= 0.01) {
+    return null;
+  }
+
+  const width = 2.5;
+  const geometry = new THREE.PlaneGeometry(length, width);
+  geometry.rotateX(-Math.PI / 2);
+
+  const mesh = new THREE.Mesh(geometry, material);
+
+  const horizontalDirection = new THREE.Vector3(direction.x, 0, direction.z);
+  const horizontalLength = horizontalDirection.length();
+  if (horizontalLength > 1e-5) {
+    mesh.rotation.y = Math.atan2(horizontalDirection.z, horizontalDirection.x);
+    const slope = Math.atan2(direction.y, horizontalLength);
+    mesh.rotation.z = slope;
+  }
+
+  const midpoint = startPoint.clone().add(endPoint).multiplyScalar(0.5);
+  if (getHeightAt) {
+    const midHeight = getHeightAt(midpoint.x, midpoint.z);
+    if (Number.isFinite(midHeight)) {
+      midpoint.y = midHeight + offset;
+    } else {
+      midpoint.y += offset;
+    }
+  } else {
+    midpoint.y += offset;
+  }
+
+  mesh.position.copy(midpoint);
+  mesh.receiveShadow = true;
+
+  scene.add(mesh);
+  return mesh;
+}
+
 const SURFACE_OFFSET = 0.05;
 
 const _matrix = new THREE.Matrix4();
@@ -155,6 +227,49 @@ export function createCity(scene, terrain, options = {}) {
 
   const city = new THREE.Group();
   city.name = "HarborCity";
+
+  const roadGrid = [];
+  const roadStartX = origin.x - halfX - spacingX * 0.5;
+  const roadStartZ = origin.z - halfZ - spacingZ * 0.5;
+
+  for (let iz = 0; iz <= countZ; iz++) {
+    const row = [];
+    const z = roadStartZ + iz * spacingZ;
+    for (let ix = 0; ix <= countX; ix++) {
+      const x = roadStartX + ix * spacingX;
+      const height = sampleHeight(terrain, x, z, null);
+      if (!Number.isFinite(height) || height < SEA_LEVEL_Y + SURFACE_OFFSET) {
+        row.push(null);
+        continue;
+      }
+      row.push(new THREE.Vector3(x, height, z));
+    }
+    roadGrid.push(row);
+  }
+
+  for (let iz = 0; iz < roadGrid.length; iz++) {
+    const row = roadGrid[iz];
+    for (let ix = 0; ix < row.length - 1; ix++) {
+      const start = row[ix];
+      const end = row[ix + 1];
+      if (!start || !end) {
+        continue;
+      }
+      createVisibleRoad(start, end, city, terrain);
+    }
+  }
+
+  const columnCount = roadGrid[0]?.length ?? 0;
+  for (let ix = 0; ix < columnCount; ix++) {
+    for (let iz = 0; iz < roadGrid.length - 1; iz++) {
+      const start = roadGrid[iz][ix];
+      const end = roadGrid[iz + 1][ix];
+      if (!start || !end) {
+        continue;
+      }
+      createVisibleRoad(start, end, city, terrain);
+    }
+  }
 
   const walkwayPoints = [];
   const walkwaySpan = Math.max(gridSize.x, gridSize.y) * 0.6;
