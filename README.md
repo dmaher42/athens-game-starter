@@ -17,6 +17,16 @@ hosting on GitHub Pages or any static site provider.
 > tracked in this repository; download or supply your own models locally before
 > building or deploying the project.
 
+### Custom ground textures
+
+Drop photographic ground tiles in `public/assets/ground/` and reference them
+from `src/world/groundTextureConfig.js`. The runtime keeps the existing vertex
+colors as a fallback, then layers your JPGs using height-aware masks so dirt can
+fade into rocky cliffs or lush grass in lowlands. Update the config to tune
+repeat counts, tint, blend mode (`"multiply"` or `"mix"`), and the height
+interval where each texture appears. Refresh the dev server after editing the
+config to trigger shader recompilation.
+
 ### Controls
 
 - **W / A / S / D** (or arrow keys) – Move across the terrain.
@@ -75,6 +85,11 @@ The runtime falls back to procedural stand-ins when the binaries are absent, so
 you can continue iterating without committing large files. Swap the models (or
 add your own landmarks) by dropping GLBs in `public/models/buildings/` and
 updating the placement list in `src/main.js`.
+
+By default the flattened city plateau hosts two procedurally generated
+monuments that stand in for the Acropolis and the Temple of Poseidon. Supplying
+the matching GLB files swaps those placeholders for the full landmarks while
+keeping their positions atop the leveled ground.
 
 ## KTX2 textures
 

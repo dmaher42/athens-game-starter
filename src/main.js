@@ -19,7 +19,7 @@ import { createHarbor, updateHarborLighting } from "./world/harbor.js";
 import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hillcity.js";
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
-import { updateCityLighting, createHillCity } from "./world/city.js";
+import { updateCityLighting, createHillCity, createCity } from "./world/city.js";
 import {
   AGORA_CENTER_3D,
   HARBOR_CENTER_3D,
@@ -616,8 +616,46 @@ async function mainApp() {
     mountHillCityDebug(scene, mainRoad);
   }
 
+  // --- Aristotle's Tomb (local GLB) -----------------------------------------
+  // We prefer a local asset the repo expects at:
+  //   public/models/landmarks/aristotle_tomb.glb
+  // At runtime we try both the site base (for GitHub Pages) and root (for dev).
+  // If found, we stream it via loadLandmark(); the loader will auto-raise it
+  // ~5cm above ground and handle KTX2 texture support transparently.
+  (async () => {
+    try {
+      const aristotleCandidates = [
+        `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
+        `/models/landmarks/aristotle_tomb.glb`,
+      ];
+      const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
+      if (aristotleUrl) {
+        await loadLandmark(worldRoot, aristotleUrl, {
+          // Use a named location that already exists in the scene constants.
+          // The landmark loader will call the scene/terrain height sampler and
+          // lift the model slightly so it rests on the ground.
+          position: ACROPOLIS_PEAK_3D,
+          // Optional: adjust if your GLB is tiny/huge
+          // scale: 1.0,
+        });
+      } else {
+        console.warn(
+          "Aristotle's Tomb not found. Expected at:",
+          aristotleCandidates
+        );
+      }
+    } catch (err) {
+      console.error("Failed to load Aristotle's Tomb:", err);
+    }
+  })();
+  // --------------------------------------------------------------------------
+
   // Plazas (agora + acropolis terraces)
   createPlazas(worldRoot);
+
+  const harborCity = createCity(worldRoot, terrain, {
+    roadsVisible,
+  });
 
   // Hill-city buildings (uses terrain sampler + road curve)
   const hillCity = createHillCity(worldRoot, terrain, mainRoad, {
@@ -1154,7 +1192,9 @@ async function mainApp() {
       url: `${buildingBase}poseidon_temple_at_sounion_greece.glb`,
       position: createTerrainAlignedPosition(-34, -12),
       rotateY: -Math.PI * 0.12,
-      scale: 0.32,
+      // Preserve the authored dimensions (≈13.8m span, 4.5m tall) so the
+      // landmark reads close to its real-world size.
+      scale: 1,
       collision: true,
       name: "SamplePoseidonTemple",
     },
@@ -1162,7 +1202,9 @@ async function mainApp() {
       url: `${buildingBase}Akropol.glb`,
       position: createTerrainAlignedPosition(6, -42),
       rotateY: Math.PI * 0.08,
-      scale: 0.24,
+      // Match the mesh's original scale to avoid shrinking the Acropolis model
+      // below a believable footprint.
+      scale: 1,
       collision: false,
       name: "SampleAkropol",
     },
@@ -1196,78 +1238,6 @@ async function mainApp() {
       );
     }
   });
-
-  async function addAristotleTomb(scene, renderer, x, z) {
-    if (!scene) return null;
-
-    const { getHeightAt } = scene.userData || {};
-    const heightSample =
-      typeof getHeightAt === "function" ? getHeightAt(x, z) : null;
-    const y = Number.isFinite(heightSample) ? heightSample + 0.05 : 0;
-
-    const tombCandidates = [
-      `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
-      "/models/landmarks/aristotle_tomb.glb",
-      `${BASE_URL}models/buildings/aristotle-tomb.glb`,
-      "/models/buildings/aristotle-tomb.glb",
-      `${BASE_URL}models/buildings/Akropol.glb`,
-      "/models/buildings/Akropol.glb",
-    ];
-
-    try {
-      const { url, root } = await loadGLBWithFallbacks({
-        renderer,
-        urls: tombCandidates,
-        targetHeight: 4.0,
-      });
-
-      root.position.set(x, y, z);
-      const shouldCollide = true;
-      root.userData = root.userData || {};
-      root.userData.noCollision = !shouldCollide;
-
-      root.traverse((o) => {
-        if (o?.isMesh) {
-          o.castShadow = true;
-          o.receiveShadow = true;
-          o.userData = o.userData || {};
-          o.userData.noCollision = !shouldCollide;
-        }
-      });
-      root.name = "AristotleTomb";
-      scene.add(root);
-
-      if (shouldCollide && typeof envCollider?.refresh === "function") {
-        envCollider.refresh();
-      }
-
-      if (
-        !url.includes("aristotle_tomb.glb") &&
-        !url.includes("aristotle-tomb.glb")
-      ) {
-        console.info(
-          `Aristotle's Tomb loaded from fallback candidate ${url}.`
-        );
-      } else {
-        console.log("[Landmark] Aristotle's Tomb loaded from", url);
-      }
-
-      return root;
-    } catch (error) {
-      const message = error?.message || error;
-      console.error("[Landmark] Failed to load Aristotle's Tomb model:", message);
-      spawnPlaceholderMonument({
-        name: "PlaceholderAristotleTomb",
-        position: new THREE.Vector3(x, y, z),
-        rotateY: Math.PI * 0.15,
-        scale: 1.2,
-        collision: true,
-      });
-      return null;
-    }
-  }
-
-  await addAristotleTomb(scene, renderer, 6, -28);
 
   const resolveCandidateUrls = (files = []) =>
     files
@@ -1489,6 +1459,7 @@ async function mainApp() {
     const sunDir = updateSky(skyObj, timeOfDayState);
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
+    updateCityLighting(harborCity, lights.nightFactor);
     updateCityLighting(hillCity, lights.nightFactor);
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     updateStars(stars, phase);
@@ -1524,6 +1495,7 @@ async function mainApp() {
     // Update sky dome, atmospheric lighting, and celestial bodies each frame.
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
+    updateCityLighting(harborCity, lights.nightFactor);
     updateCityLighting(hillCity, lights.nightFactor);
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     // Fade the stars in and out depending on the time of day.
