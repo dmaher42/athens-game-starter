@@ -1,4 +1,11 @@
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
+import {
+  copyFile,
+  mkdir,
+  readFile,
+  readdir,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 
 const OUTPUT_DIR = join(process.cwd(), 'docs');
@@ -18,7 +25,7 @@ async function pathExists(path) {
 }
 
 function toRelativeBase(content) {
-  return content.replace(/\/athens-game-starter\//g, '../');
+  return content.replace(/\/athens-game-starter\//g, './');
 }
 
 async function writeRelativeCopy(sourcePath, destinationPath) {
@@ -30,6 +37,59 @@ async function writeRelativeCopy(sourcePath, destinationPath) {
   const relativeContent = toRelativeBase(content);
   await mkdir(dirname(destinationPath), { recursive: true });
   await writeFile(destinationPath, relativeContent, 'utf8');
+}
+
+async function copyDirectory(sourceDir, destinationDir) {
+  if (!(await pathExists(sourceDir))) {
+    return;
+  }
+
+  await mkdir(destinationDir, { recursive: true });
+  const entries = await readdir(sourceDir, { withFileTypes: true });
+
+  await Promise.all(
+    entries.map(async (entry) => {
+      const sourcePath = join(sourceDir, entry.name);
+      const destinationPath = join(destinationDir, entry.name);
+
+      if (entry.isDirectory()) {
+        await copyDirectory(sourcePath, destinationPath);
+        return;
+      }
+
+      if (entry.isFile()) {
+        await copyFile(sourcePath, destinationPath);
+      }
+    }),
+  );
+}
+
+async function mirrorAssets() {
+  const entries = await readdir(OUTPUT_DIR, { withFileTypes: true });
+
+  await Promise.all(
+    entries.map(async (entry) => {
+      if (entry.name === BASE_DIR_NAME) {
+        return;
+      }
+
+      if (entry.isFile() && ['index.html', '404.html'].includes(entry.name)) {
+        return;
+      }
+
+      const sourcePath = join(OUTPUT_DIR, entry.name);
+      const destinationPath = join(BASE_DIR, entry.name);
+
+      if (entry.isDirectory()) {
+        await copyDirectory(sourcePath, destinationPath);
+        return;
+      }
+
+      if (entry.isFile()) {
+        await copyFile(sourcePath, destinationPath);
+      }
+    }),
+  );
 }
 
 async function main() {
@@ -48,6 +108,8 @@ async function main() {
   if (await pathExists(root404Path)) {
     await writeRelativeCopy(root404Path, join(BASE_DIR, '404.html'));
   }
+
+  await mirrorAssets();
 }
 
 main();
