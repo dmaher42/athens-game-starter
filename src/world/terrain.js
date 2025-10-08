@@ -226,8 +226,8 @@ export function createTerrain(scene) {
         vec3 transformed = basePos;
 ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
 
-        float dx = transformed.x - uCityCenter.x;
-        float dz = transformed.z - uCityCenter.y;
+        float dx = basePos.x - uCityCenter.x;
+        float dz = basePos.y - uCityCenter.y;
         float dCity = sqrt(dx * dx + dz * dz);
 
         float cityFactor = 1.0;
@@ -238,7 +238,7 @@ ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
           cityFactor = clamp(t, 0.0, 1.0);
         }
 
-        float sway = sin((transformed.x + transformed.z) * uWindFreq + uTime * 0.5) * 0.3;
+        float sway = sin((basePos.x + basePos.y) * uWindFreq + uTime * 0.5) * 0.3;
         transformed.y += sway * uWindStrength * cityFactor;
       `,
     );
