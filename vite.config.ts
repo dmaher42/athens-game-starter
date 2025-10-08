@@ -1,14 +1,14 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/athens-game-starter/',
+  base: './', // ✅ relative base — works locally AND on root-hosted Pages
   build: {
-    outDir: 'docs',
-    emptyOutDir: true,
+    outDir: 'docs',     // ✅ GH Pages expects the built site here
+    emptyOutDir: true,  // ✅ clears old builds before rebuilding
   },
   resolve: {
     alias: {
-      // Explicit alias prevents accidental externalisation of the "three" dependency.
+      // Prevents accidental externalization of Three.js dependency
       three: 'three',
     },
   },
