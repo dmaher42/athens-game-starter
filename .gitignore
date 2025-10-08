@@ -1,7 +1,7 @@
 node_modules/
 dist/
 public/basis/
-public/models/buildings/*.glb
-public/favicon.ico
+public/models/**/*.glb
 docs/models/**/*.glb
-!docs/models/character/hero.glb
+docs/audio/**/*.ogg
+public/favicon.ico

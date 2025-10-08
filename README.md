@@ -13,9 +13,9 @@ hosting on GitHub Pages or any static site provider.
 > ℹ️ Drop a hero character model at `public/models/character/hero.glb` to see the
 > fully animated avatar. When the file is missing the runtime first tries the
 > bundled "Hooded Adventurer" sample before falling back to a simple capsule so
-> movement and interactions remain testable. The build output at
-> `docs/models/character/hero.glb` is tracked by Git so production deployments
-> served from the `docs/` folder (for example GitHub Pages) can fetch the model.
+> movement and interactions remain testable. Large binary GLB assets are not
+> tracked in this repository; download or supply your own models locally before
+> building or deploying the project.
 
 ### Controls
 
@@ -41,8 +41,8 @@ loads your custom `hero.glb`:
    your file it logs a warning about the placeholder capsule; seeing the fully
    animated character without that warning confirms the GLB loaded correctly.
 4. When preparing a production build, make sure the same file ends up at
-   `docs/models/character/hero.glb` and commit it. Hosted services that mirror the
-   repository (such as GitHub Pages) expect the file in that location.
+   `docs/models/character/hero.glb` or an equivalent CDN bucket that your
+   deployment workflow publishes alongside the static site.
 
 > ⚠️ Opening `index.html` directly from the filesystem will not work. The source
 > imports bare modules (such as `three`) and TypeScript entry points that must be
@@ -58,18 +58,23 @@ pull the binary. Run the helper script and pass your token via the environment:
 SKETCHFAB_TOKEN=<your token> npm run download:aristotle
 ```
 
-The GLB is saved to `public/models/landmarks/aristotle_tomb.glb`. If the file is
-missing when the app boots the runtime now renders a bundled placeholder glTF
-and, when that is not available, spawns a lightweight procedural monument so you
-can continue exploring even before fetching the premium asset.
+The GLB is saved to `public/models/landmarks/aristotle_tomb.glb`. Because binary
+assets are ignored by Git, keep the downloaded file outside of commits—your
+deployment workflow should copy it into `public/` (and therefore `docs/`) at
+build time. If the file is missing when the app boots the runtime now renders a
+bundled placeholder glTF and, when that is not available, spawns a lightweight
+procedural monument so you can continue exploring even before fetching the
+premium asset.
 
 ### Sample landmark buildings
 
-Two bundled landmarks – `Akropol.glb` and
-`poseidon_temple_at_sounion_greece.glb` – now load automatically to replace the
-Acropolis and seaside placeholders. You can swap them out (or add your own
-landmarks) by dropping GLBs in `public/models/buildings/` and updating the
-placement list in `src/main.js`.
+Two sample landmarks – `Akropol.glb` and
+`poseidon_temple_at_sounion_greece.glb` – can be downloaded and placed in
+`public/models/buildings/` to replace the Acropolis and seaside placeholders.
+The runtime falls back to procedural stand-ins when the binaries are absent, so
+you can continue iterating without committing large files. Swap the models (or
+add your own landmarks) by dropping GLBs in `public/models/buildings/` and
+updating the placement list in `src/main.js`.
 
 ## KTX2 textures
 
