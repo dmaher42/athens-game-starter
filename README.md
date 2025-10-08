@@ -17,6 +17,16 @@ hosting on GitHub Pages or any static site provider.
 > tracked in this repository; download or supply your own models locally before
 > building or deploying the project.
 
+### Custom ground textures
+
+Drop photographic ground tiles in `public/assets/ground/` and reference them
+from `src/world/groundTextureConfig.js`. The runtime keeps the existing vertex
+colors as a fallback, then layers your JPGs using height-aware masks so dirt can
+fade into rocky cliffs or lush grass in lowlands. Update the config to tune
+repeat counts, tint, blend mode (`"multiply"` or `"mix"`), and the height
+interval where each texture appears. Refresh the dev server after editing the
+config to trigger shader recompilation.
+
 ### Controls
 
 - **W / A / S / D** (or arrow keys) – Move across the terrain.

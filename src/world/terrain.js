@@ -5,6 +5,11 @@ import {
   AGORA_CENTER_3D,
   CITY_AREA_RADIUS,
 } from "./locations.js";
+import {
+  createGroundTextureState,
+  injectGroundTextureShader,
+} from "./groundTextures.js";
+import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
 
 // Utility: basic pseudo-random gradient noise using deterministic hashing so we can
 // produce repeatable rolling hills without pulling in an additional dependency.
@@ -179,6 +184,12 @@ export function createTerrain(scene) {
     vertexColors: true,
   });
 
+  const groundTextureState = createGroundTextureState(
+    terrainMaterial,
+    GROUND_TEXTURE_CONFIG,
+  );
+  const shouldTrackGroundHeight = groundTextureState.detailLayers.length > 0;
+
   const swayUniforms = {
     uTime: { value: 0 },
     uWindStrength: { value: 0.75 },
@@ -205,6 +216,7 @@ export function createTerrain(scene) {
       uniform vec2 uCityCenter;
       uniform float uCityInner;
       uniform float uCityOuter;
+      ${shouldTrackGroundHeight ? "varying float vGroundHeight;" : ""}
       attribute vec3 basePos;
     ` + shader.vertexShader;
 
@@ -212,6 +224,7 @@ export function createTerrain(scene) {
       "#include <begin_vertex>",
       `
         vec3 transformed = basePos;
+${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
 
         float dx = transformed.x - uCityCenter.x;
         float dz = transformed.z - uCityCenter.y;
@@ -229,6 +242,14 @@ export function createTerrain(scene) {
         transformed.y += sway * uWindStrength * cityFactor;
       `,
     );
+
+    if (shouldTrackGroundHeight) {
+      if (!shader.fragmentShader.includes("varying float vGroundHeight")) {
+        shader.fragmentShader = `varying float vGroundHeight;\n${shader.fragmentShader}`;
+      }
+
+      injectGroundTextureShader(shader, groundTextureState);
+    }
   };
 
   const terrain = new THREE.Mesh(geometry, terrainMaterial);
@@ -281,6 +302,7 @@ export function createTerrain(scene) {
   };
 
   terrain.userData.swayUniforms = swayUniforms;
+  terrain.userData.groundTextureState = groundTextureState;
 
   return terrain;
 }
