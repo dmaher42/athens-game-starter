@@ -76,6 +76,11 @@ you can continue iterating without committing large files. Swap the models (or
 add your own landmarks) by dropping GLBs in `public/models/buildings/` and
 updating the placement list in `src/main.js`.
 
+By default the flattened city plateau hosts two procedurally generated
+monuments that stand in for the Acropolis and the Temple of Poseidon. Supplying
+the matching GLB files swaps those placeholders for the full landmarks while
+keeping their positions atop the leveled ground.
+
 ## KTX2 textures
 
 Models loaded through `GLTFLoader` expect textures in the KTX2 (Basis Universal)
