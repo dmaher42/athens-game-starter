@@ -134,7 +134,15 @@ export function createTerrain(scene) {
         // Blend original 'height' toward city target elevation.
         // Inside inner radius, t≈0 → almost perfectly flat at CITY_TARGET_Y.
         // Between inner and outer, gradually blend back to natural terrain.
-        height = THREE.MathUtils.lerp(CITY_TARGET_Y, height, t);
+        const heightBeforeCity = height;
+        const cityHeight = THREE.MathUtils.lerp(CITY_TARGET_Y, heightBeforeCity, t);
+        if (distance < HARBOR_OUTER_RADIUS) {
+          // Preserve the harbor's sea level flattening by never raising terrain
+          // above the value established by the harbor pass.
+          height = Math.min(heightBeforeCity, cityHeight);
+        } else {
+          height = cityHeight;
+        }
       }
     }
     positionAttribute.setZ(i, height);
