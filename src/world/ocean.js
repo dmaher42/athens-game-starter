@@ -50,6 +50,8 @@ const _dayWaterColor = new THREE.Color(0x1a4e80);
 const _nightWaterColor = new THREE.Color(0x091c2a);
 const _moodWaterColor = new THREE.Color();
 
+const FRONT_Z_HARD = -117;
+
 let cachedNormals = null;
 
 function resolveDevicePixelRatio(options) {
@@ -112,11 +114,25 @@ export async function createOcean(scene, options = {}) {
     ({ west, east, north, south } = options.bounds);
   } else {
     const halfX = resolvedSizeX * 0.5;
-    const halfZ = resolvedSizeZ * 0.5;
-    west = resolvedCenterX - halfX;
-    east = resolvedCenterX + halfX;
-    north = resolvedCenterZ - halfZ;
-    south = resolvedCenterZ + 0;
+    const halfZFront = resolvedSizeZ * 0.5;
+    const halfZBack = 0;
+    const cx = resolvedCenterX;
+    const cz = resolvedCenterZ;
+
+    // Hard seaward cut: never render water with z < -117
+    const zFrontDesired = cz - halfZFront;
+    const zFront = Math.max(zFrontDesired, FRONT_Z_HARD);
+    // For clarity, also keep the inland boundary as-is:
+    const zBack = cz + halfZBack;
+
+    west = cx - halfX;
+    east = cx + halfX;
+    north = zFrontDesired;
+    south = zBack;
+
+    if (import.meta.env?.DEV) {
+      console.log("[water clip]", { cx, cz, zFront, zBack, FRONT_Z_HARD });
+    }
   }
 
   if (west > east) {
@@ -147,11 +163,15 @@ export async function createOcean(scene, options = {}) {
   water.rotation.x = -Math.PI / 2;
   water.position.set(cx, HARBOR_WATER_CENTER.y, cz);
 
+  const halfX = (east - west) * 0.5;
+  const clipZFront = Math.max(north, FRONT_Z_HARD);
+  const clipZBack = Math.max(south, clipZFront);
+
   const planes = [
-    new THREE.Plane(new THREE.Vector3(1, 0, 0), -west),
-    new THREE.Plane(new THREE.Vector3(-1, 0, 0), east),
-    new THREE.Plane(new THREE.Vector3(0, 0, 1), -north),
-    new THREE.Plane(new THREE.Vector3(0, 0, -1), south),
+    new THREE.Plane(new THREE.Vector3(1, 0, 0), -(cx - halfX)),
+    new THREE.Plane(new THREE.Vector3(-1, 0, 0), cx + halfX),
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), clipZBack),
+    new THREE.Plane(new THREE.Vector3(0, 0, 1), -clipZFront),
   ];
 
   if (water.material) {
@@ -166,7 +186,7 @@ export async function createOcean(scene, options = {}) {
       if (existing) {
         scene.remove(existing);
       }
-      mountWaterClipDebug(scene, west, east, north, south);
+      mountWaterClipDebug(scene, west, east, clipZFront, clipZBack);
     }
   }
 
@@ -180,7 +200,12 @@ export async function createOcean(scene, options = {}) {
 
   scene.add(water);
   if (import.meta.env?.DEV) {
-    console.log("[ocean bounds]", { west, east, north, south });
+    console.log("[ocean bounds]", {
+      west,
+      east,
+      north: clipZFront,
+      south: clipZBack,
+    });
     const debugCenter = new THREE.Vector3(cx, HARBOR_WATER_CENTER.y, cz);
     const debugSize = new THREE.Vector2(width, depth);
     mountWaterBoundsDebug(scene, debugCenter, debugSize);
