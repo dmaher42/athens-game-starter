@@ -1248,14 +1248,24 @@ async function mainApp() {
       });
 
       root.position.set(x, y, z);
+      const shouldCollide = true;
+      root.userData = root.userData || {};
+      root.userData.noCollision = !shouldCollide;
+
       root.traverse((o) => {
         if (o?.isMesh) {
           o.castShadow = true;
           o.receiveShadow = true;
+          o.userData = o.userData || {};
+          o.userData.noCollision = !shouldCollide;
         }
       });
       root.name = "AristotleTomb";
       scene.add(root);
+
+      if (shouldCollide && typeof envCollider?.refresh === "function") {
+        envCollider.refresh();
+      }
 
       if (
         !url.includes("aristotle_tomb.glb") &&
