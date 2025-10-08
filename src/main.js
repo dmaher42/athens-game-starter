@@ -621,6 +621,10 @@ async function mainApp() {
     terrain,
   });
 
+  // Rebuild the collider again now that the civic district geometry exists so the
+  // player can stand on the new plazas instead of falling through them.
+  envCollider.refresh();
+
   const input = new InputMap(renderer.domElement);
   const player = new PlayerController(input, envCollider, { camera });
   worldRoot.add(player.object);

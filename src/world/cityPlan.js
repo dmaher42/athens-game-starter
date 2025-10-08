@@ -11,7 +11,6 @@ function createPavedStrip(width, depth, color) {
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true;
-  mesh.userData.noCollision = true;
   return mesh;
 }
 
@@ -25,7 +24,6 @@ function createGreenStrip(width, depth, color) {
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true;
-  mesh.userData.noCollision = true;
   return mesh;
 }
 
