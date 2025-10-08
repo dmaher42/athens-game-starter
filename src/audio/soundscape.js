@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { resolveAbsoluteBaseUrl, resolveBaseUrl } from "../utils/baseUrl.js";
 
 /**
  * Living City Soundscape
@@ -120,20 +121,9 @@ export class Soundscape {
   }
 
   async initFromManifest(manifestUrl = "audio/manifest.json") {
-    const makeBaseUrl = () => {
-      const rawBase = import.meta?.env?.BASE_URL ?? "/";
-      const origin =
-        typeof window !== "undefined" && window.location?.origin
-          ? window.location.origin
-          : "http://localhost";
-      try {
-        return new URL(rawBase, origin);
-      } catch {
-        return new URL("/", origin);
-      }
-    };
-
-    const baseUrl = makeBaseUrl();
+    const absoluteBaseUrl = resolveAbsoluteBaseUrl();
+    const basePath = resolveBaseUrl();
+    const baseUrl = absoluteBaseUrl;
     const resolveAssetPath = (path) => {
       if (!path) return path;
       try {
@@ -163,7 +153,7 @@ export class Soundscape {
 
     const candidates = [
       resolveAssetPath(manifestUrl),
-      resolveAssetPath(`${import.meta?.env?.BASE_URL ?? "/"}audio/manifest.json`)
+      resolveAssetPath(`${basePath}audio/manifest.json`)
     ];
 
     let mf = null;
