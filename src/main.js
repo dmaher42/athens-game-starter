@@ -627,7 +627,9 @@ async function mainApp() {
 
   const spawnPosition = new THREE.Vector3(0, 0, 10);
   player.object.position.copy(spawnPosition);
-  snapAboveGround(player.object, terrain, spawnPosition.x, spawnPosition.z, 0.1, {
+  const spawnClearance = 0.1;
+  const spawnOffset = player.height * 0.5 + spawnClearance;
+  snapAboveGround(player.object, terrain, spawnPosition.x, spawnPosition.z, spawnOffset, {
     clampToSea: true,
     seaLevel: SEA_LEVEL_Y,
     minAboveSea: 0.25,
