@@ -616,6 +616,40 @@ async function mainApp() {
     mountHillCityDebug(scene, mainRoad);
   }
 
+  // --- Aristotle's Tomb (local GLB) -----------------------------------------
+  // We prefer a local asset the repo expects at:
+  //   public/models/landmarks/aristotle_tomb.glb
+  // At runtime we try both the site base (for GitHub Pages) and root (for dev).
+  // If found, we stream it via loadLandmark(); the loader will auto-raise it
+  // ~5cm above ground and handle KTX2 texture support transparently.
+  (async () => {
+    try {
+      const aristotleCandidates = [
+        `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
+        `/models/landmarks/aristotle_tomb.glb`,
+      ];
+      const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
+      if (aristotleUrl) {
+        await loadLandmark(worldRoot, aristotleUrl, {
+          // Use a named location that already exists in the scene constants.
+          // The landmark loader will call the scene/terrain height sampler and
+          // lift the model slightly so it rests on the ground.
+          position: ACROPOLIS_PEAK_3D,
+          // Optional: adjust if your GLB is tiny/huge
+          // scale: 1.0,
+        });
+      } else {
+        console.warn(
+          "Aristotle's Tomb not found. Expected at:",
+          aristotleCandidates
+        );
+      }
+    } catch (err) {
+      console.error("Failed to load Aristotle's Tomb:", err);
+    }
+  })();
+  // --------------------------------------------------------------------------
+
   // Plazas (agora + acropolis terraces)
   createPlazas(worldRoot);
 
@@ -1204,81 +1238,6 @@ async function mainApp() {
       );
     }
   });
-
-  async function addAristotleTomb(scene, renderer, x, z) {
-    if (!scene) return null;
-
-    const { getHeightAt } = scene.userData || {};
-    const heightSample =
-      typeof getHeightAt === "function" ? getHeightAt(x, z) : null;
-    const y = Number.isFinite(heightSample) ? heightSample + 0.05 : 0;
-
-    const tombCandidates = [
-      `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
-      "/models/landmarks/aristotle_tomb.glb",
-      `${BASE_URL}models/buildings/aristotle-tomb.glb`,
-      "/models/buildings/aristotle-tomb.glb",
-      `${BASE_URL}models/buildings/Akropol.glb`,
-      "/models/buildings/Akropol.glb",
-    ];
-
-    try {
-      const { url, root } = await loadGLBWithFallbacks({
-        renderer,
-        urls: tombCandidates,
-        // The de-compressed landmark mesh stands ~16.7m tall in its source
-        // coordinates. Keep the landmark at that scale in-game so it reads at a
-        // believable height next to the 1.8m avatar.
-        targetHeight: 16.7,
-      });
-
-      root.position.set(x, y, z);
-      const shouldCollide = true;
-      root.userData = root.userData || {};
-      root.userData.noCollision = !shouldCollide;
-
-      root.traverse((o) => {
-        if (o?.isMesh) {
-          o.castShadow = true;
-          o.receiveShadow = true;
-          o.userData = o.userData || {};
-          o.userData.noCollision = !shouldCollide;
-        }
-      });
-      root.name = "AristotleTomb";
-      scene.add(root);
-
-      if (shouldCollide && typeof envCollider?.refresh === "function") {
-        envCollider.refresh();
-      }
-
-      if (
-        !url.includes("aristotle_tomb.glb") &&
-        !url.includes("aristotle-tomb.glb")
-      ) {
-        console.info(
-          `Aristotle's Tomb loaded from fallback candidate ${url}.`
-        );
-      } else {
-        console.log("[Landmark] Aristotle's Tomb loaded from", url);
-      }
-
-      return root;
-    } catch (error) {
-      const message = error?.message || error;
-      console.error("[Landmark] Failed to load Aristotle's Tomb model:", message);
-      spawnPlaceholderMonument({
-        name: "PlaceholderAristotleTomb",
-        position: new THREE.Vector3(x, y, z),
-        rotateY: Math.PI * 0.15,
-        scale: 1.2,
-        collision: true,
-      });
-      return null;
-    }
-  }
-
-  await addAristotleTomb(scene, renderer, 6, -28);
 
   const resolveCandidateUrls = (files = []) =>
     files
