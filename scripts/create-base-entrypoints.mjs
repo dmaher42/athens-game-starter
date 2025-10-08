@@ -18,7 +18,9 @@ async function pathExists(path) {
 }
 
 function toRelativeBase(content) {
-  return content.replace(/\/(athens-game-starter)\//g, '../');
+  return content
+    .replace(/\/(athens-game-starter)\//g, '../')
+    .replace(/(src|href)=("|')\.\//g, (match) => match.replace('./', '../'));
 }
 
 async function writeRelativeCopy(sourcePath, destinationPath) {
