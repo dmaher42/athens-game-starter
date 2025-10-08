@@ -119,7 +119,7 @@ export class Soundscape {
     return src;
   }
 
-  async initFromManifest(manifestUrl = "public/audio/manifest.json") {
+  async initFromManifest(manifestUrl = "audio/manifest.json") {
     const makeBaseUrl = () => {
       const rawBase = import.meta?.env?.BASE_URL ?? "/";
       const origin =
