@@ -198,6 +198,7 @@ export function createCity(scene, terrain, options = {}) {
   const spacingZ = options.spacingZ ?? 10;
   const jitter = options.jitter ?? 2.2;
   const maxSlope = options.maxSlope ?? 1.4;
+  const roadsVisible = options.roadsVisible == null ? true : Boolean(options.roadsVisible);
 
   const countX = Math.max(3, Math.floor(gridSize.x / spacingX));
   const countZ = Math.max(3, Math.floor(gridSize.y / spacingZ));
@@ -319,6 +320,7 @@ export function createCity(scene, terrain, options = {}) {
     roadsMesh.userData.noCollision = true; // visual only
     roadsMesh.castShadow = false;
     roadsMesh.receiveShadow = true;
+    roadsMesh.visible = roadsVisible;
     city.add(roadsMesh);
   }
 
@@ -332,13 +334,16 @@ export function createCity(scene, terrain, options = {}) {
     walkwayPoints.push(new THREE.Vector3(x, y, z));
   }
   if (walkwayPoints.length >= 2) {
-    createRoad(city, walkwayPoints, {
+    const walkway = createRoad(city, walkwayPoints, {
       width: 3.2,
       segments: 64,
       name: "CityWalkway",
       noCollision: true,
       color: 0x4b3f35,
     });
+    if (walkway) {
+      walkway.visible = roadsVisible;
+    }
   }
 
   const instanceCount = placements.length;
