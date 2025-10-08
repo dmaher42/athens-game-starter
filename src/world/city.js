@@ -14,6 +14,11 @@ import {
 import { createRoad } from "./roads.js";
 import { addFoundationPad } from "./foundations.js";
 
+const _roadDirection = new THREE.Vector3();
+const _roadHorizontal = new THREE.Vector3();
+const _roadReferenceAxis = new THREE.Vector3(1, 0, 0);
+const _roadQuaternion = new THREE.Quaternion();
+
 function createVisibleRoad(start, end, scene, terrain) {
   const material =
     createVisibleRoad._material ||
@@ -53,19 +58,20 @@ function createVisibleRoad(start, end, scene, terrain) {
     return null;
   }
 
+  _roadHorizontal.set(direction.x, 0, direction.z);
+  if (_roadHorizontal.lengthSq() <= 1e-10) {
+    return null;
+  }
+
   const width = 2.5;
   const geometry = new THREE.PlaneGeometry(length, width);
   geometry.rotateX(-Math.PI / 2);
 
   const mesh = new THREE.Mesh(geometry, material);
 
-  const horizontalDirection = new THREE.Vector3(direction.x, 0, direction.z);
-  const horizontalLength = horizontalDirection.length();
-  if (horizontalLength > 1e-5) {
-    mesh.rotation.y = Math.atan2(horizontalDirection.z, horizontalDirection.x);
-    const slope = Math.atan2(direction.y, horizontalLength);
-    mesh.rotation.z = slope;
-  }
+  _roadDirection.copy(direction).divideScalar(length);
+  _roadQuaternion.setFromUnitVectors(_roadReferenceAxis, _roadDirection);
+  mesh.quaternion.copy(_roadQuaternion);
 
   const midpoint = startPoint.clone().add(endPoint).multiplyScalar(0.5);
   if (getHeightAt) {
