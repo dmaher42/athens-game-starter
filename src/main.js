@@ -3,7 +3,13 @@
 import * as THREE from "three";
 import { Soundscape } from "./audio/soundscape.js";
 import { mountAudioMixer } from "./ui/audioMixer.js";
-import { createSky, updateSky, createStars, updateStars } from "./world/sky.js";
+import {
+  createSky,
+  updateSky,
+  createStars,
+  updateStars,
+  setTimeOfDayPhase,
+} from "./world/sky.js";
 import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
 import { createInteractor } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
@@ -44,6 +50,33 @@ import { snapAboveGround } from "./world/ground.js";
 import { loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
 
 const WORLD_ROOT_NAME = "WorldRoot";
+
+const LIGHTING_PRESETS = {
+  dawn: {
+    phase: 0.25,
+    exposure: 0.9,
+    label: "Dawn",
+    hotkey: "1",
+  },
+  noon: {
+    phase: 0.5,
+    exposure: 1.5,
+    label: "High Noon",
+    hotkey: "2",
+  },
+  dusk: {
+    phase: 0.75,
+    exposure: 0.95,
+    label: "Dusk",
+    hotkey: "3",
+  },
+  night: {
+    phase: 0.0,
+    exposure: 0.6,
+    label: "Night",
+    hotkey: "4",
+  },
+};
 
 function isHtmlResponse(response) {
   const contentType = response.headers.get("content-type") || "";
@@ -1458,6 +1491,34 @@ async function mainApp() {
   const clock = new THREE.Clock();
   // Slow the sun/moon orbit so each in-game day lasts 20 real minutes by default.
   const dayCycle = startTimeOfDayCycle();
+  const timeOfDayState = { timeOfDayPhase: 0 };
+  setTimeOfDayPhase(timeOfDayState, 0);
+
+  const applyLightingPreset = (presetName) => {
+    const preset = LIGHTING_PRESETS[presetName];
+    if (!preset) return;
+
+    const phase = setTimeOfDayPhase(timeOfDayState, preset.phase);
+    renderer.toneMappingExposure = preset.exposure;
+    console.log(`[HUD] preset: ${presetName}`);
+
+    const sunDir = updateSky(skyObj, timeOfDayState);
+    updateLighting(lights, sunDir);
+    updateHarborLighting(harbor, lights.nightFactor);
+    updateCityLighting(hillCity, lights.nightFactor);
+    updateMainHillRoadLighting(roadGroup, lights.nightFactor);
+    updateStars(stars, phase);
+    updateMoon(moon, sunDir);
+    updateOcean(ocean, 0, sunDir, lights.nightFactor);
+
+    const formattedTime = formatPhaseAsTime(phase);
+    if (formattedTime !== lastDisplayedTime) {
+      timeOfDayDisplay.textContent = `Time: ${formattedTime}`;
+      lastDisplayedTime = formattedTime;
+    }
+
+    renderer.render(scene, camera);
+  };
 
   function animate() {
     requestAnimationFrame(animate);
@@ -1465,17 +1526,18 @@ async function mainApp() {
     // Keep track of time for smooth animation and frame-independent movement.
     const deltaTime = clock.getDelta();
     const elapsed = clock.elapsedTime;
-    const phase = dayCycle.phaseAt(elapsed);
 
-    const theta = phase * Math.PI * 2;
-    const sunDir = new THREE.Vector3(
-      Math.cos(theta),
-      Math.sin(theta),
-      0
-    );
+    if (dayCycle.secondsPerDay > 0) {
+      const deltaPhase = deltaTime / dayCycle.secondsPerDay;
+      const nextPhase = (timeOfDayState.timeOfDayPhase ?? 0) + deltaPhase;
+      const wrappedPhase = nextPhase - Math.floor(nextPhase);
+      setTimeOfDayPhase(timeOfDayState, wrappedPhase);
+    }
+
+    const phase = timeOfDayState.timeOfDayPhase ?? 0;
+    const sunDir = updateSky(skyObj, timeOfDayState);
 
     // Update sky dome, atmospheric lighting, and celestial bodies each frame.
-    updateSky(skyObj, sunDir);
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
     updateCityLighting(hillCity, lights.nightFactor);
@@ -1548,7 +1610,13 @@ async function mainApp() {
   });
   if (SHOW_HUD) {
     console.log("[HUD] mounting…");
-    mountDevHUD({ getPosition, getDirection, onPin });
+    mountDevHUD({
+      getPosition,
+      getDirection,
+      onPin,
+      lightingPresets: LIGHTING_PRESETS,
+      onSetLightingPreset: applyLightingPreset,
+    });
   }
 
   // Simple controls: clicking the canvas or pressing E will run the onUse

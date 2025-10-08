@@ -18,10 +18,7 @@ async function pathExists(path) {
 }
 
 function toRelativeBase(content) {
-  // Escape BASE_DIR_NAME for use in RegExp
-  const escapedBaseDir = BASE_DIR_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`/${escapedBaseDir}/`, 'g');
-  return content.replace(re, '../');
+  return content.replace(/\/(athens-game-starter)\//g, '../');
 }
 
 async function writeRelativeCopy(sourcePath, destinationPath) {
