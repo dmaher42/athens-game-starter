@@ -394,6 +394,10 @@ async function mainApp() {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
+  // Lock modern physically-based lighting behaviour explicitly so appearance
+  // stays stable across Three.js releases (r155+ defaults, but we set it here
+  // for clarity and forward-compat).
+  renderer.useLegacyLights = false;
   // Enable local clipping so ocean clip planes work
   renderer.localClippingEnabled = true;
 

@@ -1,7 +1,7 @@
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 
 export const DEFAULT_BASIS_TRANSCODER_PATH =
-  "https://unpkg.com/three@0.160.0/examples/jsm/libs/basis/";
+  "https://unpkg.com/three@0.180.0/examples/jsm/libs/basis/";
 
 const LOCAL_TRANSCODER_SUBPATH = "basis/";
 const ABSOLUTE_PROTOCOL_REGEX = /^[a-z]+:\/\//i;
