@@ -14,74 +14,95 @@ import {
 import { createRoad } from "./roads.js";
 import { addFoundationPad } from "./foundations.js";
 
-function createVisibleRoad(start, end, scene, terrain) {
+// Create a short "ribbon" road between two points. The ribbon is draped to terrain
+// by sampling height along the segment, including both left/right edges so it
+// tilts with local slope. Uses only built-in materials (no textures).
+function createVisibleRoad(start, end, scene, terrain, options = {}) {
+  const width = options.width ?? 2.8;
+  const yOffset = options.yOffset ?? 0.05;
+  const color = options.color ?? 0x2f2f2f;
+
+  const length = start.distanceTo(end);
+  const segments = options.segments ?? Math.max(8, Math.ceil(length * 1.5));
+
   const material =
     createVisibleRoad._material ||
     (createVisibleRoad._material = new THREE.MeshStandardMaterial({
-      color: 0x2f2f2f,
+      color,
       roughness: 1.0,
+      metalness: 0.0,
+      side: THREE.DoubleSide,
     }));
+  material.color.setHex(color);
 
-  const startPoint = start.clone();
-  const endPoint = end.clone();
-  const getHeightAt = terrain?.userData?.getHeightAt?.bind(terrain?.userData);
+  const getHeightAt = terrain?.userData?.getHeightAt?.bind(terrain?.userData) ?? null;
+  if (!Number.isFinite(length) || length < 0.02) return null;
 
-  const offset = 0.05;
+  const dir = end.clone().sub(start);
+  dir.y = 0;
+  const dirLenXZ = Math.hypot(dir.x, dir.z);
+  const side =
+    dirLenXZ > 1e-6
+      ? new THREE.Vector3(-dir.z / dirLenXZ, 0, dir.x / dirLenXZ)
+      : new THREE.Vector3(1, 0, 0);
+  const half = width * 0.5;
 
-  if (getHeightAt) {
-    const startHeight = getHeightAt(startPoint.x, startPoint.z);
-    if (Number.isFinite(startHeight)) {
-      startPoint.y = startHeight + offset;
-    } else {
-      startPoint.y += offset;
+  const vertCount = (segments + 1) * 2;
+  const positions = new Float32Array(vertCount * 3);
+  const IndexArray = vertCount > 65535 ? Uint32Array : Uint16Array;
+  const indices = new IndexArray(segments * 6);
+
+  let p = 0;
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const x = THREE.MathUtils.lerp(start.x, end.x, t);
+    const z = THREE.MathUtils.lerp(start.z, end.z, t);
+    let y = THREE.MathUtils.lerp(start.y, end.y, t);
+    if (getHeightAt) {
+      const s = getHeightAt(x, z);
+      if (Number.isFinite(s)) y = s;
+    }
+    const center = new THREE.Vector3(x, y + yOffset, z);
+
+    const left = center.clone().addScaledVector(side, half);
+    const right = center.clone().addScaledVector(side, -half);
+    if (getHeightAt) {
+      const ly = getHeightAt(left.x, left.z);
+      const ry = getHeightAt(right.x, right.z);
+      if (Number.isFinite(ly)) left.y = ly + yOffset;
+      if (Number.isFinite(ry)) right.y = ry + yOffset;
     }
 
-    const endHeight = getHeightAt(endPoint.x, endPoint.z);
-    if (Number.isFinite(endHeight)) {
-      endPoint.y = endHeight + offset;
-    } else {
-      endPoint.y += offset;
-    }
-  } else {
-    startPoint.y += offset;
-    endPoint.y += offset;
+    positions[p++] = left.x;
+    positions[p++] = left.y;
+    positions[p++] = left.z;
+    positions[p++] = right.x;
+    positions[p++] = right.y;
+    positions[p++] = right.z;
   }
 
-  const direction = endPoint.clone().sub(startPoint);
-  const length = direction.length();
-  if (length <= 0.01) {
-    return null;
+  let k = 0;
+  for (let i = 0; i < segments; i++) {
+    const base = i * 2;
+    indices[k++] = base;
+    indices[k++] = base + 1;
+    indices[k++] = base + 2;
+    indices[k++] = base + 1;
+    indices[k++] = base + 3;
+    indices[k++] = base + 2;
   }
 
-  const width = 2.5;
-  const geometry = new THREE.PlaneGeometry(length, width);
-  geometry.rotateX(-Math.PI / 2);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+  geometry.computeVertexNormals();
 
   const mesh = new THREE.Mesh(geometry, material);
-
-  const horizontalDirection = new THREE.Vector3(direction.x, 0, direction.z);
-  const horizontalLength = horizontalDirection.length();
-  if (horizontalLength > 1e-5) {
-    mesh.rotation.y = Math.atan2(horizontalDirection.z, horizontalDirection.x);
-    const slope = Math.atan2(direction.y, horizontalLength);
-    mesh.rotation.z = slope;
-  }
-
-  const midpoint = startPoint.clone().add(endPoint).multiplyScalar(0.5);
-  if (getHeightAt) {
-    const midHeight = getHeightAt(midpoint.x, midpoint.z);
-    if (Number.isFinite(midHeight)) {
-      midpoint.y = midHeight + offset;
-    } else {
-      midpoint.y += offset;
-    }
-  } else {
-    midpoint.y += offset;
-  }
-
-  mesh.position.copy(midpoint);
+  mesh.name = "CityRoadSegment";
+  mesh.castShadow = false;
   mesh.receiveShadow = true;
-
+  mesh.userData.noCollision = true;
+  mesh.renderOrder = 1;
   scene.add(mesh);
   return mesh;
 }
