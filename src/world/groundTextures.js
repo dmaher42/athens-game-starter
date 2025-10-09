@@ -1,7 +1,62 @@
 import * as THREE from "three";
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
+import {
+  createGrassDetailTexture,
+  createGrassTexture,
+} from "./grassTextureGenerator.js";
 
 const textureLoader = new THREE.TextureLoader();
+
+const PROCEDURAL_GENERATORS = {
+  "lush-grass": (config) =>
+    createGrassTexture({
+      size: config.size,
+      seed: config.seed,
+      baseColor: config.baseColor,
+      shadowColor: config.shadowColor,
+      highlightColor: config.highlightColor,
+      bladeFrequency: config.bladeFrequency,
+      bladeTaper: config.bladeTaper,
+      highlightStrength: config.highlightStrength,
+      shadowStrength: config.shadowStrength,
+      noiseScale: config.noiseScale,
+      patchiness: config.patchiness,
+      saturation: config.saturation,
+      contrast: config.contrast,
+    }),
+  "lush-grass-detail": (config) =>
+    createGrassDetailTexture({
+      size: config.size,
+      seed: config.seed,
+      baseColor: config.baseColor,
+      shadowColor: config.shadowColor,
+      highlightColor: config.highlightColor,
+      bladeFrequency: config.bladeFrequency,
+      bladeTaper: config.bladeTaper,
+      highlightStrength: config.highlightStrength,
+      shadowStrength: config.shadowStrength,
+      noiseScale: config.noiseScale,
+      patchiness: config.patchiness,
+      saturation: config.saturation,
+      contrast: config.contrast,
+    }),
+};
+
+function createProceduralTexture(config) {
+  const generatorName = config?.generator ?? config?.procedural;
+  if (!generatorName) return null;
+  const builder = PROCEDURAL_GENERATORS[generatorName];
+  if (!builder) {
+    console.warn(`Unknown ground texture generator: ${generatorName}`);
+    return null;
+  }
+  try {
+    return builder(config);
+  } catch (error) {
+    console.warn(`Failed to build procedural texture: ${generatorName}`, error);
+    return null;
+  }
+}
 
 function configureTexture(texture, options = {}) {
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
@@ -62,9 +117,12 @@ function loadTexture(url, options, onError) {
 }
 
 function createDetailLayer(config) {
-  if (!config?.url) return null;
-  const texture = loadTexture(config.url, config);
+  const texture = config?.url
+    ? loadTexture(config.url, config)
+    : createProceduralTexture(config);
   if (!texture) return null;
+
+  configureTexture(texture, config);
 
   const strength = THREE.MathUtils.clamp(config.strength ?? 0.35, 0, 1);
   const minHeight = Number.isFinite(config.minHeight)
@@ -106,9 +164,12 @@ export function createGroundTextureState(
   };
 
   const baseConfig = config?.base;
-  if (baseConfig?.url) {
-    const baseTexture = loadTexture(baseConfig.url, baseConfig);
+  if (baseConfig?.url || baseConfig?.generator || baseConfig?.procedural) {
+    const baseTexture = baseConfig.url
+      ? loadTexture(baseConfig.url, baseConfig)
+      : createProceduralTexture(baseConfig);
     if (baseTexture) {
+      configureTexture(baseTexture, baseConfig);
       material.map = baseTexture;
       material.needsUpdate = true;
     }
