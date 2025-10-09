@@ -60,6 +60,8 @@ jobs:
           path: ${{ steps.detect-build-dir.outputs.dir }}
 
   deploy:
+    # Only deploy when pushing to main. PRs build but do not deploy.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
