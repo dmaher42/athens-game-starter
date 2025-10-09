@@ -18,6 +18,7 @@ import { createRoad } from "./roads.js";
 import { addFoundationPad } from "./foundations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
+import { spawnBuildingsFromPads } from "./buildingSpawner.js";
 
 // Create a short "ribbon" road between two points. The ribbon is draped to terrain
 // by sampling height along the segment, including both left/right edges so it
@@ -1286,6 +1287,9 @@ export async function createCity(scene, terrain, options = {}) {
       walkway.visible = roadsVisible;
     }
   }
+
+  // Spawn simple buildings on top of the lot pads (safe + fast)
+  spawnBuildingsFromPads(city, { seed: options.seed ?? 12345, leavePadsVisible: false });
 
   const instanceCount = placements.length;
   if (instanceCount === 0) {
