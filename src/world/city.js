@@ -209,12 +209,12 @@ export function createCity(scene, terrain, options = {}) {
   const halfZ = (countZ - 1) * spacingZ * 0.5;
 
   const placements = [];
+  const pocketPlazas = [];
+  let intersectionCounter = 0;
 
   for (let ix = 0; ix < countX; ix++) {
     for (let iz = 0; iz < countZ; iz++) {
-      if (rng() < 0.18) {
-        continue;
-      }
+      intersectionCounter++;
 
       const centerX = origin.x + (ix * spacingX - halfX) + THREE.MathUtils.lerp(-jitter, jitter, rng());
       const centerZ = origin.z + (iz * spacingZ - halfZ) + THREE.MathUtils.lerp(-jitter, jitter, rng());
@@ -238,6 +238,26 @@ export function createCity(scene, terrain, options = {}) {
       });
 
       if (!lot) {
+        continue;
+      }
+
+      const distanceFromOrigin = Math.hypot(centerX - origin.x, centerZ - origin.z);
+      const skipProbability =
+        distanceFromOrigin <= 45
+          ? 0.08
+          : THREE.MathUtils.lerp(0.18, 0.22, rng());
+
+      const isPocketPlaza = intersectionCounter % 5 === 0;
+      if (isPocketPlaza) {
+        const plazaHeight = Math.max(
+          lot.height + SURFACE_OFFSET,
+          SEA_LEVEL_Y + SURFACE_OFFSET
+        );
+        pocketPlazas.push({ x: centerX, y: plazaHeight, z: centerZ });
+        continue;
+      }
+
+      if (rng() < skipProbability) {
         continue;
       }
 
@@ -288,10 +308,30 @@ export function createCity(scene, terrain, options = {}) {
   // Define avenueRowIndex for the main avenue aligned with the central row
   const avenueRowIndex = Math.floor(roadGrid.length / 2);
 
-  // Generate horizontal (east-west) road segments, skipping the center row
   for (let iz = 0; iz < roadGrid.length; iz++) {
     if (iz === avenueRowIndex) continue; // Skip center row, will be replaced by main avenue
     const row = roadGrid[iz];
+    if (!row) continue;
+
+    if (iz === centerRowIndex) {
+      let currentPath = [];
+      for (let ix = 0; ix < row.length; ix++) {
+        const point = row[ix];
+        if (point) {
+          currentPath.push(point.clone());
+        } else if (currentPath.length > 0) {
+          if (currentPath.length >= 2) {
+            mainAvenuePaths.push(currentPath);
+          }
+          currentPath = [];
+        }
+      }
+      if (currentPath.length >= 2) {
+        mainAvenuePaths.push(currentPath);
+      }
+      continue;
+    }
+
     for (let ix = 0; ix < row.length - 1; ix++) {
       const start = row[ix];
       const end = row[ix + 1];
@@ -310,7 +350,23 @@ export function createCity(scene, terrain, options = {}) {
       if (!start || !end) {
         continue;
       }
-      createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
+
+      while (distanceAccum + segmentLength >= nextDistance) {
+        const remaining = nextDistance - distanceAccum;
+        const t = THREE.MathUtils.clamp(remaining / segmentLength, 0, 1);
+        const position = start.clone().lerp(end, t);
+        const height = sampleHeight(terrain, position.x, position.z, SEA_LEVEL_Y);
+        if (Number.isFinite(height)) {
+          mainAvenueLightPositions.push({
+            x: position.x,
+            y: Math.max(height + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET),
+            z: position.z,
+          });
+        }
+        nextDistance += spacing;
+      }
+
+      distanceAccum += segmentLength;
     }
   }
 
@@ -327,12 +383,18 @@ export function createCity(scene, terrain, options = {}) {
         eastPoint = centerRow[ix];
       }
     }
-    // Create a wide avenue spanning the full width (replaces regular center row roads)
-    if (westPoint && eastPoint) {
-      createVisibleRoad(westPoint, eastPoint, city, terrain, {
+    point.y = Math.max(height, SEA_LEVEL_Y) + SURFACE_OFFSET;
+    boulevardPoints.push(point);
+  }
+
+  if (boulevardPoints.length >= 2) {
+    for (let i = 0; i < boulevardPoints.length - 1; i++) {
+      const start = boulevardPoints[i];
+      const end = boulevardPoints[i + 1];
+      createVisibleRoad(start, end, city, terrain, {
         collectGeometries: roadGeometries,
-        width: 5.0,        // Wide main avenue
-        color: 0x2f2f2f,   // Dark gray (same as regular roads)
+        width: 3.8,
+        color: 0x2f2f2f,
       });
     }
   }
@@ -353,6 +415,75 @@ export function createCity(scene, terrain, options = {}) {
     roadsMesh.receiveShadow = true;
     roadsMesh.visible = roadsVisible;
     city.add(roadsMesh);
+  }
+
+  // Pocket Plazas
+  if (pocketPlazas.length > 0) {
+    for (const plaza of pocketPlazas) {
+      addFoundationPad(city, plaza.x, plaza.y, plaza.z, 2.2);
+    }
+  }
+
+  // Main-Avenue Streetlights
+  if (mainAvenueLightPositions.length > 0) {
+    const poleGeometry = new THREE.CylinderGeometry(0.06, 0.08, 1, 8);
+    poleGeometry.translate(0, 0.5, 0);
+    const lampGeometry = new THREE.SphereGeometry(0.18, 12, 12);
+
+    const poleMaterial = new THREE.MeshStandardMaterial({
+      color: 0x3d3d3d,
+      roughness: 0.85,
+      metalness: 0.25,
+    });
+    const lampMaterial = new THREE.MeshStandardMaterial({
+      color: 0xfff2d0,
+      emissive: new THREE.Color(0xfff2c0),
+      emissiveIntensity: 0.0,
+      roughness: 0.45,
+      metalness: 0.05,
+    });
+
+    const poleHeight = 3.4;
+    const lightCount = mainAvenueLightPositions.length;
+    const poles = new THREE.InstancedMesh(poleGeometry, poleMaterial, lightCount);
+    const lamps = new THREE.InstancedMesh(lampGeometry, lampMaterial, lightCount);
+
+    poles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    lamps.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    poles.castShadow = false;
+    poles.receiveShadow = true;
+    lamps.castShadow = false;
+    lamps.receiveShadow = false;
+    poles.userData.noCollision = true;
+    lamps.userData.noCollision = true;
+
+    for (let i = 0; i < lightCount; i++) {
+      const pos = mainAvenueLightPositions[i];
+      _position.set(pos.x, pos.y, pos.z);
+      _quaternion.identity();
+      _scale.set(1, poleHeight, 1);
+      _matrix.compose(_position, _quaternion, _scale);
+      poles.setMatrixAt(i, _matrix);
+
+      _position.set(pos.x, pos.y + poleHeight + 0.18, pos.z);
+      _scale.set(1, 1, 1);
+      _matrix.compose(_position, _quaternion, _scale);
+      lamps.setMatrixAt(i, _matrix);
+    }
+
+    poles.instanceMatrix.needsUpdate = true;
+    lamps.instanceMatrix.needsUpdate = true;
+    poles.visible = roadsVisible;
+    lamps.visible = roadsVisible;
+
+    city.add(poles);
+    city.add(lamps);
+
+    city.userData.streetlights = {
+      material: lampMaterial,
+      dayIntensity: 0.0,
+      nightIntensity: 1.6,
+    };
   }
 
   const walkwayPoints = [];
@@ -456,12 +587,23 @@ export function createCity(scene, terrain, options = {}) {
 
 export function updateCityLighting(city, nightFactor = 0) {
   if (!city) return;
-  const lighting = city.userData?.lighting;
-  if (!lighting) return;
-
   const factor = THREE.MathUtils.clamp(nightFactor, 0, 1);
-  const target = THREE.MathUtils.lerp(lighting.dayIntensity, lighting.nightIntensity, factor);
-  lighting.material.emissiveIntensity = target;
+
+  const lighting = city.userData?.lighting;
+  if (lighting?.material) {
+    const target = THREE.MathUtils.lerp(lighting.dayIntensity, lighting.nightIntensity, factor);
+    lighting.material.emissiveIntensity = target;
+  }
+
+  const streetlights = city.userData?.streetlights;
+  if (streetlights?.material) {
+    const lampTarget = THREE.MathUtils.lerp(
+      streetlights.dayIntensity ?? 0,
+      streetlights.nightIntensity ?? 1,
+      factor
+    );
+    streetlights.material.emissiveIntensity = lampTarget;
+  }
 }
 
 export function createHillCity(scene, terrain, curve, opts = {}) {
