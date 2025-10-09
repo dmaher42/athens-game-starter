@@ -1600,7 +1600,13 @@ async function mainApp() {
     window.SHOW_HUD = true;
   }
   console.log("[HUD] mounting…");
-  const devHud = mountDevHUD({ getPosition, getDirection, onPin });
+  const devHud = mountDevHUD({
+    getPosition,
+    getDirection,
+    onPin,
+    onSetLightingPreset: applyLightingPreset,
+    lightingPresets: LIGHTING_PRESETS,
+  });
   mountHUDCameraSettings(devHud?.rootElement ?? null);
   if (audioManifestMissing) {
     devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
