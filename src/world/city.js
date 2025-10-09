@@ -194,10 +194,13 @@ export function createCity(scene, terrain, options = {}) {
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
-  const spacingX = options.spacingX ?? 11;
-  const spacingZ = options.spacingZ ?? 10;
-  const jitter = options.jitter ?? 2.2;
-  const maxSlope = options.maxSlope ?? 1.4;
+  // --- Updated defaults for a more "city-like" layout -----------------------
+  // Goal: straighter blocks, clearer grid, fewer awkward placements. Callers
+  // can still override any of these via `options`.
+  const spacingX = options.spacingX ?? 14; // was 11 → slightly wider blocks
+  const spacingZ = options.spacingZ ?? 14; // was 10
+  const jitter = options.jitter ?? 1.2; // was 2.2 → less lateral scatter
+  const maxSlope = options.maxSlope ?? 0.2; // was 1.4 → avoid steep lots
   const roadsVisible = options.roadsVisible == null ? true : Boolean(options.roadsVisible);
 
   const countX = Math.max(3, Math.floor(gridSize.x / spacingX));
@@ -220,7 +223,7 @@ export function createCity(scene, terrain, options = {}) {
       const depth = THREE.MathUtils.lerp(4.2, 7.8, rng());
       const wallHeight = THREE.MathUtils.lerp(2.6, 3.8, rng());
       const roofHeight = wallHeight * THREE.MathUtils.lerp(0.38, 0.55, rng());
-      const rotationSteps = Math.max(1, options.rotationSteps ?? 4);
+      const rotationSteps = Math.max(1, options.rotationSteps ?? 2); // was 4 → align facades
       const rotation =
         Math.floor(rng() * rotationSteps) * ((Math.PI * 2) / rotationSteps);
 

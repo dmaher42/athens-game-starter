@@ -96,14 +96,14 @@ export function createTerrain(scene) {
   const heightScale = 25; // Raise this for taller peaks, lower for gentle plains.
   const baseFrequency = 0.01; // Higher frequency = more, smaller details.
 
-  // --- City plateau targets (flatter core around the Agora with smooth edges)
-  // We use the Agora's Y as the "target" plateau elevation and create a smooth
-  // falloff so the terrain blends into surrounding hills. Inner radius is
-  // mostly flat, outer radius blends back to normal terrain.
+  // --- City plateau targets (slightly wider + slightly flatter)
+  // Keep the same approach (flat inner, smooth falloff to natural terrain),
+  // but expand the inner zone and soften the blend so the city core looks
+  // more like an urban plain and less like rolling countryside.
   const CITY_CENTER_XZ = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
-  const CITY_INNER = Math.max(40, CITY_AREA_RADIUS * 0.55); // largely flat
-  const CITY_OUTER = CITY_AREA_RADIUS; // blend back to hills
-  const CITY_TARGET_Y = AGORA_CENTER_3D.y; // gentle, believable city elevation
+  const CITY_INNER = Math.max(48, CITY_AREA_RADIUS * 0.65); // was 0.55 → flatter core
+  const CITY_OUTER = Math.max(CITY_INNER + 32, CITY_AREA_RADIUS * 1.05); // slightly wider blend
+  const CITY_TARGET_Y = AGORA_CENTER_3D.y; // same target elevation as before
 
   for (let i = 0; i < vertexCount; i++) {
     // PlaneGeometry is built on the XY plane. We'll treat x as east-west and
@@ -128,17 +128,22 @@ export function createTerrain(scene) {
       }
     }
 
-    // --- City plateau flattening (softly level the urban core)
+    // --- City plateau flattening (softly level the urban core; wider + flatter)
     {
       const dxCity = x - CITY_CENTER_XZ.x;
       const dzCity = z - CITY_CENTER_XZ.y;
       const dCity = Math.hypot(dxCity, dzCity);
       if (dCity < CITY_OUTER) {
         // 0 in inner ring (full flatten), 1 outside the outer ring (no change).
-        const t = THREE.MathUtils.smoothstep(dCity, CITY_INNER, CITY_OUTER);
+        // Use a gentler S-curve for the blend (easeInOut-ish), which keeps more
+        // area near the core close to CITY_TARGET_Y without a hard edge.
+        const tLin = THREE.MathUtils.clamp(
+          (dCity - CITY_INNER) / Math.max(1e-3, CITY_OUTER - CITY_INNER),
+          0,
+          1,
+        );
+        const t = tLin * tLin * (3.0 - 2.0 * tLin); // smoothstep curve without extra overhead
         // Blend original 'height' toward city target elevation.
-        // Inside inner radius, t≈0 → almost perfectly flat at CITY_TARGET_Y.
-        // Between inner and outer, gradually blend back to natural terrain.
         height = THREE.MathUtils.lerp(CITY_TARGET_Y, height, t);
       }
     }
