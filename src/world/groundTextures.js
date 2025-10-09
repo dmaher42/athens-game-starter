@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
 import {
+  createDryGrassDetailTexture,
+  createFreshGrassLowlandsTexture,
   createGrassDetailTexture,
   createGrassTexture,
 } from "./grassTextureGenerator.js";
@@ -26,6 +28,38 @@ const PROCEDURAL_GENERATORS = {
     }),
   "lush-grass-detail": (config) =>
     createGrassDetailTexture({
+      size: config.size,
+      seed: config.seed,
+      baseColor: config.baseColor,
+      shadowColor: config.shadowColor,
+      highlightColor: config.highlightColor,
+      bladeFrequency: config.bladeFrequency,
+      bladeTaper: config.bladeTaper,
+      highlightStrength: config.highlightStrength,
+      shadowStrength: config.shadowStrength,
+      noiseScale: config.noiseScale,
+      patchiness: config.patchiness,
+      saturation: config.saturation,
+      contrast: config.contrast,
+    }),
+  "fresh-grass-lowlands": (config) =>
+    createFreshGrassLowlandsTexture({
+      size: config.size,
+      seed: config.seed,
+      baseColor: config.baseColor,
+      shadowColor: config.shadowColor,
+      highlightColor: config.highlightColor,
+      bladeFrequency: config.bladeFrequency,
+      bladeTaper: config.bladeTaper,
+      highlightStrength: config.highlightStrength,
+      shadowStrength: config.shadowStrength,
+      noiseScale: config.noiseScale,
+      patchiness: config.patchiness,
+      saturation: config.saturation,
+      contrast: config.contrast,
+    }),
+  "dry-grass-detail": (config) =>
+    createDryGrassDetailTexture({
       size: config.size,
       seed: config.seed,
       baseColor: config.baseColor,
