@@ -514,6 +514,11 @@ async function mainApp() {
     root.name = WORLD_ROOT_NAME;
     root.userData = root.userData || {};
     root.userData.renderer = scene.userData?.renderer || null;
+    if (typeof scene.userData?.baseUrl === "string") {
+      root.userData.baseUrl = scene.userData.baseUrl;
+    } else {
+      delete root.userData.baseUrl;
+    }
     scene.add(root);
     scene.userData.worldRoot = root;
     return root;
