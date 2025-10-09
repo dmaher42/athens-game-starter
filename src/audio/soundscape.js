@@ -100,7 +100,11 @@ export class Soundscape {
     obj.position.copy(position);
     obj.add(src);
     this.scene.add(obj);
-    this.emitters.push({ obj, src, group });
+    const entry = { obj, src, group };
+    this.emitters.push(entry);
+    if (!loop) {
+      this._attachOneShotCleanup(entry);
+    }
     return src;
   }
 
@@ -116,7 +120,11 @@ export class Soundscape {
       try { sourceNode.disconnect(); } catch {}
       sourceNode.connect(this.bus[group]);
     }
-    this.emitters.push({ obj: this.camera, src, group });
+    const entry = { obj: this.camera, src, group };
+    this.emitters.push(entry);
+    if (!loop) {
+      this._attachOneShotCleanup(entry);
+    }
     return src;
   }
 
@@ -206,16 +214,18 @@ export class Soundscape {
 
   scheduleOneShots(buffer, position, group, minS = 12, maxS = 24) {
     if (!buffer) return;
-    const tick = () => {
-      const src = this._makePositional(buffer, position, group, { loop: false, volume: 0.35, refDistance: 8 });
-      if (src) { src.play(); }
-      const next = (Math.random() * (maxS - minS) + minS) * 1000;
-      const id = setTimeout(tick, next);
+    const scheduleTick = (delay) => {
+      const id = setTimeout(() => {
+        this._removeOneShotTimer(id);
+        const src = this._makePositional(buffer, position, group, { loop: false, volume: 0.35, refDistance: 8 });
+        if (src) { src.play(); }
+        const next = (Math.random() * (maxS - minS) + minS) * 1000;
+        scheduleTick(next);
+      }, delay);
       this.oneShotTimers.push(id);
     };
     const first = (Math.random() * (maxS - minS) + minS) * 1000;
-    const id = setTimeout(tick, first);
-    this.oneShotTimers.push(id);
+    scheduleTick(first);
   }
 
   /**
@@ -255,5 +265,35 @@ export class Soundscape {
     this.buffers.clear();
     // detach listener
     try { this.camera.remove(this.listener); } catch {}
+  }
+
+  _attachOneShotCleanup(entry) {
+    const { obj, src } = entry;
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      if (obj && obj !== this.camera) {
+        this.scene.remove(obj);
+      }
+      const idx = this.emitters.indexOf(entry);
+      if (idx !== -1) {
+        this.emitters.splice(idx, 1);
+      }
+    };
+    const originalOnEnded = src.onEnded ? src.onEnded.bind(src) : null;
+    src.onEnded = () => {
+      if (originalOnEnded) {
+        originalOnEnded();
+      }
+      cleanup();
+    };
+  }
+
+  _removeOneShotTimer(id) {
+    const idx = this.oneShotTimers.indexOf(id);
+    if (idx !== -1) {
+      this.oneShotTimers.splice(idx, 1);
+    }
   }
 }
