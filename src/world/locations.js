@@ -19,7 +19,8 @@ export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, 14, 10); // hill crown
 export const HARBOR_EXCLUDE_RADIUS = 110; // keep shoreline clear
 export const AGORA_RADIUS = 22;
 export const ACROPOLIS_RADIUS = 18;
-export const CITY_AREA_RADIUS = 180;
+// Expanded city footprint
+export const CITY_AREA_RADIUS = 260; // expand urban plateau & HillCity sampling
 
 // Placement safety
 export const MIN_ABOVE_SEA = 2.0; // minimum building base above water
@@ -32,7 +33,7 @@ export const HARBOR_CENTER = new THREE.Vector2(-120, 80);
 export const HARBOR_SEA_LEVEL = SEA_LEVEL_Y;
 
 export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, 0, 25);
-export const CITY_CHUNK_SIZE = new THREE.Vector2(72, 54);
+export const CITY_CHUNK_SIZE = new THREE.Vector2(140, 110); // city grid footprint
 export const CITY_SEED = 0x4d534349;
 
 // Harbor water extents (limit the ocean to the bay only)
