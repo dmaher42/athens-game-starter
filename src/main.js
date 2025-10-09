@@ -20,6 +20,7 @@ import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hi
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
 import { updateCityLighting, createHillCity, createCity } from "./world/city.js";
+import { createGrassLayer, updateGrass } from "./world/grass.js";
 import {
   AGORA_CENTER_3D,
   HARBOR_CENTER_3D,
@@ -593,12 +594,31 @@ async function mainApp() {
     const P2 = new THREE.Vector2(-95.7, -3.1);
     addDepthOccluderRibbon(scene, terrain, P1, P2, 6 /* width */, 140 /* segments */);
   }
+
+  const grassEnabled = (() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("grass")) {
+        return false;
+      }
+      return parseToggleValue(params.get("grass"), false);
+    } catch (error) {
+      console.warn("Failed to parse grass flag from query string:", error);
+      return false;
+    }
+  })();
+
   const ocean = await createOcean(scene, { bounds: HARBOR_WATER_BOUNDS });
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
 
   const worldRoot = refreshWorldRoot();
+
+  let grassLayer = null;
 
   const roadsVisible = (() => {
     if (typeof window === "undefined") {
@@ -623,6 +643,14 @@ async function mainApp() {
   }
   if (import.meta.env?.DEV) {
     mountHillCityDebug(scene, mainRoad);
+  }
+
+  if (grassEnabled) {
+    grassLayer = createGrassLayer(worldRoot, terrain, { seed: 42 });
+    if (grassLayer && typeof updateGrass.setNightFactor === "function") {
+      updateGrass.setNightFactor(lights.nightFactor);
+      updateGrass(0);
+    }
   }
 
   // --- Aristotle's Tomb (local GLB) -----------------------------------------
@@ -1482,6 +1510,10 @@ async function mainApp() {
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
     updateOcean(ocean, 0, sunDir, lights.nightFactor);
+    if (grassLayer && typeof updateGrass.setNightFactor === "function") {
+      updateGrass.setNightFactor(lights.nightFactor);
+      updateGrass(0);
+    }
 
     const formattedTime = formatPhaseAsTime(phase);
     if (formattedTime !== lastDisplayedTime) {
@@ -1518,6 +1550,10 @@ async function mainApp() {
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
+    if (grassLayer && typeof updateGrass.setNightFactor === "function") {
+      updateGrass.setNightFactor(lights.nightFactor);
+      updateGrass(deltaTime);
+    }
 
     // Advance the GPU-driven terrain sway (no CPU vertex updates required).
     updateTerrain(terrain, elapsed);
