@@ -1,3 +1,5 @@
+import { getUISlot } from "./uiRoot.js";
+
 // Minimal UI overlay for tone mapping exposure (F9 toggles). No deps.
 export function mountExposureSlider(renderer, opts = {}) {
   const MIN = opts.min ?? 0.2;
@@ -9,16 +11,12 @@ export function mountExposureSlider(renderer, opts = {}) {
   const wrap = document.createElement('div');
   wrap.id = 'tmx-wrap';
   Object.assign(wrap.style, {
-    position: 'fixed',
-    top: '12px',
-    right: '12px',
     padding: '10px 12px',
     background: 'rgba(0,0,0,0.55)',
     backdropFilter: 'blur(4px)',
     borderRadius: '10px',
     font: '12px/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial',
     color: '#fff',
-    zIndex: 9999,
     userSelect: 'none'
   });
 
@@ -60,7 +58,7 @@ export function mountExposureSlider(renderer, opts = {}) {
   row.appendChild(value);
   wrap.appendChild(label);
   wrap.appendChild(row);
-  document.body.appendChild(wrap);
+  getUISlot("topRight").appendChild(wrap);
 
   const onKey = (e) => {
     if (e.key === KEY_TOGGLE) {
