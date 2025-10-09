@@ -614,6 +614,10 @@ export function createCity(scene, terrain, options = {}) {
     addFoundationPad(city, pierPlazaCenter.x, plazaBaseHeight, pierPlazaCenter.z, 3.2);
   }
 
+  const stallFootprints = [];
+  let frontAisleRange = null;
+  let rearAisleRange = null;
+
   // Market Stalls
   {
     const stallsPerRow = 4;
@@ -659,10 +663,14 @@ export function createCity(scene, terrain, options = {}) {
         roughness: 0.72,
         metalness: 0.08,
       });
-      const canopyMaterial = new THREE.MeshStandardMaterial({
+      // Canopy physical material
+      const canopyMaterial = new THREE.MeshPhysicalMaterial({
         color: 0xb7c4cf,
-        roughness: 0.82,
-        metalness: 0.05,
+        metalness: 0,
+        roughness: 0.85,
+        clearcoat: 0.06,
+        clearcoatRoughness: 0.9,
+        envMapIntensity: 0.6,
         vertexColors: true,
       });
 
@@ -679,22 +687,59 @@ export function createCity(scene, terrain, options = {}) {
       frames.userData.noCollision = true;
       canopies.userData.noCollision = true;
 
+      // Aisles & layout guardrails
       const canopyPalette = [0xc7b59d, 0xa9b6c8, 0xc3a7af, 0xb0c9a6];
       const stallSpacing = 2.1;
       const rowSpacing = 1.8;
       const startZ = pierPlazaCenter.z - ((stallsPerRow - 1) * stallSpacing) / 2;
+      const stallHalfX = halfWidth + 0.14;
+      const stallHalfZ = halfDepth + 0.16;
+      const aisleBuffer = 0.35;
+      const frontAisleWidth = 2.3;
+      const rearAisleWidth = 2.1;
+      const maxRowOffset = ((stallRows - 1) / 2) * rowSpacing;
+      const rowFrontEdge = pierPlazaCenter.x + maxRowOffset + stallHalfX;
+      const rowRearEdge = pierPlazaCenter.x - maxRowOffset - stallHalfX;
+      const minCenterSpacing = stallHalfZ * 2 + 0.6;
+      frontAisleRange = {
+        min: rowFrontEdge + aisleBuffer,
+        max: rowFrontEdge + aisleBuffer + frontAisleWidth,
+      };
+      rearAisleRange = {
+        min: rowRearEdge - aisleBuffer - rearAisleWidth,
+        max: rowRearEdge - aisleBuffer,
+      };
+      const rowPlacements = Array.from({ length: stallRows }, () => []);
       let stallIndex = 0;
 
       for (let row = 0; row < stallRows; row++) {
+        const placements = rowPlacements[row];
         const rowOffset = (row - (stallRows - 1) / 2) * rowSpacing;
         for (let col = 0; col < stallsPerRow; col++) {
-          const x = pierPlazaCenter.x + rowOffset;
-          const z = startZ + col * stallSpacing;
+          const jitterX = (rng() - 0.5) * 0.28;
+          const jitterZ = (rng() - 0.5) * 0.4;
+          const x = pierPlazaCenter.x + rowOffset + jitterX;
+          const z = startZ + col * stallSpacing + jitterZ;
+          const xMin = x - stallHalfX;
+          const xMax = x + stallHalfX;
+          if (
+            (frontAisleRange && xMax > frontAisleRange.min && xMin < frontAisleRange.max) ||
+            (rearAisleRange && xMax > rearAisleRange.min && xMin < rearAisleRange.max)
+          ) {
+            continue;
+          }
+          if (placements.length > 0) {
+            const prev = placements[placements.length - 1];
+            if (Math.abs(z - prev.z) < minCenterSpacing) {
+              continue;
+            }
+          }
+
           const terrainHeight = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
-          const groundY = Math.max(
-            (Number.isFinite(terrainHeight) ? terrainHeight : SEA_LEVEL_Y) + SURFACE_OFFSET,
-            SEA_LEVEL_Y + SURFACE_OFFSET
-          );
+          if (!Number.isFinite(terrainHeight)) {
+            continue;
+          }
+          const groundY = Math.max(terrainHeight + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET);
 
           _position.set(x, groundY, z);
           _quaternion.identity();
@@ -709,18 +754,29 @@ export function createCity(scene, terrain, options = {}) {
           const canopyColor = new THREE.Color(canopyPalette[stallIndex % canopyPalette.length]);
           canopies.setColorAt(stallIndex, canopyColor);
 
+          stallFootprints.push({
+            xMin,
+            xMax,
+            zMin: z - stallHalfZ,
+            zMax: z + stallHalfZ,
+          });
+          placements.push({ z });
           stallIndex++;
         }
       }
 
+      frames.count = stallIndex;
+      canopies.count = stallIndex;
       frames.instanceMatrix.needsUpdate = true;
       canopies.instanceMatrix.needsUpdate = true;
       if (canopies.instanceColor) {
         canopies.instanceColor.needsUpdate = true;
       }
 
-      city.add(frames);
-      city.add(canopies);
+      if (stallIndex > 0) {
+        city.add(frames);
+        city.add(canopies);
+      }
     }
   }
 
@@ -743,37 +799,73 @@ export function createCity(scene, terrain, options = {}) {
       crates.receiveShadow = true;
       crates.userData.noCollision = true;
 
+      const crateHalfX = 0.4;
+      const crateHalfZ = 0.3;
+      const stallClearance = 0.4;
+
       let placed = 0;
-      let attempts = 0;
-      while (placed < crateCount && attempts < crateCount * 8) {
-        attempts++;
-        const radius = THREE.MathUtils.lerp(0.6, 2.6, rng());
-        const angle = rng() * Math.PI * 2;
-        const offsetX = Math.cos(angle) * radius;
-        const offsetZ = Math.sin(angle) * radius;
-        if (Math.abs(offsetX) < 0.6 && Math.abs(offsetZ) < 1.6) {
-          continue;
-        }
+      for (let i = 0; i < crateCount && placed < crateCount; i++) {
+        let accepted = false;
+        for (let tries = 0; tries < 3 && !accepted; tries++) {
+          const radius = THREE.MathUtils.lerp(0.6, 2.6, rng());
+          const angle = rng() * Math.PI * 2;
+          const offsetX = Math.cos(angle) * radius;
+          const offsetZ = Math.sin(angle) * radius;
+          if (Math.abs(offsetX) < 0.6 && Math.abs(offsetZ) < 1.6) {
+            continue;
+          }
 
-        const x = pierPlazaCenter.x + offsetX;
-        const z = pierPlazaCenter.z + offsetZ;
-        const terrainHeight = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
-        if (!Number.isFinite(terrainHeight)) {
-          continue;
-        }
-        const groundY = Math.max(terrainHeight + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET);
+          const x = pierPlazaCenter.x + offsetX;
+          const z = pierPlazaCenter.z + offsetZ;
+          const terrainHeight = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
+          if (!Number.isFinite(terrainHeight)) {
+            continue;
+          }
 
-        _position.set(x, groundY, z);
-        _quaternion.setFromAxisAngle(_rotationAxis, rng() * Math.PI * 2);
-        _scale.set(1, 1, 1);
-        _matrix.compose(_position, _quaternion, _scale);
-        crates.setMatrixAt(placed, _matrix);
-        placed++;
+          const xMin = x - crateHalfX;
+          const xMax = x + crateHalfX;
+          const zMin = z - crateHalfZ;
+          const zMax = z + crateHalfZ;
+          if (
+            (frontAisleRange && xMax > frontAisleRange.min && xMin < frontAisleRange.max) ||
+            (rearAisleRange && xMax > rearAisleRange.min && xMin < rearAisleRange.max)
+          ) {
+            continue;
+          }
+
+          let overlapsStall = false;
+          for (const footprint of stallFootprints) {
+            if (
+              xMax + stallClearance > footprint.xMin &&
+              xMin - stallClearance < footprint.xMax &&
+              zMax + stallClearance > footprint.zMin &&
+              zMin - stallClearance < footprint.zMax
+            ) {
+              overlapsStall = true;
+              break;
+            }
+          }
+          if (overlapsStall) {
+            continue;
+          }
+
+          const groundY = Math.max(terrainHeight + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET);
+
+          _position.set(x, groundY, z);
+          _quaternion.setFromAxisAngle(_rotationAxis, rng() * Math.PI * 2);
+          _scale.set(1, 1, 1);
+          _matrix.compose(_position, _quaternion, _scale);
+          crates.setMatrixAt(placed, _matrix);
+          placed++;
+          accepted = true;
+        }
       }
 
       crates.count = placed;
       crates.instanceMatrix.needsUpdate = true;
-      city.add(crates);
+      if (placed > 0) {
+        city.add(crates);
+      }
     }
   }
 
@@ -888,6 +980,22 @@ export function createCity(scene, terrain, options = {}) {
     bulb.castShadow = false;
     lampGroup.add(bulb);
 
+    // Lamp glass bulb
+    const bulbGlassMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      metalness: 0,
+      roughness: 0.2,
+      clearcoat: 0.6,
+      clearcoatRoughness: 0.3,
+      envMapIntensity: 1.0,
+      transmission: 0,
+      emissive: new THREE.Color(lampLightColor),
+      emissiveIntensity: 0,
+    });
+    const bulbGlass = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), bulbGlassMaterial);
+    bulbGlass.castShadow = false;
+    bulb.add(bulbGlass);
+
     const pointLight = new THREE.PointLight(lampLightColor, 0, 18, 2);
     pointLight.position.copy(bulb.position);
     pointLight.castShadow = true;
@@ -896,6 +1004,7 @@ export function createCity(scene, terrain, options = {}) {
     const lampState = {
       light: pointLight,
       material: bulbMaterial,
+      glassMaterial: bulbGlassMaterial,
       baseIntensity: 1.2,
       overrideState: null,
     };
@@ -1061,10 +1170,16 @@ export function updateCityLighting(city, nightFactor = 0) {
         lampState.light.intensity = intensity;
       }
 
-      if (lampState.material) {
+      if (lampState.material || lampState.glassMaterial) {
         const normalized = baseIntensity > 0 ? intensity / baseIntensity : 0;
         const nightMax = streetlights?.nightIntensity ?? 1.6;
-        lampState.material.emissiveIntensity = normalized > 0 ? nightMax * normalized : 0;
+        const emissiveTarget = normalized > 0 ? nightMax * normalized : 0;
+        if (lampState.material) {
+          lampState.material.emissiveIntensity = emissiveTarget;
+        }
+        if (lampState.glassMaterial) {
+          lampState.glassMaterial.emissiveIntensity = intensity > 0 ? intensity : 0;
+        }
       }
     }
   }
