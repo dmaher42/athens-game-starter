@@ -33,6 +33,7 @@ const CAMERA_RANGES = {
 const listeners = new Set();
 let currentSettings = { ...defaultCameraSettings };
 let loaded = false;
+let loadedFromStorage = false;
 let persistTimer = null;
 
 function clamp(value, min, max) {
@@ -166,8 +167,10 @@ function ensureLoaded() {
   const stored = readStoredSettings();
   if (stored) {
     currentSettings = normalizeSettings(stored);
+    loadedFromStorage = true;
   } else {
     currentSettings = cloneSettings(defaultCameraSettings);
+    loadedFromStorage = false;
   }
   loaded = true;
 }
@@ -225,9 +228,15 @@ export function saveSettings(partial = {}) {
   }
 
   currentSettings = next;
+  loadedFromStorage = true;
   schedulePersist();
   notifyListeners();
   return cloneSettings(currentSettings);
+}
+
+export function hasStoredSettings() {
+  ensureLoaded();
+  return loadedFromStorage;
 }
 
 export function subscribe(listener) {
@@ -252,4 +261,5 @@ export default {
   subscribe,
   getSettings,
   defaultCameraSettings,
+  hasStoredSettings,
 };
