@@ -67,9 +67,9 @@ export function resolveDracoDecoderPath() {
     }
   }
 
+  candidates.push(DEFAULT_DRACO_DECODER_PATH);
   candidates.push(`${baseUrl}${LOCAL_DRACO_SUBPATH}`);
   candidates.push(LOCAL_DRACO_SUBPATH);
-  candidates.push(DEFAULT_DRACO_DECODER_PATH);
 
   for (const candidate of candidates) {
     const normalised = normaliseCandidate(candidate, baseUrl);
