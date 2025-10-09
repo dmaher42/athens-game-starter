@@ -153,12 +153,16 @@ export function createTerrain(scene) {
     // Blend colors based on altitude. Low areas get lush greens, mid elevations
     // expose soil, and high peaks fade into cold rock tones.
     const normalized = THREE.MathUtils.clamp((height + heightScale) / (heightScale * 2), 0, 1);
-    if (normalized < 0.38) {
-      color.setRGB(0.24, 0.42, 0.17); // lush grass
-    } else if (normalized < 0.68) {
-      color.setRGB(0.38, 0.27, 0.16); // earthy dirt
+    // richer grass/dirt/rock palette
+    if (normalized < 0.42) {
+      // richer, Mediterranean grass (was 0.24,0.42,0.17)
+      color.setRGB(0.30, 0.55, 0.22);
+    } else if (normalized < 0.72) {
+      // warmer soil (was 0.38,0.27,0.16)
+      color.setRGB(0.43, 0.31, 0.18);
     } else {
-      color.setRGB(0.6, 0.6, 0.6); // rocky summit
+      // slightly brighter rock (was 0.6,0.6,0.6)
+      color.setRGB(0.62, 0.62, 0.62);
     }
     colorAttribute.setXYZ(i, color.r, color.g, color.b);
   }
@@ -183,8 +187,8 @@ export function createTerrain(scene) {
   }
 
   const terrainMaterial = new THREE.MeshStandardMaterial({
-    color: 0x9aa382,
-    roughness: 1.0,
+    color: 0xa3ae8b,
+    roughness: 0.90,
     metalness: 0.0,
     vertexColors: true,
   });

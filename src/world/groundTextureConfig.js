@@ -39,5 +39,28 @@ export const GROUND_TEXTURE_CONFIG = {
       mode: "mix",
       seed: 404,
     },
+    // extra detail layers for lowlands/midslopes
+    {
+      generator: "fresh-grass-lowlands",
+      repeat: [64, 64],
+      strength: 0.45,
+      tint: [1.06, 1.08, 0.98],
+      minHeight: -20,
+      maxHeight: 12,
+      fade: 6,
+      mode: "mix",
+      seed: 405,
+    },
+    {
+      generator: "dry-grass-detail",
+      repeat: [88, 88],
+      strength: 0.35,
+      tint: [1.03, 0.98, 0.92],
+      minHeight: 8,
+      maxHeight: 42,
+      fade: 10,
+      mode: "multiply",
+      seed: 406,
+    },
   ],
 };
