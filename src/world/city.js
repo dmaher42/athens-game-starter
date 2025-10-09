@@ -285,7 +285,12 @@ export function createCity(scene, terrain, options = {}) {
   // --- Collect all road segment geometries for one merged mesh (perf + fewer draw calls)
   const roadGeometries = [];
 
+  // Calculate center row index for the main avenue (to avoid overlap)
+  const centerRowIndex = Math.floor(roadGrid.length / 2);
+
+  // Generate horizontal (east-west) road segments, skipping the center row
   for (let iz = 0; iz < roadGrid.length; iz++) {
+    if (iz === centerRowIndex) continue; // Skip center row, will be replaced by main avenue
     const row = roadGrid[iz];
     for (let ix = 0; ix < row.length - 1; ix++) {
       const start = row[ix];
@@ -310,8 +315,7 @@ export function createCity(scene, terrain, options = {}) {
   }
 
   // --- Add a wide east-west main avenue through the city center --------------
-  // Find the center row (approximately middle of the grid in Z)
-  const centerRowIndex = Math.floor(roadGrid.length / 2);
+  // Replace the center row with a single wide avenue spanning the full width
   const centerRow = roadGrid[centerRowIndex];
   if (centerRow && centerRow.length >= 2) {
     // Get the westmost and eastmost valid points in the center row
@@ -323,7 +327,7 @@ export function createCity(scene, terrain, options = {}) {
         eastPoint = centerRow[ix];
       }
     }
-    // Create a wide avenue spanning the full width
+    // Create a wide avenue spanning the full width (replaces regular center row roads)
     if (westPoint && eastPoint) {
       createVisibleRoad(westPoint, eastPoint, city, terrain, {
         collectGeometries: roadGeometries,
