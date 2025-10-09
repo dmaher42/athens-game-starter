@@ -200,7 +200,6 @@ export function createCity(scene, terrain, options = {}) {
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
-  const showFoundationPads = options.showFoundationPads ?? false;
   // Pier no-build mask
   const pierRect = {
     west: HARBOR_WATER_BOUNDS.west,
