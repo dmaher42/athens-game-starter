@@ -100,15 +100,22 @@ window.addEventListener("unhandledrejection", (ev) => {
 const BASE_URL = resolveBaseUrl();
 
 // resolveFirstAvailableAsset
-// --- util: resolveFirstAvailableAsset (fetch GET, skip HTML) ---
+const isHtml = (res) => (res.headers.get("content-type") || "").includes("text/html");
+
+/** Lightweight existence check (avoids double-downloading GLBs) */
+async function headOk(url) {
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    return res.ok && !isHtml(res);
+  } catch {
+    return false;
+  }
+}
+
+// --- util: resolveFirstAvailableAsset (fetch HEAD, skip HTML) ---
 async function resolveFirstAvailableAsset(candidates = []) {
-  const isHtml = (res) => (res.headers.get("content-type") || "").includes("text/html");
   for (const url of candidates) {
-    try {
-      const res = await fetch(url, { method: "GET" });
-      if (!res.ok || isHtml(res)) continue;
-      return url;
-    } catch {}
+    if (await headOk(url)) return url;
   }
   throw new Error("No candidate asset reachable: " + candidates.join(", "));
 }
