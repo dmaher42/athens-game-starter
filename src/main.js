@@ -574,16 +574,22 @@ async function mainApp() {
   if (typeof terrain?.userData?.getHeightAt === "function") {
     scene.userData.terrainHeightSampler = terrain.userData.getHeightAt;
   }
-  // Add an occluder ribbon along the troublesome band the user reported.
-  // The user provided two endpoints in X,Z. We interpret them as:
-  //   P1 = (-0.4, -0.3)
-  //   P2 = (-95.7, -3.1)
-  // If those were meant as slightly different values, we can adjust later.
-  const P1 = new THREE.Vector2(-0.4, -0.3);
-  const P2 = new THREE.Vector2(-95.7, -3.1);
-
-  // Width 6m; increase if needed (e.g., 8–10) to fully cover the area.
-  addDepthOccluderRibbon(scene, terrain, P1, P2, 6 /* width */, 140 /* segments */);
+  // Dev/test-only occluder ribbon (enable with ?occluder=1 or in DEV)
+  const shouldAddOccluder = (() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("occluder")) {
+        const v = params.get("occluder");
+        return v === null || v === "" || v === "1" || v === "true" || v === "on";
+      }
+    } catch {}
+    return !!(import.meta.env && import.meta.env.DEV);
+  })();
+  if (shouldAddOccluder) {
+    const P1 = new THREE.Vector2(-0.4, -0.3);
+    const P2 = new THREE.Vector2(-95.7, -3.1);
+    addDepthOccluderRibbon(scene, terrain, P1, P2, 6 /* width */, 140 /* segments */);
+  }
   const ocean = await createOcean(scene, { bounds: HARBOR_WATER_BOUNDS });
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
   const envCollider = new EnvironmentCollider();
