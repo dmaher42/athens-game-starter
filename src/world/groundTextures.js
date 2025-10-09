@@ -210,13 +210,6 @@ export function injectGroundTextureShader(shader, state) {
     );
   }
 
-  if (!shader.fragmentShader.includes("#include <uv_pars_fragment>")) {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <common>",
-      `#include <common>\n#include <uv_pars_fragment>`,
-    );
-  }
-
   const header = [];
   const mixCode = [];
 
@@ -232,10 +225,12 @@ export function injectGroundTextureShader(shader, state) {
     shader.uniforms[modeName] = { value: layer.mode };
 
     header.push(
-      `uniform sampler2D ${mapName};\n` +
-        `uniform vec4 ${paramName};\n` +
-        `uniform vec3 ${tintName};\n` +
+      [
+        `uniform sampler2D ${mapName};`,
+        `uniform vec4 ${paramName};`,
+        `uniform vec3 ${tintName};`,
         `uniform float ${modeName};`,
+      ].join("\n"),
     );
 
     mixCode.push(`
@@ -263,9 +258,19 @@ export function injectGroundTextureShader(shader, state) {
     `);
   });
 
+  const hasUvParsFragment = shader.fragmentShader.includes(
+    "#include <uv_pars_fragment>",
+  );
+
+  const commonInjection = [
+    "#include <common>",
+    ...(hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"]),
+    ...header,
+  ].join("\n");
+
   shader.fragmentShader = shader.fragmentShader.replace(
     "#include <common>",
-    `#include <common>\n${header.join("\n")}`,
+    commonInjection,
   );
 
   shader.fragmentShader = shader.fragmentShader.replace(
