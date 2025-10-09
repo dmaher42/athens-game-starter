@@ -406,11 +406,16 @@ function maybeDowngradePhysicalMaterial(material, options, trimmed) {
 }
 
 function budgetSingleMaterial(material, options) {
-  if (!material || processedMaterials.has(material)) {
+  if (!material) {
     return material;
   }
+
+  const cached = processedMaterials.get(material);
+  if (cached) {
+    return cached;
+  }
   if (material.userData?.textureBudget === "skip" || material.userData?.textureBudgetSkip) {
-    processedMaterials.add(material);
+    processedMaterials.set(material, material);
     return material;
   }
 
@@ -418,7 +423,7 @@ function budgetSingleMaterial(material, options) {
   const limit = Math.max(3, resolveTextureLimit(options));
 
   if (activeSlots.length <= limit) {
-    processedMaterials.add(material);
+    processedMaterials.set(material, material);
     return material;
   }
 
@@ -466,18 +471,19 @@ function budgetSingleMaterial(material, options) {
     }
   }
 
-  processedMaterials.add(material);
-
   if (active.size > limit) {
+    processedMaterials.set(material, material);
     return material;
   }
 
   const replacement = maybeDowngradePhysicalMaterial(material, options, trimmed);
   if (replacement && replacement !== material) {
-    processedMaterials.add(replacement);
+    processedMaterials.set(material, replacement);
+    processedMaterials.set(replacement, replacement);
     return replacement;
   }
 
+  processedMaterials.set(material, material);
   return material;
 }
 
@@ -548,5 +554,5 @@ export function applyTextureBudgetToObject(object, options = {}) {
 }
 
 export function resetTextureBudgetCache() {
-  processedMaterials.clear();
+  processedMaterials = new WeakMap();
 }
