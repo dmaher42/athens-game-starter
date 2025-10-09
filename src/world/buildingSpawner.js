@@ -52,8 +52,8 @@ const Prefabs = {
     g.add(roof);
     return g;
   },
-  shop(opts) { return this.house({ ...opts, w: 6, d: 6, h: 3.4 }); },
-  workshop(opts) { return this.house({ ...opts, w: 6, d: 8, h: 4.0 }); },
+  shop(opts) { return Prefabs.house({ ...opts, w: 6, d: 6, h: 3.4 }); },
+  workshop(opts) { return Prefabs.house({ ...opts, w: 6, d: 8, h: 4.0 }); },
   warehouse({ w = 9, d = 12, h = 5.2 } = {}) {
     const g = new THREE.Group();
     const base = makeBox(w, h, d, MAT.wood);
@@ -95,8 +95,8 @@ const Prefabs = {
     const deck = makeBox(w, 0.4, d, MAT.wood); deck.position.y = 0.2; g.add(deck);
     return g;
   },
-  market() { return this.shop({}); },
-  monument() { return this.fountain(); }
+  market() { return Prefabs.shop({}); },
+  monument() { return Prefabs.fountain(); }
 };
 
 // Map allowedTypes → prefab id and optional GLB path
