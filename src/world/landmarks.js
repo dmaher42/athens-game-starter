@@ -259,6 +259,25 @@ const MATERIAL_PRESETS = {
   bronze: makeBronzeMaterial,
 };
 
+const MATERIAL_FLAG_PROPERTIES = [
+  "skinning",
+  "morphTargets",
+  "morphNormals",
+  "transparent",
+];
+
+function copyMaterialFlags(source, target) {
+  if (!source || !target) return target;
+
+  MATERIAL_FLAG_PROPERTIES.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
+      target[key] = source[key];
+    }
+  });
+
+  return target;
+}
+
 export async function loadLandmark(scene, url, options = {}) {
   const timerLabel = `loadLandmark:${url}`;
   if (typeof console?.time === "function") {
@@ -421,10 +440,20 @@ export async function loadLandmark(scene, url, options = {}) {
           if (!mesh?.isMesh) return;
 
           if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((material) => material?.dispose?.());
-            mesh.material = mesh.material.map(() => presetMaterial.clone());
+            const nextMaterials = mesh.material.map((material) => {
+              const clonedMaterial = presetMaterial.clone();
+              copyMaterialFlags(material, clonedMaterial);
+              material?.dispose?.();
+              return clonedMaterial;
+            });
+            mesh.material = nextMaterials;
+          } else if (mesh.material) {
+            const currentMaterial = mesh.material;
+            const clonedMaterial = presetMaterial.clone();
+            copyMaterialFlags(currentMaterial, clonedMaterial);
+            currentMaterial.dispose?.();
+            mesh.material = clonedMaterial;
           } else {
-            mesh.material?.dispose?.();
             mesh.material = presetMaterial.clone();
           }
         });
