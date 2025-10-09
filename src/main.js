@@ -1246,6 +1246,7 @@ async function mainApp() {
         ...options,
         parent: options.parent ?? buildingsRoot,
       }),
+    quietMissing: true,
   });
 
   try {

@@ -56,6 +56,9 @@ export const athensLayoutConfig = {
       materialPreset: "marble",
     },
   },
+  // Set `enabled: false` on any group or landmark to temporarily skip it without
+  // losing placement metadata. This lets us silence missing-model warnings
+  // during demos while keeping the manifest ready for future assets.
   groups: [
     {
       id: "acropolis-plateau",
@@ -68,6 +71,7 @@ export const athensLayoutConfig = {
       landmarks: [
         {
           id: "parthenon",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Parthenon",
           description:
             "Periklean temple celebrating Athena Parthenos, rebuilt after the Persian Wars.",
@@ -86,6 +90,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "erechtheion",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Erechtheion",
           description:
             "Split-level shrine to Athena Polias and Poseidon-Erechtheus with caryatid porch.",
@@ -108,6 +113,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "athena-nike",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Temple of Athena Nike",
           description:
             "Compact bastion temple guarding the western entrance to the sanctuary.",
@@ -132,6 +138,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "propylaea",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Propylaea",
           description:
             "Monumental gateway framing the ascent to the Acropolis plateau.",
@@ -150,6 +157,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "brauronia",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Sanctuary of Artemis Brauronia",
           description:
             "Shrine and stoa nestled along the southern flank of the Parthenon.",
@@ -205,6 +213,7 @@ export const athensLayoutConfig = {
       landmarks: [
         {
           id: "theatre-dionysus",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Theatre of Dionysus",
           description:
             "Birthplace of Attic drama hosting the City Dionysia festival.",
@@ -227,6 +236,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "odeon-herodes-atticus",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Odeon of Herodes Atticus",
           description:
             "Roman-era odeon providing sheltered concerts along the south-west slope.",
@@ -244,6 +254,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "asclepieion",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Sanctuary of Asclepius",
           description:
             "Healing precinct with fountain, temple, and incubation hall.",
@@ -261,6 +272,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "stoa-eumenes",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Stoa of Eumenes",
           description:
             "Covered promenade linking the Theatre of Dionysus to the Odeon.",
@@ -289,6 +301,7 @@ export const athensLayoutConfig = {
       landmarks: [
         {
           id: "temple-hephaestus",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Temple of Hephaestus",
           description:
             "Doric temple overlooking the Agora, dedicated to Hephaestus and Athena Ergane.",
@@ -309,6 +322,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "stoa-attalos",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Stoa of Attalos",
           description:
             "Two-storey stoa rebuilt by Attalos II as a bustling market frontage.",
@@ -326,6 +340,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "bouleuterion",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Bouleuterion",
           description:
             "Council chamber where the 500 met to prepare proposals for the Assembly.",
@@ -343,6 +358,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "tholos",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Tholos",
           description:
             "Round building housing the prytaneis and the city’s official weights and measures.",
@@ -360,6 +376,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "eponymous-heroes",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Monument of the Eponymous Heroes",
           description:
             "Display platform for tribal hero statues and civic announcements.",
@@ -377,6 +394,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "royal-stoa",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Royal Stoa",
           description:
             "Law court of the archon basileus at the north-western edge of the Agora.",
@@ -405,6 +423,7 @@ export const athensLayoutConfig = {
       landmarks: [
         {
           id: "temple-olympian-zeus",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Temple of Olympian Zeus",
           description:
             "Gigantic Corinthian temple southeast of the Acropolis, finished under Hadrian.",
@@ -422,6 +441,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "panathenaic-stadium",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Panathenaic Stadium",
           description:
             "U-shaped track refurbished in marble for the Panathenaic Games.",
@@ -440,6 +460,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "academy-plato",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Academy of Plato",
           description:
             "Grove and gymnasium northwest of the city where Plato taught philosophy.",
@@ -457,6 +478,7 @@ export const athensLayoutConfig = {
         },
         {
           id: "kerameikos",
+          enabled: false, // temporarily disabled to avoid 404 until model is added
           name: "Kerameikos & Dipylon Gate",
           description:
             "Potters’ quarter and cemetery guarding the Sacred Way into the city.",
