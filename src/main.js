@@ -665,14 +665,16 @@ async function mainApp() {
   // ~5cm above ground and handle KTX2 texture support transparently.
   try {
     const aristotleCandidates = [
-      // Canonical
+      // Canonical first
       `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
       `/models/landmarks/aristotle_tomb.glb`,
-      // Legacy uploads (fallbacks)
+      // Legacy fallbacks
       `${BASE_URL}models/landmarks/aristotle_tomb_in_macedonia_greece.glb`,
       `/models/landmarks/aristotle_tomb_in_macedonia_greece.glb`,
       `${BASE_URL}aristotle_tomb_in_macedonia_greece.glb`,
       `/aristotle_tomb_in_macedonia_greece.glb`,
+      `${BASE_URL}models/buildings/aristotle_tomb_in_macedonia_greece.glb`,
+      `/models/buildings/aristotle_tomb_in_macedonia_greece.glb`,
     ];
     const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
     if (aristotleUrl) {
@@ -710,12 +712,16 @@ async function mainApp() {
   // Poseidon Temple (Sounion)
   try {
     const poseidonCandidates = [
+      // Canonical first
       `${BASE_URL}models/landmarks/poseidon_temple.glb`,
       `/models/landmarks/poseidon_temple.glb`,
+      // Legacy fallbacks
       `${BASE_URL}models/landmarks/poseidon_temple_at_sounion_greece.glb`,
       `/models/landmarks/poseidon_temple_at_sounion_greece.glb`,
       `${BASE_URL}poseidon_temple_at_sounion_greece.glb`,
       `/poseidon_temple_at_sounion_greece.glb`,
+      `${BASE_URL}models/buildings/poseidon_temple_at_sounion_greece.glb`,
+      `/models/buildings/poseidon_temple_at_sounion_greece.glb`,
     ];
     const url = await resolveFirstAvailableAsset(poseidonCandidates);
     if (url)
@@ -731,10 +737,14 @@ async function mainApp() {
   // Akropol (Acropolis complex placeholder)
   try {
     const akropolCandidates = [
+      // Canonical first
       `${BASE_URL}models/landmarks/akropol.glb`,
       `/models/landmarks/akropol.glb`,
+      // Legacy fallbacks
       `${BASE_URL}Akropol.glb`,
       `/Akropol.glb`,
+      `${BASE_URL}models/buildings/Akropol.glb`,
+      `/models/buildings/Akropol.glb`,
     ];
     const url = await resolveFirstAvailableAsset(akropolCandidates);
     if (url)
