@@ -919,6 +919,19 @@ async function mainApp() {
     .catch((error) => {
       console.warn("[NPC Loader] Failed to spawn GLB NPCs", error);
     });
+  // Limit the number of placeholder light shadow maps so we stay under the
+  // WebGL texture unit cap when many placeholders are visible at once.
+  const PLACEHOLDER_LIGHT_SHADOW_BUDGET = 12;
+  let placeholderShadowSlotsRemaining = PLACEHOLDER_LIGHT_SHADOW_BUDGET;
+
+  const tryConsumePlaceholderShadowSlot = () => {
+    if (placeholderShadowSlotsRemaining <= 0) {
+      return false;
+    }
+    placeholderShadowSlotsRemaining -= 1;
+    return true;
+  };
+
   const spawnPlaceholderMonument = (options = {}) => {
     const {
       baseRadius = 2.6,
@@ -1097,9 +1110,12 @@ async function mainApp() {
 
     const keyLight = new THREE.SpotLight(0xfff0d8, 1.15, 42, Math.PI / 5, 0.35, 1.2);
     keyLight.position.set(6, heightCursor * 0.5 + 5, 6);
-    keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(1024, 1024);
-    keyLight.shadow.bias = -0.0005;
+    const keyLightHasShadowBudget = tryConsumePlaceholderShadowSlot();
+    keyLight.castShadow = keyLightHasShadowBudget;
+    if (keyLightHasShadowBudget) {
+      keyLight.shadow.mapSize.set(1024, 1024);
+      keyLight.shadow.bias = -0.0005;
+    }
     keyLight.userData.noCollision = true;
     monument.add(keyLight);
     const keyTarget = new THREE.Object3D();
@@ -1116,9 +1132,12 @@ async function mainApp() {
 
     const accentLight = new THREE.PointLight(0xfff7dc, 0.58, 18, 1.4);
     accentLight.position.set(0, heightCursor * 0.6 + 2.4, 0);
-    accentLight.castShadow = true;
-    accentLight.shadow.mapSize.set(512, 512);
-    accentLight.shadow.bias = -0.0006;
+    const accentLightHasShadowBudget = tryConsumePlaceholderShadowSlot();
+    accentLight.castShadow = accentLightHasShadowBudget;
+    if (accentLightHasShadowBudget) {
+      accentLight.shadow.mapSize.set(512, 512);
+      accentLight.shadow.bias = -0.0006;
+    }
     accentLight.userData.noCollision = true;
     monument.add(accentLight);
 
