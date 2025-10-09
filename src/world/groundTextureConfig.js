@@ -7,11 +7,11 @@ export const GROUND_TEXTURE_CONFIG = {
    * Optional base map that replaces the flat color tint of the material. This
    * is useful for broad strokes like grass or dirt. Leave the URL as null to
    * keep the existing vertex colors.
-   */
+  */
   base: {
-    url: null,
+    generator: "lush-grass",
     /** Repeat count for the base texture across the terrain. */
-    repeat: [48, 48],
+    repeat: [52, 52],
     /** Rotate the texture in radians if you need to align features. */
     rotation: 0,
     /**
@@ -19,6 +19,8 @@ export const GROUND_TEXTURE_CONFIG = {
      * for photos/JPGs). Use "linear" for data maps such as roughness.
      */
     colorSpace: "srgb",
+    /** Optional seed to tweak the procedural noise. */
+    seed: 2024,
   },
   /**
    * Additional detail layers can be stacked on top of the base color. Each
@@ -26,17 +28,16 @@ export const GROUND_TEXTURE_CONFIG = {
    * lush. Add or remove entries in this array to match the JPGs you provide.
    */
   details: [
-    /* Example entry:
     {
-      url: "/assets/ground/grass-detail.jpg",
+      generator: "lush-grass-detail",
       repeat: [96, 96],
-      strength: 0.45,
-      tint: [1, 1, 1],
-      minHeight: -10,
-      maxHeight: 40,
-      fade: 6,
-      mode: "multiply", // or "mix"
+      strength: 0.5,
+      tint: [1.02, 1.04, 0.95],
+      minHeight: -15,
+      maxHeight: 32,
+      fade: 8,
+      mode: "mix",
+      seed: 404,
     },
-    */
   ],
 };

@@ -153,10 +153,10 @@ export function createTerrain(scene) {
     // Blend colors based on altitude. Low areas get lush greens, mid elevations
     // expose soil, and high peaks fade into cold rock tones.
     const normalized = THREE.MathUtils.clamp((height + heightScale) / (heightScale * 2), 0, 1);
-    if (normalized < 0.35) {
-      color.setRGB(0.18, 0.28, 0.12); // deep grass
-    } else if (normalized < 0.65) {
-      color.setRGB(0.36, 0.25, 0.14); // earthy dirt
+    if (normalized < 0.38) {
+      color.setRGB(0.24, 0.42, 0.17); // lush grass
+    } else if (normalized < 0.68) {
+      color.setRGB(0.38, 0.27, 0.16); // earthy dirt
     } else {
       color.setRGB(0.6, 0.6, 0.6); // rocky summit
     }
