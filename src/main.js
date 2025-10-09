@@ -61,6 +61,7 @@ import { LandmarkManager } from "./world/LandmarkManager.js";
 import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "./features/aristotle-texture.js";
+import { applyGravelToRoads } from "./features/roads-gravel.js";
 
 const WORLD_ROOT_NAME = "WorldRoot";
 const USE_THIRD_PERSON = true;
@@ -759,6 +760,12 @@ async function mainApp() {
     seed: 42,
     buildingCount: 140,
   });
+
+  try {
+    await applyGravelToRoads({ scene, BASE_URL, repeat: [6, 6] });
+  } catch (e) {
+    console.warn("Gravel roads hook skipped:", e);
+  }
 
   // Rebuild the static environment collider once after placing roads, plazas,
   // and the hill city so the player can't walk through them.
