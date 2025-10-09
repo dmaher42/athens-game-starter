@@ -229,11 +229,13 @@ export function createTerrain(scene) {
     shader.vertexShader = shader.vertexShader.replace(
       "#include <begin_vertex>",
       `
+        // Start from the stored base position. PlaneGeometry is XY with height in Z.
         vec3 transformed = basePos;
 ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
 
-        float dx = planar.x - uCityCenter.x;
-        float dz = planar.y - uCityCenter.y;
+        // Measure distance to the city center in the ground plane (object-space XY).
+        float dx = basePos.x - uCityCenter.x;
+        float dz = basePos.y - uCityCenter.y;
         float dCity = sqrt(dx * dx + dz * dz);
 
         float cityFactor = 1.0;
@@ -244,7 +246,7 @@ ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
           cityFactor = clamp(t, 0.0, 1.0);
         }
 
-        float swayPhase = (planar.x + planar.y) * uWindFreq + uTime * 0.5;
+        float swayPhase = (basePos.x + basePos.y) * uWindFreq + uTime * 0.5;
         float sway = sin(swayPhase) * 0.3;
         transformed.z += sway * uWindStrength * cityFactor;
       `,
