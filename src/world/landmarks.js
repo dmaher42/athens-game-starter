@@ -7,6 +7,23 @@ import {
   resolveKTX2TranscoderPath,
   DEFAULT_BASIS_TRANSCODER_PATH,
 } from "../utils/ktx2.js";
+import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
+
+/**
+ * Example usage:
+ *
+ * ```js
+ * await loadLandmark(scene, "models/landmarks/aristotle_tomb.glb", {
+ *   position: ACROPOLIS_PEAK_3D,
+ *   targetHeight: 18,
+ * });
+ * ```
+ */
+
+const BASE_URL = (() => {
+  const base = import.meta?.env?.BASE_URL ?? "/";
+  return base.endsWith("/") ? base : `${base}/`;
+})();
 
 // Reuse a single loader instance so we don't repeatedly allocate it whenever we
 // load a new landmark. GLTFLoader understands the .glb format which packages a
@@ -250,13 +267,42 @@ export async function loadLandmark(scene, url, options = {}) {
   trackedLandmarks.add(entry);
 
   try {
-    const gltf = await loader.loadAsync(url);
-    let root = gltf.scene || gltf.scenes?.[0];
-    if (!root) {
-      throw new Error(`GLB at ${url} did not contain a scene`);
+    const sanitizedUrl = typeof url === "string" ? url.trim() : "";
+    if (!sanitizedUrl) {
+      throw new Error("loadLandmark requires a non-empty URL");
     }
 
+    const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(sanitizedUrl) ||
+      /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(sanitizedUrl);
+    const relativeUrl = isAbsolute
+      ? sanitizedUrl
+      : sanitizedUrl.replace(/^\/+/, "");
+    const urls = (isAbsolute
+      ? [sanitizedUrl]
+      : [
+          `${BASE_URL}${relativeUrl}`,
+          `/${relativeUrl}`,
+          sanitizedUrl,
+        ]
+    ).filter((candidate, index, array) => {
+      if (!candidate) return false;
+      return array.indexOf(candidate) === index;
+    });
+
+    const { root } = await loadGLBWithFallbacks({
+      renderer: scene?.userData?.renderer || null,
+      urls,
+      targetHeight: options?.targetHeight || null,
+    });
+
     let finalObject = root;
+
+    root.traverse?.((mesh) => {
+      if (!mesh?.isMesh) return;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.frustumCulled = false;
+    });
 
     if (root.children?.length) {
       const lodLevels = root.children
