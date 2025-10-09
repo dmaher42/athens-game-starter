@@ -189,6 +189,34 @@ export function injectGroundTextureShader(shader, state) {
     return;
   }
 
+  if (!shader.defines) {
+    shader.defines = {};
+  }
+  if (shader.defines.USE_UV === undefined) {
+    shader.defines.USE_UV = "";
+  }
+
+  if (!shader.vertexShader.includes("#include <uv_pars_vertex>")) {
+    shader.vertexShader = shader.vertexShader.replace(
+      "void main() {",
+      `#include <uv_pars_vertex>\nvoid main() {`,
+    );
+  }
+
+  if (!shader.vertexShader.includes("#include <uv_vertex>")) {
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <project_vertex>",
+      `#include <uv_vertex>\n#include <project_vertex>`,
+    );
+  }
+
+  if (!shader.fragmentShader.includes("#include <uv_pars_fragment>")) {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <common>",
+      `#include <common>\n#include <uv_pars_fragment>`,
+    );
+  }
+
   const header = [];
   const mixCode = [];
 
