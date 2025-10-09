@@ -285,12 +285,12 @@ export function createCity(scene, terrain, options = {}) {
   // --- Collect all road segment geometries for one merged mesh (perf + fewer draw calls)
   const roadGeometries = [];
 
-  // Calculate center row index for the main avenue (to avoid overlap)
-  const centerRowIndex = Math.floor(roadGrid.length / 2);
+  // Define avenueRowIndex for the main avenue aligned with the central row
+  const avenueRowIndex = Math.floor(roadGrid.length / 2);
 
   // Generate horizontal (east-west) road segments, skipping the center row
   for (let iz = 0; iz < roadGrid.length; iz++) {
-    if (iz === centerRowIndex) continue; // Skip center row, will be replaced by main avenue
+    if (iz === avenueRowIndex) continue; // Skip center row, will be replaced by main avenue
     const row = roadGrid[iz];
     for (let ix = 0; ix < row.length - 1; ix++) {
       const start = row[ix];
@@ -299,23 +299,6 @@ export function createCity(scene, terrain, options = {}) {
         continue;
       }
       createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
-    }
-  }
-
-  if (avenueRowIndex >= 0) {
-    const avenueRow = roadGrid[avenueRowIndex];
-    for (let ix = 0; ix < avenueRow.length - 1; ix++) {
-      const start = avenueRow[ix];
-      const end = avenueRow[ix + 1];
-      if (!start || !end) {
-        continue;
-      }
-      // Main avenue: slightly wider, still merged for a single draw call.
-      createVisibleRoad(start, end, city, terrain, {
-        collectGeometries: roadGeometries,
-        width: 5,
-        color: 0x2f2f2f,
-      });
     }
   }
 
@@ -333,7 +316,7 @@ export function createCity(scene, terrain, options = {}) {
 
   // --- Add a wide east-west main avenue through the city center --------------
   // Replace the center row with a single wide avenue spanning the full width
-  const centerRow = roadGrid[centerRowIndex];
+  const centerRow = roadGrid[avenueRowIndex];
   if (centerRow && centerRow.length >= 2) {
     // Get the westmost and eastmost valid points in the center row
     let westPoint = null;
