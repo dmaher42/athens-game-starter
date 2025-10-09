@@ -63,6 +63,47 @@ export function mountDevHUD({
     `<div style="opacity:.8">Press <b>P</b> to drop a pin</div>`
   ].join("");
 
+  const statusSection = document.createElement("div");
+  Object.assign(statusSection.style, {
+    marginTop: "6px",
+    paddingTop: "6px",
+    borderTop: "1px solid rgba(255,255,255,0.12)",
+    display: "none",
+  });
+  read.appendChild(statusSection);
+
+  const statusEntries = new Map();
+  const updateStatusVisibility = () => {
+    statusSection.style.display = statusEntries.size ? "block" : "none";
+  };
+  const setStatusLine = (id, text) => {
+    if (!id) return;
+    const message = typeof text === "string" ? text.trim() : "";
+    let entry = statusEntries.get(id);
+    if (!message) {
+      if (entry) {
+        statusEntries.delete(id);
+        entry.remove();
+        updateStatusVisibility();
+      }
+      return;
+    }
+    if (!entry) {
+      entry = document.createElement("div");
+      Object.assign(entry.style, {
+        opacity: "0.75",
+        fontSize: "11px",
+        letterSpacing: "0.03em",
+        textTransform: "none",
+        marginTop: statusEntries.size ? "4px" : "0",
+      });
+      statusEntries.set(id, entry);
+      statusSection.appendChild(entry);
+    }
+    entry.textContent = message;
+    updateStatusVisibility();
+  };
+
   const defaultPresetOrder = [
     { name: "dawn", label: "Dawn" },
     { name: "noon", label: "High Noon" },
@@ -245,6 +286,7 @@ export function mountDevHUD({
       running = false; cancelAnimationFrame(rafId);
       window.removeEventListener("keydown", onKey);
       wrap.remove();
-    }
+    },
+    setStatusLine,
   };
 }

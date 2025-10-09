@@ -535,6 +535,11 @@ async function mainApp() {
       acropolis: ACROPOLIS_PEAK_3D,
     }
   );
+  let audioManifestMissing = false;
+  await soundscape.loadManifest("audio/manifest.json").catch(() => {
+    audioManifestMissing = true;
+    console.info("[audio] No audio manifest found; running silently.");
+  });
   await soundscape.initFromManifest("audio/manifest.json");
   await soundscape.ensureUserGestureResume();
 
@@ -766,7 +771,7 @@ async function mainApp() {
 
   const pointLight = new THREE.PointLight(0xfff5b5, 1.5, 12, 2);
   pointLight.position.y = 3;
-  pointLight.castShadow = true;
+  pointLight.castShadow = false;
   lamp.add(pointLight);
 
   lamp.userData.interactable = true;
@@ -1385,7 +1390,10 @@ async function mainApp() {
   // Force HUD to always show
   const SHOW_HUD = true;
   console.log("[HUD] mounting…");
-  mountDevHUD({ getPosition, getDirection, onPin });
+  const devHud = mountDevHUD({ getPosition, getDirection, onPin });
+  if (audioManifestMissing) {
+    devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
+  }
 
   // Simple controls: clicking the canvas or pressing E will run the onUse
   // callback attached to whatever we are currently looking at.

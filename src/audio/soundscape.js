@@ -50,6 +50,8 @@ export class Soundscape {
     this.emitters = [];
     this.oneShotTimers = [];
     this.ready = false;
+    this.manifestLoaded = false;
+    this._manifestCache = null;
 
     // Zones
     this.zones = {
@@ -128,7 +130,7 @@ export class Soundscape {
     return src;
   }
 
-  async initFromManifest(manifestUrl = "audio/manifest.json") {
+  async _fetchManifest(manifestUrl = "audio/manifest.json") {
     const absoluteBaseUrl = resolveAbsoluteBaseUrl();
     const basePath = resolveBaseUrl();
     const baseUrl = absoluteBaseUrl;
@@ -161,21 +163,86 @@ export class Soundscape {
 
     const candidates = [
       resolveAssetPath(manifestUrl),
-      resolveAssetPath(`${basePath}audio/manifest.json`)
+      resolveAssetPath(`${basePath}audio/manifest.json`),
     ];
 
-    let mf = null;
     for (const url of candidates) {
       console.log("[audio] manifest probe:", url);
       const json = await tryFetchJson(url);
       if (json) {
-        mf = json;
-        break;
+        return { manifest: json, resolveAssetPath, candidates };
       }
     }
-    if (!mf) {
-      console.warn("[audio] manifest.json not found via candidates:", candidates);
-      mf = { ambient: {}, effects: {} };
+
+    return { manifest: null, resolveAssetPath, candidates };
+  }
+
+  async loadManifest(manifestUrl = "audio/manifest.json") {
+    const result = await this._fetchManifest(manifestUrl);
+    if (!result.manifest) {
+      this.manifestLoaded = false;
+      this._manifestCache = null;
+      throw new Error("[audio] manifest.json missing");
+    }
+    this.manifestLoaded = true;
+    this._manifestCache = result;
+    return result.manifest;
+  }
+
+  async _initFromCategorizedManifest(categories, resolveAssetPath) {
+    const ambience = Array.isArray(categories?.ambience)
+      ? categories.ambience
+      : [];
+    for (const [index, entry] of ambience.entries()) {
+      const key = entry?.id || entry?.file || `ambience-${index}`;
+      const buffer = await this.loadBuffer(key, resolveAssetPath(entry?.file));
+      if (!buffer) continue;
+      const opts = {
+        loop: entry.loop !== false,
+        volume: entry.volume ?? 0.35,
+        refDistance: entry.refDistance ?? 12,
+        maxDistance: entry.maxDistance ?? 80,
+        rolloff: entry.rolloff ?? 1,
+      };
+      const zone = entry?.id && this.zones?.[entry.id];
+      const target = zone?.pos;
+      if (target) {
+        this._makePositional(buffer, target, entry.group || "ambience", opts)?.play();
+      } else {
+        this._makeGlobal(buffer, entry.group || "ambience", opts)?.play();
+      }
+    }
+
+    const fx = Array.isArray(categories?.fx) ? categories.fx : [];
+    for (const [index, entry] of fx.entries()) {
+      const key = entry?.id || entry?.file || `fx-${index}`;
+      await this.loadBuffer(key, resolveAssetPath(entry?.file));
+    }
+  }
+
+  async initFromManifest(manifestUrl = "audio/manifest.json") {
+    let manifestData = this._manifestCache;
+    if (!manifestData) {
+      manifestData = await this._fetchManifest(manifestUrl);
+      if (manifestData.manifest) {
+        this._manifestCache = manifestData;
+        this.manifestLoaded = true;
+      } else {
+        this.manifestLoaded = false;
+      }
+    }
+
+    const mf = manifestData?.manifest ?? { ambient: {}, effects: {} };
+    const resolveAssetPath =
+      manifestData?.resolveAssetPath || ((path) => path);
+    if (!manifestData?.manifest) {
+      console.warn("[audio] manifest.json not found via candidates:", manifestData?.candidates);
+    }
+
+    if (mf?.categories) {
+      await this._initFromCategorizedManifest(mf.categories, resolveAssetPath);
+      this.ready = true;
+      return;
     }
 
     const ambient = mf.ambient ?? {};
