@@ -7,6 +7,12 @@ const _left = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0);
 
+const _roadTileKeys = new Set();
+
+function gridKey(gx, gz) {
+  return `${Math.round(gx)}|${Math.round(gz)}`;
+}
+
 function createIndices(segmentCount, vertexStride) {
   const indexCount = segmentCount * 6;
   const IndexArray = vertexStride * (segmentCount + 1) > 65535 ? Uint32Array : Uint16Array;
@@ -17,6 +23,32 @@ export function createRoad(parent, points, options = {}) {
   const controlPoints = points ?? options.points;
   if (!controlPoints || controlPoints.length < 2) {
     throw new Error("createRoad requires at least two control points");
+  }
+
+  const gridCells = Array.isArray(options.gridCells)
+    ? options.gridCells
+    : options.gridCell
+      ? [options.gridCell]
+      : options.grid
+        ? [options.grid]
+        : options.gridPosition
+          ? [options.gridPosition]
+          : null;
+
+  if (gridCells && gridCells.length > 0) {
+    let hasFreshCell = false;
+    for (const cell of gridCells) {
+      if (!cell) continue;
+      const { gx, gz } = cell;
+      if (!Number.isFinite(gx) || !Number.isFinite(gz)) continue;
+      const key = gridKey(gx, gz);
+      if (_roadTileKeys.has(key)) continue;
+      _roadTileKeys.add(key);
+      hasFreshCell = true;
+    }
+    if (!hasFreshCell) {
+      return null;
+    }
   }
 
   const width = options.width ?? 4;
@@ -91,13 +123,17 @@ export function createRoad(parent, points, options = {}) {
     metalness: 0.05,
     side: THREE.DoubleSide,
   });
+  material.polygonOffset = true;
+  material.polygonOffsetFactor = -2;
+  material.polygonOffsetUnits = -2;
 
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = options.name ?? "CityRoad";
   mesh.receiveShadow = true;
   mesh.castShadow = false;
   mesh.userData.noCollision = options.noCollision ?? true;
-  mesh.renderOrder = 1;
+  mesh.position.y += 0.015;
+  mesh.renderOrder = 2;
 
   if (parent) {
     parent.add(mesh);
