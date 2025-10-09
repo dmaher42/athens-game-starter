@@ -1324,7 +1324,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
     avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 18,
   } = opts;
-  const showFoundationPads = opts.showFoundationPads === true;
+  const showHillFoundationPads = opts.showFoundationPads === true;
 
   const rng = makeRng(seed);
   const lots = [];
@@ -1407,7 +1407,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
 
     const buildingScale = 0.9 + rng() * 0.3;
     const padRadius = Math.max(2.0, 1.8 * buildingScale);
-    if (showFoundationPads) {
+    if (showHillFoundationPads) {
       addFoundationPad(scene, p.x, baseY, p.z, padRadius);
     }
 
