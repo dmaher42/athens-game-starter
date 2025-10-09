@@ -37,13 +37,13 @@ async function loadAny(tl, base, isSRGB = false) {
 export async function makeMarblePBR(basePath) {
   const tl = new TextureLoader();
 
-  const baseColor = await tryTex(tl, `${basePath}/basecolor.jpg`, true) ||
-                    await tryTex(tl, `${basePath}/basecolor.png`, true);
+  // Use the WEBP-aware helper to try .webp → .jpg → .png
+  const baseColor = await loadAny(tl, `${basePath}/basecolor`, /*sRGB*/ true);
   if (!baseColor) return null; // nothing to do
 
-  const normal    = await tryTex(tl, `${basePath}/normal.jpg`)    || await tryTex(tl, `${basePath}/normal.png`);
-  const roughness = await tryTex(tl, `${basePath}/roughness.jpg`) || await tryTex(tl, `${basePath}/roughness.png`);
-  const ao        = await tryTex(tl, `${basePath}/ao.jpg`)        || await tryTex(tl, `${basePath}/ao.png`);
+  const normal    = await loadAny(tl, `${basePath}/normal`);
+  const roughness = await loadAny(tl, `${basePath}/roughness`);
+  const ao        = await loadAny(tl, `${basePath}/ao`);
 
   return new MeshStandardMaterial({
     map: baseColor,
@@ -51,7 +51,8 @@ export async function makeMarblePBR(basePath) {
     roughnessMap: roughness || undefined,
     aoMap: ao || undefined,
     metalness: 0.0,
-    roughness: roughness ? 1.0 : 0.3, // if no map, pick a reasonable default
+    // Align fallback roughness with tiled PBR (more realistic than 0.3)
+    roughness: roughness ? 1.0 : 0.7,
   });
 }
 
