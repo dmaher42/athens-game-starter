@@ -23,6 +23,7 @@ const DEFAULT_KEY_ORBIT = {
   minDist: 2.5,
   maxDist: 7.5,
   zoomSpeed: 4,
+  invertPitch: false,
 }; // ArrowKeyOrbit: defaults for keyboard orbit behaviour
 const TAU = Math.PI * 2;
 
@@ -281,6 +282,75 @@ export class ThirdPersonCamera {
   }
 
   /**
+   * @param {import("../state/settingsStore.js").CameraSettings} settings
+   */
+  applyCameraSettings(settings) {
+    const resolved = {
+      ...defaultCameraSettings,
+      ...(settings && typeof settings === "object" ? settings : {}),
+    };
+
+    const toNumber = (value, fallback) =>
+      Number.isFinite(value) ? value : fallback;
+
+    const prevEnabled = this.keyOrbit.enabled;
+
+    this.arrowOrbitEnabled = !!resolved.enableArrowOrbit;
+    this.keyOrbit.enabled = this.arrowOrbitEnabled;
+
+    this.keyOrbit.yawSpeed = toNumber(
+      resolved.yawSpeed,
+      defaultCameraSettings.yawSpeed
+    );
+    this.keyOrbit.pitchSpeed = toNumber(
+      resolved.pitchSpeed,
+      defaultCameraSettings.pitchSpeed
+    );
+    this.keyOrbit.zoomSpeed = toNumber(
+      resolved.zoomSpeed,
+      defaultCameraSettings.zoomSpeed
+    );
+    this.keyOrbit.minPitch = toNumber(
+      resolved.minPitch,
+      defaultCameraSettings.minPitch
+    );
+    this.keyOrbit.maxPitch = toNumber(
+      resolved.maxPitch,
+      defaultCameraSettings.maxPitch
+    );
+    this.keyOrbit.minDist = Math.max(
+      0.1,
+      toNumber(resolved.minDist, defaultCameraSettings.minDist)
+    );
+    this.keyOrbit.maxDist = Math.max(
+      this.keyOrbit.minDist,
+      toNumber(resolved.maxDist, defaultCameraSettings.maxDist)
+    );
+    this.keyOrbit.invertPitch = !!resolved.invertPitch;
+
+    this.keyboardYawSpeed = this.keyOrbit.yawSpeed;
+    this.keyboardPitchSpeed = this.keyOrbit.pitchSpeed;
+    this.keyboardZoomSpeed = this.keyOrbit.zoomSpeed;
+    this.invertKeyboardPitch = this.keyOrbit.invertPitch;
+
+    this.minDistance = this.keyOrbit.minDist;
+    this.maxDistance = this.keyOrbit.maxDist;
+    this.distance = THREE.MathUtils.clamp(
+      this.distance,
+      this.minDistance,
+      this.maxDistance
+    );
+
+    if (this.enabled) {
+      if (this.keyOrbit.enabled && !prevEnabled) {
+        this.attachKeyOrbit();
+      } else if (!this.keyOrbit.enabled && prevEnabled) {
+        this.detachKeyOrbit();
+      }
+    }
+  }
+
+  /**
    * @returns {number}
    */
   getPitch() {
@@ -534,7 +604,8 @@ export class ThirdPersonCamera {
     const state = this.keyOrbitState;
     const { keys } = state;
     const yawInput = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-    const pitchInput = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+    const invert = this.keyOrbit.invertPitch ? -1 : 1;
+    const pitchInput = ((keys.up ? 1 : 0) - (keys.down ? 1 : 0)) * invert;
     const zoomInput = (keys.pageDown ? 1 : 0) - (keys.pageUp ? 1 : 0);
 
     if (yawInput !== 0) {
