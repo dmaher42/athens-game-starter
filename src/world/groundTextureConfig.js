@@ -18,7 +18,8 @@ export const GROUND_TEXTURE_CONFIG = {
     highlightStrength: 0.65,
     contrast: 1.02,
     /** Repeat count for the base texture across the terrain. */
-    repeat: [52, 52],
+    // de-tiling: lower repeats + anisotropy + slight rotation
+    repeat: [18, 18],
     /** Rotate the texture in radians if you need to align features. */
     rotation: 0,
     /**
@@ -37,7 +38,9 @@ export const GROUND_TEXTURE_CONFIG = {
   details: [
     { 
       generator: "lush-grass-detail",
-      repeat: [96, 96],
+      repeat: [36, 36],
+      rotation: 0.23,
+      anisotropy: 8,
       strength: 0.5,
       tint: [1.1, 1.12, 1.02],
       minHeight: -15,
@@ -49,7 +52,9 @@ export const GROUND_TEXTURE_CONFIG = {
     // extra detail layers for lowlands/midslopes
     {
       generator: "fresh-grass-lowlands",
-      repeat: [64, 64],
+      repeat: [48, 48],
+      rotation: 0.47,
+      anisotropy: 8,
       strength: 0.45,
       tint: [1.14, 1.16, 1.06],
       minHeight: -20,
@@ -60,7 +65,9 @@ export const GROUND_TEXTURE_CONFIG = {
     },
     {
       generator: "dry-grass-detail",
-      repeat: [88, 88],
+      repeat: [32, 32],
+      rotation: 0.11,
+      anisotropy: 8,
       strength: 0.32,
       tint: [1.08, 1.02, 0.96],
       minHeight: 8,

@@ -202,7 +202,8 @@ export function createTerrain(scene) {
 
   const swayUniforms = {
     uTime: { value: 0 },
-    uWindStrength: { value: 0.75 },
+    // softer ground sway
+    uWindStrength: { value: 0.18 },
     uWindFreq: { value: 0.15 },
     uCityCenter: {
       value: new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z),
