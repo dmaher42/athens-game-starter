@@ -102,6 +102,15 @@ monuments that stand in for the Acropolis and the Temple of Poseidon. Supplying
 the matching GLB files swaps those placeholders for the full landmarks while
 keeping their positions atop the leveled ground.
 
+## Draco meshes
+
+Many third-party GLB files ship with [Draco mesh compression](https://google.github.io/draco/). The runtime now boots a
+`DRACOLoader` alongside the existing Meshopt/KTX2 support so those assets decode automatically instead of falling back to the
+capsule placeholder. By default the decoder binaries stream from Google's hosted CDN. To self-host them, download the contents of
+the Draco `decoders/` folder and either place them in `public/draco/`, set the environment variable
+`VITE_DRACO_DECODER_PATH=/draco/`, or expose a `window.__DRACO_DECODER_PATH__` global before initialising the app. Ensure the path
+ends with a trailing slash so the loader can locate `draco_decoder.js` and `draco_decoder.wasm`.
+
 ## KTX2 textures
 
 Models loaded through `GLTFLoader` expect textures in the KTX2 (Basis Universal)
