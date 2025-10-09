@@ -98,7 +98,7 @@ export function createGrassTexture(options = {}) {
 
   const width = size;
   const height = size;
-  const data = new Uint8Array(width * height * 3);
+  const data = new Uint8Array(width * height * 4);
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -140,14 +140,21 @@ export function createGrassTexture(options = {}) {
       color = applySaturation(color, saturation);
       color = applyContrast(color, contrast);
 
-      const index = (y * width + x) * 3;
+      const index = (y * width + x) * 4;
       data[index] = color[0];
       data[index + 1] = color[1];
       data[index + 2] = color[2];
+      data[index + 3] = 255;
     }
   }
 
-  const texture = new THREE.DataTexture(data, width, height, THREE.RGBFormat);
+  const texture = new THREE.DataTexture(
+    data,
+    width,
+    height,
+    THREE.RGBAFormat,
+    THREE.UnsignedByteType,
+  );
   texture.needsUpdate = true;
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   texture.flipY = false;
