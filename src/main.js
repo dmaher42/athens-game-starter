@@ -39,7 +39,7 @@ import { EnvironmentCollider } from "./env/EnvironmentCollider.js";
 import { BuildingManager } from "./buildings/BuildingManager.js";
 import { PlayerController } from "./controls/PlayerController.js";
 import { Character } from "./characters/Character.js";
-import { spawnCitizenCrowd } from "./world/npcs.js";
+import { spawnCitizenCrowd, spawnGLBNPCs } from "./world/npcs.js";
 import { mountExposureSlider } from "./ui/exposureSlider.js";
 import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
 import { mountDevHUD } from "./ui/devHud.js";
@@ -898,6 +898,16 @@ async function mainApp() {
     });
     npcUpdaters.push(...crowd.updaters);
   }
+  spawnGLBNPCs(worldRoot, mainRoad, { terrain })
+    .then((glbNpcs) => {
+      if (!glbNpcs) return;
+      if (Array.isArray(glbNpcs.updaters)) {
+        npcUpdaters.push(...glbNpcs.updaters);
+      }
+    })
+    .catch((error) => {
+      console.warn("[NPC Loader] Failed to spawn GLB NPCs", error);
+    });
   const spawnPlaceholderMonument = (options = {}) => {
     const {
       baseRadius = 2.6,
