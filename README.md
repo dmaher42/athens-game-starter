@@ -89,13 +89,27 @@ premium asset.
 
 ### Sample landmark buildings
 
-Two sample landmarks – `Akropol.glb` and
-`poseidon_temple_at_sounion_greece.glb` – can be downloaded and placed in
-`public/models/buildings/` to replace the Acropolis and seaside placeholders.
-The runtime falls back to procedural stand-ins when the binaries are absent, so
-you can continue iterating without committing large files. Swap the models (or
-add your own landmarks) by dropping GLBs in `public/models/buildings/` and
-updating the placement list in `src/main.js`.
+Two sample landmarks – `akropol.glb` and `poseidon_temple.glb` – can be
+downloaded and placed in **`public/models/landmarks/`** to replace the Acropolis
+and seaside placeholders. Keep the canonical filenames shown above so the
+runtime can locate them automatically. The loader still supports legacy names
+such as `Akropol.glb` and `poseidon_temple_at_sounion_greece.glb`, but new
+uploads should follow the canonical naming scheme.
+
+Place landmark GLBs under **`public/models/landmarks/`** using the canonical
+names:
+
+```
+public/models/landmarks/
+  aristotle_tomb.glb
+  poseidon_temple.glb
+  akropol.glb
+```
+
+Legacy filenames are still supported as fallbacks (e.g.,
+`poseidon_temple_at_sounion_greece.glb`, `Akropol.glb`) but **new uploads should
+use the canonical names**. Update the placement list in `src/main.js` after
+adding assets.
 
 By default the flattened city plateau hosts two procedurally generated
 monuments that stand in for the Acropolis and the Temple of Poseidon. Supplying
