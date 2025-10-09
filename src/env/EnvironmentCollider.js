@@ -77,15 +77,21 @@ export class EnvironmentCollider {
     };
 
     const pushGeometry = (geometry, matrix) => {
-      const cloned = geometry.clone();
-      // Keep position only; drop everything else so attributes are consistent
-      Object.keys(cloned.attributes).forEach((attrName) => {
-        if (attrName !== 'position') cloned.deleteAttribute(attrName);
-      });
-      // Normalize index state: mergeGeometries requires either all or none
-      if (cloned.index) cloned.toNonIndexed();
-      cloned.applyMatrix4(matrix);
-      geometries.push(cloned);
+      if (!geometry || !geometry.attributes || !geometry.attributes.position)
+        return;
+
+      const src = geometry.index ? geometry.toNonIndexed() : geometry;
+      const posAttr = src.getAttribute('position');
+      if (!posAttr) return;
+
+      const clean = new THREE.BufferGeometry();
+      clean.setAttribute('position', posAttr.clone());
+      clean.setIndex(null);
+      clean.applyMatrix4(matrix);
+      clean.computeBoundingBox();
+      clean.computeBoundingSphere();
+
+      geometries.push(clean);
     };
 
     source.traverse((child) => {
