@@ -643,7 +643,7 @@ async function mainApp() {
   }
 
   if (grassEnabled) {
-    grassRoot = mountGrass(worldRoot);
+    grassRoot = mountGrass(scene);
     if (grassRoot) {
       setGrassNightFactor(lights.nightFactor);
     }
