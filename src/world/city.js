@@ -309,6 +309,30 @@ export function createCity(scene, terrain, options = {}) {
     }
   }
 
+  // --- Add a wide east-west main avenue through the city center --------------
+  // Find the center row (approximately middle of the grid in Z)
+  const centerRowIndex = Math.floor(roadGrid.length / 2);
+  const centerRow = roadGrid[centerRowIndex];
+  if (centerRow && centerRow.length >= 2) {
+    // Get the westmost and eastmost valid points in the center row
+    let westPoint = null;
+    let eastPoint = null;
+    for (let ix = 0; ix < centerRow.length; ix++) {
+      if (centerRow[ix]) {
+        if (!westPoint) westPoint = centerRow[ix];
+        eastPoint = centerRow[ix];
+      }
+    }
+    // Create a wide avenue spanning the full width
+    if (westPoint && eastPoint) {
+      createVisibleRoad(westPoint, eastPoint, city, terrain, {
+        collectGeometries: roadGeometries,
+        width: 5.0,        // Wide main avenue
+        color: 0x2f2f2f,   // Dark gray (same as regular roads)
+      });
+    }
+  }
+
   // Merge all ribbon pieces into a single, draped road mesh
   if (roadGeometries.length > 0) {
     const merged = mergeGeometries(roadGeometries, false) || new THREE.BufferGeometry();
