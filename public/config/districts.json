@@ -1,11 +1,19 @@
 {
   "seed": 1337,
+  "densitySpacingMeters": {
+    "low": 22,
+    "medium": 16,
+    "high": 11
+  },
+  "roadSetbackMeters": 4,
+  "slopeMaxDegrees": 14,
   "districts": [
     {
       "id": "acropolis",
       "label": "Acropolis",
       "heightRange": [70, 999],
       "buildingDensity": "low",
+      "minSeparation": 24,
       "allowedTypes": ["temple", "monument", "plaza"],
       "road": { "width": 4.2, "color": 3355443 }
     },
@@ -13,7 +21,8 @@
       "id": "agora",
       "label": "Agora",
       "heightRange": [35, 65],
-      "buildingDensity": "high",
+      "buildingDensity": "medium",
+      "minSeparation": 14,
       "allowedTypes": ["shop", "stoa", "fountain", "house"],
       "road": { "width": 3.8, "color": 3092271 }
     },
@@ -22,6 +31,7 @@
       "label": "Residential Slopes",
       "heightRange": [10, 80],
       "buildingDensity": "medium",
+      "minSeparation": 16,
       "allowedTypes": ["house", "workshop", "garden"],
       "road": { "width": 3.2, "color": 3355443 }
     },
@@ -29,15 +39,16 @@
       "id": "harbor",
       "label": "Harbor",
       "heightRange": [-999, 12],
-      "buildingDensity": "medium",
+      "buildingDensity": "low",
+      "minSeparation": 18,
       "allowedTypes": ["warehouse", "pier", "market"],
       "road": { "width": 3.6, "color": 3815994 }
     }
   ],
   "densityToLotSpacing": {
-    "high": 7,
-    "medium": 11,
-    "low": 16
+    "high": 11,
+    "medium": 16,
+    "low": 22
   },
   "maxSlopeDeltaPerLot": 1.8
 }
