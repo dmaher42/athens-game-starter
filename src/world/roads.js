@@ -13,6 +13,32 @@ function gridKey(gx, gz) {
   return `${Math.round(gx)}|${Math.round(gz)}`;
 }
 
+function resolveGridCoordinates(cell) {
+  if (!cell) return null;
+  if (Array.isArray(cell) && cell.length >= 2) {
+    const [gx, gz] = cell;
+    if (Number.isFinite(gx) && Number.isFinite(gz)) {
+      return { gx, gz };
+    }
+    return null;
+  }
+
+  const maybeGX = Number.isFinite(cell.gx) ? cell.gx : Number.isFinite(cell.x) ? cell.x : null;
+  const maybeGZ = Number.isFinite(cell.gz)
+    ? cell.gz
+    : Number.isFinite(cell.z)
+      ? cell.z
+      : Number.isFinite(cell.y)
+        ? cell.y
+        : null;
+
+  if (maybeGX == null || maybeGZ == null) {
+    return null;
+  }
+
+  return { gx: maybeGX, gz: maybeGZ };
+}
+
 function createIndices(segmentCount, vertexStride) {
   const indexCount = segmentCount * 6;
   const IndexArray = vertexStride * (segmentCount + 1) > 65535 ? Uint32Array : Uint16Array;
@@ -38,10 +64,9 @@ export function createRoad(parent, points, options = {}) {
   if (gridCells && gridCells.length > 0) {
     let hasFreshCell = false;
     for (const cell of gridCells) {
-      if (!cell) continue;
-      const { gx, gz } = cell;
-      if (!Number.isFinite(gx) || !Number.isFinite(gz)) continue;
-      const key = gridKey(gx, gz);
+      const coords = resolveGridCoordinates(cell);
+      if (!coords) continue;
+      const key = gridKey(coords.gx, coords.gz);
       if (_roadTileKeys.has(key)) continue;
       _roadTileKeys.add(key);
       hasFreshCell = true;
