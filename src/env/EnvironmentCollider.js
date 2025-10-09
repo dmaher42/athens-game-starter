@@ -78,14 +78,22 @@ export class EnvironmentCollider {
 
     const pushGeometry = (geometry, matrix) => {
       const cloned = geometry.clone();
-      // Keep position only; drop everything else so attributes are consistent
-      Object.keys(cloned.attributes).forEach((attrName) => {
-        if (attrName !== 'position') cloned.deleteAttribute(attrName);
-      });
+      let normalized = cloned;
+
       // Normalize index state: mergeGeometries requires either all or none
-      if (cloned.index) cloned.toNonIndexed();
-      cloned.applyMatrix4(matrix);
-      geometries.push(cloned);
+      if (normalized.index) {
+        const nonIndexed = normalized.toNonIndexed();
+        normalized.dispose();
+        normalized = nonIndexed;
+      }
+
+      // Keep position only; drop everything else so attributes are consistent
+      Object.keys(normalized.attributes).forEach((attrName) => {
+        if (attrName !== 'position') normalized.deleteAttribute(attrName);
+      });
+
+      normalized.applyMatrix4(matrix);
+      geometries.push(normalized);
     };
 
     source.traverse((child) => {
