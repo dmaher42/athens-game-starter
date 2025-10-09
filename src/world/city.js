@@ -218,10 +218,10 @@ export function createCity(scene, terrain, options = {}) {
   // --- Updated defaults for a more "city-like" layout -----------------------
   // Goal: straighter blocks, clearer grid, fewer awkward placements. Callers
   // can still override any of these via `options`.
-  const spacingX = options.spacingX ?? 14; // was 11 → slightly wider blocks
-  const spacingZ = options.spacingZ ?? 14; // was 10
-  const jitter = options.jitter ?? 1.2; // was 2.2 → less lateral scatter
-  const maxSlope = options.maxSlope ?? 0.2; // was 1.4 → avoid steep lots
+  const spacingX = options.spacingX ?? 18; // was 14
+  const spacingZ = options.spacingZ ?? 18; // was 14
+  const jitter = options.jitter ?? 1.0; // was 1.2
+  const maxSlope = options.maxSlope ?? 0.18; // was 0.2
   const roadsVisible = options.roadsVisible == null ? true : Boolean(options.roadsVisible);
 
   const countX = Math.max(3, Math.floor(gridSize.x / spacingX));
@@ -288,15 +288,12 @@ export function createCity(scene, terrain, options = {}) {
         continue;
       }
 
-      const distanceFromOrigin = Math.hypot(centerX - origin.x, centerZ - origin.z);
       let skipProbability;
       if (inQuayBand) {
         skipProbability = 0.02;
       } else {
-        skipProbability =
-          distanceFromOrigin <= 45
-            ? 0.08
-            : THREE.MathUtils.lerp(0.18, 0.22, rng());
+        const far = Math.hypot(centerX - origin.x, centerZ - origin.z);
+        skipProbability = THREE.MathUtils.clamp(0.1 + far * 0.0025, 0.1, 0.32);
       }
 
       const isPocketPlaza = intersectionCounter % 5 === 0;
@@ -358,6 +355,7 @@ export function createCity(scene, terrain, options = {}) {
   const roadGeometries = [];
   const mainAvenueSegments = [];
   const mainAvenueLightPositions = [];
+  const secondaryBoulevardLightPositions = [];
   const streetlightPoleGeometry = new THREE.CylinderGeometry(0.06, 0.08, 1, 8);
   streetlightPoleGeometry.translate(0, 0.5, 0);
   const streetlightLampGeometry = new THREE.SphereGeometry(0.18, 12, 12);
@@ -374,6 +372,14 @@ export function createCity(scene, terrain, options = {}) {
     metalness: 0.05,
   });
   const streetlightPoleHeight = 3.4;
+
+  // Secondary boulevards
+  const secondaryRowStep = 3;
+  const secondaryColStep = 4;
+  const secondaryWidth = 3.4;
+  const secondaryColor = 0x333333;
+  const secondaryLightSpacing = 10;
+  const secondaryLightOffset = secondaryLightSpacing * 0.5;
 
   const ensureStreetlightRegistry = () => {
     const registry = city.userData.streetlights;
@@ -396,9 +402,65 @@ export function createCity(scene, terrain, options = {}) {
     return created;
   };
 
+  const instantiateStreetlights = (positions, options = {}) => {
+    if (!positions || positions.length === 0) {
+      return;
+    }
+
+    const lightCount = positions.length;
+    const poles = new THREE.InstancedMesh(
+      streetlightPoleGeometry,
+      streetlightPoleMaterial,
+      lightCount
+    );
+    const lamps = new THREE.InstancedMesh(
+      streetlightLampGeometry,
+      streetlightLampMaterial,
+      lightCount
+    );
+
+    if (options.polesName) poles.name = options.polesName;
+    if (options.lampsName) lamps.name = options.lampsName;
+
+    poles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    lamps.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    poles.castShadow = false;
+    poles.receiveShadow = true;
+    lamps.castShadow = false;
+    lamps.receiveShadow = false;
+    poles.userData.noCollision = true;
+    lamps.userData.noCollision = true;
+
+    for (let i = 0; i < lightCount; i++) {
+      const pos = positions[i];
+      _position.set(pos.x, pos.y, pos.z);
+      _quaternion.identity();
+      _scale.set(1, streetlightPoleHeight, 1);
+      _matrix.compose(_position, _quaternion, _scale);
+      poles.setMatrixAt(i, _matrix);
+
+      _position.set(pos.x, pos.y + streetlightPoleHeight + 0.18, pos.z);
+      _scale.set(1, 1, 1);
+      _matrix.compose(_position, _quaternion, _scale);
+      lamps.setMatrixAt(i, _matrix);
+    }
+
+    poles.instanceMatrix.needsUpdate = true;
+    lamps.instanceMatrix.needsUpdate = true;
+    poles.visible = roadsVisible;
+    lamps.visible = roadsVisible;
+
+    city.add(poles);
+    city.add(lamps);
+
+    const streetlightsRegistry = ensureStreetlightRegistry();
+    streetlightsRegistry.meshes.push(lamps);
+  };
+
   // Define avenueRowIndex for the main avenue aligned with the central row
   const avenueRowIndex = Math.floor(roadGrid.length / 2);
 
+  // Wider grid roads
   for (let iz = 0; iz < roadGrid.length; iz++) {
     const row = roadGrid[iz];
     if (!row) continue;
@@ -422,25 +484,97 @@ export function createCity(scene, terrain, options = {}) {
       continue;
     }
 
+    const isSecondaryRow = secondaryRowStep > 0 && iz % secondaryRowStep === 0;
+    let rowDistanceAccum = 0;
+    let nextRowDistance = secondaryLightOffset;
+
     for (let ix = 0; ix < row.length - 1; ix++) {
       const start = row[ix];
       const end = row[ix + 1];
       if (!start || !end) {
+        if (isSecondaryRow) {
+          rowDistanceAccum = 0;
+          nextRowDistance = secondaryLightOffset;
+        }
         continue;
       }
-      createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
+      const roadOptions = {
+        collectGeometries: roadGeometries,
+        width: isSecondaryRow ? secondaryWidth : 3.2,
+      };
+      if (isSecondaryRow) {
+        roadOptions.color = secondaryColor;
+      }
+      createVisibleRoad(start, end, city, terrain, roadOptions);
+
+      if (isSecondaryRow) {
+        const segmentLength = start.distanceTo(end);
+        if (segmentLength > 0) {
+          while (rowDistanceAccum + segmentLength >= nextRowDistance) {
+            const remaining = nextRowDistance - rowDistanceAccum;
+            const t = THREE.MathUtils.clamp(remaining / segmentLength, 0, 1);
+            const position = start.clone().lerp(end, t);
+            const height = sampleHeight(terrain, position.x, position.z, SEA_LEVEL_Y);
+            if (Number.isFinite(height)) {
+              secondaryBoulevardLightPositions.push({
+                x: position.x,
+                y: Math.max(height, SEA_LEVEL_Y) + SURFACE_OFFSET,
+                z: position.z,
+              });
+            }
+            nextRowDistance += secondaryLightSpacing;
+          }
+          rowDistanceAccum += segmentLength;
+        }
+      }
     }
   }
 
   const columnCount = roadGrid[0]?.length ?? 0;
   for (let ix = 0; ix < columnCount; ix++) {
+    const isSecondaryColumn = secondaryColStep > 0 && ix % secondaryColStep === 0;
+    let columnDistanceAccum = 0;
+    let nextColumnDistance = secondaryLightOffset;
+
     for (let iz = 0; iz < roadGrid.length - 1; iz++) {
       const start = roadGrid[iz][ix];
       const end = roadGrid[iz + 1][ix];
       if (!start || !end) {
+        if (isSecondaryColumn) {
+          columnDistanceAccum = 0;
+          nextColumnDistance = secondaryLightOffset;
+        }
         continue;
       }
-      createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
+      const roadOptions = {
+        collectGeometries: roadGeometries,
+        width: isSecondaryColumn ? secondaryWidth : 3.2,
+      };
+      if (isSecondaryColumn) {
+        roadOptions.color = secondaryColor;
+      }
+      createVisibleRoad(start, end, city, terrain, roadOptions);
+
+      if (isSecondaryColumn) {
+        const segmentLength = start.distanceTo(end);
+        if (segmentLength > 0) {
+          while (columnDistanceAccum + segmentLength >= nextColumnDistance) {
+            const remaining = nextColumnDistance - columnDistanceAccum;
+            const t = THREE.MathUtils.clamp(remaining / segmentLength, 0, 1);
+            const position = start.clone().lerp(end, t);
+            const height = sampleHeight(terrain, position.x, position.z, SEA_LEVEL_Y);
+            if (Number.isFinite(height)) {
+              secondaryBoulevardLightPositions.push({
+                x: position.x,
+                y: Math.max(height, SEA_LEVEL_Y) + SURFACE_OFFSET,
+                z: position.z,
+              });
+            }
+            nextColumnDistance += secondaryLightSpacing;
+          }
+          columnDistanceAccum += segmentLength;
+        }
+      }
     }
   }
 
@@ -553,51 +687,17 @@ export function createCity(scene, terrain, options = {}) {
 
   // Main-Avenue Streetlights
   if (mainAvenueLightPositions.length > 0) {
-    const lightCount = mainAvenueLightPositions.length;
-    const poles = new THREE.InstancedMesh(
-      streetlightPoleGeometry,
-      streetlightPoleMaterial,
-      lightCount
-    );
-    const lamps = new THREE.InstancedMesh(
-      streetlightLampGeometry,
-      streetlightLampMaterial,
-      lightCount
-    );
+    instantiateStreetlights(mainAvenueLightPositions, {
+      polesName: "MainAvenueStreetlightPoles",
+      lampsName: "MainAvenueStreetlightLamps",
+    });
+  }
 
-    poles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    lamps.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    poles.castShadow = false;
-    poles.receiveShadow = true;
-    lamps.castShadow = false;
-    lamps.receiveShadow = false;
-    poles.userData.noCollision = true;
-    lamps.userData.noCollision = true;
-
-    for (let i = 0; i < lightCount; i++) {
-      const pos = mainAvenueLightPositions[i];
-      _position.set(pos.x, pos.y, pos.z);
-      _quaternion.identity();
-      _scale.set(1, streetlightPoleHeight, 1);
-      _matrix.compose(_position, _quaternion, _scale);
-      poles.setMatrixAt(i, _matrix);
-
-      _position.set(pos.x, pos.y + streetlightPoleHeight + 0.18, pos.z);
-      _scale.set(1, 1, 1);
-      _matrix.compose(_position, _quaternion, _scale);
-      lamps.setMatrixAt(i, _matrix);
-    }
-
-    poles.instanceMatrix.needsUpdate = true;
-    lamps.instanceMatrix.needsUpdate = true;
-    poles.visible = roadsVisible;
-    lamps.visible = roadsVisible;
-
-    city.add(poles);
-    city.add(lamps);
-
-    const streetlightsRegistry = ensureStreetlightRegistry();
-    streetlightsRegistry.meshes.push(lamps);
+  if (secondaryBoulevardLightPositions.length > 0) {
+    instantiateStreetlights(secondaryBoulevardLightPositions, {
+      polesName: "SecondaryBoulevardPoles",
+      lampsName: "SecondaryBoulevardLamps",
+    });
   }
 
   // Pier Plaza
