@@ -919,6 +919,19 @@ async function mainApp() {
     .catch((error) => {
       console.warn("[NPC Loader] Failed to spawn GLB NPCs", error);
     });
+  // Limit the number of placeholder light shadow maps so we stay under the
+  // WebGL texture unit cap when many placeholders are visible at once.
+  const PLACEHOLDER_LIGHT_SHADOW_BUDGET = 12;
+  let placeholderShadowSlotsRemaining = PLACEHOLDER_LIGHT_SHADOW_BUDGET;
+
+  const tryConsumePlaceholderShadowSlot = () => {
+    if (placeholderShadowSlotsRemaining <= 0) {
+      return false;
+    }
+    placeholderShadowSlotsRemaining -= 1;
+    return true;
+  };
+
   const spawnPlaceholderMonument = (options = {}) => {
     const {
       baseRadius = 2.6,
