@@ -88,6 +88,20 @@ window.addEventListener("unhandledrejection", (ev) => {
 
 const BASE_URL = resolveBaseUrl();
 
+// resolveFirstAvailableAsset
+// --- util: resolveFirstAvailableAsset (fetch GET, skip HTML) ---
+async function resolveFirstAvailableAsset(candidates = []) {
+  const isHtml = (res) => (res.headers.get("content-type") || "").includes("text/html");
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { method: "GET" });
+      if (!res.ok || isHtml(res)) continue;
+      return url;
+    } catch {}
+  }
+  throw new Error("No candidate asset reachable: " + candidates.join(", "));
+}
+
 function configureRendererShadows(renderer) {
   if (!renderer) return;
 
