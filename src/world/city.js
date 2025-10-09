@@ -10,6 +10,8 @@ import {
   CITY_AREA_RADIUS,
   HARBOR_EXCLUDE_RADIUS,
   HARBOR_CENTER_3D,
+  HARBOR_WATER_BOUNDS,
+  HARBOR_WATER_EAST_LIMIT,
   AGORA_CENTER_3D,
 } from "./locations.js";
 import { createRoad } from "./roads.js";
@@ -194,6 +196,23 @@ export function createCity(scene, terrain, options = {}) {
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
+  // Pier no-build mask
+  const pierRect = {
+    west: HARBOR_WATER_BOUNDS.west,
+    east: HARBOR_WATER_EAST_LIMIT + 3,
+    north: HARBOR_WATER_BOUNDS.north,
+    south: HARBOR_WATER_BOUNDS.south,
+  };
+  function inRect(x, z, r) {
+    return x >= r.west && x <= r.east && z >= r.north && z <= r.south;
+  }
+  // Waterfront frontage band
+  const quayBand = {
+    minX: HARBOR_WATER_EAST_LIMIT + 3,
+    maxX: HARBOR_WATER_EAST_LIMIT + 24,
+  };
+  // Pier Plaza
+  const pierPlazaTarget = new THREE.Vector3(HARBOR_CENTER_3D.x + 8, 0, HARBOR_CENTER_3D.z);
   // --- Updated defaults for a more "city-like" layout -----------------------
   // Goal: straighter blocks, clearer grid, fewer awkward placements. Callers
   // can still override any of these via `options`.
@@ -219,13 +238,39 @@ export function createCity(scene, terrain, options = {}) {
       const centerX = origin.x + (ix * spacingX - halfX) + THREE.MathUtils.lerp(-jitter, jitter, rng());
       const centerZ = origin.z + (iz * spacingZ - halfZ) + THREE.MathUtils.lerp(-jitter, jitter, rng());
 
-      const width = THREE.MathUtils.lerp(4.4, 7.2, rng());
-      const depth = THREE.MathUtils.lerp(4.2, 7.8, rng());
+      if (inRect(centerX, centerZ, pierRect)) {
+        continue;
+      }
+
+      const centerHeight = sampleHeight(terrain, centerX, centerZ, null);
+      if (!Number.isFinite(centerHeight) || centerHeight < SEA_LEVEL_Y) {
+        continue;
+      }
+
+      const isPierPlazaCell =
+        Math.hypot(centerX - pierPlazaTarget.x, centerZ - pierPlazaTarget.z) <=
+        Math.min(spacingX, spacingZ) * 0.6;
+      if (isPierPlazaCell) {
+        const plazaHeight = Math.max(centerHeight + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET);
+        pocketPlazas.push({ x: centerX, y: plazaHeight, z: centerZ });
+        continue;
+      }
+
+      const inQuayBand = centerX > quayBand.minX && centerX < quayBand.maxX;
+
+      const width = inQuayBand
+        ? THREE.MathUtils.lerp(6.8, 8.2, rng())
+        : THREE.MathUtils.lerp(4.4, 7.2, rng());
+      const depth = inQuayBand
+        ? THREE.MathUtils.lerp(5.2, 6.8, rng())
+        : THREE.MathUtils.lerp(4.2, 7.8, rng());
       const wallHeight = THREE.MathUtils.lerp(2.6, 3.8, rng());
       const roofHeight = wallHeight * THREE.MathUtils.lerp(0.38, 0.55, rng());
       const rotationSteps = Math.max(1, options.rotationSteps ?? 2); // was 4 → align facades
-      const rotation =
-        Math.floor(rng() * rotationSteps) * ((Math.PI * 2) / rotationSteps);
+      let rotation = Math.floor(rng() * rotationSteps) * ((Math.PI * 2) / rotationSteps);
+      if (inQuayBand) {
+        rotation = 0;
+      }
 
       const lot = evaluateLot({
         terrain,
@@ -242,10 +287,15 @@ export function createCity(scene, terrain, options = {}) {
       }
 
       const distanceFromOrigin = Math.hypot(centerX - origin.x, centerZ - origin.z);
-      const skipProbability =
-        distanceFromOrigin <= 45
-          ? 0.08
-          : THREE.MathUtils.lerp(0.18, 0.22, rng());
+      let skipProbability;
+      if (inQuayBand) {
+        skipProbability = 0.02;
+      } else {
+        skipProbability =
+          distanceFromOrigin <= 45
+            ? 0.08
+            : THREE.MathUtils.lerp(0.18, 0.22, rng());
+      }
 
       const isPocketPlaza = intersectionCounter % 5 === 0;
       if (isPocketPlaza) {
@@ -353,6 +403,33 @@ export function createCity(scene, terrain, options = {}) {
       }
       createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
     }
+  }
+
+  // Quay Promenade
+  const quayX = HARBOR_WATER_EAST_LIMIT + 1.5;
+  const quayStartZ = roadStartZ;
+  const quayEndZ = roadStartZ + spacingZ * countZ;
+  const quayStartHeight = sampleHeight(terrain, quayX, quayStartZ, SEA_LEVEL_Y);
+  const quayEndHeight = sampleHeight(terrain, quayX, quayEndZ, SEA_LEVEL_Y);
+  const quayStart = new THREE.Vector3(
+    quayX,
+    Math.max(quayStartHeight, SEA_LEVEL_Y) + SURFACE_OFFSET,
+    quayStartZ
+  );
+  const quayEnd = new THREE.Vector3(
+    quayX,
+    Math.max(quayEndHeight, SEA_LEVEL_Y) + SURFACE_OFFSET,
+    quayEndZ
+  );
+  const prePromenadeCount = roadGeometries.length;
+  createVisibleRoad(quayStart, quayEnd, city, terrain, {
+    collectGeometries: roadGeometries,
+    width: 3.6,
+    color: 0x3a3a3a,
+  });
+  const promenadeGeometry = roadGeometries[roadGeometries.length - 1];
+  if (roadGeometries.length > prePromenadeCount && promenadeGeometry) {
+    promenadeGeometry.name = "QuayPromenade";
   }
 
   // --- Add a wide east-west main avenue through the city center --------------
