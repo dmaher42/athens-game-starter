@@ -1097,7 +1097,7 @@ async function mainApp() {
 
     const keyLight = new THREE.SpotLight(0xfff0d8, 1.15, 42, Math.PI / 5, 0.35, 1.2);
     keyLight.position.set(6, heightCursor * 0.5 + 5, 6);
-    keyLight.castShadow = true;
+    keyLight.castShadow = false;
     keyLight.shadow.mapSize.set(1024, 1024);
     keyLight.shadow.bias = -0.0005;
     keyLight.userData.noCollision = true;
@@ -1116,7 +1116,7 @@ async function mainApp() {
 
     const accentLight = new THREE.PointLight(0xfff7dc, 0.58, 18, 1.4);
     accentLight.position.set(0, heightCursor * 0.6 + 2.4, 0);
-    accentLight.castShadow = true;
+    accentLight.castShadow = false;
     accentLight.shadow.mapSize.set(512, 512);
     accentLight.shadow.bias = -0.0006;
     accentLight.userData.noCollision = true;
