@@ -49,6 +49,7 @@ import { spawnCitizenCrowd, spawnGLBNPCs } from "./world/npcs.js";
 import { mountExposureSlider } from "./ui/exposureSlider.js";
 import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
 import { mountDevHUD } from "./ui/devHud.js";
+import { mount as mountHUDCameraSettings } from "./ui/HUDCameraSettings.js";
 import { createPin } from "./world/pins.js";
 import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
@@ -1573,6 +1574,7 @@ async function mainApp() {
   const SHOW_HUD = true;
   console.log("[HUD] mounting…");
   const devHud = mountDevHUD({ getPosition, getDirection, onPin });
+  mountHUDCameraSettings(devHud?.rootElement ?? null);
   if (audioManifestMissing) {
     devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
   }
