@@ -13,6 +13,7 @@ import {
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_EAST_LIMIT,
   AGORA_CENTER_3D,
+  ACROPOLIS_PEAK_3D,
 } from "./locations.js";
 import { createRoad } from "./roads.js";
 import { addFoundationPad } from "./foundations.js";
@@ -97,6 +98,30 @@ function rejectNearPoints(pads, points, setback) {
     }
     return true;
   });
+}
+
+function dist2XZ(pad, center) {
+  if (!pad || !center) return Infinity;
+  const dx = (pad.x ?? 0) - (center.x ?? 0);
+  const dz = (pad.z ?? 0) - (center.z ?? 0);
+  return dx * dx + dz * dz;
+}
+
+function getDistrictCenter(id) {
+  switch (id) {
+    case "agora":
+      if (AGORA_CENTER_3D) return { x: AGORA_CENTER_3D.x, z: AGORA_CENTER_3D.z };
+      break;
+    case "acropolis":
+      if (ACROPOLIS_PEAK_3D) return { x: ACROPOLIS_PEAK_3D.x, z: ACROPOLIS_PEAK_3D.z };
+      break;
+    case "harbor":
+      if (HARBOR_CENTER_3D) return { x: HARBOR_CENTER_3D.x, z: HARBOR_CENTER_3D.z };
+      break;
+    default:
+      break;
+  }
+  return { x: 0, z: 0 };
 }
 
 // Create a short "ribbon" road between two points. The ribbon is draped to terrain
@@ -324,6 +349,10 @@ export async function createCity(scene, terrain, options = {}) {
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
   const districtRules = options.districtRules || (await loadDistrictRules(baseUrl));
+  const typeOverrides =
+    typeof districtRules.typeOverrides === "object" && districtRules.typeOverrides
+      ? districtRules.typeOverrides
+      : {};
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
   const districtById = new Map();
   for (const d of districtRules.districts || []) {
@@ -861,6 +890,10 @@ export async function createCity(scene, terrain, options = {}) {
     });
     if (!lotInfo) return false;
 
+    const slopeDelta = Math.max(0, lotInfo.maxHeight - lotInfo.minHeight);
+    const slopeDenom = Math.max(lotWidth, lotDepth, 0.0001);
+    const slopeDeg = THREE.MathUtils.radToDeg(Math.atan2(slopeDelta, slopeDenom));
+
     padCandidates.push({
       x: cx,
       y: lotInfo.height + SURFACE_OFFSET,
@@ -868,6 +901,7 @@ export async function createCity(scene, terrain, options = {}) {
       rotation: rotationRad,
       districtId: district?.id || "unknown",
       district,
+      slopeDeg,
     });
     return true;
   }
@@ -912,16 +946,63 @@ export async function createCity(scene, terrain, options = {}) {
     padsByDistrict.get(key).push(pad);
   }
 
+  const defaultTypeByDistrict = {
+    acropolis: "temple",
+    agora: "shop",
+    residential: "house",
+    harbor: "warehouse",
+  };
+
   const finalPadCandidates = [];
   for (const [districtId, group] of padsByDistrict) {
     const district = group[0]?.district || districtById.get(districtId);
     const density = district?.buildingDensity || "medium";
     const baseSpacing = spacingForDensity(districtRules, density);
-    const minSeparation = Math.max(
+    const districtMin = Math.max(
       baseSpacing,
       Number.isFinite(district?.minSeparation) ? district.minSeparation : 0
     );
-    finalPadCandidates.push(...cullByMinSeparation(group, minSeparation));
+
+    const fallbackType =
+      defaultTypeByDistrict[districtId] ||
+      (Array.isArray(district?.allowedTypes) && district.allowedTypes.length > 0
+        ? district.allowedTypes[0]
+        : "house");
+
+    const groupedByType = new Map();
+    for (const pad of group) {
+      const typeKey = pad.buildingType || fallbackType || "house";
+      if (!groupedByType.has(typeKey)) {
+        groupedByType.set(typeKey, []);
+      }
+      groupedByType.get(typeKey).push(pad);
+    }
+
+    let districtKept = [];
+    for (const [typeKey, list] of groupedByType) {
+      const override = typeOverrides?.[typeKey] || null;
+      const overrideMin = Number.isFinite(override?.minSeparation) ? override.minSeparation : 0;
+      const effectiveMin = Math.max(districtMin, overrideMin);
+      districtKept.push(...cullByMinSeparation(list, effectiveMin));
+    }
+
+    const cap = Number.isFinite(district?.maxPerDistrict) ? Math.max(0, district.maxPerDistrict) : Infinity;
+    if (Number.isFinite(cap) && districtKept.length > cap) {
+      const center = getDistrictCenter(districtId);
+      districtKept.sort((a, b) => {
+        const slopeA = Number.isFinite(a.slopeDeg) ? a.slopeDeg : 0;
+        const slopeB = Number.isFinite(b.slopeDeg) ? b.slopeDeg : 0;
+        if (slopeA !== slopeB) return slopeA - slopeB;
+        const distA = center ? dist2XZ(a, center) : 0;
+        const distB = center ? dist2XZ(b, center) : 0;
+        if (distA !== distB) return distA - distB;
+        if (a.x !== b.x) return a.x - b.x;
+        return a.z - b.z;
+      });
+      districtKept = districtKept.slice(0, cap);
+    }
+
+    finalPadCandidates.push(...districtKept);
   }
 
   for (const padData of finalPadCandidates) {
