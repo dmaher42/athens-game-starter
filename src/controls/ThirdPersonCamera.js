@@ -1,4 +1,9 @@
 import * as THREE from "three";
+import {
+  loadSettings,
+  subscribe,
+  defaultCameraSettings,
+} from "../state/settingsStore.js";
 
 const DEFAULT_OFFSET = new THREE.Vector3(0, 2.2, -4.5);
 const DEFAULT_TARGET_OFFSET = new THREE.Vector3(0, 1.2, 0);
@@ -26,6 +31,15 @@ const _tmpDirection = new THREE.Vector3();
 const _tmpTarget = new THREE.Vector3();
 const _tmpCollision = new THREE.Vector3();
 const _tmpLookAt = new THREE.Vector3();
+
+const KEY_CODES = [
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "PageUp",
+  "PageDown",
+];
 
 function wrapAngle(angle) {
   return THREE.MathUtils.euclideanModulo(angle + Math.PI, TAU) - Math.PI;
@@ -203,6 +217,48 @@ export class ThirdPersonCamera {
       ? options.solids.filter(isObject3D)
       : [];
 
+    // CameraSettingsStore: keyboard orbit state
+    this.keyboardState = {
+      ArrowLeft: false,
+      ArrowRight: false,
+      ArrowUp: false,
+      ArrowDown: false,
+      PageUp: false,
+      PageDown: false,
+    };
+    this.arrowOrbitEnabled = defaultCameraSettings.enableArrowOrbit;
+    this.keyboardYawSpeed = defaultCameraSettings.yawSpeed;
+    this.keyboardPitchSpeed = defaultCameraSettings.pitchSpeed;
+    this.keyboardZoomSpeed = defaultCameraSettings.zoomSpeed;
+    this.minDistance = defaultCameraSettings.minDist;
+    this.maxDistance = defaultCameraSettings.maxDist;
+    this.invertKeyboardPitch = defaultCameraSettings.invertPitch;
+    this._settingsUnsubscribe = null;
+
+    this._handleKeyDown = (event) => {
+      if (!event || typeof event.code !== "string") return;
+      if (!KEY_CODES.includes(event.code)) return;
+      this.keyboardState[event.code] = true;
+    };
+    this._handleKeyUp = (event) => {
+      if (!event || typeof event.code !== "string") return;
+      if (!KEY_CODES.includes(event.code)) return;
+      this.keyboardState[event.code] = false;
+    };
+    this._handleBlur = () => {
+      this.clearKeyStates();
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", this._handleKeyDown, true);
+      window.addEventListener("keyup", this._handleKeyUp, true);
+      window.addEventListener("blur", this._handleBlur);
+    }
+
+    this.applyCameraSettings(loadSettings());
+    this._settingsUnsubscribe = subscribe((next) => {
+      this.applyCameraSettings(next);
+    });
+
     this.enabled = false;
     this.needsImmediateSnap = false;
     this.warnedMissingTarget = false;
@@ -272,6 +328,9 @@ export class ThirdPersonCamera {
     if (nextEnabled === this.enabled) return;
 
     this.enabled = nextEnabled;
+    if (!this.enabled) {
+      this.clearKeyStates();
+    }
     if (this.enabled) {
       this.needsImmediateSnap = true;
       this.warnedMissingTarget = false;
@@ -310,6 +369,7 @@ export class ThirdPersonCamera {
     }
 
     this.targetPitch = THREE.MathUtils.clamp(this.targetPitch, this.minPitch, this.maxPitch);
+    this.distance = THREE.MathUtils.clamp(this.distance, this.minDistance, this.maxDistance);
 
     const rotationAlpha = dtSafe > 0
       ? 1 - Math.pow(1 - this.rotationLerp, dtSafe * 60)
@@ -405,6 +465,16 @@ export class ThirdPersonCamera {
   dispose() {
     this.setEnabled(false);
     this.solids.length = 0;
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", this._handleKeyDown, true);
+      window.removeEventListener("keyup", this._handleKeyUp, true);
+      window.removeEventListener("blur", this._handleBlur);
+    }
+    this.clearKeyStates();
+    if (typeof this._settingsUnsubscribe === "function") {
+      this._settingsUnsubscribe();
+      this._settingsUnsubscribe = null;
+    }
     this.disposed = true;
   }
 

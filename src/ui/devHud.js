@@ -288,5 +288,6 @@ export function mountDevHUD({
       wrap.remove();
     },
     setStatusLine,
+    rootElement: read,
   };
 }
