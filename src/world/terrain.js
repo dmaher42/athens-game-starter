@@ -10,6 +10,7 @@ import {
   injectGroundTextureShader,
 } from "./groundTextures.js";
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
+import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
 
 // Utility: basic pseudo-random gradient noise using deterministic hashing so we can
 // produce repeatable rolling hills without pulling in an additional dependency.
@@ -186,7 +187,7 @@ export function createTerrain(scene) {
     geometry.setAttribute("basePos", basePos);
   }
 
-  const terrainMaterial = new THREE.MeshStandardMaterial({
+  let terrainMaterial = new THREE.MeshStandardMaterial({
     color: 0xa3ae8b,
     roughness: 0.90,
     metalness: 0.0,
@@ -266,6 +267,10 @@ ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
       injectGroundTextureShader(shader, groundTextureState);
     }
   };
+
+  terrainMaterial = applyTextureBudgetToMaterial(terrainMaterial, {
+    renderer: scene?.userData?.renderer ?? null,
+  });
 
   const terrain = new THREE.Mesh(geometry, terrainMaterial);
   terrain.rotation.x = -Math.PI / 2; // Rotate so the plane lies flat on the XZ axis.
