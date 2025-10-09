@@ -664,8 +664,14 @@ async function mainApp() {
   // ~5cm above ground and handle KTX2 texture support transparently.
   try {
     const aristotleCandidates = [
+      // Canonical
       `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
       `/models/landmarks/aristotle_tomb.glb`,
+      // Legacy uploads (fallbacks)
+      `${BASE_URL}models/landmarks/aristotle_tomb_in_macedonia_greece.glb`,
+      `/models/landmarks/aristotle_tomb_in_macedonia_greece.glb`,
+      `${BASE_URL}aristotle_tomb_in_macedonia_greece.glb`,
+      `/aristotle_tomb_in_macedonia_greece.glb`,
     ];
     const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
     if (aristotleUrl) {
@@ -697,6 +703,47 @@ async function mainApp() {
     }
   } catch (err) {
     console.error("Failed to load Aristotle's Tomb:", err);
+  }
+  // --------------------------------------------------------------------------
+
+  // Poseidon Temple (Sounion)
+  try {
+    const poseidonCandidates = [
+      `${BASE_URL}models/landmarks/poseidon_temple.glb`,
+      `/models/landmarks/poseidon_temple.glb`,
+      `${BASE_URL}models/landmarks/poseidon_temple_at_sounion_greece.glb`,
+      `/models/landmarks/poseidon_temple_at_sounion_greece.glb`,
+      `${BASE_URL}poseidon_temple_at_sounion_greece.glb`,
+      `/poseidon_temple_at_sounion_greece.glb`,
+    ];
+    const url = await resolveFirstAvailableAsset(poseidonCandidates);
+    if (url)
+      await loadLandmark(worldRoot, url, {
+        position: new THREE.Vector3(90, 0, -60),
+        scale: 2.6,
+        materialPreset: "marble",
+      });
+  } catch (e) {
+    console.warn("Poseidon Temple not loaded:", e);
+  }
+
+  // Akropol (Acropolis complex placeholder)
+  try {
+    const akropolCandidates = [
+      `${BASE_URL}models/landmarks/akropol.glb`,
+      `/models/landmarks/akropol.glb`,
+      `${BASE_URL}Akropol.glb`,
+      `/Akropol.glb`,
+    ];
+    const url = await resolveFirstAvailableAsset(akropolCandidates);
+    if (url)
+      await loadLandmark(worldRoot, url, {
+        position: new THREE.Vector3(130, 0, 40),
+        scale: 2.2,
+        materialPreset: "marble",
+      });
+  } catch (e) {
+    console.warn("Akropol not loaded:", e);
   }
   // --------------------------------------------------------------------------
 
