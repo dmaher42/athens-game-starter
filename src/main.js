@@ -748,6 +748,7 @@ async function mainApp() {
     lastX: 0,
     lastY: 0,
     pendingUse: false,
+    pointerType: null,
   };
   let thirdPersonHandlersAttached = false;
 
@@ -763,6 +764,7 @@ async function mainApp() {
     thirdPersonPointerState.active = false;
     thirdPersonPointerState.pointerId = null;
     thirdPersonPointerState.pendingUse = false;
+    thirdPersonPointerState.pointerType = null;
   };
 
   const onThirdPersonPointerDown = (event) => {
@@ -774,7 +776,8 @@ async function mainApp() {
     thirdPersonPointerState.pointerId = event.pointerId;
     thirdPersonPointerState.lastX = event.clientX;
     thirdPersonPointerState.lastY = event.clientY;
-    thirdPersonPointerState.pendingUse = event.pointerType !== "touch" && event.button === 0;
+    thirdPersonPointerState.pointerType = event.pointerType;
+    thirdPersonPointerState.pendingUse = event.button === 0 || event.pointerType === "touch";
 
     try {
       viewCanvas.setPointerCapture(event.pointerId);
@@ -807,7 +810,9 @@ async function mainApp() {
   const onThirdPersonPointerUp = (event) => {
     if (thirdPersonPointerState.pointerId !== event.pointerId) return;
 
-    const shouldUse = thirdPersonPointerState.pendingUse && event.button === 0;
+    const shouldUse =
+      thirdPersonPointerState.pendingUse &&
+      (event.button === 0 || thirdPersonPointerState.pointerType === "touch");
 
     clearThirdPersonPointer();
 
