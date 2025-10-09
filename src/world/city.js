@@ -304,10 +304,12 @@ export function createCity(scene, terrain, options = {}) {
 
   // --- Collect all road segment geometries for one merged mesh (perf + fewer draw calls)
   const roadGeometries = [];
-  const centerRowIndex = Math.floor(roadGrid.length / 2);
-  const mainAvenuePaths = [];
+
+  // Define avenueRowIndex for the main avenue aligned with the central row
+  const avenueRowIndex = Math.floor(roadGrid.length / 2);
 
   for (let iz = 0; iz < roadGrid.length; iz++) {
+    if (iz === avenueRowIndex) continue; // Skip center row, will be replaced by main avenue
     const row = roadGrid[iz];
     if (!row) continue;
 
@@ -348,40 +350,6 @@ export function createCity(scene, terrain, options = {}) {
       if (!start || !end) {
         continue;
       }
-      createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
-    }
-  }
-
-  // Main Avenue
-  const mainAvenueLightPositions = [];
-  for (const path of mainAvenuePaths) {
-    if (!path || path.length < 2) {
-      continue;
-    }
-
-    for (let i = 0; i < path.length - 1; i++) {
-      const start = path[i];
-      const end = path[i + 1];
-      createVisibleRoad(start, end, city, terrain, {
-        collectGeometries: roadGeometries,
-        width: 5.0,
-        color: 0x2f2f2f,
-      });
-    }
-
-    const spacing = 10;
-    let distanceAccum = 0;
-    let nextDistance = 5;
-    for (let i = 0; i < path.length - 1; i++) {
-      const start = path[i];
-      const end = path[i + 1];
-      const segmentLength = start.distanceTo(end);
-      if (!Number.isFinite(segmentLength) || segmentLength < 0.01) {
-        if (Number.isFinite(segmentLength)) {
-          distanceAccum += segmentLength;
-        }
-        continue;
-      }
 
       while (distanceAccum + segmentLength >= nextDistance) {
         const remaining = nextDistance - distanceAccum;
@@ -402,27 +370,18 @@ export function createCity(scene, terrain, options = {}) {
     }
   }
 
-  // Harbor–Agora Boulevard
-  const boulevardPoints = [];
-  const harborPoint = HARBOR_CENTER_3D.clone();
-  const agoraPoint = AGORA_CENTER_3D.clone();
-  const boulevardDirection = agoraPoint.clone().sub(harborPoint);
-  const boulevardLateral = new THREE.Vector3(-boulevardDirection.z, 0, boulevardDirection.x);
-  if (boulevardLateral.lengthSq() < 1e-6) {
-    boulevardLateral.set(0, 0, 1);
-  } else {
-    boulevardLateral.normalize();
-  }
-
-  const boulevardFractions = [0, 0.25, 0.5, 0.75, 1];
-  const boulevardOffsets = [0, 8, -6, 4, 0];
-  for (let i = 0; i < boulevardFractions.length; i++) {
-    const fraction = boulevardFractions[i];
-    const point = harborPoint.clone().lerp(agoraPoint, fraction);
-    point.addScaledVector(boulevardLateral, boulevardOffsets[i]);
-    const height = sampleHeight(terrain, point.x, point.z, SEA_LEVEL_Y);
-    if (!Number.isFinite(height)) {
-      continue;
+  // --- Add a wide east-west main avenue through the city center --------------
+  // Replace the center row with a single wide avenue spanning the full width
+  const centerRow = roadGrid[avenueRowIndex];
+  if (centerRow && centerRow.length >= 2) {
+    // Get the westmost and eastmost valid points in the center row
+    let westPoint = null;
+    let eastPoint = null;
+    for (let ix = 0; ix < centerRow.length; ix++) {
+      if (centerRow[ix]) {
+        if (!westPoint) westPoint = centerRow[ix];
+        eastPoint = centerRow[ix];
+      }
     }
     point.y = Math.max(height, SEA_LEVEL_Y) + SURFACE_OFFSET;
     boulevardPoints.push(point);
