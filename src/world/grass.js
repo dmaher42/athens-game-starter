@@ -152,7 +152,7 @@ function createGrassMaterial() {
     varying float vTipFactor;
     varying float vWorldY;
 
-    // renamed to avoid conflict with Three.js ShaderChunk helpers
+    // Avoid conflict with Three.js ShaderChunk-defined helpers
     float grassLuma(vec3 color) {
       return dot(color, vec3(0.299, 0.587, 0.114));
     }

@@ -87,8 +87,8 @@ export class EnvironmentCollider {
 
       cloned.applyMatrix4(matrix);
 
+      // Ensure mergeGeometries sees consistent non-indexed data.
       const normalized = cloned.getIndex() ? cloned.toNonIndexed() : cloned;
-
       geometries.push(normalized);
 
       if (normalized !== cloned) {
