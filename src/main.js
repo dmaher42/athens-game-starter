@@ -50,6 +50,8 @@ import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
 import { loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
 import { resolveBaseUrl } from "./utils/baseUrl.js";
+import { LandmarkManager } from "./world/LandmarkManager.js";
+import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
 
 const WORLD_ROOT_NAME = "WorldRoot";
 
@@ -79,39 +81,6 @@ const LIGHTING_PRESETS = {
     hotkey: "4",
   },
 };
-
-function isHtmlResponse(response) {
-  const contentType = response.headers.get("content-type") || "";
-  return contentType.includes("text/html");
-}
-
-async function probeAsset(url) {
-  try {
-    const response = await fetch(url, { method: "HEAD" });
-    if (response.ok && !isHtmlResponse(response)) {
-      return true;
-    }
-
-    if (response.status === 405 || response.status === 501) {
-      const getResponse = await fetch(url, { method: "GET" });
-      return getResponse.ok && !isHtmlResponse(getResponse);
-    }
-
-    return false;
-  } catch (error) {
-    console.debug(`Asset probe failed for "${url}"`, error);
-    return false;
-  }
-}
-
-async function resolveFirstAvailableAsset(urls) {
-  for (const url of urls) {
-    if (await probeAsset(url)) {
-      return url;
-    }
-  }
-  return null;
-}
 
 window.addEventListener("unhandledrejection", (ev) => {
   console.error("Unhandled promise rejection:", ev.reason);
@@ -1164,7 +1133,8 @@ async function mainApp() {
       minAboveSea: 0.02,
     });
 
-    worldRoot.add(monument);
+    const parentGroup = options.parent ?? worldRoot;
+    parentGroup.add(monument);
 
     if (shouldCollide) {
       envCollider.refresh();
@@ -1173,53 +1143,6 @@ async function mainApp() {
     return monument;
   };
   const buildingBase = `${BASE_URL}models/buildings/`;
-
-  const cloneVector3Like = (value) => {
-    if (!value) return null;
-    if (value.isVector3) return value.clone();
-    if (Array.isArray(value)) {
-      return new THREE.Vector3(value[0] ?? 0, value[1] ?? 0, value[2] ?? 0);
-    }
-    if (typeof value === "object") {
-      const { x = 0, y = 0, z = 0 } = value;
-      return new THREE.Vector3(x, y, z);
-    }
-    return new THREE.Vector3(0, 0, 0);
-  };
-
-  const preparePlacementOptions = (options = {}, spec = {}) => {
-    const prepared = { ...options };
-    if (options.position) {
-      const position = cloneVector3Like(options.position);
-      if (position) {
-        const sampler = terrain?.userData?.getHeightAt;
-        const offset = spec.surfaceOffset ?? 0.05;
-        const shouldAlign = spec.alignToTerrain !== false;
-        if (shouldAlign && typeof sampler === "function") {
-          const sampled = sampler(position.x, position.z);
-          if (Number.isFinite(sampled)) {
-            position.y = sampled + offset;
-          } else if (!Number.isFinite(position.y)) {
-            position.y = offset;
-          }
-        } else if (!Number.isFinite(position.y)) {
-          position.y = offset;
-        }
-      }
-      prepared.position = position;
-    }
-    if (!prepared.parent && buildingsRoot) {
-      prepared.parent = buildingsRoot;
-    }
-    if (!prepared.heightSampler) {
-      prepared.heightSampler =
-        options.heightSampler ??
-        options.terrainSampler ??
-        terrainHeightSampler ??
-        terrain?.userData?.getHeightAt;
-    }
-    return prepared;
-  };
 
   const createTerrainAlignedPosition = (x, z, offset = 0.05) => {
     let y = offset;
@@ -1284,205 +1207,24 @@ async function mainApp() {
     }
   });
 
-  const resolveCandidateUrls = (files = []) =>
-    files
-      .map((file) => {
-        if (!file) return null;
-        if (/^https?:/i.test(file) || file.startsWith(BASE_URL)) {
-          return file;
-        }
-        if (file.startsWith("/")) {
-          return file;
-        }
-        return `${buildingBase}${file}`;
-      })
-      .filter(Boolean);
+  const landmarkManager = new LandmarkManager({
+    scene: worldRoot,
+    parent: buildingsRoot,
+    terrain,
+    heightSampler: terrainHeightSampler,
+    envCollider,
+    renderer,
+    spawnPlaceholder: (options = {}) =>
+      spawnPlaceholderMonument({
+        ...options,
+        parent: options.parent ?? buildingsRoot,
+      }),
+  });
 
-  const loadBuildingPlacement = async (spec) => {
-    const displayName = spec.displayName ?? spec.name ?? "Building";
-    const placementOptions = preparePlacementOptions(spec.options ?? {}, spec);
-    const placeholderOptions = preparePlacementOptions(
-      { ...(spec.options ?? {}), ...(spec.placeholderOptions ?? {}) },
-      spec
-    );
-
-    const candidateUrls = resolveCandidateUrls(spec.files ?? []);
-    const fallbackUrls = resolveCandidateUrls(spec.fallbackFiles ?? []);
-
-    const snapAndRefresh = (object) => {
-      if (!object || spec.snapToGround === false) return;
-      if (!placementOptions?.position) return;
-      const { x, z } = placementOptions.position;
-      const snapOffset = spec.surfaceOffset ?? 0.05;
-      const snapSettings = {
-        clampToSea: true,
-        seaLevel: SEA_LEVEL_Y,
-        minAboveSea: spec.minAboveSea ?? 0.02,
-        ...(spec.snapOptions ?? {}),
-      };
-      snapAboveGround(object, terrain, x, z, snapOffset, snapSettings);
-    };
-
-    const resolveTransformOptions = () => {
-      const transform = {};
-
-      if (placementOptions.position) {
-        transform.position = placementOptions.position;
-      }
-
-      if (placementOptions.scale !== undefined) {
-        transform.scale = placementOptions.scale;
-      }
-
-      if (placementOptions.rotation) {
-        const { x, y, z } = placementOptions.rotation;
-        if ([x, y, z].some((value) => Number.isFinite(value))) {
-          transform.rotation = { x, y, z };
-        }
-      } else {
-        const euler = {};
-        let hasRotation = false;
-        const axisMap = [
-          ["rotateX", "x"],
-          ["rotateY", "y"],
-          ["rotateZ", "z"],
-        ];
-
-        for (const [key, axis] of axisMap) {
-          const value = placementOptions[key];
-          if (Number.isFinite(value)) {
-            euler[axis] = value;
-            hasRotation = true;
-          }
-        }
-
-        if (hasRotation) {
-          transform.rotation = euler;
-        }
-      }
-
-      return transform;
-    };
-
-    const applyCollisionSettings = (object) => {
-      if (!object) return;
-      const shouldCollide = Boolean(placementOptions?.collision);
-      object.traverse?.((child) => {
-        if (!child?.isMesh) return;
-        child.userData = child.userData || {};
-        child.userData.noCollision = !shouldCollide;
-      });
-      if (shouldCollide && typeof envCollider?.refresh === "function") {
-        envCollider.refresh();
-      }
-    };
-
-    const attemptLoad = async (urls, label) => {
-      if (!urls.length) return null;
-      const url = await resolveFirstAvailableAsset(urls);
-      if (!url) return null;
-      try {
-        const transformOptions = resolveTransformOptions();
-        const object = await loadLandmark(worldRoot, url, transformOptions);
-        if (!object) {
-          return null;
-        }
-        if (spec.name && (!object.name || object.name === "")) {
-          object.name = spec.name;
-        }
-        snapAndRefresh(object);
-        applyCollisionSettings(object);
-        if (typeof spec.onLoaded === "function") {
-          try {
-            spec.onLoaded(object, { url, label });
-          } catch (hookError) {
-            console.warn(`loadBuildingPlacement onLoaded hook failed for ${displayName}`, hookError);
-          }
-        }
-        return object;
-      } catch (error) {
-        const prefix = label === "fallback" ? "Fallback" : "";
-        console.error(
-          `${prefix ? `${prefix} ` : ""}${displayName} failed to load from ${url}`,
-          error
-        );
-        return null;
-      }
-    };
-
-    let object = await attemptLoad(candidateUrls, "primary");
-
-    if (!object && fallbackUrls.length) {
-      if (spec.missingPrimaryMessage) {
-        console.info(spec.missingPrimaryMessage);
-      }
-      object = await attemptLoad(fallbackUrls, "fallback");
-      if (object) {
-        if (spec.fallbackMessage) {
-          console.info(spec.fallbackMessage);
-        }
-      } else if (spec.fallbackFailureMessage) {
-        console.error(spec.fallbackFailureMessage);
-      }
-    }
-
-    if (!object) {
-      if (!fallbackUrls.length && spec.missingPrimaryMessage) {
-        console.info(spec.missingPrimaryMessage);
-      }
-      if (spec.allMissingMessage) {
-        console.info(spec.allMissingMessage);
-      }
-      if (spec.spawnPlaceholder !== false) {
-        spawnPlaceholderMonument({
-          ...placeholderOptions,
-          collision:
-            spec.placeholderCollision ??
-            placeholderOptions.collision ??
-            placementOptions.collision,
-        });
-      }
-    }
-
-    return object;
-  };
-
-  const akropolUrl = `${buildingBase}Akropol.glb`;
-  const poseidonUrl = `${buildingBase}poseidon_temple_at_sounion_greece.glb`;
-
-  const buildingPlacements = [
-    {
-      name: "acropolis",
-      displayName: "Acropolis",
-      files: ["Akropol.glb"],
-      options: {
-        position: ACROPOLIS_PEAK_3D.clone(),
-        rotateY: Math.PI * 0.22,
-        scale: 0.45,
-        collision: true,
-      },
-      surfaceOffset: 0.18,
-      snapOptions: { minAboveSea: 0.5 },
-      missingPrimaryMessage: `Akropol asset missing at ${akropolUrl}; add it under public/models/buildings/ to replace the placeholder.`,
-    },
-    {
-      name: "poseidon-temple",
-      displayName: "Temple of Poseidon",
-      files: ["poseidon_temple_at_sounion_greece.glb"],
-      options: {
-        position: new THREE.Vector3(-150, 0, 42),
-        rotateY: -Math.PI * 0.35,
-        scale: 0.38,
-        collision: true,
-      },
-      surfaceOffset: 0.08,
-      snapOptions: { minAboveSea: 0.05 },
-      missingPrimaryMessage: `Poseidon temple model missing at ${poseidonUrl}; add it under public/models/buildings/ to replace the placeholder.`,
-    },
-  ];
-
-  for (const spec of buildingPlacements) {
-    await loadBuildingPlacement(spec);
+  try {
+    await landmarkManager.loadConfig(athensLayoutConfig);
+  } catch (error) {
+    console.error("[LandmarkManager] Failed to load Athens layout", error);
   }
 
   const interactor = createInteractor(renderer, camera, scene);
