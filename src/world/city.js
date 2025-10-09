@@ -302,6 +302,23 @@ export function createCity(scene, terrain, options = {}) {
     }
   }
 
+  if (avenueRowIndex >= 0) {
+    const avenueRow = roadGrid[avenueRowIndex];
+    for (let ix = 0; ix < avenueRow.length - 1; ix++) {
+      const start = avenueRow[ix];
+      const end = avenueRow[ix + 1];
+      if (!start || !end) {
+        continue;
+      }
+      // Main avenue: slightly wider, still merged for a single draw call.
+      createVisibleRoad(start, end, city, terrain, {
+        collectGeometries: roadGeometries,
+        width: 5,
+        color: 0x2f2f2f,
+      });
+    }
+  }
+
   const columnCount = roadGrid[0]?.length ?? 0;
   for (let ix = 0; ix < columnCount; ix++) {
     for (let iz = 0; iz < roadGrid.length - 1; iz++) {
