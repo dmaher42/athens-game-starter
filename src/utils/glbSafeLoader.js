@@ -53,7 +53,11 @@ export async function loadGLBWithFallbacks({
         throw new Error(`Downloaded HTML instead of GLB: ${candidate}`);
       }
 
-      const gltf = await loader.loadAsync(candidate);
+      const basePath =
+        loader.path && loader.path.length > 0
+          ? loader.path
+          : THREE.LoaderUtils.extractUrlBase(candidate);
+      const gltf = await loader.parseAsync(buffer, basePath);
       const root = gltf.scene || (Array.isArray(gltf.scenes) ? gltf.scenes[0] : null);
       if (!root) throw new Error(`No scene in GLB: ${candidate}`);
 
