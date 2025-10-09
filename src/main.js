@@ -883,6 +883,16 @@ async function mainApp() {
       rotationLerp: 0.15,
       solids: thirdPersonSolids,
       enabled: false,
+      keyOrbit: {
+        enabled: true,
+        yawSpeed: 0.9,
+        pitchSpeed: 0.9,
+        minPitch: -0.6,
+        maxPitch: 0.6,
+        minDist: 2.5,
+        maxDist: 7.5,
+        zoomSpeed: 4,
+      }, // ArrowKeyOrbit: configure keyboard orbit controls
     });
   }
 
