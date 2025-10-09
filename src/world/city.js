@@ -17,6 +17,7 @@ import {
 import { createRoad } from "./roads.js";
 import { addFoundationPad } from "./foundations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
+import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
 
 // Create a short "ribbon" road between two points. The ribbon is draped to terrain
 // by sampling height along the segment, including both left/right edges so it
@@ -234,13 +235,15 @@ function evaluateLot({ terrain, centerX, centerZ, width, depth, rotation, maxSlo
   };
 }
 
-export function createCity(scene, terrain, options = {}) {
+export async function createCity(scene, terrain, options = {}) {
   // Toggle to show/hide plaza “foundation pads” (the visible discs).
   // Default false so the two large discs disappear on the live build.
   const showFoundationPads = options.showFoundationPads === true;
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const renderer = scene?.userData?.renderer ?? null;
   const rng = mulberry32(options.seed ?? CITY_SEED);
+  const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
+  const districtRules = options.districtRules || (await loadDistrictRules(baseUrl));
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
   // Pier no-build mask
   const pierRect = {
@@ -391,7 +394,9 @@ export function createCity(scene, terrain, options = {}) {
         row.push(null);
         continue;
       }
-      row.push(new THREE.Vector3(x, height, z));
+      const node = new THREE.Vector3(x, height, z);
+      node.userData = { district: resolveDistrictAt(terrain, districtRules, x, z) };
+      row.push(node);
     }
     roadGrid.push(row);
   }
@@ -543,13 +548,15 @@ export function createCity(scene, terrain, options = {}) {
         }
         continue;
       }
+      const startDistrict = start?.userData?.district;
+      const districtRoad = startDistrict?.road || {};
+      const segWidth = isSecondaryRow ? secondaryWidth : districtRoad.width ?? 3.2;
+      const segColor = isSecondaryRow ? secondaryColor : districtRoad.color ?? 0x333333;
       const roadOptions = {
         collectGeometries: roadGeometries,
-        width: isSecondaryRow ? secondaryWidth : 3.2,
+        width: segWidth,
+        color: segColor,
       };
-      if (isSecondaryRow) {
-        roadOptions.color = secondaryColor;
-      }
       createVisibleRoad(start, end, city, terrain, roadOptions);
 
       if (isSecondaryRow) {
@@ -591,13 +598,15 @@ export function createCity(scene, terrain, options = {}) {
         }
         continue;
       }
+      const startDistrict = start?.userData?.district;
+      const districtRoad = startDistrict?.road || {};
+      const segWidth = isSecondaryColumn ? secondaryWidth : districtRoad.width ?? 3.2;
+      const segColor = isSecondaryColumn ? secondaryColor : districtRoad.color ?? 0x333333;
       const roadOptions = {
         collectGeometries: roadGeometries,
-        width: isSecondaryColumn ? secondaryWidth : 3.2,
+        width: segWidth,
+        color: segColor,
       };
-      if (isSecondaryColumn) {
-        roadOptions.color = secondaryColor;
-      }
       createVisibleRoad(start, end, city, terrain, roadOptions);
 
       if (isSecondaryColumn) {
@@ -721,6 +730,70 @@ export function createCity(scene, terrain, options = {}) {
     roadsMesh.receiveShadow = true;
     roadsMesh.visible = roadsVisible;
     city.add(roadsMesh);
+  }
+
+  // Data-driven "lot pads" to visualize district density and reserve space
+  // for future building placement.
+  const lotPads = new THREE.Group();
+  lotPads.name = "LotPads";
+  lotPads.userData.noCollision = true;
+  city.add(lotPads);
+
+  const lotPadGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.08, 10);
+  const lotPadMaterial = new THREE.MeshStandardMaterial({ color: 0xb7b3a7, roughness: 1, metalness: 0 });
+  const maxLotSlope = Number.isFinite(districtRules.maxSlopeDeltaPerLot)
+    ? districtRules.maxSlopeDeltaPerLot
+    : 2.0;
+  const lotWidth = 4.2;
+  const lotDepth = 4.2;
+
+  function tryPadAt(cx, cz, rotationRad, district) {
+    const lotInfo = evaluateLot({
+      terrain,
+      centerX: cx,
+      centerZ: cz,
+      width: lotWidth,
+      depth: lotDepth,
+      rotation: rotationRad,
+      maxSlope: maxLotSlope,
+    });
+    if (!lotInfo) return false;
+
+    const pad = new THREE.Mesh(lotPadGeometry, lotPadMaterial);
+    pad.position.set(cx, lotInfo.height + SURFACE_OFFSET, cz);
+    pad.rotation.y = rotationRad;
+    pad.castShadow = false;
+    pad.receiveShadow = true;
+    pad.userData = pad.userData || {};
+    pad.userData.district = district?.id || "unknown";
+    pad.userData.noCollision = true;
+    lotPads.add(pad);
+    return true;
+  }
+
+  for (let iz = 0; iz < roadGrid.length; iz++) {
+    const row = roadGrid[iz];
+    if (!row) continue;
+    for (let ix = 0; ix < row.length; ix++) {
+      const node = row[ix];
+      if (!node) continue;
+      const district = node.userData?.district;
+      const density = district?.buildingDensity || "medium";
+      const spacing = spacingForDensity(districtRules, density);
+      const halfSpacing = spacing * 0.5;
+      const jitterX = (rng() - 0.5) * 0.6;
+      const jitterZ = (rng() - 0.5) * 0.6;
+      const candidates = [
+        { x: node.x + halfSpacing + jitterX, z: node.z + jitterZ },
+        { x: node.x - halfSpacing + jitterX, z: node.z + jitterZ },
+        { x: node.x + jitterX, z: node.z + halfSpacing + jitterZ },
+        { x: node.x + jitterX, z: node.z - halfSpacing + jitterZ },
+      ];
+      for (const { x: cx, z: cz } of candidates) {
+        const rotation = rng() * Math.PI * 2;
+        tryPadAt(cx, cz, rotation, district);
+      }
+    }
   }
 
   // Pocket Plazas
