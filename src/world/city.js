@@ -197,6 +197,7 @@ export function createCity(scene, terrain, options = {}) {
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
+  const showFoundationPads = options.showFoundationPads ?? false;
   // Pier no-build mask
   const pierRect = {
     west: HARBOR_WATER_BOUNDS.west,
@@ -679,7 +680,7 @@ export function createCity(scene, terrain, options = {}) {
   }
 
   // Pocket Plazas
-  if (pocketPlazas.length > 0) {
+  if (showFoundationPads && pocketPlazas.length > 0) {
     for (const plaza of pocketPlazas) {
       addFoundationPad(city, plaza.x, plaza.y, plaza.z, 2.2);
     }
@@ -701,7 +702,7 @@ export function createCity(scene, terrain, options = {}) {
   }
 
   // Pier Plaza
-  {
+  if (showFoundationPads) {
     const plazaHeightSample = sampleHeight(
       terrain,
       pierPlazaCenter.x,
