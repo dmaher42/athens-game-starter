@@ -285,6 +285,29 @@ export function createCity(scene, terrain, options = {}) {
   // --- Collect all road segment geometries for one merged mesh (perf + fewer draw calls)
   const roadGeometries = [];
 
+  // --- Identify a center row to host the wider east-west "main avenue"
+  let avenueRowIndex = -1;
+  if (roadGrid.length > 0) {
+    let bestDelta = Infinity;
+    for (let iz = 0; iz < roadGrid.length; iz++) {
+      const row = roadGrid[iz];
+      // Need at least two viable points in the row to draw the avenue.
+      let usable = 0;
+      for (let ix = 0; ix < row.length && usable < 2; ix++) {
+        if (row[ix]) usable++;
+      }
+      if (usable < 2) {
+        continue;
+      }
+      const rowZ = roadStartZ + iz * spacingZ;
+      const delta = Math.abs(rowZ - origin.z);
+      if (delta < bestDelta) {
+        bestDelta = delta;
+        avenueRowIndex = iz;
+      }
+    }
+  }
+
   for (let iz = 0; iz < roadGrid.length; iz++) {
     const row = roadGrid[iz];
     for (let ix = 0; ix < row.length - 1; ix++) {
@@ -294,6 +317,23 @@ export function createCity(scene, terrain, options = {}) {
         continue;
       }
       createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
+    }
+  }
+
+  if (avenueRowIndex >= 0) {
+    const avenueRow = roadGrid[avenueRowIndex];
+    for (let ix = 0; ix < avenueRow.length - 1; ix++) {
+      const start = avenueRow[ix];
+      const end = avenueRow[ix + 1];
+      if (!start || !end) {
+        continue;
+      }
+      // Main avenue: slightly wider, still merged for a single draw call.
+      createVisibleRoad(start, end, city, terrain, {
+        collectGeometries: roadGeometries,
+        width: 5,
+        color: 0x2f2f2f,
+      });
     }
   }
 
