@@ -1,3 +1,5 @@
+import { getUISlot } from "./uiRoot.js";
+
 // Dev HUD: compass + coordinates + pin hotkey (P)
 export function mountDevHUD({
   getPosition,
@@ -14,8 +16,7 @@ export function mountDevHUD({
   // --- DOM
   const wrap = document.createElement("div");
   Object.assign(wrap.style, {
-    position: "fixed", top: "12px", right: "12px",
-    zIndex: 999999, color: "#fff",
+    color: "#fff",
     font: "12px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto",
     textShadow: "0 1px 2px rgba(0,0,0,0.45)",
     userSelect: "none", pointerEvents: "none",
@@ -215,7 +216,8 @@ export function mountDevHUD({
 
   wrap.appendChild(comp);
   wrap.appendChild(read);
-  document.body.appendChild(wrap);
+  const slot = getUISlot("topRight");
+  slot.appendChild(wrap);
 
   const elPos = read.querySelector("#hud-pos");
   const elBear= read.querySelector("#hud-bear");

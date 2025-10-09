@@ -1,3 +1,5 @@
+import { getUISlot } from "./uiRoot.js";
+
 const STYLE_ID = "hotkey-overlay-style";
 const ROOT_CLASS = "hotkey-overlay";
 const HIDDEN_MOD = "hotkey-overlay--hidden";
@@ -133,7 +135,7 @@ export function mountHotkeyOverlay(options = {}) {
     root.appendChild(toggleButton);
   }
   root.appendChild(panel);
-  document.body.appendChild(root);
+  getUISlot("topRight").appendChild(root);
 
   const applyVisibility = (shouldOpen) => {
     if (shouldOpen) {
@@ -186,10 +188,6 @@ function ensureStyles() {
   style.id = STYLE_ID;
   style.textContent = `
     .${ROOT_CLASS} {
-      position: fixed;
-      right: 16px;
-      top: 16px;
-      z-index: 1200;
       display: flex;
       flex-direction: column;
       gap: 10px;
