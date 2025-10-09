@@ -16,6 +16,7 @@ import {
 } from "./locations.js";
 import { createRoad } from "./roads.js";
 import { addFoundationPad } from "./foundations.js";
+import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 
 // Create a short "ribbon" road between two points. The ribbon is draped to terrain
 // by sampling height along the segment, including both left/right edges so it
@@ -139,6 +140,46 @@ function mulberry32(seed) {
   };
 }
 
+function applyCityTextureBudget(city, renderer) {
+  if (!city) return;
+
+  applyTextureBudgetToObject(city, { renderer });
+
+  const lighting = city.userData?.lighting;
+  if (lighting && city.userData?.walls?.material) {
+    lighting.material = city.userData.walls.material;
+  }
+
+  const streetlights = city.userData?.streetlights;
+  if (streetlights) {
+    if (Array.isArray(streetlights.meshes)) {
+      const firstMesh = streetlights.meshes.find((mesh) => mesh?.material);
+      if (firstMesh?.material) {
+        streetlights.material = firstMesh.material;
+      }
+    }
+
+    if (Array.isArray(streetlights.individuals)) {
+      for (const lampState of streetlights.individuals) {
+        if (!lampState) continue;
+        if (lampState.bulbMesh?.material) {
+          lampState.material = lampState.bulbMesh.material;
+        }
+        if (lampState.glassMesh?.material) {
+          lampState.glassMaterial = lampState.glassMesh.material;
+        }
+      }
+
+      if (!streetlights.material) {
+        const fallback = streetlights.individuals.find((entry) => entry?.material);
+        if (fallback?.material) {
+          streetlights.material = fallback.material;
+        }
+      }
+    }
+  }
+}
+
 function sampleHeight(terrain, x, z, fallback) {
   const getter = terrain?.userData?.getHeightAt;
   if (typeof getter === "function") {
@@ -198,6 +239,7 @@ export function createCity(scene, terrain, options = {}) {
   // Default false so the two large discs disappear on the live build.
   const showFoundationPads = options.showFoundationPads === true;
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
+  const renderer = scene?.userData?.renderer ?? null;
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
   // Pier no-build mask
@@ -1122,6 +1164,8 @@ export function createCity(scene, terrain, options = {}) {
       light: pointLight,
       material: bulbMaterial,
       glassMaterial: bulbGlassMaterial,
+      bulbMesh: bulb,
+      glassMesh: bulbGlass,
       baseIntensity: 1.2,
       overrideState: null,
       flickerPhase,
@@ -1172,6 +1216,7 @@ export function createCity(scene, terrain, options = {}) {
 
   const instanceCount = placements.length;
   if (instanceCount === 0) {
+    applyCityTextureBudget(city, renderer);
     scene.add(city);
     return city;
   }
@@ -1250,6 +1295,7 @@ export function createCity(scene, terrain, options = {}) {
     nightIntensity: 1.35,
   };
 
+  applyCityTextureBudget(city, renderer);
   scene.add(city);
   return city;
 }

@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { createKTX2Loader } from "./ktx2.js";
 import { createDracoLoader } from "./draco.js";
+import { applyTextureBudgetToObject } from "./textureBudget.js";
 
 function isProbablyHtml(buffer) {
   if (!buffer || buffer.byteLength < 16) return true;
@@ -82,6 +83,8 @@ export async function loadGLBWithFallbacks({
           root.scale.multiplyScalar(scaleFactor);
         }
       }
+
+      applyTextureBudgetToObject(root, { renderer });
 
       if (typeof onLoaded === "function") {
         try {
