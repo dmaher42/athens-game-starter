@@ -20,7 +20,11 @@ import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hi
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
 import { updateCityLighting, createHillCity, createCity } from "./world/city.js";
-import { createGrassLayer, updateGrass } from "./world/grass.js";
+import {
+  mount as mountGrass,
+  update as updateGrass,
+  setNightFactor as setGrassNightFactor,
+} from "./world/grass.js";
 import {
   AGORA_CENTER_3D,
   HARBOR_CENTER_3D,
@@ -39,21 +43,25 @@ import { InputMap } from "./input/InputMap.js";
 import { EnvironmentCollider } from "./env/EnvironmentCollider.js";
 import { BuildingManager } from "./buildings/BuildingManager.js";
 import { PlayerController } from "./controls/PlayerController.js";
+import { ThirdPersonCamera } from "./controls/ThirdPersonCamera.js";
 import { Character } from "./characters/Character.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "./world/npcs.js";
 import { mountExposureSlider } from "./ui/exposureSlider.js";
 import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
 import { mountDevHUD } from "./ui/devHud.js";
+import { mount as mountHUDCameraSettings } from "./ui/HUDCameraSettings.js";
 import { createPin } from "./world/pins.js";
 import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
 import { loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
 import { resolveBaseUrl } from "./utils/baseUrl.js";
+import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
 import { LandmarkManager } from "./world/LandmarkManager.js";
 import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
 
 const WORLD_ROOT_NAME = "WorldRoot";
+const USE_THIRD_PERSON = true;
 
 const LIGHTING_PRESETS = {
   dawn: {
@@ -606,7 +614,7 @@ async function mainApp() {
 
   const worldRoot = refreshWorldRoot();
 
-  let grassLayer = null;
+  let grassRoot = null;
 
   const roadsVisible = (() => {
     if (typeof window === "undefined") {
@@ -634,10 +642,9 @@ async function mainApp() {
   }
 
   if (grassEnabled) {
-    grassLayer = createGrassLayer(worldRoot, terrain, { seed: 42 });
-    if (grassLayer && typeof updateGrass.setNightFactor === "function") {
-      updateGrass.setNightFactor(lights.nightFactor);
-      updateGrass(0);
+    grassRoot = mountGrass(worldRoot);
+    if (grassRoot) {
+      setGrassNightFactor(lights.nightFactor);
     }
   }
 
@@ -719,6 +726,177 @@ async function mainApp() {
     minAboveSea: 0.25,
   });
   player.syncCapsuleToObject();
+
+  let interactor = null;
+
+  const thirdPersonSolids = [];
+  if (envCollider?.mesh) {
+    thirdPersonSolids.push(envCollider.mesh);
+  }
+  if (terrain) {
+    thirdPersonSolids.push(terrain);
+  }
+  // If we centralize environment collision meshes later, wire them into this array.
+
+  const thirdPersonTargetOffset = new THREE.Vector3(0, player.height * 0.6, 0);
+
+  let thirdPersonCamera = null;
+  let thirdPersonEnabled = false;
+  const thirdPersonPointerState = {
+    active: false,
+    pointerId: null,
+    lastX: 0,
+    lastY: 0,
+    pendingUse: false,
+  };
+  let thirdPersonHandlersAttached = false;
+
+  const viewCanvas = renderer.domElement;
+  const DRAG_THRESHOLD = 1.5;
+
+  const clearThirdPersonPointer = () => {
+    if (thirdPersonPointerState.pointerId !== null) {
+      try {
+        viewCanvas.releasePointerCapture(thirdPersonPointerState.pointerId);
+      } catch {}
+    }
+    thirdPersonPointerState.active = false;
+    thirdPersonPointerState.pointerId = null;
+    thirdPersonPointerState.pendingUse = false;
+  };
+
+  const onThirdPersonPointerDown = (event) => {
+    if (!thirdPersonEnabled || !thirdPersonCamera) return;
+    if (!event.isPrimary) return;
+    if (event.pointerType !== "touch" && event.button !== 0) return;
+
+    thirdPersonPointerState.active = true;
+    thirdPersonPointerState.pointerId = event.pointerId;
+    thirdPersonPointerState.lastX = event.clientX;
+    thirdPersonPointerState.lastY = event.clientY;
+    thirdPersonPointerState.pendingUse = event.pointerType !== "touch" && event.button === 0;
+
+    try {
+      viewCanvas.setPointerCapture(event.pointerId);
+    } catch {}
+
+    event.preventDefault();
+  };
+
+  const onThirdPersonPointerMove = (event) => {
+    if (!thirdPersonPointerState.active) return;
+    if (thirdPersonPointerState.pointerId !== event.pointerId) return;
+
+    const deltaX = event.clientX - thirdPersonPointerState.lastX;
+    const deltaY = event.clientY - thirdPersonPointerState.lastY;
+
+    thirdPersonPointerState.lastX = event.clientX;
+    thirdPersonPointerState.lastY = event.clientY;
+
+    if (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD) {
+      thirdPersonPointerState.pendingUse = false;
+    }
+
+    if (thirdPersonCamera) {
+      thirdPersonCamera.handlePointer(deltaX, deltaY);
+    }
+
+    event.preventDefault();
+  };
+
+  const onThirdPersonPointerUp = (event) => {
+    if (thirdPersonPointerState.pointerId !== event.pointerId) return;
+
+    const shouldUse = thirdPersonPointerState.pendingUse && event.button === 0;
+
+    clearThirdPersonPointer();
+
+    if (shouldUse && interactor) {
+      interactor.useObject();
+    }
+
+    event.preventDefault();
+  };
+
+  const onThirdPersonPointerCancel = () => {
+    if (!thirdPersonPointerState.active) return;
+    clearThirdPersonPointer();
+  };
+
+  const attachThirdPersonPointer = () => {
+    if (thirdPersonHandlersAttached) return;
+    thirdPersonHandlersAttached = true;
+    viewCanvas.addEventListener("pointerdown", onThirdPersonPointerDown);
+    viewCanvas.addEventListener("pointermove", onThirdPersonPointerMove);
+    viewCanvas.addEventListener("pointerup", onThirdPersonPointerUp);
+    viewCanvas.addEventListener("pointercancel", onThirdPersonPointerCancel);
+    viewCanvas.addEventListener("lostpointercapture", onThirdPersonPointerCancel);
+    window.addEventListener("blur", onThirdPersonPointerCancel);
+  };
+
+  const detachThirdPersonPointer = () => {
+    if (!thirdPersonHandlersAttached) return;
+    thirdPersonHandlersAttached = false;
+    viewCanvas.removeEventListener("pointerdown", onThirdPersonPointerDown);
+    viewCanvas.removeEventListener("pointermove", onThirdPersonPointerMove);
+    viewCanvas.removeEventListener("pointerup", onThirdPersonPointerUp);
+    viewCanvas.removeEventListener("pointercancel", onThirdPersonPointerCancel);
+    viewCanvas.removeEventListener("lostpointercapture", onThirdPersonPointerCancel);
+    window.removeEventListener("blur", onThirdPersonPointerCancel);
+    clearThirdPersonPointer();
+  };
+
+  const setThirdPersonEnabled = (enabled) => {
+    if (!thirdPersonCamera) return;
+
+    const next = !!enabled;
+    if (thirdPersonEnabled === next) return;
+
+    thirdPersonEnabled = next;
+    thirdPersonCamera.setEnabled(next);
+
+    if (next) {
+      thirdPersonCamera.setAngles(player.cameraYaw ?? 0, player.cameraPitch ?? 0, {
+        snap: true,
+      });
+      thirdPersonCamera.update(0);
+      attachThirdPersonPointer();
+      if (
+        typeof document !== "undefined" &&
+        document.pointerLockElement === viewCanvas &&
+        typeof document.exitPointerLock === "function"
+      ) {
+        try {
+          document.exitPointerLock();
+        } catch {}
+      }
+    } else {
+      thirdPersonCamera.setAngles(player.cameraYaw ?? 0, player.cameraPitch ?? 0, {
+        snap: true,
+      });
+      detachThirdPersonPointer();
+    }
+  };
+
+  if (USE_THIRD_PERSON) {
+    thirdPersonCamera = new ThirdPersonCamera(camera, player.object, {
+      targetOffset: thirdPersonTargetOffset,
+      followLerp: 0.12,
+      rotationLerp: 0.15,
+      solids: thirdPersonSolids,
+      enabled: false,
+      keyOrbit: {
+        enabled: true,
+        yawSpeed: 0.9,
+        pitchSpeed: 0.9,
+        minPitch: -0.6,
+        maxPitch: 0.6,
+        minDist: 2.5,
+        maxDist: 7.5,
+        zoomSpeed: 4,
+      }, // ArrowKeyOrbit: configure keyboard orbit controls
+    });
+  }
 
   // Example interactable props. userData acts like a metadata bag so you can
   // describe behaviour without subclassing three.js meshes. Below we hook up a
@@ -1260,7 +1438,14 @@ async function mainApp() {
     console.error("[LandmarkManager] Failed to load Athens layout", error);
   }
 
-  const interactor = createInteractor(renderer, camera, scene);
+  interactor = createInteractor(renderer, camera, scene);
+
+  if (thirdPersonCamera) {
+    setThirdPersonEnabled(USE_THIRD_PERSON);
+  }
+
+  // Texture budget safe mode.
+  applyTextureBudgetToObject(scene, { safeMode: true });
 
   const clock = new THREE.Clock();
   // Slow the sun/moon orbit so each in-game day lasts 20 real minutes by default.
@@ -1285,9 +1470,9 @@ async function mainApp() {
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
     updateOcean(ocean, 0, sunDir, lights.nightFactor);
-    if (grassLayer && typeof updateGrass.setNightFactor === "function") {
-      updateGrass.setNightFactor(lights.nightFactor);
-      updateGrass(0);
+    if (grassRoot) {
+      setGrassNightFactor(lights.nightFactor);
+      updateGrass(0, player?.position ?? null);
     }
 
     const formattedTime = formatPhaseAsTime(phase);
@@ -1325,9 +1510,9 @@ async function mainApp() {
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
-    if (grassLayer && typeof updateGrass.setNightFactor === "function") {
-      updateGrass.setNightFactor(lights.nightFactor);
-      updateGrass(deltaTime);
+    if (grassRoot) {
+      setGrassNightFactor(lights.nightFactor);
+      updateGrass(deltaTime, player?.position ?? null);
     }
 
     // Advance the GPU-driven terrain sway (no CPU vertex updates required).
@@ -1337,8 +1522,20 @@ async function mainApp() {
     // Update soundscape once per frame (player position optional)
     soundscape.update(player?.position);
 
+    if (thirdPersonCamera && thirdPersonEnabled) {
+      player.cameraYaw = thirdPersonCamera.getYaw();
+      player.cameraPitch = thirdPersonCamera.getPitch();
+    }
+
     // Update player movement and drive the attached character animation.
     player.update(deltaTime);
+    if (thirdPersonCamera && thirdPersonEnabled) {
+      player.cameraYaw = thirdPersonCamera.getYaw();
+      player.cameraPitch = thirdPersonCamera.getPitch();
+    }
+    if (thirdPersonCamera) {
+      thirdPersonCamera.update(deltaTime);
+    }
     for (const updateNpc of npcUpdaters) updateNpc(deltaTime);
 
     // Cast a ray through the center of the screen to detect hovered objects and
@@ -1391,6 +1588,7 @@ async function mainApp() {
   const SHOW_HUD = true;
   console.log("[HUD] mounting…");
   const devHud = mountDevHUD({ getPosition, getDirection, onPin });
+  mountHUDCameraSettings(devHud?.rootElement ?? null);
   if (audioManifestMissing) {
     devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
   }
@@ -1399,12 +1597,17 @@ async function mainApp() {
   // callback attached to whatever we are currently looking at.
   renderer.domElement.addEventListener("pointerdown", (event) => {
     if (event.button === 0) {
+      if (thirdPersonEnabled && thirdPersonCamera) {
+        return;
+      }
       interactor.useObject();
     }
   });
 
   window.addEventListener("keydown", (event) => {
-    if (event.code === "KeyE") {
+    if (event.code === "KeyV" && !event.repeat && thirdPersonCamera) {
+      setThirdPersonEnabled(!thirdPersonEnabled);
+    } else if (event.code === "KeyE") {
       interactor.useObject();
     }
   });

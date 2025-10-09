@@ -1,3 +1,9 @@
+import {
+  loadSettings,
+  subscribe,
+  defaultCameraSettings,
+} from "../state/settingsStore.js";
+
 const CONTROL_KEYS = new Set([
   "KeyW",
   "KeyA",
@@ -31,6 +37,14 @@ export class InputMap {
 
     /** @private */
     this.flyToggleQueued = false;
+
+    // CameraSettingsStore: sync arrow-key look speeds
+    /** @private */
+    this.cameraSettings = loadSettings();
+    /** @private */
+    this.unsubscribeCameraSettings = subscribe((settings) => {
+      this.cameraSettings = settings;
+    });
 
     /** @private */
     this.keyDownHandler = (event) => {
@@ -66,6 +80,8 @@ export class InputMap {
     window.removeEventListener("keyup", this.keyUpHandler);
     window.removeEventListener("blur", this.blurHandler);
     window.removeEventListener("focus", this.blurHandler);
+    this.unsubscribeCameraSettings?.();
+    this.unsubscribeCameraSettings = null;
   }
 
   /**
@@ -73,13 +89,28 @@ export class InputMap {
    * @returns {LookDelta}
    */
   consumeLookDelta(dt = 0) {
+    const settings = this.cameraSettings || defaultCameraSettings;
+    if (!settings.enableArrowOrbit) {
+      return { yaw: 0, pitch: 0 };
+    }
+
     const yawInput = (this.lookRight ? 1 : 0) - (this.lookLeft ? 1 : 0);
     const pitchInput = (this.lookDown ? 1 : 0) - (this.lookUp ? 1 : 0);
-    const sensitivity = 1.8; // radians per second
+    const yawSpeed = Number.isFinite(settings.yawSpeed)
+      ? settings.yawSpeed
+      : defaultCameraSettings.yawSpeed;
+    const pitchSpeed = Number.isFinite(settings.pitchSpeed)
+      ? settings.pitchSpeed
+      : defaultCameraSettings.pitchSpeed;
+    const invert = settings.invertPitch ? -1 : 1;
+    const dtSafe = Number.isFinite(dt) ? Math.max(0, dt) : 0;
+
+    const yawDelta = yawInput * yawSpeed * dtSafe;
+    const pitchDelta = pitchInput * pitchSpeed * dtSafe * invert;
 
     return {
-      yaw: yawInput * sensitivity * dt,
-      pitch: pitchInput * sensitivity * dt,
+      yaw: yawDelta,
+      pitch: pitchDelta,
     };
   }
 
