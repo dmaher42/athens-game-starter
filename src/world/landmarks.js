@@ -8,6 +8,7 @@ import {
   DEFAULT_BASIS_TRANSCODER_PATH,
 } from "../utils/ktx2.js";
 import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
+import { resolveBaseUrl } from "../utils/baseUrl.js";
 import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
 
 /**
@@ -21,10 +22,7 @@ import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
  * ```
  */
 
-const BASE_URL = (() => {
-  const base = import.meta?.env?.BASE_URL ?? "/";
-  return base.endsWith("/") ? base : `${base}/`;
-})();
+const BASE_URL = resolveBaseUrl();
 
 // Reuse a single loader instance so we don't repeatedly allocate it whenever we
 // load a new landmark. GLTFLoader understands the .glb format which packages a

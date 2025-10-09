@@ -1,14 +1,16 @@
 // ---- src/features/roads-gravel.js ----
 import { makeTiledPBR } from "../materials/pbr-utils.js";
+import { resolveBaseUrl } from "../utils/baseUrl.js";
 
 /**
  * Applies gravel material to road meshes only.
  * - Safe if textures missing (no-op).
  * - Idempotent: re-running won’t double-apply.
  */
-export async function applyGravelToRoads({ scene, BASE_URL = "./", repeat = [6, 6] } = {}) {
+export async function applyGravelToRoads({ scene, BASE_URL, repeat = [6, 6] } = {}) {
   if (!scene) return;
 
+  BASE_URL = resolveBaseUrl(BASE_URL);
   const basePath = `${BASE_URL}textures/gravel`.replace(/\/{2,}/g, "/");
   const mat = await makeTiledPBR(basePath, repeat);
   if (!mat) return; // textures not uploaded yet
