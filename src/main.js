@@ -464,6 +464,7 @@ async function mainApp() {
   const scene = new THREE.Scene();
   scene.userData = scene.userData || {};
   scene.userData.renderer = renderer;
+  scene.userData.baseUrl = BASE_URL;
 
   const disposeMaterial = (material) => {
     if (!material) return;
@@ -683,7 +684,7 @@ async function mainApp() {
   // Plazas (agora + acropolis terraces)
   createPlazas(worldRoot);
 
-  const harborCity = createCity(worldRoot, terrain, {
+  const harborCity = await createCity(worldRoot, terrain, {
     roadsVisible,
   });
 
