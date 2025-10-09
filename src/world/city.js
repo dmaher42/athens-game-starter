@@ -212,7 +212,8 @@ export function createCity(scene, terrain, options = {}) {
     maxX: HARBOR_WATER_EAST_LIMIT + 24,
   };
   // Pier Plaza
-  const pierPlazaTarget = new THREE.Vector3(HARBOR_CENTER_3D.x + 8, 0, HARBOR_CENTER_3D.z);
+  const pierPlazaCenter = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(10, 0, 0));
+  const pierPlazaTarget = pierPlazaCenter.clone();
   // --- Updated defaults for a more "city-like" layout -----------------------
   // Goal: straighter blocks, clearer grid, fewer awkward placements. Callers
   // can still override any of these via `options`.
@@ -356,6 +357,43 @@ export function createCity(scene, terrain, options = {}) {
   const roadGeometries = [];
   const mainAvenueSegments = [];
   const mainAvenueLightPositions = [];
+  const streetlightPoleGeometry = new THREE.CylinderGeometry(0.06, 0.08, 1, 8);
+  streetlightPoleGeometry.translate(0, 0.5, 0);
+  const streetlightLampGeometry = new THREE.SphereGeometry(0.18, 12, 12);
+  const streetlightPoleMaterial = new THREE.MeshStandardMaterial({
+    color: 0x3d3d3d,
+    roughness: 0.85,
+    metalness: 0.25,
+  });
+  const streetlightLampMaterial = new THREE.MeshStandardMaterial({
+    color: 0xfff2d0,
+    emissive: new THREE.Color(0xfff2c0),
+    emissiveIntensity: 0.0,
+    roughness: 0.45,
+    metalness: 0.05,
+  });
+  const streetlightPoleHeight = 3.4;
+
+  const ensureStreetlightRegistry = () => {
+    const registry = city.userData.streetlights;
+    if (registry) {
+      registry.material = streetlightLampMaterial;
+      if (!Array.isArray(registry.meshes)) registry.meshes = [];
+      if (!Array.isArray(registry.individuals)) registry.individuals = [];
+      if (registry.dayIntensity == null) registry.dayIntensity = 0.0;
+      if (registry.nightIntensity == null) registry.nightIntensity = 1.6;
+      return registry;
+    }
+    const created = {
+      material: streetlightLampMaterial,
+      dayIntensity: 0.0,
+      nightIntensity: 1.6,
+      meshes: [],
+      individuals: [],
+    };
+    city.userData.streetlights = created;
+    return created;
+  };
 
   // Define avenueRowIndex for the main avenue aligned with the central row
   const avenueRowIndex = Math.floor(roadGrid.length / 2);
@@ -514,27 +552,17 @@ export function createCity(scene, terrain, options = {}) {
 
   // Main-Avenue Streetlights
   if (mainAvenueLightPositions.length > 0) {
-    const poleGeometry = new THREE.CylinderGeometry(0.06, 0.08, 1, 8);
-    poleGeometry.translate(0, 0.5, 0);
-    const lampGeometry = new THREE.SphereGeometry(0.18, 12, 12);
-
-    const poleMaterial = new THREE.MeshStandardMaterial({
-      color: 0x3d3d3d,
-      roughness: 0.85,
-      metalness: 0.25,
-    });
-    const lampMaterial = new THREE.MeshStandardMaterial({
-      color: 0xfff2d0,
-      emissive: new THREE.Color(0xfff2c0),
-      emissiveIntensity: 0.0,
-      roughness: 0.45,
-      metalness: 0.05,
-    });
-
-    const poleHeight = 3.4;
     const lightCount = mainAvenueLightPositions.length;
-    const poles = new THREE.InstancedMesh(poleGeometry, poleMaterial, lightCount);
-    const lamps = new THREE.InstancedMesh(lampGeometry, lampMaterial, lightCount);
+    const poles = new THREE.InstancedMesh(
+      streetlightPoleGeometry,
+      streetlightPoleMaterial,
+      lightCount
+    );
+    const lamps = new THREE.InstancedMesh(
+      streetlightLampGeometry,
+      streetlightLampMaterial,
+      lightCount
+    );
 
     poles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     lamps.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -549,11 +577,11 @@ export function createCity(scene, terrain, options = {}) {
       const pos = mainAvenueLightPositions[i];
       _position.set(pos.x, pos.y, pos.z);
       _quaternion.identity();
-      _scale.set(1, poleHeight, 1);
+      _scale.set(1, streetlightPoleHeight, 1);
       _matrix.compose(_position, _quaternion, _scale);
       poles.setMatrixAt(i, _matrix);
 
-      _position.set(pos.x, pos.y + poleHeight + 0.18, pos.z);
+      _position.set(pos.x, pos.y + streetlightPoleHeight + 0.18, pos.z);
       _scale.set(1, 1, 1);
       _matrix.compose(_position, _quaternion, _scale);
       lamps.setMatrixAt(i, _matrix);
@@ -567,11 +595,329 @@ export function createCity(scene, terrain, options = {}) {
     city.add(poles);
     city.add(lamps);
 
-    city.userData.streetlights = {
-      material: lampMaterial,
-      dayIntensity: 0.0,
-      nightIntensity: 1.6,
+    const streetlightsRegistry = ensureStreetlightRegistry();
+    streetlightsRegistry.meshes.push(lamps);
+  }
+
+  // Pier Plaza
+  {
+    const plazaHeightSample = sampleHeight(
+      terrain,
+      pierPlazaCenter.x,
+      pierPlazaCenter.z,
+      SEA_LEVEL_Y
+    );
+    const plazaBaseHeight = Math.max(
+      (Number.isFinite(plazaHeightSample) ? plazaHeightSample : SEA_LEVEL_Y) + SURFACE_OFFSET,
+      SEA_LEVEL_Y + SURFACE_OFFSET
+    );
+    addFoundationPad(city, pierPlazaCenter.x, plazaBaseHeight, pierPlazaCenter.z, 3.2);
+  }
+
+  // Market Stalls
+  {
+    const stallsPerRow = 4;
+    const stallRows = 2;
+    const totalStalls = stallsPerRow * stallRows;
+    if (totalStalls > 0) {
+      const halfWidth = 0.75;
+      const halfDepth = 0.55;
+      const postHeight = 1.7;
+
+      const postGeometry = new THREE.BoxGeometry(0.08, postHeight, 0.08);
+      postGeometry.translate(0, postHeight / 2, 0);
+      const frontBeamGeometry = new THREE.BoxGeometry(halfWidth * 2 + 0.16, 0.08, 0.08);
+      frontBeamGeometry.translate(0, postHeight, halfDepth);
+      const rearBeamGeometry = new THREE.BoxGeometry(halfWidth * 2 + 0.16, 0.08, 0.08);
+      rearBeamGeometry.translate(0, postHeight, -halfDepth);
+      const counterGeometry = new THREE.BoxGeometry(halfWidth * 2 + 0.12, 0.12, halfDepth * 1.4);
+      counterGeometry.translate(0, 0.9, 0);
+
+      const framePieces = [];
+      const postOffsets = [
+        [-halfWidth, 0, -halfDepth],
+        [halfWidth, 0, -halfDepth],
+        [-halfWidth, 0, halfDepth],
+        [halfWidth, 0, halfDepth],
+      ];
+      for (const [px, py, pz] of postOffsets) {
+        const piece = postGeometry.clone();
+        piece.translate(px, py, pz);
+        framePieces.push(piece);
+      }
+      framePieces.push(frontBeamGeometry);
+      framePieces.push(rearBeamGeometry);
+      framePieces.push(counterGeometry);
+
+      const frameGeometry = mergeGeometries(framePieces, true);
+
+      const canopyGeometry = new THREE.BoxGeometry(halfWidth * 2 + 0.28, 0.14, halfDepth * 2 + 0.32);
+      canopyGeometry.translate(0, 0.07, 0);
+
+      const frameMaterial = new THREE.MeshStandardMaterial({
+        color: 0x7a5a3b,
+        roughness: 0.72,
+        metalness: 0.08,
+      });
+      const canopyMaterial = new THREE.MeshStandardMaterial({
+        color: 0xb7c4cf,
+        roughness: 0.82,
+        metalness: 0.05,
+        vertexColors: true,
+      });
+
+      const frames = new THREE.InstancedMesh(frameGeometry, frameMaterial, totalStalls);
+      const canopies = new THREE.InstancedMesh(canopyGeometry, canopyMaterial, totalStalls);
+      frames.name = "HarborPierMarketFrames";
+      canopies.name = "HarborPierMarketCanopies";
+      frames.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      canopies.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      frames.castShadow = true;
+      frames.receiveShadow = false;
+      canopies.castShadow = false;
+      canopies.receiveShadow = true;
+      frames.userData.noCollision = true;
+      canopies.userData.noCollision = true;
+
+      const canopyPalette = [0xc7b59d, 0xa9b6c8, 0xc3a7af, 0xb0c9a6];
+      const stallSpacing = 2.1;
+      const rowSpacing = 1.8;
+      const startZ = pierPlazaCenter.z - ((stallsPerRow - 1) * stallSpacing) / 2;
+      let stallIndex = 0;
+
+      for (let row = 0; row < stallRows; row++) {
+        const rowOffset = (row - (stallRows - 1) / 2) * rowSpacing;
+        for (let col = 0; col < stallsPerRow; col++) {
+          const x = pierPlazaCenter.x + rowOffset;
+          const z = startZ + col * stallSpacing;
+          const terrainHeight = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
+          const groundY = Math.max(
+            (Number.isFinite(terrainHeight) ? terrainHeight : SEA_LEVEL_Y) + SURFACE_OFFSET,
+            SEA_LEVEL_Y + SURFACE_OFFSET
+          );
+
+          _position.set(x, groundY, z);
+          _quaternion.identity();
+          _scale.set(1, 1, 1);
+          _matrix.compose(_position, _quaternion, _scale);
+          frames.setMatrixAt(stallIndex, _matrix);
+
+          _position.set(x, groundY + postHeight + 0.18, z);
+          _matrix.compose(_position, _quaternion, _scale);
+          canopies.setMatrixAt(stallIndex, _matrix);
+
+          const canopyColor = new THREE.Color(canopyPalette[stallIndex % canopyPalette.length]);
+          canopies.setColorAt(stallIndex, canopyColor);
+
+          stallIndex++;
+        }
+      }
+
+      frames.instanceMatrix.needsUpdate = true;
+      canopies.instanceMatrix.needsUpdate = true;
+      if (canopies.instanceColor) {
+        canopies.instanceColor.needsUpdate = true;
+      }
+
+      city.add(frames);
+      city.add(canopies);
+    }
+  }
+
+  // Crates
+  {
+    const crateCount = 24;
+    if (crateCount > 0) {
+      const crateGeometry = new THREE.BoxGeometry(0.8, 0.6, 0.6);
+      crateGeometry.translate(0, 0.3, 0);
+      const crateMaterial = new THREE.MeshStandardMaterial({
+        color: 0x8f6b45,
+        roughness: 0.78,
+        metalness: 0.04,
+      });
+
+      const crates = new THREE.InstancedMesh(crateGeometry, crateMaterial, crateCount);
+      crates.name = "HarborPierMarketCrates";
+      crates.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      crates.castShadow = true;
+      crates.receiveShadow = true;
+      crates.userData.noCollision = true;
+
+      let placed = 0;
+      let attempts = 0;
+      while (placed < crateCount && attempts < crateCount * 8) {
+        attempts++;
+        const radius = THREE.MathUtils.lerp(0.6, 2.6, rng());
+        const angle = rng() * Math.PI * 2;
+        const offsetX = Math.cos(angle) * radius;
+        const offsetZ = Math.sin(angle) * radius;
+        if (Math.abs(offsetX) < 0.6 && Math.abs(offsetZ) < 1.6) {
+          continue;
+        }
+
+        const x = pierPlazaCenter.x + offsetX;
+        const z = pierPlazaCenter.z + offsetZ;
+        const terrainHeight = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
+        if (!Number.isFinite(terrainHeight)) {
+          continue;
+        }
+        const groundY = Math.max(terrainHeight + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET);
+
+        _position.set(x, groundY, z);
+        _quaternion.setFromAxisAngle(_rotationAxis, rng() * Math.PI * 2);
+        _scale.set(1, 1, 1);
+        _matrix.compose(_position, _quaternion, _scale);
+        crates.setMatrixAt(placed, _matrix);
+        placed++;
+      }
+
+      crates.count = placed;
+      crates.instanceMatrix.needsUpdate = true;
+      city.add(crates);
+    }
+  }
+
+  // Plaza Lamps
+  {
+    const lampPositions = [];
+    const lampRadius = 2.6;
+    for (let i = 0; i < 4; i++) {
+      const angle = (Math.PI / 2) * i + Math.PI / 4;
+      const x = pierPlazaCenter.x + Math.cos(angle) * lampRadius;
+      const z = pierPlazaCenter.z + Math.sin(angle) * lampRadius;
+      lampPositions.push(new THREE.Vector3(x, 0, z));
+    }
+
+    if (lampPositions.length > 0) {
+      const lamps = new THREE.InstancedMesh(
+        streetlightLampGeometry,
+        streetlightLampMaterial,
+        lampPositions.length
+      );
+      const poles = new THREE.InstancedMesh(
+        streetlightPoleGeometry,
+        streetlightPoleMaterial,
+        lampPositions.length
+      );
+      lamps.name = "HarborPlazaLamps";
+      poles.name = "HarborPlazaLampPoles";
+      lamps.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      poles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      lamps.castShadow = false;
+      lamps.receiveShadow = false;
+      poles.castShadow = false;
+      poles.receiveShadow = true;
+      lamps.userData.noCollision = true;
+      poles.userData.noCollision = true;
+
+      for (let i = 0; i < lampPositions.length; i++) {
+        const target = lampPositions[i];
+        const terrainHeight = sampleHeight(terrain, target.x, target.z, SEA_LEVEL_Y);
+        const groundY = Math.max(
+          (Number.isFinite(terrainHeight) ? terrainHeight : SEA_LEVEL_Y) + SURFACE_OFFSET,
+          SEA_LEVEL_Y + SURFACE_OFFSET
+        );
+
+        _position.set(target.x, groundY, target.z);
+        _quaternion.identity();
+        _scale.set(1, streetlightPoleHeight, 1);
+        _matrix.compose(_position, _quaternion, _scale);
+        poles.setMatrixAt(i, _matrix);
+
+        _position.set(target.x, groundY + streetlightPoleHeight + 0.18, target.z);
+        _scale.set(1, 1, 1);
+        _matrix.compose(_position, _quaternion, _scale);
+        lamps.setMatrixAt(i, _matrix);
+      }
+
+      lamps.instanceMatrix.needsUpdate = true;
+      poles.instanceMatrix.needsUpdate = true;
+      lamps.visible = roadsVisible;
+      poles.visible = roadsVisible;
+
+      city.add(poles);
+      city.add(lamps);
+
+      const streetlightsRegistry = ensureStreetlightRegistry();
+      streetlightsRegistry.meshes.push(lamps);
+    }
+
+    const lampLightColor = 0xfff2c8;
+    const interactiveLampHeight = sampleHeight(
+      terrain,
+      pierPlazaCenter.x,
+      pierPlazaCenter.z,
+      SEA_LEVEL_Y
+    );
+    const interactiveLampY = Math.max(
+      (Number.isFinite(interactiveLampHeight) ? interactiveLampHeight : SEA_LEVEL_Y) + SURFACE_OFFSET,
+      SEA_LEVEL_Y + SURFACE_OFFSET
+    );
+
+    const lampGroup = new THREE.Group();
+    lampGroup.name = "HarborPlazaLamp";
+    lampGroup.position.set(pierPlazaCenter.x, interactiveLampY, pierPlazaCenter.z);
+    lampGroup.userData.noCollision = true;
+    lampGroup.visible = roadsVisible;
+
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.4, 12), streetlightPoleMaterial);
+    base.position.y = 0.2;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    lampGroup.add(base);
+
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, streetlightPoleHeight, 10), streetlightPoleMaterial);
+    pole.position.y = streetlightPoleHeight / 2 + 0.4;
+    pole.castShadow = true;
+    pole.receiveShadow = false;
+    lampGroup.add(pole);
+
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 1.2), streetlightPoleMaterial);
+    arm.position.set(0, streetlightPoleHeight + 0.32, 0.5);
+    arm.castShadow = true;
+    arm.receiveShadow = false;
+    lampGroup.add(arm);
+
+    const bulbMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: new THREE.Color(lampLightColor),
+      emissiveIntensity: 0,
+    });
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16), bulbMaterial);
+    bulb.position.set(0, streetlightPoleHeight + 0.12, 1.0);
+    bulb.castShadow = false;
+    lampGroup.add(bulb);
+
+    const pointLight = new THREE.PointLight(lampLightColor, 0, 18, 2);
+    pointLight.position.copy(bulb.position);
+    pointLight.castShadow = true;
+    lampGroup.add(pointLight);
+
+    const lampState = {
+      light: pointLight,
+      material: bulbMaterial,
+      baseIntensity: 1.2,
+      overrideState: null,
     };
+
+    lampGroup.userData.interactable = true;
+    lampGroup.userData.highlightTarget = bulb;
+    lampGroup.userData.light = pointLight;
+    lampGroup.userData.onUse = () => {
+      const state = lampState.overrideState;
+      if (state === null) {
+        lampState.overrideState = true;
+      } else if (state === true) {
+        lampState.overrideState = false;
+      } else {
+        lampState.overrideState = null;
+      }
+    };
+
+    city.add(lampGroup);
+
+    const streetlightsRegistry = ensureStreetlightRegistry();
+    streetlightsRegistry.individuals.push(lampState);
   }
 
   const walkwayPoints = [];
@@ -698,6 +1044,29 @@ export function updateCityLighting(city, nightFactor = 0) {
       factor
     );
     streetlights.material.emissiveIntensity = lampTarget;
+  }
+
+  if (Array.isArray(streetlights?.individuals)) {
+    for (const lampState of streetlights.individuals) {
+      if (!lampState) continue;
+      const baseIntensity = lampState.baseIntensity ?? 0;
+      let intensity = THREE.MathUtils.lerp(0, baseIntensity, factor);
+      if (lampState.overrideState === true) {
+        intensity = baseIntensity;
+      } else if (lampState.overrideState === false) {
+        intensity = 0;
+      }
+
+      if (lampState.light) {
+        lampState.light.intensity = intensity;
+      }
+
+      if (lampState.material) {
+        const normalized = baseIntensity > 0 ? intensity / baseIntensity : 0;
+        const nightMax = streetlights?.nightIntensity ?? 1.6;
+        lampState.material.emissiveIntensity = normalized > 0 ? nightMax * normalized : 0;
+      }
+    }
   }
 }
 
