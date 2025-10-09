@@ -14,6 +14,16 @@ const DEFAULT_FOLLOW_LERP = 0.12;
 const DEFAULT_ROTATION_LERP = 0.15;
 const DEFAULT_YAW_SENSITIVITY = 0.0024;
 const DEFAULT_PITCH_SENSITIVITY = 0.0021;
+const DEFAULT_KEY_ORBIT = {
+  enabled: true,
+  yawSpeed: 0.9,
+  pitchSpeed: 0.9,
+  minPitch: -0.6,
+  maxPitch: 0.6,
+  minDist: 2.5,
+  maxDist: 7.5,
+  zoomSpeed: 4,
+}; // ArrowKeyOrbit: defaults for keyboard orbit behaviour
 const TAU = Math.PI * 2;
 
 const _tmpOffset = new THREE.Vector3();
@@ -60,12 +70,22 @@ export class ThirdPersonCamera {
    *   collisionOffset?: number,
    *   followLerp?: number,
    *   rotationLerp?: number,
-   *   yawSensitivity?: number,
-   *   pitchSensitivity?: number,
-   *   solids?: THREE.Object3D[],
-   *   enabled?: boolean,
-   * }} [options]
-   */
+  *   yawSensitivity?: number,
+  *   pitchSensitivity?: number,
+  *   solids?: THREE.Object3D[],
+  *   enabled?: boolean,
+  *   keyOrbit?: {
+  *     enabled?: boolean,
+  *     yawSpeed?: number,
+  *     pitchSpeed?: number,
+  *     minPitch?: number,
+  *     maxPitch?: number,
+  *     minDist?: number,
+  *     maxDist?: number,
+  *     zoomSpeed?: number,
+  *   },
+  * }} [options]
+  */
   constructor(camera, targetObject, options = {}) {
     this.camera = camera;
     this.targetObject = targetObject ?? null;
@@ -83,6 +103,99 @@ export class ThirdPersonCamera {
     this.collisionOffset = options.collisionOffset ?? DEFAULT_COLLISION_OFFSET;
 
     this.distance = Math.max(0.1, this.offset.length());
+
+    const keyOrbitOptions = options.keyOrbit ?? DEFAULT_KEY_ORBIT;
+    const resolvedKeyOrbit = { ...DEFAULT_KEY_ORBIT, ...keyOrbitOptions };
+    resolvedKeyOrbit.minPitch = THREE.MathUtils.clamp(
+      resolvedKeyOrbit.minPitch,
+      -Math.PI * 0.5,
+      Math.PI * 0.5
+    );
+    resolvedKeyOrbit.maxPitch = THREE.MathUtils.clamp(
+      resolvedKeyOrbit.maxPitch,
+      -Math.PI * 0.5,
+      Math.PI * 0.5
+    );
+    if (resolvedKeyOrbit.maxPitch < resolvedKeyOrbit.minPitch) {
+      const swap = resolvedKeyOrbit.maxPitch;
+      resolvedKeyOrbit.maxPitch = resolvedKeyOrbit.minPitch;
+      resolvedKeyOrbit.minPitch = swap;
+    }
+    this.keyOrbit = resolvedKeyOrbit; // ArrowKeyOrbit: resolved configuration
+
+    this.keyOrbitState = {
+      desiredYawDelta: 0,
+      desiredPitchDelta: 0,
+      keys: {
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+        pageUp: false,
+        pageDown: false,
+      },
+    }; // ArrowKeyOrbit: runtime state
+    this.keyOrbitHandlersAttached = false;
+    this.handleKeyDown = (event) => {
+      if (!this.shouldHandleKeyOrbitEvent(event)) return;
+      let handled = false;
+      switch (event.code) {
+        case "ArrowLeft":
+          this.keyOrbitState.keys.left = true;
+          handled = true;
+          break;
+        case "ArrowRight":
+          this.keyOrbitState.keys.right = true;
+          handled = true;
+          break;
+        case "ArrowUp":
+          this.keyOrbitState.keys.up = true;
+          handled = true;
+          break;
+        case "ArrowDown":
+          this.keyOrbitState.keys.down = true;
+          handled = true;
+          break;
+        case "PageUp":
+          this.keyOrbitState.keys.pageUp = true;
+          handled = true;
+          break;
+        case "PageDown":
+          this.keyOrbitState.keys.pageDown = true;
+          handled = true;
+          break;
+        default:
+          break;
+      }
+      if (handled && this.shouldConsumeKeyOrbit()) {
+        event.preventDefault(); // ArrowKeyOrbit: prevent scrolling when orbiting
+      }
+    };
+    this.handleKeyUp = (event) => {
+      if (!this.keyOrbitHandlersAttached) return;
+      switch (event.code) {
+        case "ArrowLeft":
+          this.keyOrbitState.keys.left = false;
+          break;
+        case "ArrowRight":
+          this.keyOrbitState.keys.right = false;
+          break;
+        case "ArrowUp":
+          this.keyOrbitState.keys.up = false;
+          break;
+        case "ArrowDown":
+          this.keyOrbitState.keys.down = false;
+          break;
+        case "PageUp":
+          this.keyOrbitState.keys.pageUp = false;
+          break;
+        case "PageDown":
+          this.keyOrbitState.keys.pageDown = false;
+          break;
+        default:
+          break;
+      }
+    };
 
     const clampedY = THREE.MathUtils.clamp(this.offset.y / this.distance, -1, 1);
     this.basePitch = Math.asin(clampedY);
@@ -221,6 +334,10 @@ export class ThirdPersonCamera {
     if (this.enabled) {
       this.needsImmediateSnap = true;
       this.warnedMissingTarget = false;
+      this.attachKeyOrbit();
+    }
+    if (!this.enabled) {
+      this.detachKeyOrbit();
     }
   }
 
@@ -246,8 +363,9 @@ export class ThirdPersonCamera {
     _tmpTarget.add(this.targetOffset);
 
     const dtSafe = Number.isFinite(dt) ? Math.max(0, dt) : 0;
-    if (dtSafe > 0) {
-      this.updateKeyboardOrbit(dtSafe);
+
+    if (this.keyOrbit.enabled) {
+      this.updateKeyOrbit(dtSafe);
     }
 
     this.targetPitch = THREE.MathUtils.clamp(this.targetPitch, this.minPitch, this.maxPitch);
@@ -360,79 +478,101 @@ export class ThirdPersonCamera {
     this.disposed = true;
   }
 
-  clearKeyStates() {
-    for (const key of KEY_CODES) {
-      this.keyboardState[key] = false;
+  // ArrowKeyOrbit: determine if keyboard events should be handled
+  shouldHandleKeyOrbitEvent(event) {
+    if (!this.keyOrbit.enabled) return false;
+    if (!this.enabled || this.disposed) return false;
+    if (!event) return false;
+    if (typeof document !== "undefined" && document.pointerLockElement && !this.enabled) {
+      return false;
     }
+    return true;
   }
 
-  applyCameraSettings(settings) {
-    const next = { ...defaultCameraSettings, ...(settings || {}) };
-    this.arrowOrbitEnabled = !!next.enableArrowOrbit;
-    this.keyboardYawSpeed = Number.isFinite(next.yawSpeed)
-      ? next.yawSpeed
-      : defaultCameraSettings.yawSpeed;
-    this.keyboardPitchSpeed = Number.isFinite(next.pitchSpeed)
-      ? next.pitchSpeed
-      : defaultCameraSettings.pitchSpeed;
-    this.keyboardZoomSpeed = Number.isFinite(next.zoomSpeed)
-      ? next.zoomSpeed
-      : defaultCameraSettings.zoomSpeed;
-    this.minPitch = Number.isFinite(next.minPitch) ? next.minPitch : this.minPitch;
-    this.maxPitch = Number.isFinite(next.maxPitch) ? next.maxPitch : this.maxPitch;
-    this.minDistance = Number.isFinite(next.minDist) ? next.minDist : this.minDistance;
-    this.maxDistance = Number.isFinite(next.maxDist) ? next.maxDist : this.maxDistance;
-    this.invertKeyboardPitch = !!next.invertPitch;
-
-    if (this.minPitch > this.maxPitch) {
-      const temp = this.minPitch;
-      this.minPitch = this.maxPitch;
-      this.maxPitch = temp;
+  // ArrowKeyOrbit: prevent default browser behaviour only when active
+  shouldConsumeKeyOrbit() {
+    if (!this.keyOrbit.enabled) return false;
+    if (!this.enabled || this.disposed) return false;
+    if (typeof document !== "undefined" && document.pointerLockElement && !this.enabled) {
+      return false;
     }
-    if (this.minDistance > this.maxDistance) {
-      const temp = this.minDistance;
-      this.minDistance = this.maxDistance;
-      this.maxDistance = temp;
-    }
-
-    this.targetPitch = THREE.MathUtils.clamp(this.targetPitch, this.minPitch, this.maxPitch);
-    this.currentPitch = THREE.MathUtils.clamp(this.currentPitch, this.minPitch, this.maxPitch);
-    this.distance = THREE.MathUtils.clamp(this.distance, this.minDistance, this.maxDistance);
-
-    if (!this.arrowOrbitEnabled) {
-      this.clearKeyStates();
-    }
+    return true;
   }
 
-  updateKeyboardOrbit(dt) {
-    if (!this.arrowOrbitEnabled || dt <= 0) return;
+  // ArrowKeyOrbit: attach keyboard listeners when enabled
+  attachKeyOrbit() {
+    if (!this.keyOrbit.enabled) return;
+    if (this.keyOrbitHandlersAttached) return;
+    if (typeof window === "undefined") return;
+    window.addEventListener("keydown", this.handleKeyDown);
+    window.addEventListener("keyup", this.handleKeyUp);
+    this.keyOrbitHandlersAttached = true;
+  }
 
-    const yawInput = (this.keyboardState.ArrowRight ? 1 : 0) - (this.keyboardState.ArrowLeft ? 1 : 0);
-    let pitchInput = (this.keyboardState.ArrowDown ? 1 : 0) - (this.keyboardState.ArrowUp ? 1 : 0);
-    const zoomInput = (this.keyboardState.PageUp ? 1 : 0) - (this.keyboardState.PageDown ? 1 : 0);
+  // ArrowKeyOrbit: detach keyboard listeners
+  detachKeyOrbit() {
+    if (!this.keyOrbitHandlersAttached) return;
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", this.handleKeyDown);
+      window.removeEventListener("keyup", this.handleKeyUp);
+    }
+    this.keyOrbitHandlersAttached = false;
+    this.keyOrbitState.desiredYawDelta = 0;
+    this.keyOrbitState.desiredPitchDelta = 0;
+    const { keys } = this.keyOrbitState;
+    keys.left = false;
+    keys.right = false;
+    keys.up = false;
+    keys.down = false;
+    keys.pageUp = false;
+    keys.pageDown = false;
+  }
 
-    if (this.invertKeyboardPitch) {
-      pitchInput *= -1;
+  // ArrowKeyOrbit: smooth keyboard-driven yaw/pitch/zoom updates
+  updateKeyOrbit(dt) {
+    if (dt <= 0) return;
+    const state = this.keyOrbitState;
+    const { keys } = state;
+    const yawInput = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    const pitchInput = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+    const zoomInput = (keys.pageDown ? 1 : 0) - (keys.pageUp ? 1 : 0);
+
+    if (yawInput !== 0) {
+      state.desiredYawDelta += yawInput * this.keyOrbit.yawSpeed * dt;
+    }
+    if (pitchInput !== 0) {
+      state.desiredPitchDelta += pitchInput * this.keyOrbit.pitchSpeed * dt;
     }
 
-    const yawDelta = yawInput * this.keyboardYawSpeed * dt;
-    const pitchDelta = pitchInput * this.keyboardPitchSpeed * dt;
-    const zoomDelta = zoomInput * this.keyboardZoomSpeed * dt;
+    const yawStep = THREE.MathUtils.lerp(0, state.desiredYawDelta, 0.18);
+    const pitchStep = THREE.MathUtils.lerp(0, state.desiredPitchDelta, 0.18);
 
-    if (yawDelta !== 0) {
-      this.targetYaw = wrapAngle(this.targetYaw - yawDelta);
+    if (yawStep !== 0) {
+      this.targetYaw = wrapAngle(this.targetYaw + yawStep);
     }
-    if (pitchDelta !== 0) {
-      const nextPitch = this.targetPitch - pitchDelta;
-      this.targetPitch = THREE.MathUtils.clamp(nextPitch, this.minPitch, this.maxPitch);
+    if (pitchStep !== 0 || pitchInput !== 0 || Math.abs(state.desiredPitchDelta) > 1e-5) {
+      const minPitch = Math.max(this.minPitch, this.keyOrbit.minPitch);
+      const maxPitch = Math.min(this.maxPitch, this.keyOrbit.maxPitch);
+      const nextPitch = this.targetPitch + pitchStep;
+      this.targetPitch = THREE.MathUtils.clamp(nextPitch, minPitch, maxPitch);
     }
-    if (zoomDelta !== 0) {
-      const nextDistance = THREE.MathUtils.clamp(
-        this.distance - zoomDelta,
-        this.minDistance,
-        this.maxDistance
+
+    state.desiredYawDelta -= yawStep;
+    state.desiredPitchDelta -= pitchStep;
+
+    if (zoomInput !== 0) {
+      const zoomDelta = zoomInput * this.keyOrbit.zoomSpeed * dt;
+      const minDist = Math.max(0.1, this.keyOrbit.minDist);
+      const maxDist = Math.max(minDist, this.keyOrbit.maxDist);
+      this.distance = THREE.MathUtils.clamp(
+        this.distance + zoomDelta,
+        minDist,
+        maxDist
       );
-      this.distance = nextDistance;
+    } else {
+      const minDist = Math.max(0.1, this.keyOrbit.minDist);
+      const maxDist = Math.max(minDist, this.keyOrbit.maxDist);
+      this.distance = THREE.MathUtils.clamp(this.distance, minDist, maxDist);
     }
   }
 }

@@ -56,6 +56,7 @@ import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
 import { loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
 import { resolveBaseUrl } from "./utils/baseUrl.js";
+import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
 import { LandmarkManager } from "./world/LandmarkManager.js";
 import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
 
@@ -884,6 +885,16 @@ async function mainApp() {
       rotationLerp: 0.15,
       solids: thirdPersonSolids,
       enabled: false,
+      keyOrbit: {
+        enabled: true,
+        yawSpeed: 0.9,
+        pitchSpeed: 0.9,
+        minPitch: -0.6,
+        maxPitch: 0.6,
+        minDist: 2.5,
+        maxDist: 7.5,
+        zoomSpeed: 4,
+      }, // ArrowKeyOrbit: configure keyboard orbit controls
     });
   }
 
@@ -1432,6 +1443,9 @@ async function mainApp() {
   if (thirdPersonCamera) {
     setThirdPersonEnabled(USE_THIRD_PERSON);
   }
+
+  // Texture budget safe mode.
+  applyTextureBudgetToObject(scene, { safeMode: true });
 
   const clock = new THREE.Clock();
   // Slow the sun/moon orbit so each in-game day lasts 20 real minutes by default.
