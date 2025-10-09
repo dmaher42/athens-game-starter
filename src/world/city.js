@@ -194,6 +194,9 @@ function evaluateLot({ terrain, centerX, centerZ, width, depth, rotation, maxSlo
 }
 
 export function createCity(scene, terrain, options = {}) {
+  // Toggle to show/hide plaza “foundation pads” (the visible discs).
+  // Default false so the two large discs disappear on the live build.
+  const showFoundationPads = options.showFoundationPads === true;
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
@@ -679,7 +682,7 @@ export function createCity(scene, terrain, options = {}) {
   }
 
   // Pocket Plazas
-  if (pocketPlazas.length > 0) {
+  if (showFoundationPads && pocketPlazas.length > 0) {
     for (const plaza of pocketPlazas) {
       addFoundationPad(city, plaza.x, plaza.y, plaza.z, 2.2);
     }
@@ -701,7 +704,7 @@ export function createCity(scene, terrain, options = {}) {
   }
 
   // Pier Plaza
-  {
+  if (showFoundationPads) {
     const plazaHeightSample = sampleHeight(
       terrain,
       pierPlazaCenter.x,
@@ -1321,6 +1324,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
     avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 18,
   } = opts;
+  const showFoundationPads = opts.showFoundationPads === true;
 
   const rng = makeRng(seed);
   const lots = [];
@@ -1403,7 +1407,9 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
 
     const buildingScale = 0.9 + rng() * 0.3;
     const padRadius = Math.max(2.0, 1.8 * buildingScale);
-    addFoundationPad(scene, p.x, baseY, p.z, padRadius);
+    if (showFoundationPads) {
+      addFoundationPad(scene, p.x, baseY, p.z, padRadius);
+    }
 
     // walls
     dummy.position.set(p.x, baseY + 1.0, p.z);
