@@ -1,20 +1,42 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
+import { resolveBaseUrl } from "../utils/baseUrl.js";
 
 // Optional: if your repo already has a safe GLB loader, plug it here.
 // Otherwise this shim returns null so we fall back to parametric meshes.
-async function tryLoadGLB(url) {
-  try {
-    if (!url) return null;
-    // Lazy import to avoid bundling issues if loader doesn't exist
-    const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
-    const loader = new GLTFLoader();
-    return await new Promise((resolve, reject) => {
-      loader.load(url, (gltf) => resolve(gltf.scene || gltf.scenes?.[0] || null), undefined, reject);
-    });
-  } catch {
-    return null;
+async function tryLoadGLB(urls) {
+  const candidates = Array.isArray(urls)
+    ? urls.filter((value) => typeof value === "string" && value.length > 0)
+    : typeof urls === "string" && urls.length > 0
+    ? [urls]
+    : [];
+
+  if (!candidates.length) return null;
+
+  let loader = null;
+  for (const url of candidates) {
+    try {
+      if (!loader) {
+        // Lazy import to avoid bundling issues if loader doesn't exist
+        const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
+        loader = new GLTFLoader();
+      }
+
+      const glb = await new Promise((resolve, reject) => {
+        loader.load(url, (gltf) => resolve(gltf.scene || gltf.scenes?.[0] || null), undefined, reject);
+      });
+
+      if (glb) {
+        return glb;
+      }
+    } catch (error) {
+      if (typeof console !== "undefined" && console.debug) {
+        console.debug("[buildingSpawner] Failed to load GLB candidate", url, error);
+      }
+    }
   }
+
+  return null;
 }
 
 // Minimal, safe materials (no maps) to avoid texture-unit overflow on Chromebook
@@ -146,17 +168,41 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     // 1) Try GLB (if present in public/…)
     let built = null;
     if (map.glb) {
-      const baseUrl = window.__ATHENS_BASE__ || "/athens-game-starter/";
-      const url = (baseUrl + map.glb).replace(/\/{2,}/g, "/");
-      const glb = await tryLoadGLB(url);
-      if (glb) {
-        built = glb;
-        // Normalize scale so GLBs feel consistent
-        const box = new THREE.Box3().setFromObject(glb);
-        const size = new THREE.Vector3(); box.getSize(size);
-        const targetY = clamp(size.y, 3.5, 8.0);
-        const scale = targetY > 0 ? (targetY / size.y) : 1.0;
-        glb.scale.setScalar(scale);
+      const baseUrl = resolveBaseUrl();
+      const trimmedGlb = typeof map.glb === "string" ? map.glb.trim() : "";
+
+      if (trimmedGlb.length > 0) {
+        const relativePath = trimmedGlb.replace(/^\/+/, "");
+        const candidateUrls = [];
+        const seen = new Set();
+        const pushCandidate = (value) => {
+          if (typeof value !== "string" || value.length === 0) return;
+          if (seen.has(value)) return;
+          seen.add(value);
+          candidateUrls.push(value);
+        };
+
+        if (typeof baseUrl === "string" && baseUrl.length > 0) {
+          pushCandidate(`${baseUrl}${relativePath}`);
+        }
+
+        if (trimmedGlb.startsWith("/")) {
+          pushCandidate(trimmedGlb);
+        } else {
+          pushCandidate(`/${relativePath}`);
+          pushCandidate(trimmedGlb);
+        }
+
+        const glb = await tryLoadGLB(candidateUrls);
+        if (glb) {
+          built = glb;
+          // Normalize scale so GLBs feel consistent
+          const box = new THREE.Box3().setFromObject(glb);
+          const size = new THREE.Vector3(); box.getSize(size);
+          const targetY = clamp(size.y, 3.5, 8.0);
+          const scale = targetY > 0 ? (targetY / size.y) : 1.0;
+          glb.scale.setScalar(scale);
+        }
       }
     }
 
