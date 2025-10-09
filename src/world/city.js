@@ -128,6 +128,7 @@ const _roofScale = new THREE.Vector3();
 const _position = new THREE.Vector3();
 const _rotationAxis = new THREE.Vector3(0, 1, 0);
 const _color = new THREE.Color();
+const _hsl = { h: 0, s: 0, l: 0 };
 
 function mulberry32(seed) {
   return function () {
@@ -679,7 +680,12 @@ export function createCity(scene, terrain, options = {}) {
       frames.userData.noCollision = true;
       canopies.userData.noCollision = true;
 
-      const canopyPalette = [0xc7b59d, 0xa9b6c8, 0xc3a7af, 0xb0c9a6];
+      const canopyPalette = [
+        new THREE.Color(0xcabda3),
+        new THREE.Color(0xb69379),
+        new THREE.Color(0x718c86),
+        new THREE.Color(0xa69e90),
+      ];
       const stallSpacing = 2.1;
       const rowSpacing = 1.8;
       const startZ = pierPlazaCenter.z - ((stallsPerRow - 1) * stallSpacing) / 2;
@@ -706,8 +712,16 @@ export function createCity(scene, terrain, options = {}) {
           _matrix.compose(_position, _quaternion, _scale);
           canopies.setMatrixAt(stallIndex, _matrix);
 
-          const canopyColor = new THREE.Color(canopyPalette[stallIndex % canopyPalette.length]);
-          canopies.setColorAt(stallIndex, canopyColor);
+          // Canopy color tints
+          const baseColor = canopyPalette[stallIndex % canopyPalette.length];
+          _color.copy(baseColor);
+          _color.getHSL(_hsl);
+          const saturationDelta = THREE.MathUtils.lerp(-0.05, 0.05, rng());
+          const lightnessDelta = THREE.MathUtils.lerp(-0.06, 0.06, rng());
+          const tintedSaturation = THREE.MathUtils.clamp(_hsl.s * (1 + saturationDelta), 0, 1);
+          const tintedLightness = THREE.MathUtils.clamp(_hsl.l * (1 + lightnessDelta), 0, 1);
+          _color.setHSL(_hsl.h, tintedSaturation, tintedLightness);
+          canopies.setColorAt(stallIndex, _color);
 
           stallIndex++;
         }
@@ -893,16 +907,19 @@ export function createCity(scene, terrain, options = {}) {
     pointLight.castShadow = true;
     lampGroup.add(pointLight);
 
+    const flickerPhase = rng() * Math.PI * 2;
     const lampState = {
       light: pointLight,
       material: bulbMaterial,
       baseIntensity: 1.2,
       overrideState: null,
+      flickerPhase,
     };
 
     lampGroup.userData.interactable = true;
     lampGroup.userData.highlightTarget = bulb;
     lampGroup.userData.light = pointLight;
+    lampGroup.userData.flickerPhase = flickerPhase;
     lampGroup.userData.onUse = () => {
       const state = lampState.overrideState;
       if (state === null) {
@@ -1029,6 +1046,7 @@ export function createCity(scene, terrain, options = {}) {
 export function updateCityLighting(city, nightFactor = 0) {
   if (!city) return;
   const factor = THREE.MathUtils.clamp(nightFactor, 0, 1);
+  const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
 
   const lighting = city.userData?.lighting;
   if (lighting?.material) {
@@ -1055,6 +1073,15 @@ export function updateCityLighting(city, nightFactor = 0) {
         intensity = baseIntensity;
       } else if (lampState.overrideState === false) {
         intensity = 0;
+      }
+
+      if (factor > 0 && intensity > 0 && Number.isFinite(lampState.flickerPhase)) {
+        // Warm flicker on special lamp
+        const flickerStrength = factor;
+        const flicker =
+          1 +
+          flickerStrength * (0.05 * Math.sin(now * 7) + 0.03 * Math.sin(now * 13 + lampState.flickerPhase));
+        intensity = Math.max(intensity * flicker, 0);
       }
 
       if (lampState.light) {
