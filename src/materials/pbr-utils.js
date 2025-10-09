@@ -20,6 +20,7 @@ async function tryTex(loader, url, isSRGB = false) {
   if (!(await urlExists(url))) return null;
   const tex = await loader.loadAsync(url);
   if (isSRGB) tex.colorSpace = SRGBColorSpace;
+  tex.flipY = false;
   return tex;
 }
 

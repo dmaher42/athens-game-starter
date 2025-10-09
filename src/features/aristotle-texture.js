@@ -29,7 +29,12 @@ export async function attachAristotleMarblePBR(options) {
     }
   }
 
-  const basePath = `${BASE_URL}${textureSubdir}`.replace(/\/{2,}/g, "/");
+  let normalizedBase = BASE_URL ?? "";
+  if (normalizedBase && !normalizedBase.endsWith("/")) {
+    normalizedBase += "/";
+  }
+  const normalizedSubdir = (textureSubdir ?? "").replace(/^\/+/, "");
+  const basePath = normalizedBase ? `${normalizedBase}${normalizedSubdir}` : normalizedSubdir;
 
   const material = await makeMarblePBR(basePath);
   if (!material) return; // textures not uploaded yet
