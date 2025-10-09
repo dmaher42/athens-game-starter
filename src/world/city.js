@@ -304,30 +304,31 @@ export function createCity(scene, terrain, options = {}) {
 
   // --- Collect all road segment geometries for one merged mesh (perf + fewer draw calls)
   const roadGeometries = [];
+  const mainAvenueSegments = [];
+  const mainAvenueLightPositions = [];
 
   // Define avenueRowIndex for the main avenue aligned with the central row
   const avenueRowIndex = Math.floor(roadGrid.length / 2);
 
   for (let iz = 0; iz < roadGrid.length; iz++) {
-    if (iz === avenueRowIndex) continue; // Skip center row, will be replaced by main avenue
     const row = roadGrid[iz];
     if (!row) continue;
 
-    if (iz === centerRowIndex) {
-      let currentPath = [];
+    if (iz === avenueRowIndex) {
+      let currentSegment = [];
       for (let ix = 0; ix < row.length; ix++) {
         const point = row[ix];
         if (point) {
-          currentPath.push(point.clone());
-        } else if (currentPath.length > 0) {
-          if (currentPath.length >= 2) {
-            mainAvenuePaths.push(currentPath);
+          currentSegment.push(point.clone());
+        } else if (currentSegment.length > 0) {
+          if (currentSegment.length >= 2) {
+            mainAvenueSegments.push(currentSegment);
           }
-          currentPath = [];
+          currentSegment = [];
         }
       }
-      if (currentPath.length >= 2) {
-        mainAvenuePaths.push(currentPath);
+      if (currentSegment.length >= 2) {
+        mainAvenueSegments.push(currentSegment);
       }
       continue;
     }
@@ -350,6 +351,45 @@ export function createCity(scene, terrain, options = {}) {
       if (!start || !end) {
         continue;
       }
+      createVisibleRoad(start, end, city, terrain, { collectGeometries: roadGeometries });
+    }
+  }
+
+  // --- Add a wide east-west main avenue through the city center --------------
+  // Replace the center row with a single wide avenue spanning the full width
+  const mainAvenueWidth = 3.8;
+  const mainAvenueColor = 0x2f2f2f;
+  const lightSpacing = 9;
+  const lightOffset = lightSpacing * 0.5;
+
+  for (const segment of mainAvenueSegments) {
+    if (segment.length < 2) {
+      continue;
+    }
+
+    const boulevardPoints = segment.map((point) => {
+      const height = sampleHeight(terrain, point.x, point.z, SEA_LEVEL_Y);
+      const y = Number.isFinite(height) ? height : SEA_LEVEL_Y;
+      return new THREE.Vector3(point.x, Math.max(y, SEA_LEVEL_Y) + SURFACE_OFFSET, point.z);
+    });
+
+    let distanceAccum = 0;
+    let nextDistance = lightOffset;
+
+    for (let i = 0; i < boulevardPoints.length - 1; i++) {
+      const start = boulevardPoints[i];
+      const end = boulevardPoints[i + 1];
+
+      createVisibleRoad(start, end, city, terrain, {
+        collectGeometries: roadGeometries,
+        width: mainAvenueWidth,
+        color: mainAvenueColor,
+      });
+
+      const segmentLength = start.distanceTo(end);
+      if (segmentLength <= 0) {
+        continue;
+      }
 
       while (distanceAccum + segmentLength >= nextDistance) {
         const remaining = nextDistance - distanceAccum;
@@ -359,43 +399,14 @@ export function createCity(scene, terrain, options = {}) {
         if (Number.isFinite(height)) {
           mainAvenueLightPositions.push({
             x: position.x,
-            y: Math.max(height + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET),
+            y: Math.max(height, SEA_LEVEL_Y) + SURFACE_OFFSET,
             z: position.z,
           });
         }
-        nextDistance += spacing;
+        nextDistance += lightSpacing;
       }
 
       distanceAccum += segmentLength;
-    }
-  }
-
-  // --- Add a wide east-west main avenue through the city center --------------
-  // Replace the center row with a single wide avenue spanning the full width
-  const centerRow = roadGrid[avenueRowIndex];
-  if (centerRow && centerRow.length >= 2) {
-    // Get the westmost and eastmost valid points in the center row
-    let westPoint = null;
-    let eastPoint = null;
-    for (let ix = 0; ix < centerRow.length; ix++) {
-      if (centerRow[ix]) {
-        if (!westPoint) westPoint = centerRow[ix];
-        eastPoint = centerRow[ix];
-      }
-    }
-    point.y = Math.max(height, SEA_LEVEL_Y) + SURFACE_OFFSET;
-    boulevardPoints.push(point);
-  }
-
-  if (boulevardPoints.length >= 2) {
-    for (let i = 0; i < boulevardPoints.length - 1; i++) {
-      const start = boulevardPoints[i];
-      const end = boulevardPoints[i + 1];
-      createVisibleRoad(start, end, city, terrain, {
-        collectGeometries: roadGeometries,
-        width: 3.8,
-        color: 0x2f2f2f,
-      });
     }
   }
 
