@@ -102,6 +102,7 @@ export class LandmarkManager {
     renderer = null,
     spawnPlaceholder = null,
     logger = console,
+    quietMissing = false,
   } = {}) {
     this.scene = scene;
     this.parent = parent || scene;
@@ -114,6 +115,7 @@ export class LandmarkManager {
     this.renderer = renderer;
     this.spawnPlaceholder = typeof spawnPlaceholder === "function" ? spawnPlaceholder : null;
     this.logger = logger || console;
+    this.quietMissing = !!quietMissing;
     this.baseUrl = resolveBaseUrl();
     this.globalDefaults = {};
     this.results = [];
@@ -378,29 +380,29 @@ export class LandmarkManager {
     const fallbackUrls = this.resolveUrls(spec.fallbackFiles || []);
     const messages = spec.messages || {};
 
-    if (!primaryUrls.length && messages.missingPrimary) {
+    if (!primaryUrls.length && messages.missingPrimary && !this.quietMissing) {
       this.logMessage("info", messages.missingPrimary);
     }
 
     let result = await this.attemptLoad(primaryUrls, spec, transformInfo, "primary");
 
     if (!result && fallbackUrls.length) {
-      if (messages.missingPrimary) {
+      if (messages.missingPrimary && !this.quietMissing) {
         this.logMessage("info", messages.missingPrimary);
       }
       const fallbackResult = await this.attemptLoad(fallbackUrls, spec, transformInfo, "fallback");
       if (fallbackResult) {
-        if (messages.fallbackUsed) {
+        if (messages.fallbackUsed && !this.quietMissing) {
           this.logMessage("info", messages.fallbackUsed);
         }
         result = fallbackResult;
-      } else if (messages.fallbackMissing) {
+      } else if (messages.fallbackMissing && !this.quietMissing) {
         this.logMessage("warn", messages.fallbackMissing);
       }
     }
 
     if (!result) {
-      if (!fallbackUrls.length && messages.allMissing) {
+      if (!fallbackUrls.length && messages.allMissing && !this.quietMissing) {
         this.logMessage("info", messages.allMissing);
       }
       this.spawnFallbackPlaceholder(spec, transformInfo);
@@ -416,9 +418,15 @@ export class LandmarkManager {
 
     const groups = Array.isArray(config.groups) ? config.groups : [];
     for (const group of groups) {
+      if (group?.enabled === false) {
+        continue;
+      }
       const groupDefaults = mergeSettings(this.globalDefaults, group?.defaults);
       const landmarks = Array.isArray(group?.landmarks) ? group.landmarks : [];
       for (const entry of landmarks) {
+        if (entry?.enabled === false) {
+          continue;
+        }
         const spec = mergeSettings(groupDefaults, entry);
         spec.groupId = group?.id;
         spec.groupLabel = group?.label;
