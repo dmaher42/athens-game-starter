@@ -8,6 +8,7 @@ import {
   DEFAULT_BASIS_TRANSCODER_PATH,
 } from "../utils/ktx2.js";
 import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
+import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
 
 /**
  * Example usage:
@@ -236,6 +237,11 @@ function removePlaceholder(entry) {
  * feedback while the real asset streams in. Once the GLB arrives we swap the
  * placeholder for the actual model.
  */
+const MATERIAL_PRESETS = {
+  marble: makeMarbleMaterial,
+  bronze: makeBronzeMaterial,
+};
+
 export async function loadLandmark(scene, url, options = {}) {
   const timerLabel = `loadLandmark:${url}`;
   if (typeof console?.time === "function") {
@@ -288,6 +294,8 @@ export async function loadLandmark(scene, url, options = {}) {
       if (!candidate) return false;
       return array.indexOf(candidate) === index;
     });
+
+    const { materialPreset } = options;
 
     const { root } = await loadGLBWithFallbacks({
       renderer: scene?.userData?.renderer || null,
@@ -386,6 +394,26 @@ export async function loadLandmark(scene, url, options = {}) {
         }
       };
     });
+
+    if (materialPreset) {
+      const factory = MATERIAL_PRESETS[materialPreset];
+      const presetMaterial = typeof factory === "function" ? factory(THREE) : null;
+
+      if (presetMaterial) {
+        finalObject.traverse?.((mesh) => {
+          if (!mesh?.isMesh) return;
+
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((material) => material?.dispose?.());
+            mesh.material = mesh.material.map(() => presetMaterial.clone());
+          } else {
+            mesh.material?.dispose?.();
+            mesh.material = presetMaterial.clone();
+          }
+        });
+        presetMaterial.dispose?.();
+      }
+    }
 
     return finalObject;
   } catch (error) {

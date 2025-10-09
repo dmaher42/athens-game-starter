@@ -184,7 +184,7 @@ function createSolidDataTexture(color, { colorSpace = THREE.SRGBColorSpace } = {
   return texture;
 }
 
-function createProceduralMarbleTextures() {
+export function createProceduralMarbleTextures() {
   if (cachedMonumentTextures) {
     return cachedMonumentTextures;
   }
@@ -640,8 +640,8 @@ async function mainApp() {
         // The landmark loader will call the scene/terrain height sampler and
         // lift the model slightly so it rests on the ground.
         position: ACROPOLIS_PEAK_3D,
-        // Optional: adjust if your GLB is tiny/huge
-        // scale: 1.0,
+        scale: 3.0,
+        materialPreset: "marble",
       });
     } else {
       console.warn(

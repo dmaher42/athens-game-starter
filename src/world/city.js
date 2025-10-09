@@ -531,20 +531,27 @@ export function createCity(scene, terrain, options = {}) {
   roofGeometry.rotateY(Math.PI / 4);
   roofGeometry.translate(0, 0.5, 0);
 
-  const wallsMaterial = new THREE.MeshStandardMaterial({
+  const wallsMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
     roughness: 0.6,
     metalness: 0.08,
     emissive: new THREE.Color(0xffdfa1),
     emissiveIntensity: 0.08,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.6,
+    sheen: 0.1,
+    envMapIntensity: 0.7,
   });
 
-  const roofsMaterial = new THREE.MeshStandardMaterial({
+  const roofsMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
     roughness: 0.85,
     metalness: 0.05,
+    clearcoat: 0.05,
+    clearcoatRoughness: 0.8,
+    envMapIntensity: 0.5,
   });
 
   const walls = new THREE.InstancedMesh(wallGeometry, wallsMaterial, instanceCount);
@@ -876,21 +883,28 @@ function getSharedRoofGeometry() {
 }
 
 function createWallsMaterial() {
-  return new THREE.MeshStandardMaterial({
+  return new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
     roughness: 0.6,
     metalness: 0.08,
     emissive: new THREE.Color(0xffdfa1),
     emissiveIntensity: 0.08,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.6,
+    sheen: 0.1,
+    envMapIntensity: 0.7,
   });
 }
 
 function createRoofsMaterial() {
-  return new THREE.MeshStandardMaterial({
+  return new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     vertexColors: true,
     roughness: 0.85,
     metalness: 0.05,
+    clearcoat: 0.05,
+    clearcoatRoughness: 0.8,
+    envMapIntensity: 0.5,
   });
 }
