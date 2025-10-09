@@ -11,9 +11,9 @@ export const GROUND_TEXTURE_CONFIG = {
   base: {
     generator: "lush-grass",
     /** Brighten the procedural grass so the terrain reads lighter overall. */
-    baseColor: [116, 172, 110],
-    shadowColor: [64, 110, 68],
-    highlightColor: [190, 232, 148],
+    baseColor: [121, 182, 112], // Grass weight/tint bump
+    shadowColor: [67, 117, 70], // Grass weight/tint bump
+    highlightColor: [198, 246, 154], // Grass weight/tint bump
     shadowStrength: 0.45,
     highlightStrength: 0.65,
     contrast: 1.02,
@@ -41,11 +41,12 @@ export const GROUND_TEXTURE_CONFIG = {
       repeat: [36, 36],
       rotation: 0.23,
       anisotropy: 8,
-      strength: 0.5,
+      strength: 0.75, // Grass weight/tint bump
       tint: [1.1, 1.12, 1.02],
       minHeight: -15,
       maxHeight: 32,
-      fade: 8,
+      fade: 10, // Grass weight/tint bump
+      slopeMax: 0.42, // Grass weight/tint bump
       mode: "mix",
       seed: 404,
     },
@@ -55,11 +56,12 @@ export const GROUND_TEXTURE_CONFIG = {
       repeat: [48, 48],
       rotation: 0.47,
       anisotropy: 8,
-      strength: 0.45,
-      tint: [1.14, 1.16, 1.06],
+      strength: 0.5, // Grass weight/tint bump
+      tint: [1.18, 1.2, 1.08], // Grass weight/tint bump
       minHeight: -20,
-      maxHeight: 12,
-      fade: 6,
+      maxHeight: 18, // Grass weight/tint bump
+      fade: 8, // Grass weight/tint bump
+      slopeMax: 0.38, // Grass weight/tint bump
       mode: "mix",
       seed: 405,
     },
@@ -68,11 +70,12 @@ export const GROUND_TEXTURE_CONFIG = {
       repeat: [32, 32],
       rotation: 0.11,
       anisotropy: 8,
-      strength: 0.32,
-      tint: [1.08, 1.02, 0.96],
-      minHeight: 8,
-      maxHeight: 42,
-      fade: 10,
+      strength: 0.28, // Grass weight/tint bump
+      tint: [1.04, 1, 0.92], // Grass weight/tint bump
+      minHeight: 16, // Grass weight/tint bump
+      maxHeight: 46, // Grass weight/tint bump
+      fade: 6, // Grass weight/tint bump
+      slopeMin: 0.32, // Grass weight/tint bump
       mode: "multiply",
       seed: 406,
     },
