@@ -77,23 +77,15 @@ export class EnvironmentCollider {
     };
 
     const pushGeometry = (geometry, matrix) => {
-      let cloned = geometry.clone();
-
+      const cloned = geometry.clone();
+      // Keep position only; drop everything else so attributes are consistent
       Object.keys(cloned.attributes).forEach((attrName) => {
-        if (attrName !== 'position') {
-          cloned.deleteAttribute(attrName);
-        }
+        if (attrName !== 'position') cloned.deleteAttribute(attrName);
       });
-
+      // Normalize index state: mergeGeometries requires either all or none
+      if (cloned.index) cloned.toNonIndexed();
       cloned.applyMatrix4(matrix);
-
-      // Ensure mergeGeometries sees consistent non-indexed data.
-      const normalized = cloned.getIndex() ? cloned.toNonIndexed() : cloned;
-      geometries.push(normalized);
-
-      if (normalized !== cloned) {
-        cloned.dispose();
-      }
+      geometries.push(cloned);
     };
 
     source.traverse((child) => {
@@ -121,12 +113,12 @@ export class EnvironmentCollider {
       pushGeometry(geometry, mesh.matrixWorld);
     });
 
-    let merged;
+    let merged = new THREE.BufferGeometry();
     if (geometries.length > 0) {
       const combined = mergeGeometries(geometries, false);
-      merged = combined ?? new THREE.BufferGeometry();
-    } else {
-      merged = new THREE.BufferGeometry();
+      if (combined) {
+        merged = combined;
+      }
     }
 
     geometries.forEach((geom) => geom.dispose());

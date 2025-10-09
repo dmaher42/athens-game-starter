@@ -246,13 +246,11 @@ export class ThirdPersonCamera {
       if (!KEY_CODES.includes(event.code)) return;
       this.keyboardState[event.code] = false;
     };
-    this._handleBlur = () => {
-      this.clearKeyStates();
-    };
+    this._handleBlur = this._handleBlur.bind(this);
     if (typeof window !== "undefined") {
       window.addEventListener("keydown", this._handleKeyDown, true);
       window.addEventListener("keyup", this._handleKeyUp, true);
-      window.addEventListener("blur", this._handleBlur);
+      window.addEventListener("blur", this._handleBlur, { passive: true });
     }
 
     this.applyCameraSettings(loadSettings());
@@ -274,7 +272,16 @@ export class ThirdPersonCamera {
     }
   }
 
+  _handleBlur() {
+    this.clearKeyStates();
+  }
+
   clearKeyStates() {
+    if (this.keyStates) {
+      Object.keys(this.keyStates).forEach((key) => {
+        this.keyStates[key] = false;
+      });
+    }
     if (this.keyboardState) {
       for (const key of Object.keys(this.keyboardState)) {
         this.keyboardState[key] = false;
@@ -287,6 +294,12 @@ export class ThirdPersonCamera {
       }
       this.keyOrbitState.desiredYawDelta = 0;
       this.keyOrbitState.desiredPitchDelta = 0;
+      if ("yaw" in this.keyOrbitState) this.keyOrbitState.yaw = 0;
+      if ("pitch" in this.keyOrbitState) this.keyOrbitState.pitch = 0;
+    }
+    this.isDragging = false;
+    if (this._pointerDelta && typeof this._pointerDelta.set === "function") {
+      this._pointerDelta.set(0, 0);
     }
   }
 
