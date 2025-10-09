@@ -1590,8 +1590,10 @@ async function mainApp() {
   };
 
   // Mount HUD in dev OR if a global flag is set (useful in prod previews)
-  // Force HUD to always show
-  const SHOW_HUD = true;
+  // Force HUD to always show in live builds so camera controls + compass remain visible
+  if (typeof window !== "undefined") {
+    window.SHOW_HUD = true;
+  }
   console.log("[HUD] mounting…");
   const devHud = mountDevHUD({ getPosition, getDirection, onPin });
   mountHUDCameraSettings(devHud?.rootElement ?? null);
