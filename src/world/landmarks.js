@@ -218,7 +218,11 @@ function liftObjectAboveGround(scene, object, offset = 0.05) {
 
 function disposeObject(object, scene) {
   if (!object) return;
-  if (scene) {
+
+  const parent = object.parent;
+  if (parent) {
+    parent.remove(object);
+  } else if (scene) {
     scene.remove(object);
   }
 
