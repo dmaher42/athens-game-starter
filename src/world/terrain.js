@@ -229,6 +229,7 @@ export function createTerrain(scene) {
     shader.vertexShader = shader.vertexShader.replace(
       "#include <begin_vertex>",
       `
+        vec2 planar = basePos.xy;
         vec3 transformed = basePos;
 ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
 
