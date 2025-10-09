@@ -196,7 +196,6 @@ function evaluateLot({ terrain, centerX, centerZ, width, depth, rotation, maxSlo
 export function createCity(scene, terrain, options = {}) {
   // Toggle to show/hide plaza “foundation pads” (the visible discs).
   // Default false so the two large discs disappear on the live build.
-  const showFoundationPads = options.showFoundationPads === true;
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
