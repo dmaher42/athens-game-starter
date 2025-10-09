@@ -5,3 +5,9 @@ public/models/**/*.glb
 docs/models/**/*.glb
 docs/audio/**/*.ogg
 public/favicon.ico
+
++# allow the small, canonical game assets to be committed
++!public/models/landmarks/*.glb
++!public/models/character/*.glb
++!public/favicon.ico
+
