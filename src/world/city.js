@@ -107,6 +107,89 @@ function dist2XZ(pad, center) {
   return dx * dx + dz * dz;
 }
 
+function getTypeOverride(overrides, type) {
+  if (!overrides || typeof overrides !== "object") return null;
+  return overrides[type] || null;
+}
+
+function distanceToNearestRoad(worldX, worldZ, roadGrid, cellSize, gridWidth, gridHeight, worldToGrid) {
+  if (!Array.isArray(roadGrid) || roadGrid.length === 0) return Infinity;
+  if (!Number.isFinite(gridWidth) || gridWidth <= 0) return Infinity;
+  if (!Number.isFinite(gridHeight) || gridHeight <= 0) return Infinity;
+  if (typeof worldToGrid !== "function") return Infinity;
+
+  const { gx, gz } = worldToGrid(worldX, worldZ) || {};
+  if (!Number.isFinite(gx) || !Number.isFinite(gz)) return Infinity;
+
+  const clampIndex = (value, max) => Math.max(0, Math.min(max, value));
+  const maxX = gridWidth - 1;
+  const maxZ = gridHeight - 1;
+  const cx = clampIndex(Math.round(gx), maxX);
+  const cz = clampIndex(Math.round(gz), maxZ);
+
+  const nodeAt = (ix, iz) => {
+    if (iz < 0 || iz >= gridHeight) return null;
+    const row = roadGrid[iz];
+    if (!Array.isArray(row)) return null;
+    return row[ix] || null;
+  };
+
+  const distanceToNode = (node) => {
+    if (!node) return Infinity;
+    const dx = worldX - node.x;
+    const dz = worldZ - node.z;
+    return Math.sqrt(dx * dx + dz * dz);
+  };
+
+  const centerNode = nodeAt(cx, cz);
+  if (centerNode) {
+    return distanceToNode(centerNode);
+  }
+
+  const safeCell = Number.isFinite(cellSize) && cellSize > 0 ? cellSize : 1;
+  const maxRings = Math.max(1, Math.ceil(10 / safeCell));
+
+  for (let r = 1; r <= maxRings; r++) {
+    let best = Infinity;
+    const minX = clampIndex(cx - r, maxX);
+    const maxXRing = clampIndex(cx + r, maxX);
+    const minZ = clampIndex(cz - r, maxZ);
+    const maxZRing = clampIndex(cz + r, maxZ);
+
+    for (let x = minX; x <= maxXRing; x++) {
+      const topNode = nodeAt(x, minZ);
+      if (topNode) {
+        const d = distanceToNode(topNode);
+        if (d < best) best = d;
+      }
+      const bottomNode = nodeAt(x, maxZRing);
+      if (bottomNode) {
+        const d = distanceToNode(bottomNode);
+        if (d < best) best = d;
+      }
+    }
+
+    for (let z = minZ + 1; z < maxZRing; z++) {
+      const leftNode = nodeAt(minX, z);
+      if (leftNode) {
+        const d = distanceToNode(leftNode);
+        if (d < best) best = d;
+      }
+      const rightNode = nodeAt(maxXRing, z);
+      if (rightNode) {
+        const d = distanceToNode(rightNode);
+        if (d < best) best = d;
+      }
+    }
+
+    if (best !== Infinity) {
+      return best;
+    }
+  }
+
+  return (maxRings + 1) * safeCell;
+}
+
 function getDistrictCenter(id) {
   switch (id) {
     case "agora":
@@ -518,6 +601,17 @@ export async function createCity(scene, terrain, options = {}) {
     }
     roadGrid.push(row);
   }
+
+  const roadGridHeight = roadGrid.length;
+  const roadGridWidth = roadGrid[0]?.length ?? 0;
+  const spacingOptions = [Math.abs(spacingX), Math.abs(spacingZ)].filter(
+    (value) => Number.isFinite(value) && value > 0
+  );
+  const roadCellSize = spacingOptions.length > 0 ? Math.min(...spacingOptions) : 1;
+  const worldToRoadGrid = (worldX, worldZ) => ({
+    gx: spacingX !== 0 ? (worldX - roadStartX) / spacingX : 0,
+    gz: spacingZ !== 0 ? (worldZ - roadStartZ) / spacingZ : 0,
+  });
 
   // --- Collect all road segment geometries for one merged mesh (perf + fewer draw calls)
   const roadGeometries = [];
@@ -975,15 +1069,43 @@ export async function createCity(scene, terrain, options = {}) {
       if (!groupedByType.has(typeKey)) {
         groupedByType.set(typeKey, []);
       }
+      if (!pad.buildingType) {
+        pad.buildingType = typeKey;
+      }
       groupedByType.get(typeKey).push(pad);
     }
 
     let districtKept = [];
     for (const [typeKey, list] of groupedByType) {
-      const override = typeOverrides?.[typeKey] || null;
+      const override = getTypeOverride(typeOverrides, typeKey);
+      let padsForType = list;
+
+      if (override && Number.isFinite(override.roadSetback)) {
+        const requiredSetback = Math.max(0, override.roadSetback);
+        padsForType = list.filter((pad) => {
+          const distance = distanceToNearestRoad(
+            pad.x,
+            pad.z,
+            roadGrid,
+            roadCellSize,
+            roadGridWidth,
+            roadGridHeight,
+            worldToRoadGrid
+          );
+          return distance >= requiredSetback;
+        });
+      }
+
+      if (override && Number.isFinite(override.minSeparation)) {
+        const minOverride = override.minSeparation;
+        for (const pad of padsForType) {
+          pad.minSeparation = Math.max(pad.minSeparation || 0, minOverride);
+        }
+      }
+
       const overrideMin = Number.isFinite(override?.minSeparation) ? override.minSeparation : 0;
       const effectiveMin = Math.max(districtMin, overrideMin);
-      districtKept.push(...cullByMinSeparation(list, effectiveMin));
+      districtKept.push(...cullByMinSeparation(padsForType, effectiveMin));
     }
 
     const cap = Number.isFinite(district?.maxPerDistrict) ? Math.max(0, district.maxPerDistrict) : Infinity;

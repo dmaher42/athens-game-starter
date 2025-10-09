@@ -7,11 +7,12 @@
   },
   "roadSetbackMeters": 4,
   "typeOverrides": {
-    "temple": { "minSeparation": 28 },
-    "warehouse": { "minSeparation": 22 },
-    "stoa": { "minSeparation": 20 },
-    "shop": { "minSeparation": 14 },
-    "house": { "minSeparation": 16 }
+    "shop": { "roadSetback": 0.8, "minSeparation": 14 },
+    "house": { "roadSetback": 2.5, "minSeparation": 16 },
+    "warehouse": { "roadSetback": 3.5, "minSeparation": 22 },
+    "temple": { "roadSetback": 4.0, "minSeparation": 28 },
+    "stoa": { "roadSetback": 2.0, "minSeparation": 20 },
+    "fountain": { "roadSetback": 1.0, "minSeparation": 1.5 }
   },
   "slopeMaxDegrees": 14,
   "districts": [
