@@ -20,6 +20,85 @@ import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
 import { spawnBuildingsFromPads } from "./buildingSpawner.js";
 
+function cullByMinSeparation(pads, minDist) {
+  if (!Array.isArray(pads) || pads.length === 0) return [];
+  if (!(minDist > 0)) return pads.slice();
+  const cell = Math.max(1, Math.floor(minDist));
+  const key = (x, z) => `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
+  const buckets = new Map();
+  const kept = [];
+  for (const pad of pads) {
+    const k = key(pad.x, pad.z);
+    let ok = true;
+    const [cx, cz] = k.split(",").map(Number);
+    for (let dz = -1; dz <= 1 && ok; dz++) {
+      for (let dx = -1; dx <= 1 && ok; dx++) {
+        const neighbor = buckets.get(`${cx + dx},${cz + dz}`);
+        if (!neighbor) continue;
+        for (const other of neighbor) {
+          const dxm = pad.x - other.x;
+          const dzm = pad.z - other.z;
+          if (dxm * dxm + dzm * dzm < minDist * minDist) {
+            ok = false;
+            break;
+          }
+        }
+      }
+    }
+    if (!ok) continue;
+    if (!buckets.has(k)) buckets.set(k, []);
+    buckets.get(k).push(pad);
+    kept.push(pad);
+  }
+  return kept;
+}
+
+function distanceSqPointToSegment2D(px, pz, ax, az, bx, bz) {
+  const abx = bx - ax;
+  const abz = bz - az;
+  const apx = px - ax;
+  const apz = pz - az;
+  const abLenSq = abx * abx + abz * abz;
+  const t = abLenSq > 0 ? Math.max(0, Math.min(1, (apx * abx + apz * abz) / abLenSq)) : 0;
+  const cx = ax + abx * t;
+  const cz = az + abz * t;
+  const dx = px - cx;
+  const dz = pz - cz;
+  return dx * dx + dz * dz;
+}
+
+function rejectNearSegments(pads, segments, setback) {
+  if (!Array.isArray(pads) || pads.length === 0) return [];
+  if (!Array.isArray(segments) || segments.length === 0) return pads.slice();
+  if (!(setback > 0)) return pads.slice();
+  const r2 = setback * setback;
+  return pads.filter((pad) => {
+    for (const seg of segments) {
+      if (distanceSqPointToSegment2D(pad.x, pad.z, seg.ax, seg.az, seg.bx, seg.bz) <= r2) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+function rejectNearPoints(pads, points, setback) {
+  if (!Array.isArray(pads) || pads.length === 0) return [];
+  if (!Array.isArray(points) || points.length === 0) return pads.slice();
+  if (!(setback > 0)) return pads.slice();
+  const r2 = setback * setback;
+  return pads.filter((pad) => {
+    for (const pt of points) {
+      const dx = pad.x - pt.x;
+      const dz = pad.z - pt.z;
+      if (dx * dx + dz * dz <= r2) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
 // Create a short "ribbon" road between two points. The ribbon is draped to terrain
 // by sampling height along the segment, including both left/right edges so it
 // tilts with local slope. Uses only built-in materials (no textures).
@@ -246,6 +325,15 @@ export async function createCity(scene, terrain, options = {}) {
   const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
   const districtRules = options.districtRules || (await loadDistrictRules(baseUrl));
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
+  const districtById = new Map();
+  for (const d of districtRules.districts || []) {
+    if (d?.id) {
+      districtById.set(d.id, d);
+    }
+  }
+  const roadSetback = Number.isFinite(districtRules.roadSetbackMeters)
+    ? districtRules.roadSetbackMeters
+    : 4;
   // Pier no-build mask
   const pierRect = {
     west: HARBOR_WATER_BOUNDS.west,
@@ -404,6 +492,14 @@ export async function createCity(scene, terrain, options = {}) {
 
   // --- Collect all road segment geometries for one merged mesh (perf + fewer draw calls)
   const roadGeometries = [];
+  const roadCenterSegments = [];
+  const recordRoadSegment = (a, b) => {
+    if (!a || !b) return;
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    if (dx * dx + dz * dz <= 0) return;
+    roadCenterSegments.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z });
+  };
   const mainAvenueSegments = [];
   const mainAvenueLightPositions = [];
   const secondaryBoulevardLightPositions = [];
@@ -559,6 +655,7 @@ export async function createCity(scene, terrain, options = {}) {
         color: segColor,
       };
       createVisibleRoad(start, end, city, terrain, roadOptions);
+      recordRoadSegment(start, end);
 
       if (isSecondaryRow) {
         const segmentLength = start.distanceTo(end);
@@ -609,6 +706,7 @@ export async function createCity(scene, terrain, options = {}) {
         color: segColor,
       };
       createVisibleRoad(start, end, city, terrain, roadOptions);
+      recordRoadSegment(start, end);
 
       if (isSecondaryColumn) {
         const segmentLength = start.distanceTo(end);
@@ -655,6 +753,7 @@ export async function createCity(scene, terrain, options = {}) {
     width: 3.6,
     color: 0x3a3a3a,
   });
+  recordRoadSegment(quayStart, quayEnd);
   const promenadeGeometry = roadGeometries[roadGeometries.length - 1];
   if (roadGeometries.length > prePromenadeCount && promenadeGeometry) {
     promenadeGeometry.name = "QuayPromenade";
@@ -690,6 +789,7 @@ export async function createCity(scene, terrain, options = {}) {
         width: mainAvenueWidth,
         color: mainAvenueColor,
       });
+      recordRoadSegment(start, end);
 
       const segmentLength = start.distanceTo(end);
       if (segmentLength <= 0) {
@@ -747,8 +847,9 @@ export async function createCity(scene, terrain, options = {}) {
     : 2.0;
   const lotWidth = 4.2;
   const lotDepth = 4.2;
+  const padCandidates = [];
 
-  function tryPadAt(cx, cz, rotationRad, district) {
+  function queuePadCandidate(cx, cz, rotationRad, district) {
     const lotInfo = evaluateLot({
       terrain,
       centerX: cx,
@@ -760,15 +861,14 @@ export async function createCity(scene, terrain, options = {}) {
     });
     if (!lotInfo) return false;
 
-    const pad = new THREE.Mesh(lotPadGeometry, lotPadMaterial);
-    pad.position.set(cx, lotInfo.height + SURFACE_OFFSET, cz);
-    pad.rotation.y = rotationRad;
-    pad.castShadow = false;
-    pad.receiveShadow = true;
-    pad.userData = pad.userData || {};
-    pad.userData.district = district?.id || "unknown";
-    pad.userData.noCollision = true;
-    lotPads.add(pad);
+    padCandidates.push({
+      x: cx,
+      y: lotInfo.height + SURFACE_OFFSET,
+      z: cz,
+      rotation: rotationRad,
+      districtId: district?.id || "unknown",
+      district,
+    });
     return true;
   }
 
@@ -792,9 +892,48 @@ export async function createCity(scene, terrain, options = {}) {
       ];
       for (const { x: cx, z: cz } of candidates) {
         const rotation = rng() * Math.PI * 2;
-        tryPadAt(cx, cz, rotation, district);
+        queuePadCandidate(cx, cz, rotation, district);
       }
     }
+  }
+
+  let filteredPadCandidates = padCandidates.slice();
+  if (roadSetback > 0) {
+    filteredPadCandidates = rejectNearSegments(filteredPadCandidates, roadCenterSegments, roadSetback);
+    filteredPadCandidates = rejectNearPoints(filteredPadCandidates, pocketPlazas, roadSetback);
+  }
+
+  const padsByDistrict = new Map();
+  for (const pad of filteredPadCandidates) {
+    const key = pad.districtId;
+    if (!padsByDistrict.has(key)) {
+      padsByDistrict.set(key, []);
+    }
+    padsByDistrict.get(key).push(pad);
+  }
+
+  const finalPadCandidates = [];
+  for (const [districtId, group] of padsByDistrict) {
+    const district = group[0]?.district || districtById.get(districtId);
+    const density = district?.buildingDensity || "medium";
+    const baseSpacing = spacingForDensity(districtRules, density);
+    const minSeparation = Math.max(
+      baseSpacing,
+      Number.isFinite(district?.minSeparation) ? district.minSeparation : 0
+    );
+    finalPadCandidates.push(...cullByMinSeparation(group, minSeparation));
+  }
+
+  for (const padData of finalPadCandidates) {
+    const pad = new THREE.Mesh(lotPadGeometry, lotPadMaterial);
+    pad.position.set(padData.x, padData.y, padData.z);
+    pad.rotation.y = padData.rotation;
+    pad.castShadow = false;
+    pad.receiveShadow = true;
+    pad.userData = pad.userData || {};
+    pad.userData.district = padData.districtId || "unknown";
+    pad.userData.noCollision = true;
+    lotPads.add(pad);
   }
 
   // Pocket Plazas
