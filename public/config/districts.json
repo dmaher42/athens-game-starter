@@ -39,7 +39,7 @@
     {
       "id": "residential",
       "label": "Residential Slopes",
-      "heightRange": [10, 80],
+      "heightRange": [13, 80],
       "buildingDensity": "medium",
       "minSeparation": 16,
       "maxPerDistrict": 300,
