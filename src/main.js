@@ -681,8 +681,8 @@ async function mainApp() {
   }
   // --------------------------------------------------------------------------
 
-  // Plazas (agora + acropolis terraces)
-  createPlazas(worldRoot);
+  // Plazas (agora + acropolis terraces) — disabled per request to remove large discs
+  // createPlazas(worldRoot);
 
   const harborCity = await createCity(worldRoot, terrain, {
     roadsVisible,
