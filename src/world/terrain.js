@@ -101,8 +101,8 @@ export function createTerrain(scene) {
   // but expand the inner zone and soften the blend so the city core looks
   // more like an urban plain and less like rolling countryside.
   const CITY_CENTER_XZ = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
-  const CITY_INNER = Math.max(48, CITY_AREA_RADIUS * 0.65); // was 0.55 → flatter core
-  const CITY_OUTER = Math.max(CITY_INNER + 32, CITY_AREA_RADIUS * 1.05); // slightly wider blend
+  const CITY_INNER = Math.max(48, CITY_AREA_RADIUS * 0.65); // (CPU + GPU agree)
+  const CITY_OUTER = Math.max(CITY_INNER + 32, CITY_AREA_RADIUS * 1.05); // (CPU + GPU agree)
   const CITY_TARGET_Y = AGORA_CENTER_3D.y; // same target elevation as before
 
   for (let i = 0; i < vertexCount; i++) {
@@ -202,8 +202,9 @@ export function createTerrain(scene) {
     uCityCenter: {
       value: new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z),
     },
-    uCityInner: { value: Math.max(40, CITY_AREA_RADIUS * 0.55) },
-    uCityOuter: { value: CITY_AREA_RADIUS },
+    // Use the SAME values as CPU flattening above so the shader & geometry match.
+    uCityInner: { value: CITY_INNER },
+    uCityOuter: { value: CITY_OUTER },
   };
 
   terrainMaterial.onBeforeCompile = (shader) => {
