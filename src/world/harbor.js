@@ -239,7 +239,7 @@ export function createHarbor(scene, options = {}) {
 
   const lampLight = new THREE.PointLight(0xfff2c8, 0, 18, 2);
   lampLight.position.copy(lampBulb.position);
-  lampLight.castShadow = true;
+  lampLight.castShadow = false;
   lamp.add(lampLight);
 
   const lampState = {

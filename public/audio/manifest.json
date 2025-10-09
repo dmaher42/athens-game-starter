@@ -1,15 +1,6 @@
 {
-  "ambient": {
-    "sea": "audio/sea.ogg",
-    "wind": "audio/wind.ogg",
-    "gulls": "audio/gulls.ogg",
-    "market": "audio/market.ogg",
-    "fountain": "audio/fountain.ogg",
-    "lyre": "audio/lyre.ogg"
-  },
-  "effects": {
-    "blacksmith": "audio/blacksmith.ogg",
-    "goats": "audio/goats.ogg",
-    "cart": "audio/cart.ogg"
-  }
+  "version": 1,
+  "ambient": [],
+  "effects": [],
+  "music": []
 }
