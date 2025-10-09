@@ -152,7 +152,8 @@ function createGrassMaterial() {
     varying float vTipFactor;
     varying float vWorldY;
 
-    float luminance(vec3 color) {
+    // Avoid conflict with Three.js ShaderChunk-defined helpers
+    float grassLuma(vec3 color) {
       return dot(color, vec3(0.299, 0.587, 0.114));
     }
 
@@ -164,7 +165,7 @@ function createGrassMaterial() {
       float desatAmount = uNightFactor * ${NIGHT_DESAT.toFixed(2)};
       float darkenAmount = uNightFactor * ${NIGHT_DARKEN.toFixed(2)};
 
-      float lum = luminance(color);
+      float lum = grassLuma(color);
       color = mix(color, vec3(lum), desatAmount);
       color *= mix(1.0, 0.6, darkenAmount);
 
