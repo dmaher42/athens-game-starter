@@ -20,7 +20,11 @@ import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hi
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
 import { updateCityLighting, createHillCity, createCity } from "./world/city.js";
-import { createGrassLayer, updateGrass } from "./world/grass.js";
+import {
+  mount as mountGrass,
+  update as updateGrass,
+  setNightFactor as setGrassNightFactor,
+} from "./world/grass.js";
 import {
   AGORA_CENTER_3D,
   HARBOR_CENTER_3D,
@@ -608,7 +612,7 @@ async function mainApp() {
 
   const worldRoot = refreshWorldRoot();
 
-  let grassLayer = null;
+  let grassRoot = null;
 
   const roadsVisible = (() => {
     if (typeof window === "undefined") {
@@ -636,10 +640,9 @@ async function mainApp() {
   }
 
   if (grassEnabled) {
-    grassLayer = createGrassLayer(worldRoot, terrain, { seed: 42 });
-    if (grassLayer && typeof updateGrass.setNightFactor === "function") {
-      updateGrass.setNightFactor(lights.nightFactor);
-      updateGrass(0);
+    grassRoot = mountGrass(worldRoot);
+    if (grassRoot) {
+      setGrassNightFactor(lights.nightFactor);
     }
   }
 
@@ -1452,9 +1455,9 @@ async function mainApp() {
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
     updateOcean(ocean, 0, sunDir, lights.nightFactor);
-    if (grassLayer && typeof updateGrass.setNightFactor === "function") {
-      updateGrass.setNightFactor(lights.nightFactor);
-      updateGrass(0);
+    if (grassRoot) {
+      setGrassNightFactor(lights.nightFactor);
+      updateGrass(0, player?.position ?? null);
     }
 
     const formattedTime = formatPhaseAsTime(phase);
@@ -1492,9 +1495,9 @@ async function mainApp() {
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
-    if (grassLayer && typeof updateGrass.setNightFactor === "function") {
-      updateGrass.setNightFactor(lights.nightFactor);
-      updateGrass(deltaTime);
+    if (grassRoot) {
+      setGrassNightFactor(lights.nightFactor);
+      updateGrass(deltaTime, player?.position ?? null);
     }
 
     // Advance the GPU-driven terrain sway (no CPU vertex updates required).
