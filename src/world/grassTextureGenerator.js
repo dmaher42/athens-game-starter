@@ -183,3 +183,39 @@ export function createGrassDetailTexture(options = {}) {
 
   return detailTexture;
 }
+
+export function createFreshGrassLowlandsTexture(options = {}) {
+  return createGrassTexture({
+    size: options.size ?? 256,
+    seed: (options.seed ?? 733) * 2.7,
+    baseColor: options.baseColor ?? [112, 168, 98],
+    shadowColor: options.shadowColor ?? [58, 106, 64],
+    highlightColor: options.highlightColor ?? [196, 232, 150],
+    bladeFrequency: options.bladeFrequency ?? 6.25,
+    bladeTaper: options.bladeTaper ?? 1.3,
+    highlightStrength: options.highlightStrength ?? 0.68,
+    shadowStrength: options.shadowStrength ?? 0.52,
+    noiseScale: options.noiseScale ?? 4.1,
+    patchiness: options.patchiness ?? 0.22,
+    saturation: options.saturation ?? 1.08,
+    contrast: options.contrast ?? 1.04,
+  });
+}
+
+export function createDryGrassDetailTexture(options = {}) {
+  return createGrassTexture({
+    size: options.size ?? 256,
+    seed: (options.seed ?? 905) * 3.5,
+    baseColor: options.baseColor ?? [170, 156, 108],
+    shadowColor: options.shadowColor ?? [102, 96, 68],
+    highlightColor: options.highlightColor ?? [216, 206, 150],
+    bladeFrequency: options.bladeFrequency ?? 8.4,
+    bladeTaper: options.bladeTaper ?? 1.05,
+    highlightStrength: options.highlightStrength ?? 0.58,
+    shadowStrength: options.shadowStrength ?? 0.48,
+    noiseScale: options.noiseScale ?? 5.9,
+    patchiness: options.patchiness ?? 0.32,
+    saturation: options.saturation ?? 0.94,
+    contrast: options.contrast ?? 1.1,
+  });
+}
