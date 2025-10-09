@@ -59,6 +59,8 @@ import { resolveBaseUrl } from "./utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
 import { LandmarkManager } from "./world/LandmarkManager.js";
 import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
+// === CODex: Aristotle PBR hook (non-breaking) ===
+import { attachAristotleMarblePBR } from "./features/aristotle-texture.js";
 
 const WORLD_ROOT_NAME = "WorldRoot";
 const USE_THIRD_PERSON = true;
@@ -667,7 +669,7 @@ async function mainApp() {
     ];
     const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
     if (aristotleUrl) {
-      await loadLandmark(worldRoot, aristotleUrl, {
+      const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
         // Use a named location that already exists in the scene constants.
         // The landmark loader will call the scene/terrain height sampler and
         // lift the model slightly so it rests on the ground.
@@ -675,6 +677,18 @@ async function mainApp() {
         scale: 3.0,
         materialPreset: "marble",
       });
+      // Safe no-op if textures not uploaded yet
+      try {
+        await attachAristotleMarblePBR({
+          obj: aristotle ?? null,
+          scene,
+          renderer,
+          BASE_URL,
+        });
+      } catch (e) {
+        // never fail the scene due to the texture hook
+        console.warn("Aristotle PBR hook skipped:", e);
+      }
     } else {
       console.warn(
         "Aristotle's Tomb not found. Expected at:",
