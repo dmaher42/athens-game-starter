@@ -122,6 +122,23 @@ export function initLandmarks(scene, renderer) {
 // when the player leaves the area or reloads the scene.
 const trackedLandmarks = new Set();
 
+function resolveRenderer(scene, explicitRenderer = null) {
+  if (explicitRenderer) {
+    return explicitRenderer;
+  }
+
+  let current = scene || null;
+  while (current) {
+    const candidate = current?.userData?.renderer;
+    if (candidate) {
+      return candidate;
+    }
+    current = current.parent || null;
+  }
+
+  return null;
+}
+
 function applyTransform(object, options) {
   const { position, rotation, scale } = options;
 
@@ -290,7 +307,7 @@ export async function loadLandmark(scene, url, options = {}) {
     });
 
     const { root } = await loadGLBWithFallbacks({
-      renderer: scene?.userData?.renderer || null,
+      renderer: resolveRenderer(scene, options?.renderer),
       urls,
       targetHeight: options?.targetHeight || null,
     });

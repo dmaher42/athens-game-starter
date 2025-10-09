@@ -471,6 +471,7 @@ async function mainApp() {
 
   const scene = new THREE.Scene();
   scene.userData = scene.userData || {};
+  scene.userData.renderer = renderer;
 
   const disposeMaterial = (material) => {
     if (!material) return;
@@ -518,6 +519,8 @@ async function mainApp() {
 
     const root = new THREE.Group();
     root.name = WORLD_ROOT_NAME;
+    root.userData = root.userData || {};
+    root.userData.renderer = scene.userData?.renderer || null;
     scene.add(root);
     scene.userData.worldRoot = root;
     return root;
