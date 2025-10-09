@@ -1026,8 +1026,26 @@ export async function createCity(scene, terrain, options = {}) {
   }
 
   let filteredPadCandidates = padCandidates.slice();
+  let prefilterRoadSetback = Number.isFinite(roadSetback) && roadSetback > 0 ? Math.max(0, roadSetback) : Infinity;
+  if (typeOverrides && typeof typeOverrides === "object") {
+    for (const override of Object.values(typeOverrides)) {
+      if (!override || typeof override !== "object") continue;
+      if (!Number.isFinite(override.roadSetback)) continue;
+      const overrideSetback = Math.max(0, override.roadSetback);
+      prefilterRoadSetback = Math.min(prefilterRoadSetback, overrideSetback);
+    }
+  }
+  if (!Number.isFinite(prefilterRoadSetback)) {
+    prefilterRoadSetback = Number.isFinite(roadSetback) && roadSetback > 0 ? Math.max(0, roadSetback) : 0;
+  }
+  if (prefilterRoadSetback > 0) {
+    filteredPadCandidates = rejectNearSegments(
+      filteredPadCandidates,
+      roadCenterSegments,
+      prefilterRoadSetback
+    );
+  }
   if (roadSetback > 0) {
-    filteredPadCandidates = rejectNearSegments(filteredPadCandidates, roadCenterSegments, roadSetback);
     filteredPadCandidates = rejectNearPoints(filteredPadCandidates, pocketPlazas, roadSetback);
   }
 
@@ -1080,18 +1098,25 @@ export async function createCity(scene, terrain, options = {}) {
       const override = getTypeOverride(typeOverrides, typeKey);
       let padsForType = list;
 
-      if (override && Number.isFinite(override.roadSetback)) {
-        const requiredSetback = Math.max(0, override.roadSetback);
+      const baseRoadSetback = Number.isFinite(roadSetback) && roadSetback > 0 ? Math.max(0, roadSetback) : 0;
+      const requiredSetback = Number.isFinite(override?.roadSetback)
+        ? Math.max(0, override.roadSetback)
+        : baseRoadSetback;
+      if (requiredSetback > 0) {
         padsForType = list.filter((pad) => {
-          const distance = distanceToNearestRoad(
-            pad.x,
-            pad.z,
-            roadGrid,
-            roadCellSize,
-            roadGridWidth,
-            roadGridHeight,
-            worldToRoadGrid
-          );
+          let distance = pad.distanceToRoad;
+          if (!Number.isFinite(distance)) {
+            distance = distanceToNearestRoad(
+              pad.x,
+              pad.z,
+              roadGrid,
+              roadCellSize,
+              roadGridWidth,
+              roadGridHeight,
+              worldToRoadGrid
+            );
+            pad.distanceToRoad = distance;
+          }
           return distance >= requiredSetback;
         });
       }
