@@ -194,6 +194,7 @@ export function createTerrain(scene) {
     GROUND_TEXTURE_CONFIG,
   );
   const shouldTrackGroundHeight = groundTextureState.detailLayers.length > 0;
+  const basePosAttr = geometry.getAttribute("basePos");
 
   const swayUniforms = {
     uTime: { value: 0 },
@@ -300,10 +301,52 @@ ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
     const index01 = z1 * stride + x0;
     const index11 = z1 * stride + x1;
 
-    const h00 = baseHeights[index00];
-    const h10 = baseHeights[index10];
-    const h01 = baseHeights[index01];
-    const h11 = baseHeights[index11];
+    const uniforms = terrain.userData.swayUniforms;
+
+    const sampleSway = (vertexIndex) => {
+      if (!uniforms) return 0;
+
+      const windStrength = uniforms.uWindStrength?.value ?? 0;
+      if (windStrength === 0) {
+        return 0;
+      }
+
+      const planarX = basePosAttr.getX(vertexIndex);
+      const planarY = basePosAttr.getY(vertexIndex);
+
+      const cityCenter = uniforms.uCityCenter?.value;
+      const cityInner = uniforms.uCityInner?.value ?? 0;
+      const cityOuter = uniforms.uCityOuter?.value ?? cityInner;
+
+      let cityFactor = 1;
+      if (cityCenter) {
+        const dx = planarX - cityCenter.x;
+        const dz = planarY - cityCenter.y;
+        const distance = Math.hypot(dx, dz);
+
+        if (distance <= cityInner) {
+          cityFactor = 0;
+        } else if (distance < cityOuter) {
+          const range = Math.max(0.0001, cityOuter - cityInner);
+          const t = (distance - cityInner) / range;
+          cityFactor = THREE.MathUtils.clamp(t, 0, 1);
+        }
+      }
+
+      if (cityFactor === 0) {
+        return 0;
+      }
+
+      const windFreq = uniforms.uWindFreq?.value ?? 0;
+      const time = uniforms.uTime?.value ?? 0;
+      const swayPhase = (planarX + planarY) * windFreq + time * 0.5;
+      return Math.sin(swayPhase) * 0.3 * windStrength * cityFactor;
+    };
+
+    const h00 = baseHeights[index00] + sampleSway(index00);
+    const h10 = baseHeights[index10] + sampleSway(index10);
+    const h01 = baseHeights[index01] + sampleSway(index01);
+    const h11 = baseHeights[index11] + sampleSway(index11);
 
     const h0 = h00 + (h10 - h00) * sx;
     const h1 = h01 + (h11 - h01) * sx;
