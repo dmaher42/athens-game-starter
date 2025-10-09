@@ -77,7 +77,7 @@ export class EnvironmentCollider {
     };
 
     const pushGeometry = (geometry, matrix) => {
-      const cloned = geometry.clone();
+      let cloned = geometry.clone();
 
       Object.keys(cloned.attributes).forEach((attrName) => {
         if (attrName !== 'position') {
@@ -86,7 +86,14 @@ export class EnvironmentCollider {
       });
 
       cloned.applyMatrix4(matrix);
-      geometries.push(cloned);
+
+      // Ensure mergeGeometries sees consistent non-indexed data.
+      const normalized = cloned.getIndex() ? cloned.toNonIndexed() : cloned;
+      geometries.push(normalized);
+
+      if (normalized !== cloned) {
+        cloned.dispose();
+      }
     };
 
     source.traverse((child) => {

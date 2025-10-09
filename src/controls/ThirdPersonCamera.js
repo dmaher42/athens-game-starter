@@ -274,6 +274,22 @@ export class ThirdPersonCamera {
     }
   }
 
+  clearKeyStates() {
+    if (this.keyboardState) {
+      for (const key of Object.keys(this.keyboardState)) {
+        this.keyboardState[key] = false;
+      }
+    }
+    if (this.keyOrbitState && this.keyOrbitState.keys) {
+      const { keys } = this.keyOrbitState;
+      for (const key of Object.keys(keys)) {
+        keys[key] = false;
+      }
+      this.keyOrbitState.desiredYawDelta = 0;
+      this.keyOrbitState.desiredPitchDelta = 0;
+    }
+  }
+
   /**
    * @returns {number}
    */
