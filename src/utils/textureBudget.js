@@ -3,7 +3,7 @@ import * as THREE from "three";
 const DEFAULT_HARDWARE_LIMIT = 8;
 const LOW_TIER_LIMIT = 10;
 const SAFE_MODE_FRAME_LIMIT = 24;
-const processedMaterials = new WeakSet();
+let processedMaterials = new WeakMap();
 
 const CORE_TEXTURE_SLOTS = ["map", "normalMap", "roughnessMap"];
 
