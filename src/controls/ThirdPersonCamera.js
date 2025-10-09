@@ -3,6 +3,7 @@ import {
   loadSettings,
   subscribe,
   defaultCameraSettings,
+  hasStoredSettings,
 } from "../state/settingsStore.js";
 
 const DEFAULT_OFFSET = new THREE.Vector3(0, 2.2, -4.5);
@@ -254,8 +255,16 @@ export class ThirdPersonCamera {
       window.addEventListener("blur", this._handleBlur);
     }
 
-    this.applyCameraSettings(loadSettings());
+    const hasPersistedSettings = hasStoredSettings();
+    if (hasPersistedSettings) {
+      this.applyCameraSettings(loadSettings());
+    }
+    this._skipNextSettingsUpdate = !hasPersistedSettings;
     this._settingsUnsubscribe = subscribe((next) => {
+      if (this._skipNextSettingsUpdate) {
+        this._skipNextSettingsUpdate = false;
+        return;
+      }
       this.applyCameraSettings(next);
     });
 
