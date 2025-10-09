@@ -199,7 +199,6 @@ export function createCity(scene, terrain, options = {}) {
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const gridSize = options.gridSize ?? CITY_CHUNK_SIZE.clone();
-  const showFoundationPads = options.showFoundationPads ?? false;
   // Pier no-build mask
   const pierRect = {
     west: HARBOR_WATER_BOUNDS.west,
@@ -1324,7 +1323,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
     avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 18,
   } = opts;
-  const showFoundationPads = opts.showFoundationPads === true;
+  const showHillFoundationPads = opts.showFoundationPads === true;
 
   const rng = makeRng(seed);
   const lots = [];
@@ -1407,7 +1406,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
 
     const buildingScale = 0.9 + rng() * 0.3;
     const padRadius = Math.max(2.0, 1.8 * buildingScale);
-    if (showFoundationPads) {
+    if (showHillFoundationPads) {
       addFoundationPad(scene, p.x, baseY, p.z, padRadius);
     }
 
