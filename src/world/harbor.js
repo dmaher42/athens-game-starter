@@ -74,6 +74,19 @@ export function createHarbor(scene, options = {}) {
   const spurLength = options.spurLength ?? 24;
   const postSpacing = options.postSpacing ?? 6;
 
+  const terrainHeightSampler = scene?.userData?.terrainHeightSampler;
+  if (typeof terrainHeightSampler === "function") {
+    const walkwaySampleX = center.x + mainWidth / 2 + approachLength;
+    const walkwaySampleZ = center.z;
+    const sampledGround = terrainHeightSampler(walkwaySampleX, walkwaySampleZ);
+    if (Number.isFinite(sampledGround)) {
+      const desiredCenterY = sampledGround - deckHeight;
+      if (desiredCenterY > center.y) {
+        center.y = desiredCenterY;
+      }
+    }
+  }
+
   const deckMaterial = createWoodMaterial(0x7b5b3f);
   const postMaterial = createWoodMaterial(0x4a3a27);
   const trimMaterial = new THREE.MeshStandardMaterial({
