@@ -1,7 +1,9 @@
 # Ground texture drop folder
 
 Place your JPG (or PNG) files in this directory to have them picked up by the
-custom terrain texturing system. Reference the filenames from
+custom terrain texturing system. When you run `npm run build`, Vite copies the
+same folder to `docs/assets/ground/` so GitHub Pages (or any static host) serves
+the textures alongside the compiled site. Reference the filenames from
 `src/world/groundTextureConfig.js` – for example:
 
 ```js
