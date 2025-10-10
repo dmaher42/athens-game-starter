@@ -264,10 +264,10 @@ export class Soundscape {
     };
   }
 
-  async loadManifest(manifestUrl = "audio/manifest.json") {
+  async loadManifest(manifestUrl = "public/audio/manifest.json") {
     const baseUrl = resolveBaseUrl();
     const provided = Array.isArray(manifestUrl) ? manifestUrl : [manifestUrl];
-    const defaults = [joinPath(baseUrl, "audio/manifest.json")];
+    const defaults = [joinPath(baseUrl, "public/audio/manifest.json")];
     const candidates = [...provided, ...defaults]
       .map((value) => ensureUrl(value) || value)
       .filter(Boolean)
@@ -341,7 +341,7 @@ export class Soundscape {
     }
   }
 
-  async initFromManifest(manifestUrl = "audio/manifest.json") {
+  async initFromManifest(manifestUrl = "public/audio/manifest.json") {
     if (!this._manifest) {
       try {
         await this.loadManifest(manifestUrl);
