@@ -54,7 +54,7 @@ import { createPin } from "./world/pins.js";
 import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
-import { loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
+import { createGLTFLoader, loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
 import { resolveBaseUrl, joinPath } from "./utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
 import { LandmarkManager } from "./world/LandmarkManager.js";
@@ -98,6 +98,21 @@ window.addEventListener("unhandledrejection", (ev) => {
 });
 
 const BASE_URL = resolveBaseUrl();
+const ARISTOTLE_CANDIDATES = [
+  joinPath(BASE_URL, "models/buildings/aristotle_tomb_in_macedonia_greece.glb"),
+  joinPath(BASE_URL, "models/landmarks/aristotle_tomb.glb"),
+  joinPath(BASE_URL, "models/landmarks/aristotle_tomb_in_macedonia_greece.glb"),
+];
+const POSEIDON_CANDIDATES = [
+  joinPath(BASE_URL, "models/buildings/poseidon_temple_at_sounion_greece.glb"),
+  joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
+  joinPath(BASE_URL, "models/landmarks/poseidon_temple_at_sounion_greece.glb"),
+];
+const AKROPOL_CANDIDATES = [
+  joinPath(BASE_URL, "models/buildings/Akropol.glb"),
+  joinPath(BASE_URL, "models/landmarks/akropol.glb"),
+  joinPath(BASE_URL, "models/landmarks/Akropol.glb"),
+];
 
 // resolveFirstAvailableAsset
 const isHtml = (res) => (res.headers.get("content-type") || "").includes("text/html");
@@ -697,12 +712,7 @@ async function mainApp() {
   // If found, we stream it via loadLandmark(); the loader will auto-raise it
   // ~5cm above ground and handle KTX2 texture support transparently.
   try {
-    const aristotleCandidates = [
-      joinPath(BASE_URL, "models/landmarks/aristotle_tomb.glb"),
-      joinPath(BASE_URL, "models/landmarks/aristotle_tomb_in_macedonia_greece.glb"),
-      joinPath(BASE_URL, "models/buildings/aristotle_tomb_in_macedonia_greece.glb"),
-    ];
-    const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
+    const aristotleUrl = await resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
     if (aristotleUrl) {
       const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
         // Use a named location that already exists in the scene constants.
@@ -727,7 +737,7 @@ async function mainApp() {
     } else {
       console.warn(
         "Aristotle's Tomb not found. Expected at:",
-        aristotleCandidates
+        ARISTOTLE_CANDIDATES
       );
     }
   } catch (err) {
@@ -737,11 +747,7 @@ async function mainApp() {
 
   // Poseidon Temple (Sounion)
   try {
-    const poseidonCandidates = [
-      joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
-      joinPath(BASE_URL, "models/landmarks/poseidon_temple_at_sounion_greece.glb"),
-    ];
-    const url = await resolveFirstAvailableAsset(poseidonCandidates);
+    const url = await resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
     if (url)
       await loadLandmark(worldRoot, url, {
         position: new THREE.Vector3(90, 0, -60),
@@ -754,12 +760,7 @@ async function mainApp() {
 
   // Akropol (Acropolis complex placeholder)
   try {
-    const akropolCandidates = [
-      joinPath(BASE_URL, "models/landmarks/akropol.glb"),
-      joinPath(BASE_URL, "models/landmarks/Akropol.glb"),
-      joinPath(BASE_URL, "models/buildings/Akropol.glb"),
-    ];
-    const url = await resolveFirstAvailableAsset(akropolCandidates);
+    const url = await resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
     if (url)
       await loadLandmark(worldRoot, url, {
         position: new THREE.Vector3(130, 0, 40),
@@ -1134,9 +1135,9 @@ async function mainApp() {
   );
 
   try {
-    const loadedHero = await loadGLBWithFallbacks({
+    const heroLoader = createGLTFLoader(renderer);
+    const loadedHero = await loadGLBWithFallbacks(heroLoader, heroCandidates, {
       renderer,
-      urls: heroCandidates,
       targetHeight: 1.8,
     });
 
