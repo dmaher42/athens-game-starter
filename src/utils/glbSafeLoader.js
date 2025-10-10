@@ -4,6 +4,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { createKTX2Loader } from "./ktx2.js";
 import { createDracoLoader } from "./draco.js";
 import { applyTextureBudgetToObject } from "./textureBudget.js";
+import { resolveBaseUrl, joinPath } from "./baseUrl.js";
 
 function isProbablyHtml(buffer) {
   if (!buffer || buffer.byteLength < 16) return true;
@@ -49,6 +50,7 @@ export async function loadGLBWithFallbacks({
   }
 
   const loader = createGLTFLoader(renderer);
+  const baseUrl = resolveBaseUrl();
 
   let lastErr = null;
   for (const url of urls) {
@@ -56,21 +58,24 @@ export async function loadGLBWithFallbacks({
       continue;
     }
     const candidate = url.trim();
+    const resolved = /^(?:[a-z]+:)?\/\//i.test(candidate)
+      ? candidate
+      : joinPath(baseUrl, candidate);
     try {
-      const res = await fetch(candidate, { cache: "no-cache" });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText} at ${candidate}`);
+      const res = await fetch(resolved, { cache: "no-cache" });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText} at ${resolved}`);
       const buffer = await res.arrayBuffer();
       if (isProbablyHtml(buffer)) {
-        throw new Error(`Downloaded HTML instead of GLB: ${candidate}`);
+        throw new Error(`Downloaded HTML instead of GLB: ${resolved}`);
       }
 
       const basePath =
         loader.path && loader.path.length > 0
           ? loader.path
-          : THREE.LoaderUtils.extractUrlBase(candidate);
+          : THREE.LoaderUtils.extractUrlBase(resolved);
       const gltf = await loader.parseAsync(buffer, basePath);
       const root = gltf.scene || (Array.isArray(gltf.scenes) ? gltf.scenes[0] : null);
-      if (!root) throw new Error(`No scene in GLB: ${candidate}`);
+      if (!root) throw new Error(`No scene in GLB: ${resolved}`);
 
       if (targetHeight && targetHeight > 0) {
         root.updateMatrixWorld(true);
@@ -88,16 +93,16 @@ export async function loadGLBWithFallbacks({
 
       if (typeof onLoaded === "function") {
         try {
-          onLoaded({ url: candidate, gltf, root });
+          onLoaded({ url: resolved, gltf, root });
         } catch (hookError) {
           console.warn("[GLB Fallback] onLoaded hook failed", hookError);
         }
       }
 
-      return { url: candidate, gltf, root };
+      return { url: resolved, gltf, root };
     } catch (err) {
       lastErr = err instanceof Error ? err : new Error(String(err));
-      console.warn(`[GLB Fallback] Failed ${candidate}:`, lastErr.message || lastErr);
+      console.warn(`[GLB Fallback] Failed ${resolved}:`, lastErr.message || lastErr);
     }
   }
 

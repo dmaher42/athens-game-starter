@@ -49,6 +49,7 @@ async function tryLoadGLB(urls) {
   if (!candidates.length) return null;
 
   let loader = null;
+  const baseUrl = resolveBaseUrl();
   for (const url of candidates) {
     try {
       if (!loader) {
@@ -57,8 +58,12 @@ async function tryLoadGLB(urls) {
         loader = new GLTFLoader();
       }
 
+      const resolved = /^(?:[a-z]+:)?\/\//i.test(url)
+        ? url
+        : joinPath(baseUrl, url.replace(/^\/+/, ""));
+
       const glb = await new Promise((resolve, reject) => {
-        loader.load(url, (gltf) => resolve(gltf.scene || gltf.scenes?.[0] || null), undefined, reject);
+        loader.load(resolved, (gltf) => resolve(gltf.scene || gltf.scenes?.[0] || null), undefined, reject);
       });
 
       if (glb) {
@@ -213,7 +218,7 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
             [
               joinPath(baseUrl, relativePath),
               relativePath,
-              trimmedGlb.startsWith("/") ? trimmedGlb : `/${relativePath}`,
+              trimmedGlb,
             ].filter(Boolean)
           )
         );
