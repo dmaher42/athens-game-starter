@@ -1,6 +1,6 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath, normalizeAssetPath } from "../utils/baseUrl.js";
 
 const glbAvailability = new Map();
 const onceFlags = new Set();
@@ -33,7 +33,7 @@ async function ensureBuildingGlb(relativePath, typeKey, baseUrl) {
     return glbAvailability.get(key);
   }
 
-  const canonical = joinPath(baseUrl, relativePath);
+  const canonical = joinPath(baseUrl, normalizeAssetPath(relativePath));
   const exists = await headOk(canonical);
   glbAvailability.set(key, exists);
 
@@ -61,9 +61,12 @@ async function tryLoadGLB(urls) {
         loader = new GLTFLoader();
       }
 
-      const resolved = /^(?:[a-z]+:)?\/\//i.test(url)
-        ? url
-        : joinPath(baseUrl, url.replace(/^\/+/, ""));
+      const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(url);
+      const normalized = normalizeAssetPath(url);
+      if (!isAbsolute && !normalized) {
+        continue;
+      }
+      const resolved = isAbsolute ? url : joinPath(baseUrl, normalized);
 
       const glb = await new Promise((resolve, reject) => {
         loader.load(resolved, (gltf) => resolve(gltf.scene || gltf.scenes?.[0] || null), undefined, reject);

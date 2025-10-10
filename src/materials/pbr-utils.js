@@ -7,7 +7,7 @@ import {
   MeshStandardMaterial,
   RepeatWrapping,
 } from "three";
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath, normalizeAssetPath } from "../utils/baseUrl.js";
 
 const headCache = new Map();
 
@@ -31,7 +31,7 @@ export async function urlExists(url) {
 /** Load a texture if present; returns null if 404/missing */
 async function loadAny(loader, stem, { isSRGB = false } = {}) {
   if (typeof stem !== "string" || stem.length === 0) return null;
-  const baseStem = stem.replace(/^\/+/, "");
+  const baseStem = normalizeAssetPath(stem);
   const variants = Array.from(
     new Set(
       [

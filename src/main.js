@@ -55,7 +55,7 @@ import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
 import { createGLTFLoader, loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
-import { resolveBaseUrl, joinPath } from "./utils/baseUrl.js";
+import { resolveBaseUrl, joinPath, normalizeAssetPath } from "./utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
 import { LandmarkManager } from "./world/LandmarkManager.js";
 import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
@@ -149,12 +149,25 @@ async function resolveFirstAvailableAsset(candidates = []) {
       continue;
     }
 
-    const relative = trimmed.replace(/^\/+/, "");
-    const needsBase =
-      BASE_URL && relative && !relative.startsWith(BASE_URL.replace(/^\/+/, ""));
-    const candidatesToTry = needsBase
-      ? [joinPath(BASE_URL, relative), relative]
-      : [relative];
+    const relative = normalizeAssetPath(trimmed);
+    if (!relative) {
+      continue;
+    }
+
+    const candidatesToTry = [];
+    if (trimmed.startsWith("/")) {
+      const rootCandidate = `/${relative}`;
+      candidatesToTry.push(rootCandidate);
+    }
+
+    const withBase = joinPath(BASE_URL, relative);
+    if (withBase) {
+      candidatesToTry.push(withBase);
+    }
+
+    if (!candidatesToTry.includes(relative)) {
+      candidatesToTry.push(relative);
+    }
 
     for (const candidate of candidatesToTry) {
       if (seen.has(candidate)) continue;
