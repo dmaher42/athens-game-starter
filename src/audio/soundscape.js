@@ -1,5 +1,20 @@
 import * as THREE from "three";
-import { resolveAbsoluteBaseUrl } from "../utils/baseUrl.js";
+
+// Ensure we always work with strings; accept object forms like { url: "..." }
+function ensureUrl(input) {
+  if (typeof input === "string") return input;
+  if (input && typeof input.url === "string") return input.url;
+  return "";
+}
+
+// Append "manifest.json" only if the string does NOT already look like a .json URL
+function toJsonUrl(input) {
+  const s = ensureUrl(input);
+  if (!s) return "";
+  // treat ?query the same; only add if there's no ".json" before query/hash end
+  const looksJson = /\.json(\?|#|$)/i.test(s);
+  return looksJson ? s : (s.endsWith("/") ? s + "manifest.json" : s + "/manifest.json");
+}
 
 /**
  * Living City Soundscape
@@ -51,7 +66,9 @@ export class Soundscape {
     this.oneShotTimers = [];
     this.ready = false;
     this.manifestLoaded = false;
-    this._manifestCache = null;
+    this._manifest = null;
+    this._manifestUrl = "";
+    this._resolveAssetPath = (path) => path;
 
     // Zones
     this.zones = {
@@ -130,62 +147,81 @@ export class Soundscape {
     return src;
   }
 
-  async _fetchManifest(manifestUrl = "audio/manifest.json") {
-    const absoluteBaseUrl = resolveAbsoluteBaseUrl();
-    const baseUrl = absoluteBaseUrl.endsWith("/")
-      ? absoluteBaseUrl
-      : `${absoluteBaseUrl}/`;
-    const resolveAssetPath = (path) => {
-      if (!path) return path;
+  async _fetchManifest(candidates) {
+    const list = Array.isArray(candidates) ? candidates : [candidates];
+
+    for (const cand of list) {
+      const url = toJsonUrl(cand);
+      if (!url) continue;
+
       try {
-        return new URL(path, baseUrl).toString();
-      } catch {
-        console.warn(`[audio] Failed to resolve asset path: ${path}. Using as-is.`);
+        const res = await fetch(url, { method: "GET", mode: "cors" });
+        if (res.ok) {
+          // If content-type is JSON use json(), else try text() then JSON.parse
+          let data;
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json")) {
+            data = await res.json();
+          } else {
+            const txt = await res.text();
+            try { data = JSON.parse(txt); } catch { data = null; }
+          }
+          if (data && typeof data === "object") {
+            this._manifestUrl = url;  // optional: remember which one worked
+            this._manifest = data;
+            return true;
+          }
+        }
+      } catch (err) {
+        console.warn("[audio] manifest fetch error:", url, err);
+      }
+    }
+
+    console.warn("[audio] manifest.json not found via candidates:", list.map(ensureUrl));
+    return false;
+  }
+
+  _createAssetResolver(manifestUrl) {
+    const url = ensureUrl(manifestUrl);
+    if (!url) {
+      return (path) => path;
+    }
+
+    let baseReference = null;
+    try {
+      const origin = typeof window !== "undefined" && window.location?.origin
+        ? window.location.origin
+        : "http://localhost";
+      const resolved = new URL(url, origin);
+      resolved.hash = "";
+      resolved.search = "";
+      const pathname = resolved.pathname || "/";
+      const lastSlash = pathname.lastIndexOf("/");
+      const directory = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
+      resolved.pathname = directory;
+      baseReference = resolved;
+    } catch {
+      const clean = url.replace(/[#?].*$/, "");
+      const lastSlash = clean.lastIndexOf("/");
+      baseReference = lastSlash >= 0 ? clean.slice(0, lastSlash + 1) : "";
+    }
+
+    return (path) => {
+      if (!path || typeof path !== "string") return path;
+      if (/^[a-z]+:/i.test(path) || path.startsWith("//") || path.startsWith("/")) {
         return path;
       }
+      if (baseReference instanceof URL) {
+        try {
+          return new URL(path, baseReference).toString();
+        } catch {
+          // ignore fallthrough
+        }
+      }
+      const normalized = path.replace(/^\.\//, "").replace(/^\//, "");
+      const prefix = typeof baseReference === "string" ? baseReference : "";
+      return prefix + normalized;
     };
-
-    function isHtmlResponse(response) {
-      const ct = response.headers.get("content-type") || "";
-      return ct.includes("text/html");
-    }
-
-    async function tryFetchJson(url) {
-      try {
-        const res = await fetch(url, { method: "GET" });
-        if (!res.ok || isHtmlResponse(res)) return null;
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("json")) return null;
-        return await res.json();
-      } catch {
-        return null;
-      }
-    }
-
-    const defaultCandidates = [
-      `${baseUrl}audio/manifest.json`,
-      `${baseUrl}manifest.json`,
-    ];
-    let candidates = defaultCandidates;
-    if (manifestUrl && manifestUrl !== "audio/manifest.json") {
-      try {
-        const custom = resolveAssetPath(manifestUrl);
-        candidates = [custom, ...defaultCandidates.filter((url) => url !== custom)];
-      } catch {
-        candidates = defaultCandidates;
-      }
-    }
-
-    for (const url of candidates) {
-      console.log("[audio] manifest probe:", url);
-      const json = await tryFetchJson(url);
-      if (json) {
-        const manifest = this._normalizeManifestSchema(json);
-        return { manifest, resolveAssetPath, candidates };
-      }
-    }
-
-    return { manifest: null, resolveAssetPath, candidates };
   }
 
   _normalizeManifestSchema(rawManifest) {
@@ -247,15 +283,31 @@ export class Soundscape {
   }
 
   async loadManifest(manifestUrl = "audio/manifest.json") {
-    const result = await this._fetchManifest(manifestUrl);
-    if (!result.manifest) {
+    const provided = Array.isArray(manifestUrl) ? manifestUrl : [manifestUrl];
+    const defaults = ["audio", "audio/manifest.json"];
+    const candidates = [...provided, ...defaults];
+    const seen = new Set();
+    const uniqueCandidates = [];
+    for (const cand of candidates) {
+      const candidateUrl = toJsonUrl(cand);
+      if (!candidateUrl || seen.has(candidateUrl)) continue;
+      seen.add(candidateUrl);
+      uniqueCandidates.push(candidateUrl);
+    }
+    const success = await this._fetchManifest(uniqueCandidates);
+    if (!success || !this._manifest) {
       this.manifestLoaded = false;
-      this._manifestCache = null;
+      this._manifest = null;
+      this._manifestUrl = "";
+      this._resolveAssetPath = (path) => path;
       throw new Error("[audio] manifest.json missing");
     }
+
+    this._manifest = this._normalizeManifestSchema(this._manifest);
+    this._resolveAssetPath = this._createAssetResolver(ensureUrl(this._manifestUrl));
     this.manifestLoaded = true;
-    this._manifestCache = result;
-    return result.manifest;
+    console.log("[audio] manifest loaded:", this._manifestUrl);
+    return this._manifest;
   }
 
   async _initFromCategorizedManifest(categories, resolveAssetPath) {
@@ -301,23 +353,16 @@ export class Soundscape {
   }
 
   async initFromManifest(manifestUrl = "audio/manifest.json") {
-    let manifestData = this._manifestCache;
-    if (!manifestData) {
-      manifestData = await this._fetchManifest(manifestUrl);
-      if (manifestData.manifest) {
-        this._manifestCache = manifestData;
-        this.manifestLoaded = true;
-      } else {
-        this.manifestLoaded = false;
+    if (!this._manifest) {
+      try {
+        await this.loadManifest(manifestUrl);
+      } catch {
+        // loadManifest already logged warnings when appropriate
       }
     }
 
-    const mf = manifestData?.manifest ?? { ambient: {}, effects: {} };
-    const resolveAssetPath =
-      manifestData?.resolveAssetPath || ((path) => path);
-    if (!manifestData?.manifest) {
-      console.warn("[audio] manifest.json not found via candidates:", manifestData?.candidates);
-    }
+    const mf = this._manifest ?? { ambient: {}, effects: {} };
+    const resolveAssetPath = this._resolveAssetPath || ((path) => path);
 
     if (mf?.categories) {
       await this._initFromCategorizedManifest(mf.categories, resolveAssetPath);
