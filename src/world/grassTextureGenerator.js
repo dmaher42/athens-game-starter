@@ -2,21 +2,35 @@ import * as THREE from "three";
 
 const { clamp, lerp } = THREE.MathUtils;
 
-function hashNoise(x, y, seed) {
-  const s = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453;
+function wrapIndex(value, period) {
+  if (!Number.isFinite(period) || period <= 0) {
+    return value;
+  }
+  let wrapped = value % period;
+  if (wrapped < 0) {
+    wrapped += period;
+  }
+  return wrapped;
+}
+
+function hashNoise(x, y, seed, periodX, periodY) {
+  const wrappedX = wrapIndex(x, periodX);
+  const wrappedY = wrapIndex(y, periodY);
+  const s =
+    Math.sin(wrappedX * 127.1 + wrappedY * 311.7 + seed * 74.7) * 43758.5453;
   return s - Math.floor(s);
 }
 
-function smoothNoise(x, y, seed) {
+function smoothNoise(x, y, seed, periodX, periodY) {
   const x0 = Math.floor(x);
   const y0 = Math.floor(y);
   const xf = x - x0;
   const yf = y - y0;
 
-  const n00 = hashNoise(x0, y0, seed);
-  const n10 = hashNoise(x0 + 1, y0, seed);
-  const n01 = hashNoise(x0, y0 + 1, seed);
-  const n11 = hashNoise(x0 + 1, y0 + 1, seed);
+  const n00 = hashNoise(x0, y0, seed, periodX, periodY);
+  const n10 = hashNoise(x0 + 1, y0, seed, periodX, periodY);
+  const n01 = hashNoise(x0, y0 + 1, seed, periodX, periodY);
+  const n11 = hashNoise(x0 + 1, y0 + 1, seed, periodX, periodY);
 
   const nx0 = lerp(n00, n10, xf);
   const nx1 = lerp(n01, n11, xf);
@@ -27,8 +41,10 @@ function fbmNoise(x, y, options = {}) {
   const {
     octaves = 4,
     persistence = 0.55,
-    lacunarity = 2.1,
+    lacunarity = 2,
     seed = 1,
+    periodX = 0,
+    periodY = 0,
   } = options;
 
   let amplitude = 1;
@@ -37,7 +53,21 @@ function fbmNoise(x, y, options = {}) {
   let max = 0;
 
   for (let i = 0; i < octaves; i++) {
-    sum += smoothNoise(x * frequency, y * frequency, seed + i * 17.23) * amplitude;
+    const octaveSeed = seed + i * 17.23;
+    const octavePeriodX = periodX
+      ? Math.max(1, Math.round(periodX * frequency))
+      : 0;
+    const octavePeriodY = periodY
+      ? Math.max(1, Math.round(periodY * frequency))
+      : 0;
+    sum +=
+      smoothNoise(
+        x * frequency,
+        y * frequency,
+        octaveSeed,
+        octavePeriodX,
+        octavePeriodY,
+      ) * amplitude;
     max += amplitude;
     amplitude *= persistence;
     frequency *= lacunarity;
@@ -79,6 +109,21 @@ function composeColor(base, shadow, highlight, params) {
   ];
 }
 
+function makeTileableSample(nx, ny, freqX, freqY, offsetX, offsetY) {
+  const safeFreqX = Math.max(Math.abs(freqX), 1e-6);
+  const safeFreqY = Math.max(Math.abs(freqY), 1e-6);
+  const periodX = Math.max(1, Math.round(safeFreqX));
+  const periodY = Math.max(1, Math.round(safeFreqY));
+  const scaleX = periodX / safeFreqX;
+  const scaleY = periodY / safeFreqY;
+  return {
+    x: (nx * freqX + offsetX) * scaleX,
+    y: (ny * freqY + offsetY) * scaleY,
+    periodX,
+    periodY,
+  };
+}
+
 export function createGrassTexture(options = {}) {
   const {
     size = 256,
@@ -105,17 +150,37 @@ export function createGrassTexture(options = {}) {
       const nx = x / width;
       const ny = y / height;
 
-      const patchNoise = fbmNoise(
-        nx * noiseScale + seed * 0.13,
-        ny * noiseScale + seed * 0.19,
-        { octaves: 4, persistence: 0.55, seed },
+      const patchSample = makeTileableSample(
+        nx,
+        ny,
+        noiseScale,
+        noiseScale,
+        seed * 0.13,
+        seed * 0.19,
       );
+      const patchNoise = fbmNoise(patchSample.x, patchSample.y, {
+        octaves: 4,
+        persistence: 0.55,
+        seed,
+        periodX: patchSample.periodX,
+        periodY: patchSample.periodY,
+      });
 
-      const bladeNoise = fbmNoise(
-        nx * (noiseScale * 1.7) + seed * 0.31,
-        ny * (noiseScale * 1.1) + seed * 0.47,
-        { octaves: 5, persistence: 0.5, seed: seed * 1.7 },
+      const bladeSample = makeTileableSample(
+        nx,
+        ny,
+        noiseScale * 1.7,
+        noiseScale * 1.1,
+        seed * 0.31,
+        seed * 0.47,
       );
+      const bladeNoise = fbmNoise(bladeSample.x, bladeSample.y, {
+        octaves: 5,
+        persistence: 0.5,
+        seed: seed * 1.7,
+        periodX: bladeSample.periodX,
+        periodY: bladeSample.periodY,
+      });
 
       const bladePhase =
         Math.sin((nx + ny * 0.25) * Math.PI * bladeFrequency + bladeNoise * Math.PI * 2) *
