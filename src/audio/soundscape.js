@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { resolveAbsoluteBaseUrl, resolveBaseUrl } from "../utils/baseUrl.js";
+import { resolveAbsoluteBaseUrl } from "../utils/baseUrl.js";
 
 /**
  * Living City Soundscape
@@ -132,8 +132,9 @@ export class Soundscape {
 
   async _fetchManifest(manifestUrl = "audio/manifest.json") {
     const absoluteBaseUrl = resolveAbsoluteBaseUrl();
-    const basePath = resolveBaseUrl();
-    const baseUrl = absoluteBaseUrl;
+    const baseUrl = absoluteBaseUrl.endsWith("/")
+      ? absoluteBaseUrl
+      : `${absoluteBaseUrl}/`;
     const resolveAssetPath = (path) => {
       if (!path) return path;
       try {
@@ -161,20 +162,88 @@ export class Soundscape {
       }
     }
 
-    const candidates = [
-      resolveAssetPath(manifestUrl),
-      resolveAssetPath(`${basePath}audio/manifest.json`),
+    const defaultCandidates = [
+      `${baseUrl}audio/manifest.json`,
+      `${baseUrl}manifest.json`,
     ];
+    let candidates = defaultCandidates;
+    if (manifestUrl && manifestUrl !== "audio/manifest.json") {
+      try {
+        const custom = resolveAssetPath(manifestUrl);
+        candidates = [custom, ...defaultCandidates.filter((url) => url !== custom)];
+      } catch {
+        candidates = defaultCandidates;
+      }
+    }
 
     for (const url of candidates) {
       console.log("[audio] manifest probe:", url);
       const json = await tryFetchJson(url);
       if (json) {
-        return { manifest: json, resolveAssetPath, candidates };
+        const manifest = this._normalizeManifestSchema(json);
+        return { manifest, resolveAssetPath, candidates };
       }
     }
 
     return { manifest: null, resolveAssetPath, candidates };
+  }
+
+  _normalizeManifestSchema(rawManifest) {
+    if (!rawManifest || typeof rawManifest !== "object" || Array.isArray(rawManifest)) {
+      return rawManifest;
+    }
+
+    if (rawManifest?.categories && typeof rawManifest.categories === "object") {
+      return rawManifest;
+    }
+
+    const { ambient, effects } = rawManifest;
+    const isLegacyAmbient = ambient && typeof ambient === "object" && !Array.isArray(ambient);
+    const isLegacyEffects = effects && typeof effects === "object" && !Array.isArray(effects);
+
+    if (!isLegacyAmbient && !isLegacyEffects) {
+      return rawManifest;
+    }
+
+    const cloneEntry = (id, value) => {
+      if (value == null) return null;
+      if (typeof value === "string") {
+        return { id, file: value };
+      }
+      if (typeof value === "object") {
+        const file = value.file ?? value.url ?? value.path;
+        if (!file) return null;
+        const entry = { id, file };
+        const extraKeys = ["loop", "volume", "group", "refDistance", "maxDistance", "rolloff"];
+        for (const key of extraKeys) {
+          if (value[key] !== undefined) {
+            entry[key] = value[key];
+          }
+        }
+        return entry;
+      }
+      return null;
+    };
+
+    const toArray = (records) => {
+      if (!records || typeof records !== "object") return [];
+      const entries = [];
+      for (const [id, value] of Object.entries(records)) {
+        const normalized = cloneEntry(id, value);
+        if (normalized) {
+          entries.push(normalized);
+        }
+      }
+      return entries;
+    };
+
+    return {
+      version: 1,
+      categories: {
+        ambience: toArray(ambient),
+        fx: toArray(effects),
+      },
+    };
   }
 
   async loadManifest(manifestUrl = "audio/manifest.json") {
@@ -191,7 +260,7 @@ export class Soundscape {
 
   async _initFromCategorizedManifest(categories, resolveAssetPath) {
     const ambience = Array.isArray(categories?.ambience)
-      ? categories.ambience
+      ? categories.ambience.filter((entry) => entry && entry.file)
       : [];
     for (const [index, entry] of ambience.entries()) {
       const key = entry?.id || entry?.file || `ambience-${index}`;
@@ -213,10 +282,21 @@ export class Soundscape {
       }
     }
 
-    const fx = Array.isArray(categories?.fx) ? categories.fx : [];
+    const fx = Array.isArray(categories?.fx)
+      ? categories.fx.filter((entry) => entry && entry.file)
+      : [];
     for (const [index, entry] of fx.entries()) {
       const key = entry?.id || entry?.file || `fx-${index}`;
       await this.loadBuffer(key, resolveAssetPath(entry?.file));
+    }
+
+    if (!ambience.length && !fx.length) {
+      console.info("[audio] running silently (no categorized entries).");
+    } else {
+      console.info("[audio] manifest loaded.", {
+        ambience: ambience.length,
+        fx: fx.length,
+      });
     }
   }
 
