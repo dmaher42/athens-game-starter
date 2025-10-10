@@ -3,6 +3,7 @@ import { Water } from "three/addons/objects/Water.js";
 import {
   HARBOR_WATER_CENTER,
   HARBOR_WATER_SIZE,
+  HARBOR_WATER_EAST_LIMIT,
   SEA_LEVEL_Y,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
@@ -126,9 +127,9 @@ export async function createOcean(scene, options = {}) {
     const zBack = cz + halfZBack;
 
     west = cx - halfX;
-    east = cx + halfX;
-    north = zFrontDesired;
-    south = zBack;
+    east = Math.min(cx + halfX, HARBOR_WATER_EAST_LIMIT);
+    north = zFront;
+    south = Math.max(zBack, north);
 
     if (import.meta.env?.DEV) {
       console.log("[water clip]", { cx, cz, zFront, zBack, FRONT_Z_HARD });
@@ -208,6 +209,10 @@ export async function createOcean(scene, options = {}) {
     });
     const debugCenter = new THREE.Vector3(cx, HARBOR_WATER_CENTER.y, cz);
     const debugSize = new THREE.Vector2(width, depth);
+    const existingBoundsHelper = scene.getObjectByName?.("WaterBoundsDebug");
+    if (existingBoundsHelper) {
+      scene.remove(existingBoundsHelper);
+    }
     mountWaterBoundsDebug(scene, debugCenter, debugSize);
   }
 
