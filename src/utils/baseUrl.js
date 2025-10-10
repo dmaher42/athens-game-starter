@@ -1,10 +1,10 @@
 // src/utils/baseUrl.js
 export function resolveBaseUrl() {
-  // With Vite base="./", we should use relative URLs from app root.
-  return ""; // no hard-coded /athens-game-starter/
+  // With Vite base: "./" and GitHub Pages serving /athens-game-starter/,
+  // relative URLs from app root are correct.
+  return ""; // always return relative base
 }
 
-// join parts without // or leading/trailing slashes
 export function joinPath(...parts) {
   return parts
     .filter(Boolean)

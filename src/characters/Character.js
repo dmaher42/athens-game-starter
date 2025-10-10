@@ -18,11 +18,17 @@ export class Character extends THREE.Object3D {
    */
   async load(url, renderer, { targetHeight = 1.8 } = {}) {
     const urls = Array.isArray(url) ? url : [url];
-    const { gltf, root } = await loadGLBWithFallbacks({
+    const loaded = await loadGLBWithFallbacks({
       renderer,
       urls,
       targetHeight,
     });
+
+    if (!loaded || !loaded.root) {
+      throw new Error('Character.load failed: no reachable GLB candidates');
+    }
+
+    const { gltf, root } = loaded;
 
     this.initializeFromGLTF(root, gltf.animations);
   }

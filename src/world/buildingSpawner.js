@@ -218,11 +218,7 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
         const relativePath = trimmedGlb.replace(/^\/+/, "");
         const candidateUrls = Array.from(
           new Set(
-            [
-              joinPath(baseUrl, relativePath),
-              relativePath,
-              trimmedGlb,
-            ].filter(Boolean)
+            [joinPath(baseUrl, relativePath), relativePath].filter(Boolean)
           )
         );
 
@@ -230,7 +226,7 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
           const exists = await ensureBuildingGlb(relativePath, typeKey, baseUrl);
           if (!exists) {
             once("buildings-missing", () =>
-              console.warn("[buildings] prototypes not present, skipping spawns")
+              console.warn("[buildings] Skipping prototypes (no GLBs found under models/buildings/)")
             );
             if (!options.leavePadsVisible) pad.visible = false;
             continue;
