@@ -140,8 +140,8 @@ export class Soundscape {
   }
 
   async _fetchManifest(candidateUrl) {
-    const str = String(candidateUrl ?? "");
-    const url = str.trim();
+    const s = typeof candidateUrl === "string" ? candidateUrl : String(candidateUrl ?? "");
+    const url = s.trim();
     if (!url) return null;
     if (!url.endsWith(".json")) return null;
     try {
@@ -264,22 +264,27 @@ export class Soundscape {
     };
   }
 
-  async loadManifest(manifestUrl = "public/audio/manifest.json") {
+  async loadManifest(manifestUrl = "audio/manifest.json") {
     const baseUrl = resolveBaseUrl();
+    const fallbackManifest = joinPath(baseUrl, "audio/manifest.json");
     const provided = Array.isArray(manifestUrl) ? manifestUrl : [manifestUrl];
-    const defaults = [joinPath(baseUrl, "public/audio/manifest.json")];
-    const candidates = [...provided, ...defaults]
-      .map((value) => ensureUrl(value) || value)
-      .filter(Boolean)
-      .map((value) => {
-        const str = String(value).trim();
-        if (!str) return "";
-        if (/^(?:[a-z]+:)?\/\//i.test(str) || str.startsWith("/")) {
-          return str;
-        }
-        return joinPath(baseUrl, str);
-      })
-      .filter(Boolean);
+    const queue = [...provided, fallbackManifest, "audio/manifest.json"];
+    const seen = new Set();
+    const candidates = [];
+
+    for (const entry of queue) {
+      const value = ensureUrl(entry) || entry;
+      if (!value) continue;
+      const str = typeof value === "string" ? value : String(value ?? "");
+      const trimmed = str.trim();
+      if (!trimmed) continue;
+      const candidate = /^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")
+        ? trimmed
+        : joinPath(baseUrl, trimmed);
+      if (!candidate || seen.has(candidate)) continue;
+      seen.add(candidate);
+      candidates.push(candidate);
+    }
 
     for (const candidate of candidates) {
       const data = await this._fetchManifest(candidate);
@@ -341,7 +346,7 @@ export class Soundscape {
     }
   }
 
-  async initFromManifest(manifestUrl = "public/audio/manifest.json") {
+  async initFromManifest(manifestUrl = "audio/manifest.json") {
     if (!this._manifest) {
       try {
         await this.loadManifest(manifestUrl);
