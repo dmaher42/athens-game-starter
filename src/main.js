@@ -675,10 +675,9 @@ async function mainApp() {
       new Set([
         // Canonical first
         joinPath(BASE_URL, "models/landmarks/aristotle_tomb.glb"),
-        // Legacy fallbacks
+        // Legacy fallbacks (keep relative)
         joinPath(BASE_URL, "models/landmarks/aristotle_tomb_in_macedonia_greece.glb"),
-        joinPath(BASE_URL, "aristotle_tomb_in_macedonia_greece.glb"),
-        "/aristotle_tomb_in_macedonia_greece.glb",
+        joinPath(BASE_URL, "models/buildings/aristotle_tomb_in_macedonia_greece.glb"),
       ].filter(Boolean))
     );
     const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
@@ -722,8 +721,6 @@ async function mainApp() {
         joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
         // Legacy fallbacks
         joinPath(BASE_URL, "models/landmarks/poseidon_temple_at_sounion_greece.glb"),
-        joinPath(BASE_URL, "poseidon_temple_at_sounion_greece.glb"),
-        "/poseidon_temple_at_sounion_greece.glb",
       ].filter(Boolean))
     );
     const url = await resolveFirstAvailableAsset(poseidonCandidates);
@@ -744,8 +741,7 @@ async function mainApp() {
         // Canonical first
         joinPath(BASE_URL, "models/landmarks/akropol.glb"),
         // Legacy fallbacks
-        joinPath(BASE_URL, "Akropol.glb"),
-        "/Akropol.glb",
+        joinPath(BASE_URL, "models/buildings/Akropol.glb"),
       ].filter(Boolean))
     );
     const url = await resolveFirstAvailableAsset(akropolCandidates);
