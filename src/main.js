@@ -1644,7 +1644,7 @@ async function mainApp() {
 
     // Cast a ray through the center of the screen to detect hovered objects and
     // highlight anything marked as interactable via userData.
-    const hovered = interactor.updateHover();
+    const hovered = interactor.updateHover(deltaTime);
     interactPrompt.style.opacity = hovered ? "1" : "0";
 
     const formattedTime = formatPhaseAsTime(phase);
