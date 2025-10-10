@@ -3,6 +3,22 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const BUILDINGS_ROOT_NAME = 'BuildingsRoot';
 
+/**
+ * Check if a URL returns a valid response (not HTML).
+ * Prevents loading HTML fallback pages as GLB files.
+ */
+async function headOk(url) {
+  if (!url) return false;
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    if (!res.ok) return false;
+    const contentType = res.headers.get('content-type') || '';
+    return !contentType.toLowerCase().includes('text/html');
+  } catch {
+    return false;
+  }
+}
+
 function disposeMaterial(material) {
   if (!material) return;
   if (Array.isArray(material)) {
@@ -48,6 +64,12 @@ export class BuildingManager {
    * }} [options]
    */
   async loadBuilding(url, options) {
+    // Check if the file exists before attempting to load it
+    // This prevents trying to parse HTML 404 pages as GLB files
+    if (!(await headOk(url))) {
+      throw new Error(`Building file not found or not accessible: ${url}`);
+    }
+    
     const gltf = await this.loader.loadAsync(url);
     const obj = gltf.scene;
     const opts = options ?? {};

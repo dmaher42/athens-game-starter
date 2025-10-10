@@ -1472,7 +1472,7 @@ async function mainApp() {
 
   const sampleBuildingSpecs = [
     {
-      url: joinPath(buildingBase, "poseidon_temple_at_sounion_greece.glb"),
+      url: joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
       position: createTerrainAlignedPosition(-34, -12),
       rotateY: -Math.PI * 0.12,
       // Preserve the authored dimensions (≈13.8m span, 4.5m tall) so the
@@ -1482,7 +1482,7 @@ async function mainApp() {
       name: "SamplePoseidonTemple",
     },
     {
-      url: joinPath(buildingBase, "Akropol.glb"),
+      url: joinPath(BASE_URL, "models/landmarks/akropol.glb"),
       position: createTerrainAlignedPosition(6, -42),
       rotateY: Math.PI * 0.08,
       // Match the mesh's original scale to avoid shrinking the Acropolis model

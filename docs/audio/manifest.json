@@ -1,0 +1,12 @@
+{
+  "categories": {
+    "ambience": [
+      { "id": "agora", "file": "ambience_agora.mp3", "loop": true, "volume": 0.35 },
+      { "id": "harbor", "file": "ambience_harbor.mp3", "loop": true, "volume": 0.4 }
+    ],
+    "fx": [
+      { "id": "footstep_stone", "file": "fx_footstep_stone.mp3", "volume": 0.6 },
+      { "id": "footstep_dirt",  "file": "fx_footstep_dirt.mp3",  "volume": 0.6 }
+    ]
+  }
+}
