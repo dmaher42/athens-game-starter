@@ -1,6 +1,41 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
-import { resolveBaseUrl } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+
+const glbAvailability = new Map();
+const missingTypeNotice = new Set();
+
+async function headOk(url) {
+  if (!url) return false;
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    if (!res.ok) return false;
+    const contentType = res.headers.get("content-type") || "";
+    return !contentType.toLowerCase().includes("text/html");
+  } catch {
+    return false;
+  }
+}
+
+async function ensureBuildingGlb(relativePath, typeKey, baseUrl) {
+  const key = relativePath;
+  if (glbAvailability.has(key)) {
+    return glbAvailability.get(key);
+  }
+
+  const canonical = joinPath(baseUrl, relativePath);
+  const exists = await headOk(canonical);
+  glbAvailability.set(key, exists);
+
+  if (!exists && typeKey && !missingTypeNotice.has(typeKey)) {
+    missingTypeNotice.add(typeKey);
+    console.info(
+      `[buildingSpawner] Skipping ${typeKey} GLB (missing public/${relativePath}).`
+    );
+  }
+
+  return exists;
+}
 
 // Optional: if your repo already has a safe GLB loader, plug it here.
 // Otherwise this shim returns null so we fall back to parametric meshes.
@@ -173,35 +208,32 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
 
       if (trimmedGlb.length > 0) {
         const relativePath = trimmedGlb.replace(/^\/+/, "");
-        const candidateUrls = [];
-        const seen = new Set();
-        const pushCandidate = (value) => {
-          if (typeof value !== "string" || value.length === 0) return;
-          if (seen.has(value)) return;
-          seen.add(value);
-          candidateUrls.push(value);
-        };
+        const candidateUrls = Array.from(
+          new Set(
+            [
+              joinPath(baseUrl, relativePath),
+              relativePath,
+              trimmedGlb.startsWith("/") ? trimmedGlb : `/${relativePath}`,
+            ].filter(Boolean)
+          )
+        );
 
-        if (typeof baseUrl === "string" && baseUrl.length > 0) {
-          pushCandidate(`${baseUrl}${relativePath}`);
+        let canAttempt = true;
+        if (relativePath.startsWith("models/buildings/")) {
+          canAttempt = await ensureBuildingGlb(relativePath, typeKey, baseUrl);
         }
 
-        if (trimmedGlb.startsWith("/")) {
-          pushCandidate(trimmedGlb);
-        } else {
-          pushCandidate(`/${relativePath}`);
-          pushCandidate(trimmedGlb);
-        }
-
-        const glb = await tryLoadGLB(candidateUrls);
-        if (glb) {
-          built = glb;
-          // Normalize scale so GLBs feel consistent
-          const box = new THREE.Box3().setFromObject(glb);
-          const size = new THREE.Vector3(); box.getSize(size);
-          const targetY = clamp(size.y, 3.5, 8.0);
-          const scale = targetY > 0 ? (targetY / size.y) : 1.0;
-          glb.scale.setScalar(scale);
+        if (canAttempt) {
+          const glb = await tryLoadGLB(candidateUrls);
+          if (glb) {
+            built = glb;
+            // Normalize scale so GLBs feel consistent
+            const box = new THREE.Box3().setFromObject(glb);
+            const size = new THREE.Vector3(); box.getSize(size);
+            const targetY = clamp(size.y, 3.5, 8.0);
+            const scale = targetY > 0 ? (targetY / size.y) : 1.0;
+            glb.scale.setScalar(scale);
+          }
         }
       }
     }

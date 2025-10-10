@@ -1,10 +1,15 @@
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+
 /** Load district rules from /config/districts.json with safe fallbacks. */
 export async function loadDistrictRules(baseUrl = "") {
-  const candidates = [];
-  if (baseUrl && typeof baseUrl === "string") {
-    candidates.push(`${baseUrl}config/districts.json`);
-  }
-  candidates.push("/config/districts.json");
+  const resolvedBase = typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : resolveBaseUrl();
+  const candidates = Array.from(
+    new Set([
+      joinPath(resolvedBase, "config/districts.json"),
+      "config/districts.json",
+      "/config/districts.json",
+    ].filter(Boolean))
+  );
 
   for (const url of candidates) {
     try {

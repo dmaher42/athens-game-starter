@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 // Ensure we always work with strings; accept object forms like { url: "..." }
 function ensureUrl(input) {
@@ -10,10 +11,17 @@ function ensureUrl(input) {
 // Append "manifest.json" only if the string does NOT already look like a .json URL
 function toJsonUrl(input) {
   const s = ensureUrl(input);
-  if (!s) return "";
-  // treat ?query the same; only add if there's no ".json" before query/hash end
-  const looksJson = /\.json(\?|#|$)/i.test(s);
-  return looksJson ? s : (s.endsWith("/") ? s + "manifest.json" : s + "/manifest.json");
+  if (typeof s !== "string" || s.length === 0) return "";
+  const trimmed = s.trim();
+  if (!trimmed) return "";
+  const looksJson = /\.json(\?|#|$)/i.test(trimmed);
+  if (looksJson) {
+    return trimmed;
+  }
+  if (typeof trimmed === "string" && trimmed.endsWith("/")) {
+    return `${trimmed}manifest.json`;
+  }
+  return `${trimmed}/manifest.json`;
 }
 
 /**
@@ -147,15 +155,27 @@ export class Soundscape {
     return src;
   }
 
-  async _fetchManifest(candidates) {
+  async _fetchManifest(candidates, baseUrl = "") {
     const list = Array.isArray(candidates) ? candidates : [candidates];
+    const attempts = [];
 
     for (const cand of list) {
       const url = toJsonUrl(cand);
       if (!url) continue;
 
+      let targetUrl = url;
+      if (typeof url === "string") {
+        if (url.startsWith("./")) {
+          targetUrl = joinPath(baseUrl, url.replace(/^\.\/+/, ""));
+        } else if (!/^(?:[a-z]+:)?\/\//i.test(url) && !url.startsWith("/")) {
+          targetUrl = joinPath(baseUrl, url);
+        }
+      }
+
+      attempts.push(targetUrl);
+
       try {
-        const res = await fetch(url, { method: "GET", mode: "cors" });
+        const res = await fetch(targetUrl, { method: "GET", mode: "cors" });
         if (res.ok) {
           // If content-type is JSON use json(), else try text() then JSON.parse
           let data;
@@ -167,17 +187,17 @@ export class Soundscape {
             try { data = JSON.parse(txt); } catch { data = null; }
           }
           if (data && typeof data === "object") {
-            this._manifestUrl = url;  // optional: remember which one worked
+            this._manifestUrl = targetUrl;  // optional: remember which one worked
             this._manifest = data;
             return true;
           }
         }
       } catch (err) {
-        console.warn("[audio] manifest fetch error:", url, err);
+        console.warn("[audio] manifest fetch error:", targetUrl, err);
       }
     }
 
-    console.warn("[audio] manifest.json not found via candidates:", list.map(ensureUrl));
+    console.warn("[audio] manifest.json not found via candidates:", attempts);
     return false;
   }
 
@@ -283,8 +303,9 @@ export class Soundscape {
   }
 
   async loadManifest(manifestUrl = "audio/manifest.json") {
+    const baseUrl = resolveBaseUrl();
     const provided = Array.isArray(manifestUrl) ? manifestUrl : [manifestUrl];
-    const defaults = ["audio", "audio/manifest.json"];
+    const defaults = [joinPath(baseUrl, "audio/manifest.json")];
     const candidates = [...provided, ...defaults];
     const seen = new Set();
     const uniqueCandidates = [];
@@ -294,7 +315,7 @@ export class Soundscape {
       seen.add(candidateUrl);
       uniqueCandidates.push(candidateUrl);
     }
-    const success = await this._fetchManifest(uniqueCandidates);
+    const success = await this._fetchManifest(uniqueCandidates, baseUrl);
     if (!success || !this._manifest) {
       this.manifestLoaded = false;
       this._manifest = null;

@@ -16,7 +16,7 @@ import * as THREE from "three";
 import { loadLandmark } from "./landmarks.js";
 import { SEA_LEVEL_Y } from "./locations.js";
 import { snapAboveGround } from "./ground.js";
-import { resolveBaseUrl } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
@@ -233,26 +233,37 @@ export class LandmarkManager {
 
   resolveUrls(files = []) {
     const urls = [];
+    const seen = new Set();
+    const push = (value) => {
+      if (typeof value !== "string") return;
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      if (seen.has(trimmed)) return;
+      seen.add(trimmed);
+      urls.push(trimmed);
+    };
+
     for (const file of files) {
-      if (!file || typeof file !== "string") continue;
+      if (typeof file !== "string") continue;
       const trimmed = file.trim();
       if (!trimmed) continue;
+
       if (/^https?:/i.test(trimmed) || trimmed.startsWith("data:")) {
-        urls.push(trimmed);
+        push(trimmed);
         continue;
       }
+
       if (trimmed.startsWith("/")) {
-        urls.push(trimmed);
+        push(trimmed);
         continue;
       }
-      if (trimmed.startsWith(this.baseUrl)) {
-        urls.push(trimmed);
-        continue;
-      }
-      const normalised = trimmed.startsWith("./") ? trimmed.slice(2) : trimmed;
-      urls.push(`${this.baseUrl}${normalised}`);
+
+      const normalised = trimmed.replace(/^\.\/+/, "");
+      push(joinPath(this.baseUrl, normalised));
+      push(normalised);
     }
-    return urls.filter((candidate, index, array) => array.indexOf(candidate) === index);
+
+    return urls;
   }
 
   applyCollisionSettings(object, shouldCollide) {

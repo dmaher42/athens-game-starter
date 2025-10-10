@@ -55,7 +55,7 @@ import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
 import { loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
-import { resolveBaseUrl } from "./utils/baseUrl.js";
+import { resolveBaseUrl, joinPath } from "./utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
 import { LandmarkManager } from "./world/LandmarkManager.js";
 import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
@@ -671,18 +671,16 @@ async function mainApp() {
   // If found, we stream it via loadLandmark(); the loader will auto-raise it
   // ~5cm above ground and handle KTX2 texture support transparently.
   try {
-    const aristotleCandidates = [
-      // Canonical first
-      `${BASE_URL}models/landmarks/aristotle_tomb.glb`,
-      `/models/landmarks/aristotle_tomb.glb`,
-      // Legacy fallbacks
-      `${BASE_URL}models/landmarks/aristotle_tomb_in_macedonia_greece.glb`,
-      `/models/landmarks/aristotle_tomb_in_macedonia_greece.glb`,
-      `${BASE_URL}aristotle_tomb_in_macedonia_greece.glb`,
-      `/aristotle_tomb_in_macedonia_greece.glb`,
-      `${BASE_URL}models/buildings/aristotle_tomb_in_macedonia_greece.glb`,
-      `/models/buildings/aristotle_tomb_in_macedonia_greece.glb`,
-    ];
+    const aristotleCandidates = Array.from(
+      new Set([
+        // Canonical first
+        joinPath(BASE_URL, "models/landmarks/aristotle_tomb.glb"),
+        // Legacy fallbacks
+        joinPath(BASE_URL, "models/landmarks/aristotle_tomb_in_macedonia_greece.glb"),
+        joinPath(BASE_URL, "aristotle_tomb_in_macedonia_greece.glb"),
+        "/aristotle_tomb_in_macedonia_greece.glb",
+      ].filter(Boolean))
+    );
     const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
     if (aristotleUrl) {
       const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
@@ -718,18 +716,16 @@ async function mainApp() {
 
   // Poseidon Temple (Sounion)
   try {
-    const poseidonCandidates = [
-      // Canonical first
-      `${BASE_URL}models/landmarks/poseidon_temple.glb`,
-      `/models/landmarks/poseidon_temple.glb`,
-      // Legacy fallbacks
-      `${BASE_URL}models/landmarks/poseidon_temple_at_sounion_greece.glb`,
-      `/models/landmarks/poseidon_temple_at_sounion_greece.glb`,
-      `${BASE_URL}poseidon_temple_at_sounion_greece.glb`,
-      `/poseidon_temple_at_sounion_greece.glb`,
-      `${BASE_URL}models/buildings/poseidon_temple_at_sounion_greece.glb`,
-      `/models/buildings/poseidon_temple_at_sounion_greece.glb`,
-    ];
+    const poseidonCandidates = Array.from(
+      new Set([
+        // Canonical first
+        joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
+        // Legacy fallbacks
+        joinPath(BASE_URL, "models/landmarks/poseidon_temple_at_sounion_greece.glb"),
+        joinPath(BASE_URL, "poseidon_temple_at_sounion_greece.glb"),
+        "/poseidon_temple_at_sounion_greece.glb",
+      ].filter(Boolean))
+    );
     const url = await resolveFirstAvailableAsset(poseidonCandidates);
     if (url)
       await loadLandmark(worldRoot, url, {
@@ -743,16 +739,15 @@ async function mainApp() {
 
   // Akropol (Acropolis complex placeholder)
   try {
-    const akropolCandidates = [
-      // Canonical first
-      `${BASE_URL}models/landmarks/akropol.glb`,
-      `/models/landmarks/akropol.glb`,
-      // Legacy fallbacks
-      `${BASE_URL}Akropol.glb`,
-      `/Akropol.glb`,
-      `${BASE_URL}models/buildings/Akropol.glb`,
-      `/models/buildings/Akropol.glb`,
-    ];
+    const akropolCandidates = Array.from(
+      new Set([
+        // Canonical first
+        joinPath(BASE_URL, "models/landmarks/akropol.glb"),
+        // Legacy fallbacks
+        joinPath(BASE_URL, "Akropol.glb"),
+        "/Akropol.glb",
+      ].filter(Boolean))
+    );
     const url = await resolveFirstAvailableAsset(akropolCandidates);
     if (url)
       await loadLandmark(worldRoot, url, {
@@ -779,7 +774,7 @@ async function mainApp() {
   });
 
   try {
-    await applyGravelToRoads({ scene, BASE_URL, repeat: [6, 6] });
+    await applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] });
   } catch (e) {
     console.warn("Gravel roads hook skipped:", e);
   }
@@ -1109,14 +1104,11 @@ async function mainApp() {
   };
 
   const character = new Character();
-  const heroPath = `${BASE_URL}models/character/hero.glb`;
-  const heroRootPath = `/models/character/hero.glb`;
-  const bundledHeroPath = `${BASE_URL}models/character/${encodeURIComponent(
-    "Hooded Adventurer.glb"
-  )}`;
-  const bundledHeroRootPath = `/models/character/${encodeURIComponent(
-    "Hooded Adventurer.glb"
-  )}`;
+  const heroPath = joinPath(BASE_URL, "models/character/hero.glb");
+  const heroRootPath = "models/character/hero.glb";
+  const bundledHeroName = encodeURIComponent("Hooded Adventurer.glb");
+  const bundledHeroPath = joinPath(BASE_URL, "models/character", bundledHeroName);
+  const bundledHeroRootPath = joinPath("models/character", bundledHeroName);
   const attachFallbackAvatar = () => {
     removeExistingAvatar();
     const fallbackAvatar = createFallbackAvatar();
@@ -1124,12 +1116,13 @@ async function mainApp() {
     fallbackAvatar.position.set(0, 0, 0);
   };
 
-  const heroCandidates = [
-    heroPath,
-    heroRootPath,
-    bundledHeroPath,
-    bundledHeroRootPath,
-  ].filter((value, index, array) => value && array.indexOf(value) === index);
+  const heroCandidates = Array.from(
+    new Set(
+      [heroPath, heroRootPath, bundledHeroPath, bundledHeroRootPath, `/models/character/${bundledHeroName}`].filter(
+        Boolean
+      )
+    )
+  );
 
   try {
     const { url, gltf, root } = await loadGLBWithFallbacks({
@@ -1448,7 +1441,7 @@ async function mainApp() {
 
     return monument;
   };
-  const buildingBase = `${BASE_URL}models/buildings/`;
+  const buildingBase = joinPath(BASE_URL, "models/buildings");
 
   const createTerrainAlignedPosition = (x, z, offset = 0.05) => {
     let y = offset;
@@ -1463,7 +1456,7 @@ async function mainApp() {
 
   const sampleBuildingSpecs = [
     {
-      url: `${buildingBase}poseidon_temple_at_sounion_greece.glb`,
+      url: joinPath(buildingBase, "poseidon_temple_at_sounion_greece.glb"),
       position: createTerrainAlignedPosition(-34, -12),
       rotateY: -Math.PI * 0.12,
       // Preserve the authored dimensions (≈13.8m span, 4.5m tall) so the
@@ -1473,7 +1466,7 @@ async function mainApp() {
       name: "SamplePoseidonTemple",
     },
     {
-      url: `${buildingBase}Akropol.glb`,
+      url: joinPath(buildingBase, "Akropol.glb"),
       position: createTerrainAlignedPosition(6, -42),
       rotateY: Math.PI * 0.08,
       // Match the mesh's original scale to avoid shrinking the Acropolis model

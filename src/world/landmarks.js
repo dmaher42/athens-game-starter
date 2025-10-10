@@ -8,7 +8,7 @@ import {
   DEFAULT_BASIS_TRANSCODER_PATH,
 } from "../utils/ktx2.js";
 import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
-import { resolveBaseUrl } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
 
 /**
@@ -320,14 +320,12 @@ export async function loadLandmark(scene, url, options = {}) {
     const urls = (isAbsolute
       ? [sanitizedUrl]
       : [
-          `${BASE_URL}${relativeUrl}`,
+          joinPath(BASE_URL, relativeUrl),
+          relativeUrl,
           `/${relativeUrl}`,
-          sanitizedUrl,
-        ]
-    ).filter((candidate, index, array) => {
-      if (!candidate) return false;
-      return array.indexOf(candidate) === index;
-    });
+        ])
+      .filter(Boolean)
+      .filter((candidate, index, array) => array.indexOf(candidate) === index);
 
     const { materialPreset } = options;
 
