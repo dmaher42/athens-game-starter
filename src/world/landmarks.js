@@ -319,11 +319,7 @@ export async function loadLandmark(scene, url, options = {}) {
       : sanitizedUrl.replace(/^\/+/, "");
     const urls = (isAbsolute
       ? [sanitizedUrl]
-      : [
-          joinPath(BASE_URL, relativeUrl),
-          relativeUrl,
-          `/${relativeUrl}`,
-        ])
+      : [joinPath(BASE_URL, relativeUrl), relativeUrl])
       .filter(Boolean)
       .filter((candidate, index, array) => array.indexOf(candidate) === index);
 

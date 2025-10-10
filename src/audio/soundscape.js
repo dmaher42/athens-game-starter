@@ -140,7 +140,8 @@ export class Soundscape {
   }
 
   async _fetchManifest(candidateUrl) {
-    const url = String(candidateUrl ?? "").trim();
+    const str = String(candidateUrl ?? "");
+    const url = str.trim();
     if (!url) return null;
     if (!url.endsWith(".json")) return null;
     try {
@@ -266,7 +267,7 @@ export class Soundscape {
   async loadManifest(manifestUrl = "audio/manifest.json") {
     const baseUrl = resolveBaseUrl();
     const provided = Array.isArray(manifestUrl) ? manifestUrl : [manifestUrl];
-    const defaults = ["audio/manifest.json"];
+    const defaults = [joinPath(baseUrl, "audio/manifest.json")];
     const candidates = [...provided, ...defaults]
       .map((value) => ensureUrl(value) || value)
       .filter(Boolean)

@@ -115,7 +115,13 @@ async function headOk(url) {
 // --- util: resolveFirstAvailableAsset (fetch HEAD, skip HTML) ---
 async function resolveFirstAvailableAsset(candidates = []) {
   for (const url of candidates) {
-    if (await headOk(url)) return url;
+    if (typeof url !== "string") continue;
+    const trimmed = url.trim();
+    if (!trimmed) continue;
+    const resolved = /^(?:[a-z]+:)?\/\//i.test(trimmed)
+      ? trimmed
+      : joinPath(BASE_URL, trimmed);
+    if (await headOk(resolved)) return resolved;
   }
   throw new Error("No candidate asset reachable: " + candidates.join(", "));
 }
@@ -671,15 +677,11 @@ async function mainApp() {
   // If found, we stream it via loadLandmark(); the loader will auto-raise it
   // ~5cm above ground and handle KTX2 texture support transparently.
   try {
-    const aristotleCandidates = Array.from(
-      new Set([
-        // Canonical first
-        joinPath(BASE_URL, "models/landmarks/aristotle_tomb.glb"),
-        // Legacy fallbacks (keep relative)
-        joinPath(BASE_URL, "models/landmarks/aristotle_tomb_in_macedonia_greece.glb"),
-        joinPath(BASE_URL, "models/buildings/aristotle_tomb_in_macedonia_greece.glb"),
-      ].filter(Boolean))
-    );
+    const aristotleCandidates = [
+      "models/landmarks/aristotle_tomb.glb",
+      "models/landmarks/aristotle_tomb_in_macedonia_greece.glb",
+      "models/buildings/aristotle_tomb_in_macedonia_greece.glb",
+    ];
     const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
     if (aristotleUrl) {
       const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
@@ -715,14 +717,10 @@ async function mainApp() {
 
   // Poseidon Temple (Sounion)
   try {
-    const poseidonCandidates = Array.from(
-      new Set([
-        // Canonical first
-        joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
-        // Legacy fallbacks
-        joinPath(BASE_URL, "models/landmarks/poseidon_temple_at_sounion_greece.glb"),
-      ].filter(Boolean))
-    );
+    const poseidonCandidates = [
+      "models/landmarks/poseidon_temple.glb",
+      "models/landmarks/poseidon_temple_at_sounion_greece.glb",
+    ];
     const url = await resolveFirstAvailableAsset(poseidonCandidates);
     if (url)
       await loadLandmark(worldRoot, url, {
@@ -736,14 +734,11 @@ async function mainApp() {
 
   // Akropol (Acropolis complex placeholder)
   try {
-    const akropolCandidates = Array.from(
-      new Set([
-        // Canonical first
-        joinPath(BASE_URL, "models/landmarks/akropol.glb"),
-        // Legacy fallbacks
-        joinPath(BASE_URL, "models/buildings/Akropol.glb"),
-      ].filter(Boolean))
-    );
+    const akropolCandidates = [
+      "models/landmarks/akropol.glb",
+      "models/landmarks/Akropol.glb",
+      "models/buildings/Akropol.glb",
+    ];
     const url = await resolveFirstAvailableAsset(akropolCandidates);
     if (url)
       await loadLandmark(worldRoot, url, {
