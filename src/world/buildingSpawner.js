@@ -3,7 +3,17 @@ import * as THREE from "three";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 const glbAvailability = new Map();
-const missingTypeNotice = new Set();
+const onceFlags = new Set();
+
+function once(key, fn) {
+  if (onceFlags.has(key)) return;
+  onceFlags.add(key);
+  try {
+    fn();
+  } catch (error) {
+    console.warn("[buildingSpawner] once handler failed", error);
+  }
+}
 
 async function headOk(url) {
   if (!url) return false;
@@ -26,13 +36,6 @@ async function ensureBuildingGlb(relativePath, typeKey, baseUrl) {
   const canonical = joinPath(baseUrl, relativePath);
   const exists = await headOk(canonical);
   glbAvailability.set(key, exists);
-
-  if (!exists && typeKey && !missingTypeNotice.has(typeKey)) {
-    missingTypeNotice.add(typeKey);
-    console.info(
-      `[buildingSpawner] Skipping ${typeKey} GLB (missing public/${relativePath}).`
-    );
-  }
 
   return exists;
 }
@@ -223,22 +226,26 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
           )
         );
 
-        let canAttempt = true;
         if (relativePath.startsWith("models/buildings/")) {
-          canAttempt = await ensureBuildingGlb(relativePath, typeKey, baseUrl);
+          const exists = await ensureBuildingGlb(relativePath, typeKey, baseUrl);
+          if (!exists) {
+            once("buildings-missing", () =>
+              console.warn("[buildings] prototypes not present, skipping spawns")
+            );
+            if (!options.leavePadsVisible) pad.visible = false;
+            continue;
+          }
         }
 
-        if (canAttempt) {
-          const glb = await tryLoadGLB(candidateUrls);
-          if (glb) {
-            built = glb;
-            // Normalize scale so GLBs feel consistent
-            const box = new THREE.Box3().setFromObject(glb);
-            const size = new THREE.Vector3(); box.getSize(size);
-            const targetY = clamp(size.y, 3.5, 8.0);
-            const scale = targetY > 0 ? (targetY / size.y) : 1.0;
-            glb.scale.setScalar(scale);
-          }
+        const glb = await tryLoadGLB(candidateUrls);
+        if (glb) {
+          built = glb;
+          // Normalize scale so GLBs feel consistent
+          const box = new THREE.Box3().setFromObject(glb);
+          const size = new THREE.Vector3(); box.getSize(size);
+          const targetY = clamp(size.y, 3.5, 8.0);
+          const scale = targetY > 0 ? (targetY / size.y) : 1.0;
+          glb.scale.setScalar(scale);
         }
       }
     }

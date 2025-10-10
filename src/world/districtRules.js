@@ -3,23 +3,15 @@ import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 /** Load district rules from /config/districts.json with safe fallbacks. */
 export async function loadDistrictRules(baseUrl = "") {
   const resolvedBase = typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : resolveBaseUrl();
-  const candidates = Array.from(
-    new Set([
-      joinPath(resolvedBase, "config/districts.json"),
-      "config/districts.json",
-      "/config/districts.json",
-    ].filter(Boolean))
-  );
+  const url = joinPath(resolvedBase, "config/districts.json");
 
-  for (const url of candidates) {
-    try {
-      const res = await fetch(url, { cache: "no-cache" });
-      if (res.ok) {
-        const json = await res.json();
-        return normalizeRules(json);
-      }
-    } catch {}
-  }
+  try {
+    const res = await fetch(url, { cache: "no-cache" });
+    if (res.ok) {
+      const json = await res.json();
+      return normalizeRules(json);
+    }
+  } catch {}
   // Minimal fallback (keeps city rendering even if file missing)
   return normalizeRules({
     seed: 1337,

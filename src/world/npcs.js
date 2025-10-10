@@ -122,7 +122,6 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
     new Set([
       joinPath(baseUrl, 'models/npcs/manifest.json'),
       'models/npcs/manifest.json',
-      '/models/npcs/manifest.json',
     ].filter(Boolean))
   );
 
@@ -166,7 +165,6 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
       new Set([
         joinPath(baseUrl, 'models/npcs', fileName),
         joinPath('models/npcs', fileName),
-        `/models/npcs/${fileName}`,
       ].filter(Boolean))
     );
 

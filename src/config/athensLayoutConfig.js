@@ -62,16 +62,16 @@ export const athensLayoutConfig = {
       "models/landmarks/poseidon_temple.glb",
       // Legacy fallbacks (alternate filenames)
       "models/landmarks/poseidon_temple_at_sounion_greece.glb",
-      "/poseidon_temple_at_sounion_greece.glb",
     ],
     akropol: [
       "models/landmarks/akropol.glb",
-      "/Akropol.glb",
+      "models/landmarks/Akropol.glb",
+      "models/buildings/Akropol.glb",
     ],
     aristotle: [
       "models/landmarks/aristotle_tomb.glb",
       "models/landmarks/aristotle_tomb_in_macedonia_greece.glb",
-      "/aristotle_tomb_in_macedonia_greece.glb",
+      "models/buildings/aristotle_tomb_in_macedonia_greece.glb",
     ],
   },
   // Set `enabled: false` on any group or landmark to temporarily skip it without
