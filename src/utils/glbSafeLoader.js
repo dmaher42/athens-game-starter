@@ -4,7 +4,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { createKTX2Loader } from "./ktx2.js";
 import { createDracoLoader } from "./draco.js";
 import { applyTextureBudgetToObject } from "./textureBudget.js";
-import { joinPath, resolveBaseUrl } from "./baseUrl.js";
+import { joinPath, resolveBaseUrl, normalizeAssetPath } from "./baseUrl.js";
 
 export function createGLTFLoader(renderer) {
   const loader = new GLTFLoader();
@@ -68,7 +68,12 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
 
     const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) ||
       /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
-    const relative = raw.replace(/^\/+/, "");
+    const normalized = normalizeAssetPath(raw);
+    if (!isAbsolute && !normalized) {
+      continue;
+    }
+
+    const relative = isAbsolute ? raw : normalized;
     const url = isAbsolute ? raw : joinPath(baseUrl, relative);
 
     if (seen.has(url)) {

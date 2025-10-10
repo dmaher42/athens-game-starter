@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath, normalizeAssetPath } from "../utils/baseUrl.js";
 
 // Ensure we always work with strings; accept object forms like { url: "..." }
 function ensureUrl(input) {
@@ -200,9 +200,9 @@ export class Soundscape {
           // ignore fallthrough
         }
       }
-      const normalized = path.replace(/^\.\//, "").replace(/^\//, "");
+      const normalized = normalizeAssetPath(path);
       const prefix = typeof baseReference === "string" ? baseReference : "";
-      return prefix + normalized;
+      return joinPath(prefix, normalized);
     };
   }
 
@@ -278,12 +278,29 @@ export class Soundscape {
       const str = typeof value === "string" ? value : String(value ?? "");
       const trimmed = str.trim();
       if (!trimmed) continue;
-      const candidate = /^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")
-        ? trimmed
-        : joinPath(baseUrl, trimmed);
-      if (!candidate || seen.has(candidate)) continue;
-      seen.add(candidate);
-      candidates.push(candidate);
+
+      const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(trimmed);
+      const isRoot = trimmed.startsWith("/");
+      const normalized = normalizeAssetPath(trimmed);
+
+      const localCandidates = [];
+      if (isAbsolute) {
+        localCandidates.push(trimmed);
+      } else {
+        if (isRoot && normalized) {
+          localCandidates.push(`/${normalized}`);
+        }
+        if (normalized) {
+          localCandidates.push(joinPath(baseUrl, normalized));
+          localCandidates.push(normalized);
+        }
+      }
+
+      for (const candidate of localCandidates) {
+        if (!candidate || seen.has(candidate)) continue;
+        seen.add(candidate);
+        candidates.push(candidate);
+      }
     }
 
     for (const candidate of candidates) {
