@@ -325,11 +325,19 @@ export async function loadLandmark(scene, url, options = {}) {
 
     const { materialPreset } = options;
 
-    const { root } = await loadGLBWithFallbacks({
+    const loaded = await loadGLBWithFallbacks({
       renderer: resolveRenderer(scene, options?.renderer),
       urls,
       targetHeight: options?.targetHeight || null,
     });
+
+    if (!loaded || !loaded.root) {
+      removePlaceholder(entry);
+      trackedLandmarks.delete(entry);
+      return null;
+    }
+
+    const { root } = loaded;
 
     let finalObject = root;
 

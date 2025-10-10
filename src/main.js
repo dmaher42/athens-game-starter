@@ -114,14 +114,34 @@ async function headOk(url) {
 
 // --- util: resolveFirstAvailableAsset (fetch HEAD, skip HTML) ---
 async function resolveFirstAvailableAsset(candidates = []) {
+  const seen = new Set();
   for (const url of candidates) {
     if (typeof url !== "string") continue;
     const trimmed = url.trim();
     if (!trimmed) continue;
-    const resolved = /^(?:[a-z]+:)?\/\//i.test(trimmed)
-      ? trimmed
-      : joinPath(BASE_URL, trimmed);
-    if (await headOk(resolved)) return resolved;
+
+    if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
+      if (!seen.has(trimmed) && (await headOk(trimmed))) {
+        return trimmed;
+      }
+      seen.add(trimmed);
+      continue;
+    }
+
+    const relative = trimmed.replace(/^\/+/, "");
+    const needsBase =
+      BASE_URL && relative && !relative.startsWith(BASE_URL.replace(/^\/+/, ""));
+    const candidatesToTry = needsBase
+      ? [joinPath(BASE_URL, relative), relative]
+      : [relative];
+
+    for (const candidate of candidatesToTry) {
+      if (seen.has(candidate)) continue;
+      seen.add(candidate);
+      if (await headOk(candidate)) {
+        return candidate;
+      }
+    }
   }
   throw new Error("No candidate asset reachable: " + candidates.join(", "));
 }
@@ -678,9 +698,9 @@ async function mainApp() {
   // ~5cm above ground and handle KTX2 texture support transparently.
   try {
     const aristotleCandidates = [
-      "models/landmarks/aristotle_tomb.glb",
-      "models/landmarks/aristotle_tomb_in_macedonia_greece.glb",
-      "models/buildings/aristotle_tomb_in_macedonia_greece.glb",
+      joinPath(BASE_URL, "models/landmarks/aristotle_tomb.glb"),
+      joinPath(BASE_URL, "models/landmarks/aristotle_tomb_in_macedonia_greece.glb"),
+      joinPath(BASE_URL, "models/buildings/aristotle_tomb_in_macedonia_greece.glb"),
     ];
     const aristotleUrl = await resolveFirstAvailableAsset(aristotleCandidates);
     if (aristotleUrl) {
@@ -718,8 +738,8 @@ async function mainApp() {
   // Poseidon Temple (Sounion)
   try {
     const poseidonCandidates = [
-      "models/landmarks/poseidon_temple.glb",
-      "models/landmarks/poseidon_temple_at_sounion_greece.glb",
+      joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
+      joinPath(BASE_URL, "models/landmarks/poseidon_temple_at_sounion_greece.glb"),
     ];
     const url = await resolveFirstAvailableAsset(poseidonCandidates);
     if (url)
@@ -735,9 +755,9 @@ async function mainApp() {
   // Akropol (Acropolis complex placeholder)
   try {
     const akropolCandidates = [
-      "models/landmarks/akropol.glb",
-      "models/landmarks/Akropol.glb",
-      "models/buildings/Akropol.glb",
+      joinPath(BASE_URL, "models/landmarks/akropol.glb"),
+      joinPath(BASE_URL, "models/landmarks/Akropol.glb"),
+      joinPath(BASE_URL, "models/buildings/Akropol.glb"),
     ];
     const url = await resolveFirstAvailableAsset(akropolCandidates);
     if (url)
@@ -1109,18 +1129,22 @@ async function mainApp() {
 
   const heroCandidates = Array.from(
     new Set(
-      [heroPath, heroRootPath, bundledHeroPath, bundledHeroRootPath, `/models/character/${bundledHeroName}`].filter(
-        Boolean
-      )
+      [heroPath, heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
     )
   );
 
   try {
-    const { url, gltf, root } = await loadGLBWithFallbacks({
+    const loadedHero = await loadGLBWithFallbacks({
       renderer,
       urls: heroCandidates,
       targetHeight: 1.8,
     });
+
+    if (!loadedHero || !loadedHero.root) {
+      throw new Error("No hero GLB candidates reachable");
+    }
+
+    const { url, gltf, root } = loadedHero;
 
     removeExistingAvatar();
     character.initializeFromGLTF(root, gltf.animations);
