@@ -13,7 +13,7 @@ import * as THREE from "three";
  *   mouse: THREE.Vector2,
  *   pickObject: (screenX: number, screenY: number) => THREE.Intersection | null,
  *   pickCenter: () => THREE.Intersection | null,
- *   updateHover: () => THREE.Object3D | null,
+ *   updateHover: (deltaSeconds?: number) => THREE.Object3D | null,
  *   clearHover: () => void,
  *   getCurrentHover: () => THREE.Object3D | null,
  *   useObject: () => void,
@@ -24,8 +24,10 @@ export function createInteractor(renderer, camera, scene) {
   const mouse = new THREE.Vector2();
 
   const HOVER_COLOR = 0x222244;
+  const HOVER_UPDATE_INTERVAL = 1 / 24; // limit expensive raycasts to ~24 Hz
   const storedMaterialState = new Map();
   let currentHover = null;
+  let hoverTimer = HOVER_UPDATE_INTERVAL; // ensure the first call performs a hit test
 
   /**
    * Because `userData` is just a plain JavaScript object, we can attach custom
@@ -80,6 +82,7 @@ export function createInteractor(renderer, camera, scene) {
       storedMaterialState.delete(material);
     }
     currentHover = null;
+    hoverTimer = HOVER_UPDATE_INTERVAL;
   }
 
   /**
@@ -148,7 +151,16 @@ export function createInteractor(renderer, camera, scene) {
     return intersects.length > 0 ? intersects[0] : null;
   }
 
-  function updateHover() {
+  function updateHover(deltaSeconds = HOVER_UPDATE_INTERVAL) {
+    if (Number.isFinite(deltaSeconds)) {
+      hoverTimer += deltaSeconds;
+    }
+
+    if (hoverTimer < HOVER_UPDATE_INTERVAL) {
+      return currentHover;
+    }
+
+    hoverTimer = 0;
     const hit = pickCenter();
     const target = hit ? findInteractable(hit.object) : null;
 
