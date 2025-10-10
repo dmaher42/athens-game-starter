@@ -7,13 +7,25 @@ import {
   MeshStandardMaterial,
   RepeatWrapping,
 } from "three";
+import { joinPath } from "../utils/baseUrl.js";
+
+const headCache = new Map();
 
 /** HEAD-check a URL (returns true/false; never throws) */
 export async function urlExists(url) {
+  if (typeof url !== "string" || url.length === 0) return false;
+  if (headCache.has(url)) {
+    return headCache.get(url);
+  }
   try {
     const res = await fetch(url, { method: "HEAD" });
-    return res.ok;
-  } catch { return false; }
+    const ok = res.ok && !(res.headers.get("content-type") || "").includes("text/html");
+    headCache.set(url, ok);
+    return ok;
+  } catch {
+    headCache.set(url, false);
+    return false;
+  }
 }
 
 /** Load a texture if present; returns null if 404/missing */
@@ -25,12 +37,13 @@ async function tryTex(loader, url, isSRGB = false) {
 }
 
 /** Load first available variant for a base name (webp/jpg/png) */
-async function loadAny(tl, base, isSRGB = false) {
-  return (
-    (await tryTex(tl, `${base}.webp`, isSRGB)) ||
-    (await tryTex(tl, `${base}.jpg`, isSRGB)) ||
-    (await tryTex(tl, `${base}.png`, isSRGB))
-  );
+async function loadAny(tl, basePath, name, isSRGB = false) {
+  const candidates = ["webp", "jpg", "png"].map((ext) => joinPath(basePath, `${name}.${ext}`));
+  for (const url of candidates) {
+    const tex = await tryTex(tl, url, isSRGB);
+    if (tex) return tex;
+  }
+  return null;
 }
 
 /** Build a MeshStandardMaterial from available maps (base color required) */
@@ -38,12 +51,12 @@ export async function makeMarblePBR(basePath) {
   const tl = new TextureLoader();
 
   // Use the WEBP-aware helper to try .webp → .jpg → .png
-  const baseColor = await loadAny(tl, `${basePath}/basecolor`, /*sRGB*/ true);
+  const baseColor = await loadAny(tl, basePath, "basecolor", /*sRGB*/ true);
   if (!baseColor) return null; // nothing to do
 
-  const normal    = await loadAny(tl, `${basePath}/normal`);
-  const roughness = await loadAny(tl, `${basePath}/roughness`);
-  const ao        = await loadAny(tl, `${basePath}/ao`);
+  const normal = await loadAny(tl, basePath, "normal");
+  const roughness = await loadAny(tl, basePath, "roughness");
+  const ao = await loadAny(tl, basePath, "ao");
 
   return new MeshStandardMaterial({
     map: baseColor,
@@ -51,8 +64,7 @@ export async function makeMarblePBR(basePath) {
     roughnessMap: roughness || undefined,
     aoMap: ao || undefined,
     metalness: 0.0,
-    // Align fallback roughness with tiled PBR (more realistic than 0.3)
-    roughness: roughness ? 1.0 : 0.7,
+    roughness: 1.0,
   });
 }
 
@@ -60,12 +72,12 @@ export async function makeMarblePBR(basePath) {
 export async function makeTiledPBR(basePath, repeat = [6, 6]) {
   const tl = new TextureLoader();
 
-  const base = await loadAny(tl, `${basePath}/basecolor`, /*sRGB*/ true);
+  const base = await loadAny(tl, basePath, "basecolor", /*sRGB*/ true);
   if (!base) return null;
 
-  const normal = await loadAny(tl, `${basePath}/normal`);
-  const roughness = await loadAny(tl, `${basePath}/roughness`);
-  const ao = await loadAny(tl, `${basePath}/ao`);
+  const normal = await loadAny(tl, basePath, "normal");
+  const roughness = await loadAny(tl, basePath, "roughness");
+  const ao = await loadAny(tl, basePath, "ao");
 
   // Set tiling on any map we loaded
   const maps = [base, normal, roughness, ao].filter(Boolean);
@@ -81,7 +93,7 @@ export async function makeTiledPBR(basePath, repeat = [6, 6]) {
     roughnessMap: roughness || undefined,
     aoMap: ao || undefined,
     metalness: 0.0,
-    roughness: roughness ? 1.0 : 0.7,
+    roughness: 1.0,
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Character } from '../characters/Character.js';
-import { resolveBaseUrl } from '../utils/baseUrl.js';
+import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 
 function createCitizenModel(primaryColor, secondaryColor) {
   const group = new THREE.Group();
@@ -118,11 +118,13 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
   }
 
   const baseUrl = resolveBaseUrl();
-  const manifestCandidates = [];
-  if (typeof baseUrl === 'string' && baseUrl.length > 0) {
-    manifestCandidates.push(`${baseUrl}models/npcs/manifest.json`);
-  }
-  manifestCandidates.push('/models/npcs/manifest.json');
+  const manifestCandidates = Array.from(
+    new Set([
+      joinPath(baseUrl, 'models/npcs/manifest.json'),
+      'models/npcs/manifest.json',
+      '/models/npcs/manifest.json',
+    ].filter(Boolean))
+  );
 
   let manifest = null;
   for (const candidate of manifestCandidates) {
@@ -160,11 +162,13 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
 
   for (let i = 0; i < fileNames.length; i += 1) {
     const fileName = fileNames[i];
-    const urlCandidates = [];
-    if (typeof baseUrl === 'string' && baseUrl.length > 0) {
-      urlCandidates.push(`${baseUrl}models/npcs/${fileName}`);
-    }
-    urlCandidates.push(`/models/npcs/${fileName}`);
+    const urlCandidates = Array.from(
+      new Set([
+        joinPath(baseUrl, 'models/npcs', fileName),
+        joinPath('models/npcs', fileName),
+        `/models/npcs/${fileName}`,
+      ].filter(Boolean))
+    );
 
     const character = new Character();
     character.name = `GLBNPC:${fileName}`;

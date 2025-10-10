@@ -1,1 +1,11 @@
+node_modules/
+dist/
 
+# --- Project: allow public assets to publish on GitHub Pages ---
+!public/models/**
+!public/audio/**
+!public/textures/**
+!public/config/**
+
+# Build output is docs/. It is published by Pages via CI,
+# but do not hand-edit docs/ in this PR. Build fills it.

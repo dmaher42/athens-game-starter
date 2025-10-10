@@ -4,6 +4,7 @@
 
 import * as THREE from "three";
 import { makeMarblePBR, applyMaterialToTree } from "../materials/pbr-utils.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 /**
  * Idempotent hook. Call after Aristotle tomb is loaded if you have its root object.
@@ -14,7 +15,8 @@ export async function attachAristotleMarblePBR(options) {
     obj = null,             // the GLB root if you have it
     scene,                  // THREE.Scene (required for fallback)
     renderer,               // THREE.WebGLRenderer (optional: for colour mgmt)
-    BASE_URL = "./",        // site base
+    BASE_URL = "",          // legacy support for callers passing BASE_URL
+    baseUrl = BASE_URL,
     textureSubdir = "textures/aristotle_tomb",
     approxPosition = new THREE.Vector3(-40, 14, 10) // Acropolis peak default
   } = options || {};
@@ -29,7 +31,8 @@ export async function attachAristotleMarblePBR(options) {
     }
   }
 
-  const basePath = `${BASE_URL}${textureSubdir}`.replace(/\/{2,}/g, "/");
+  const resolvedBase = typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : resolveBaseUrl();
+  const basePath = joinPath(resolvedBase, textureSubdir);
 
   const material = await makeMarblePBR(basePath);
   if (!material) return; // textures not uploaded yet
