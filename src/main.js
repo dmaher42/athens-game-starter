@@ -55,7 +55,7 @@ import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
 import { createGLTFLoader, loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
-import { resolveBaseUrl, joinPath } from "./utils/baseUrl.js";
+import { resolveBaseUrl, joinPath, normalizeAssetPath } from "./utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
 import { LandmarkManager } from "./world/LandmarkManager.js";
 import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
@@ -99,19 +99,25 @@ window.addEventListener("unhandledrejection", (ev) => {
 
 const BASE_URL = resolveBaseUrl();
 const ARISTOTLE_CANDIDATES = [
-  joinPath(BASE_URL, "models/buildings/aristotle_tomb_in_macedonia_greece.glb"),
-  joinPath(BASE_URL, "models/landmarks/aristotle_tomb.glb"),
-  joinPath(BASE_URL, "models/landmarks/aristotle_tomb_in_macedonia_greece.glb"),
+  "models/buildings/aristotle_tomb.glb",
+  "models/buildings/aristotle_tomb_in_macedonia_greece.glb",
+  "models/landmarks/aristotle_tomb.glb",
+  "models/landmarks/aristotle_tomb_in_macedonia_greece.glb",
+  "aristotle_tomb_in_macedonia_greece.glb",
 ];
 const POSEIDON_CANDIDATES = [
-  joinPath(BASE_URL, "models/buildings/poseidon_temple_at_sounion_greece.glb"),
-  joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
-  joinPath(BASE_URL, "models/landmarks/poseidon_temple_at_sounion_greece.glb"),
+  "models/buildings/poseidon_temple.glb",
+  "models/buildings/poseidon_temple_at_sounion_greece.glb",
+  "models/landmarks/poseidon_temple.glb",
+  "models/landmarks/poseidon_temple_at_sounion_greece.glb",
+  "poseidon_temple_at_sounion_greece.glb",
 ];
 const AKROPOL_CANDIDATES = [
-  joinPath(BASE_URL, "models/buildings/Akropol.glb"),
-  joinPath(BASE_URL, "models/landmarks/akropol.glb"),
-  joinPath(BASE_URL, "models/landmarks/Akropol.glb"),
+  "models/buildings/akropol.glb",
+  "models/buildings/Akropol.glb",
+  "models/landmarks/akropol.glb",
+  "models/landmarks/Akropol.glb",
+  "Akropol.glb",
 ];
 
 // resolveFirstAvailableAsset
@@ -143,12 +149,25 @@ async function resolveFirstAvailableAsset(candidates = []) {
       continue;
     }
 
-    const relative = trimmed.replace(/^\/+/, "");
-    const needsBase =
-      BASE_URL && relative && !relative.startsWith(BASE_URL.replace(/^\/+/, ""));
-    const candidatesToTry = needsBase
-      ? [joinPath(BASE_URL, relative), relative]
-      : [relative];
+    const relative = normalizeAssetPath(trimmed);
+    if (!relative) {
+      continue;
+    }
+
+    const candidatesToTry = [];
+    if (trimmed.startsWith("/")) {
+      const rootCandidate = `/${relative}`;
+      candidatesToTry.push(rootCandidate);
+    }
+
+    const withBase = joinPath(BASE_URL, relative);
+    if (withBase) {
+      candidatesToTry.push(withBase);
+    }
+
+    if (!candidatesToTry.includes(relative)) {
+      candidatesToTry.push(relative);
+    }
 
     for (const candidate of candidatesToTry) {
       if (seen.has(candidate)) continue;

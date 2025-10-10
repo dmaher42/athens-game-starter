@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Character } from '../characters/Character.js';
-import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
+import { resolveBaseUrl, joinPath, normalizeAssetPath } from '../utils/baseUrl.js';
 
 function createCitizenModel(primaryColor, secondaryColor) {
   const group = new THREE.Group();
@@ -143,7 +143,7 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
   }
 
   const fileNames = entries
-    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .map((value) => (typeof value === 'string' ? normalizeAssetPath(value) : ''))
     .filter((value) => value.length > 0);
 
   if (!fileNames.length) {

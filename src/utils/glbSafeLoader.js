@@ -4,6 +4,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { createKTX2Loader } from "./ktx2.js";
 import { createDracoLoader } from "./draco.js";
 import { applyTextureBudgetToObject } from "./textureBudget.js";
+import { joinPath, resolveBaseUrl, normalizeAssetPath } from "./baseUrl.js";
 
 export function createGLTFLoader(renderer) {
   const loader = new GLTFLoader();
@@ -54,24 +55,42 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
 
   const { targetHeight = null, renderer = null, onLoaded = null } = options;
 
+  const baseUrl = resolveBaseUrl();
+  const seen = new Set();
+
   let lastErr = null;
   const tried = [];
   for (const candidate of urls) {
-    const resolved = typeof candidate === "string" ? candidate.trim() : "";
-    if (!resolved) {
+    const raw = typeof candidate === "string" ? candidate.trim() : "";
+    if (!raw) {
       continue;
     }
 
-    if (!(await headOk(resolved))) {
-      tried.push([resolved, 404]);
+    const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) ||
+      /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
+    const normalized = normalizeAssetPath(raw);
+    if (!isAbsolute && !normalized) {
+      continue;
+    }
+
+    const relative = isAbsolute ? raw : normalized;
+    const url = isAbsolute ? raw : joinPath(baseUrl, relative);
+
+    if (seen.has(url)) {
+      continue;
+    }
+    seen.add(url);
+
+    if (!(await headOk(url))) {
+      tried.push([url, 404]);
       continue;
     }
     try {
-      const gltf = await loader.loadAsync(resolved);
+      const gltf = await loader.loadAsync(url);
       const { scene, scenes } = gltf || {};
       const bufferScene = scene || (Array.isArray(scenes) ? scenes[0] : null);
       const root = bufferScene || null;
-      if (!root) throw new Error(`No scene in GLB: ${resolved}`);
+      if (!root) throw new Error(`No scene in GLB: ${url}`);
 
       if (targetHeight && targetHeight > 0) {
         root.updateMatrixWorld(true);
@@ -89,16 +108,16 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
 
       if (typeof onLoaded === "function") {
         try {
-          onLoaded({ url: resolved, gltf, root });
+          onLoaded({ url, gltf, root });
         } catch (hookError) {
           console.warn("[GLB Fallback] onLoaded hook failed", hookError);
         }
       }
 
-      return { url: resolved, gltf, root };
+      return { url, gltf, root };
     } catch (err) {
       lastErr = err instanceof Error ? err : new Error(String(err));
-      tried.push([resolved, "load-fail"]);
+      tried.push([url, "load-fail"]);
     }
   }
 

@@ -8,7 +8,7 @@ import {
   DEFAULT_BASIS_TRANSCODER_PATH,
 } from "../utils/ktx2.js";
 import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath, normalizeAssetPath } from "../utils/baseUrl.js";
 import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
 
 /**
@@ -312,16 +312,24 @@ export async function loadLandmark(scene, url, options = {}) {
       throw new Error("loadLandmark requires a non-empty URL");
     }
 
-    const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(sanitizedUrl) ||
+    const isProtocolAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(sanitizedUrl) ||
       /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(sanitizedUrl);
-    const relativeUrl = isAbsolute
-      ? sanitizedUrl
-      : sanitizedUrl.replace(/^\/+/, "");
-    const urls = (isAbsolute
-      ? [sanitizedUrl]
-      : [joinPath(BASE_URL, relativeUrl), relativeUrl])
-      .filter(Boolean)
-      .filter((candidate, index, array) => array.indexOf(candidate) === index);
+    const normalized = normalizeAssetPath(sanitizedUrl);
+
+    const urlSet = new Set();
+    if (isProtocolAbsolute) {
+      urlSet.add(sanitizedUrl);
+    } else {
+      if (sanitizedUrl.startsWith("/") && normalized) {
+        urlSet.add(`/${normalized}`);
+      }
+      if (normalized) {
+        urlSet.add(joinPath(BASE_URL, normalized));
+        urlSet.add(normalized);
+      }
+    }
+
+    const urls = Array.from(urlSet).filter(Boolean);
 
     const { materialPreset } = options;
     const resolvedRenderer = resolveRenderer(scene, options?.renderer);
