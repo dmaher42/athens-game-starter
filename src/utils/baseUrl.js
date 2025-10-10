@@ -22,14 +22,9 @@ function normaliseEnvBase(base) {
   }
 
   // Relative base values like "./" or "/repo/" should resolve to a clean path.
-  let relative = trimmed.replace(/^\.\/?/, ""); // drop leading "./"
-
-  const hadLeadingSlash = relative.startsWith("/");
-  if (hadLeadingSlash) {
-    relative = `/${relative.replace(/^\/+/, "")}`;
-  } else {
-    relative = relative.replace(/^\/+/, "");
-  }
+  let relative = trimmed
+    .replace(/^\.\/?/, "") // drop leading "./"
+    .replace(/^\/+/, ""); // and leading slashes
 
   if (relative.endsWith("index.html")) {
     relative = relative.slice(0, -"index.html".length);
@@ -77,12 +72,7 @@ function resolveFromLocation(loc) {
     path = path.slice(0, queryIndex);
   }
 
-  const hadLeadingSlash = path.startsWith("/");
   path = path.replace(/^\/+/, "");
-
-  if (hadLeadingSlash) {
-    path = `/${path}`;
-  }
 
   if (path.endsWith("index.html")) {
     path = path.slice(0, -"index.html".length);
