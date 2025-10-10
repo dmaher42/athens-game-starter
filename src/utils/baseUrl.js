@@ -1,10 +1,12 @@
 // src/utils/baseUrl.js
+// We serve with Vite `base: "./"`. Use relative paths only; never hard-code
+// "/athens-game-starter" or other absolute prefixes so we can deploy anywhere.
 export function resolveBaseUrl() {
-  // With Vite base: "./" and GitHub Pages serving /athens-game-starter/,
-  // relative URLs from app root are correct.
-  return ""; // always return relative base
+  return ""; // relative from app root
 }
 
+// Join parts like URL paths, trimming leading/trailing slashes to avoid "//"
+// and duplicated prefixes when concatenating.
 export function joinPath(...parts) {
   return parts
     .filter(Boolean)
