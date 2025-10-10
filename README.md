@@ -120,10 +120,30 @@ keeping their positions atop the leveled ground.
 
 Many third-party GLB files ship with [Draco mesh compression](https://google.github.io/draco/). The runtime now boots a
 `DRACOLoader` alongside the existing Meshopt/KTX2 support so those assets decode automatically instead of falling back to the
-capsule placeholder. By default the decoder binaries stream from Google's hosted CDN. To self-host them, download the contents of
-the Draco `decoders/` folder and either place them in `public/draco/`, set the environment variable
-`VITE_DRACO_DECODER_PATH=/draco/`, or expose a `window.__DRACO_DECODER_PATH__` global before initialising the app. Ensure the path
-ends with a trailing slash so the loader can locate `draco_decoder.js` and `draco_decoder.wasm`.
+capsule placeholder.
+
+The loader tries decoder paths in this order:
+
+1. Environment variable `VITE_DRACO_DECODER_PATH` (set during build)
+2. Global variable `window.__DRACO_DECODER_PATH__` (set before app boots)
+3. Local path `draco/` (relative to your deployment)
+4. Google's hosted CDN (fallback)
+
+To self-host the decoder (recommended to avoid ad blocker issues), download the
+contents of the [Draco `decoders/` folder](https://www.gstatic.com/draco/versioned/decoders/1.5.6/) and either:
+
+1. Place them in `public/draco/`, then set the environment variable
+   `VITE_DRACO_DECODER_PATH=/draco/` when running the dev server or build.
+2. Expose a global in your HTML before the app boots:
+
+   ```html
+   <script>
+     window.__DRACO_DECODER_PATH__ = "/path/to/draco/";
+   </script>
+   ```
+
+Ensure the path ends with a trailing slash so the loader can locate
+`draco_decoder.js` and `draco_decoder.wasm`.
 
 ## KTX2 textures
 
