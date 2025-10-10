@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { loadGLBWithFallbacks } from '../utils/glbSafeLoader.js';
+import { createGLTFLoader, loadGLBWithFallbacks } from '../utils/glbSafeLoader.js';
 
 /** @typedef {'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump'} AnimName */
 
@@ -18,9 +18,9 @@ export class Character extends THREE.Object3D {
    */
   async load(url, renderer, { targetHeight = 1.8 } = {}) {
     const urls = Array.isArray(url) ? url : [url];
-    const loaded = await loadGLBWithFallbacks({
+    const loader = createGLTFLoader(renderer);
+    const loaded = await loadGLBWithFallbacks(loader, urls, {
       renderer,
-      urls,
       targetHeight,
     });
 

@@ -44,28 +44,26 @@ async function headOk(url) {
   }
 }
 
-export async function loadGLBWithFallbacks({
-  renderer,
-  urls,
-  targetHeight = null,
-  onLoaded = null,
-}) {
+export async function loadGLBWithFallbacks(loader, urls, options = {}) {
+  if (!loader || typeof loader.loadAsync !== "function") {
+    throw new Error("loadGLBWithFallbacks requires a GLTFLoader instance");
+  }
   if (!Array.isArray(urls) || urls.length === 0) {
     throw new Error("loadGLBWithFallbacks requires at least one URL");
   }
 
-  const loader = createGLTFLoader(renderer);
+  const { targetHeight = null, renderer = null, onLoaded = null } = options;
 
   let lastErr = null;
-  const attempted = [];
-  for (const url of urls) {
-    if (typeof url !== "string" || url.trim().length === 0) {
+  const tried = [];
+  for (const candidate of urls) {
+    const resolved = typeof candidate === "string" ? candidate.trim() : "";
+    if (!resolved) {
       continue;
     }
-    const resolved = url.trim();
-    attempted.push(resolved);
 
     if (!(await headOk(resolved))) {
+      tried.push([resolved, 404]);
       continue;
     }
     try {
@@ -100,20 +98,18 @@ export async function loadGLBWithFallbacks({
       return { url: resolved, gltf, root };
     } catch (err) {
       lastErr = err instanceof Error ? err : new Error(String(err));
+      tried.push([resolved, "load-fail"]);
     }
   }
 
-  if (attempted.length) {
-    const toPath = (value) => {
-      try {
-        return new URL(value, typeof location !== "undefined" ? location.href : "http://local/").pathname;
-      } catch {
-        return value;
-      }
-    };
-    const paths = attempted.map(toPath);
+  if (tried.length) {
+    const attemptedUrls = tried.map(([url]) => url);
     const suffix = lastErr ? ` (${lastErr.message || lastErr})` : "";
-    console.warn(`[GLB] No reachable candidate among: ${paths.join(", ")}${suffix}`);
+    if (suffix.trim()) {
+      console.warn("[GLB] No reachable candidate:", attemptedUrls, suffix);
+    } else {
+      console.warn("[GLB] No reachable candidate:", attemptedUrls);
+    }
   }
 
   return null;

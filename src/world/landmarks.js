@@ -324,10 +324,10 @@ export async function loadLandmark(scene, url, options = {}) {
       .filter((candidate, index, array) => array.indexOf(candidate) === index);
 
     const { materialPreset } = options;
+    const resolvedRenderer = resolveRenderer(scene, options?.renderer);
 
-    const loaded = await loadGLBWithFallbacks({
-      renderer: resolveRenderer(scene, options?.renderer),
-      urls,
+    const loaded = await loadGLBWithFallbacks(loader, urls, {
+      renderer: resolvedRenderer,
       targetHeight: options?.targetHeight || null,
     });
 
