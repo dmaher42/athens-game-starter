@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { MeshBVH } from 'three-mesh-bvh';
 
 const EPSILON = 1e-6;
 const _instanceMatrix = new THREE.Matrix4();
@@ -24,6 +25,7 @@ export class EnvironmentCollider {
     this.lastRoot = null;
     this.positionAttr = null;
     this.indexAttr = null;
+    this.boundsTree = null;
     this.capsuleBox = new THREE.Box3();
     this.triangleBox = new THREE.Box3();
     this.triangle = new THREE.Triangle();
@@ -130,6 +132,11 @@ export class EnvironmentCollider {
     geometries.forEach((geom) => geom.dispose());
 
     const oldGeometry = this.mesh.geometry;
+    if (this.boundsTree) {
+      this.boundsTree.dispose();
+      this.boundsTree = null;
+    }
+
     if (oldGeometry) oldGeometry.dispose();
 
     this.mesh.geometry = merged;
@@ -138,6 +145,15 @@ export class EnvironmentCollider {
 
     this.positionAttr = merged.getAttribute('position');
     this.indexAttr = merged.getIndex();
+
+    if (this.positionAttr && this.positionAttr.count > 0) {
+      try {
+        this.boundsTree = new MeshBVH(merged, { lazyGeneration: false });
+      } catch (err) {
+        console.warn('Failed to build environment bounds tree', err);
+        this.boundsTree = null;
+      }
+    }
   }
 
   refresh(opts = {}) {
@@ -166,19 +182,18 @@ export class EnvironmentCollider {
     if (!boundingBox.intersectsBox(this.capsuleBox)) return null;
 
     let bestDepth = 0;
-    let bestNormal = null;
+    const bestNormal = this.tmpVec3;
+    let hasHit = false;
 
-    const index = this.indexAttr;
-
-    const checkTriangle = (aIndex, bIndex, cIndex) => {
-      this.tmpVec0.fromBufferAttribute(position, aIndex);
-      this.tmpVec1.fromBufferAttribute(position, bIndex);
-      this.tmpVec2.fromBufferAttribute(position, cIndex);
+    const processTriangle = (a, b, c) => {
+      const triA = this.tmpVec6.copy(a);
+      const triB = this.tmpVec7.copy(b);
+      const triC = this.tmpVec8.copy(c);
 
       this.triangleBox.makeEmpty();
-      this.triangleBox.expandByPoint(this.tmpVec0);
-      this.triangleBox.expandByPoint(this.tmpVec1);
-      this.triangleBox.expandByPoint(this.tmpVec2);
+      this.triangleBox.expandByPoint(triA);
+      this.triangleBox.expandByPoint(triB);
+      this.triangleBox.expandByPoint(triC);
       this.triangleBox.min.addScalar(-capsule.radius);
       this.triangleBox.max.addScalar(capsule.radius);
 
@@ -186,7 +201,7 @@ export class EnvironmentCollider {
         return;
       }
 
-      this.triangle.set(this.tmpVec0, this.tmpVec1, this.tmpVec2);
+      this.triangle.set(triA, triB, triC);
 
       const distance = this.closestPointsSegmentTriangle(
         this.capsuleSegment,
@@ -209,22 +224,44 @@ export class EnvironmentCollider {
             this.tmpNormal.normalize();
           }
 
-          bestNormal = this.tmpVec3.copy(this.tmpNormal);
+          bestNormal.copy(this.tmpNormal);
+          hasHit = true;
         }
       }
     };
 
-    if (index) {
-      for (let i = 0; i < index.count; i += 3) {
-        checkTriangle(index.getX(i), index.getX(i + 1), index.getX(i + 2));
-      }
+    if (this.boundsTree) {
+      this.boundsTree.shapecast({
+        intersectsBounds: (box) => box.intersectsBox(this.capsuleBox),
+        intersectsTriangle: (triangle) => {
+          processTriangle(triangle.a, triangle.b, triangle.c);
+          return false;
+        },
+      });
     } else {
-      for (let i = 0; i < position.count; i += 3) {
-        checkTriangle(i, i + 1, i + 2);
+      const index = this.indexAttr;
+      const v0 = this.tmpVec0;
+      const v1 = this.tmpVec1;
+      const v2 = this.tmpVec2;
+
+      if (index) {
+        for (let i = 0; i < index.count; i += 3) {
+          v0.fromBufferAttribute(position, index.getX(i));
+          v1.fromBufferAttribute(position, index.getX(i + 1));
+          v2.fromBufferAttribute(position, index.getX(i + 2));
+          processTriangle(v0, v1, v2);
+        }
+      } else {
+        for (let i = 0; i < position.count; i += 3) {
+          v0.fromBufferAttribute(position, i);
+          v1.fromBufferAttribute(position, i + 1);
+          v2.fromBufferAttribute(position, i + 2);
+          processTriangle(v0, v1, v2);
+        }
       }
     }
 
-    if (!bestNormal) return null;
+    if (!hasHit) return null;
 
     return {
       normal: bestNormal.clone(),
