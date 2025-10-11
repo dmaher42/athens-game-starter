@@ -1,22 +1,26 @@
-const VITE_BASE = (import.meta?.env?.BASE_URL) || "/";
-
-function ensureSlash(s) {
-  return s.endsWith("/") ? s : s + "/";
-}
-
-// Optional override before app boots:
-// <script>window.__BASE_URL__="/athens-game-starter/";</script>
+// src/utils/baseUrl.js
 export function resolveBaseUrl() {
-  const override =
-    (typeof window !== "undefined" && window.__BASE_URL__) || "";
-  const base = (override && typeof override === "string") ? override : VITE_BASE;
-  return ensureSlash(base); // e.g., "/athens-game-starter/"
+  const viteBase =
+    (typeof import.meta !== "undefined" &&
+      import.meta.env &&
+      import.meta.env.BASE_URL) ||
+    "/";
+  const globalBase =
+    (typeof window !== "undefined" && window.__BASE_URL__) || null;
+  const base = globalBase || viteBase || "/";
+  return base.endsWith("/") ? base : base + "/";
 }
 
-// If rel is absolute URL or starts with "/", leave it alone (caller’s intent).
-// Otherwise, join to base without inserting an extra leading slash.
 export function joinPath(base, rel) {
-  const r = String(rel);
-  if (/^(https?:)?\/\//i.test(r) || r.startsWith("/")) return r;
-  return ensureSlash(base) + r.replace(/^\/+/, "");
+  if (!base) base = "/";
+  if (!rel) return base;
+  // If rel is a full URL, return it as-is.
+  if (/^(?:[a-z]+:)?\/\//i.test(rel)) return rel;
+  // Treat root-absolute rels as absolute (don't re-join).
+  if (rel.startsWith("/")) {
+    return rel;
+  }
+  const b = base.endsWith("/") ? base : base + "/";
+  const r = String(rel).replace(/^\/+/, "");
+  return b + r;
 }
