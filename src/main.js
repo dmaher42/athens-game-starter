@@ -63,16 +63,8 @@ import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
 import { attachAristotleMarblePBR } from "./features/aristotle-texture.js";
 import { applyGravelToRoads } from "./features/roads-gravel.js";
 
-const BUILD_TIME =
-  typeof __BUILD_TIME__ !== "undefined"
-    ? __BUILD_TIME__
-    : (typeof import.meta !== "undefined" && import.meta?.env?.VITE_BUILD_TIME) || new Date().toISOString();
-const BUILD_SHA =
-  typeof __BUILD_SHA__ !== "undefined"
-    ? __BUILD_SHA__
-    : (typeof import.meta !== "undefined" && import.meta?.env?.VITE_BUILD_SHA) || "development";
-
-console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
+// @ts-ignore injected by Vite define()
+console.info("[build]", { time: __BUILD_TIME__, sha: __BUILD_SHA__ });
 
 (async () => {
   const BASE = resolveBaseUrl();
@@ -80,14 +72,12 @@ console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
     "audio/manifest.json",
     "models/npcs/manifest.json",
     "config/districts.json",
-    // keep GLBs optional; uncomment as you add binaries:
-    // "models/landmarks/akropol.glb",
-    // "models/landmarks/poseidon_temple.glb",
   ];
   for (const p of probes) {
     const u = joinPath(BASE, p);
     try {
-      const r = await fetch(u, { method: p.endsWith(".json") ? "GET" : "HEAD", cache: "no-cache" });
+      const method = p.endsWith(".json") ? "GET" : "HEAD";
+      const r = await fetch(u, { method, cache: "no-cache" });
       console.log("[probe]", p, r.status, r.ok, u);
     } catch (e) {
       console.warn("[probe-failed]", p, u, e);

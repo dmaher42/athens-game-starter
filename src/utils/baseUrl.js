@@ -4,17 +4,19 @@ function ensureSlash(s) {
   return s.endsWith("/") ? s : s + "/";
 }
 
-// Optional explicit override before app boots:
+// Optional override before app boots:
 // <script>window.__BASE_URL__="/athens-game-starter/";</script>
 export function resolveBaseUrl() {
   const override =
     (typeof window !== "undefined" && window.__BASE_URL__) || "";
   const base = (override && typeof override === "string") ? override : VITE_BASE;
-  return ensureSlash(base);
+  return ensureSlash(base); // e.g., "/athens-game-starter/"
 }
 
-// Join a relative path to base. If rel is absolute, leave it untouched.
+// If rel is absolute URL or starts with "/", leave it alone (caller’s intent).
+// Otherwise, join to base without inserting an extra leading slash.
 export function joinPath(base, rel) {
-  if (/^(https?:)?\/\//i.test(rel) || rel.startsWith("/")) return rel;
-  return ensureSlash(base) + String(rel).replace(/^\/+/, "");
+  const r = String(rel);
+  if (/^(https?:)?\/\//i.test(r) || r.startsWith("/")) return r;
+  return ensureSlash(base) + r.replace(/^\/+/, "");
 }
