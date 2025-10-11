@@ -64,7 +64,10 @@ import { attachAristotleMarblePBR } from "./features/aristotle-texture.js";
 import { applyGravelToRoads } from "./features/roads-gravel.js";
 
 // @ts-ignore injected by Vite define()
-console.info("[build]", { time: __BUILD_TIME__, sha: __BUILD_SHA__ });
+const BUILD_TIME = typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : "";
+// @ts-ignore injected by Vite define()
+const BUILD_SHA = typeof __BUILD_SHA__ !== "undefined" ? __BUILD_SHA__ : "";
+console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
 
 (async () => {
   const BASE = resolveBaseUrl();
