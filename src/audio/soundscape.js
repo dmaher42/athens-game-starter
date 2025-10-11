@@ -203,7 +203,8 @@ export class Soundscape {
       return this._manifest;
     }
 
-    const manifestUrl = joinPath(resolveBaseUrl(), "audio/manifest.json");
+    const BASE = resolveBaseUrl();
+    const manifestUrl = joinPath(BASE, "audio/manifest.json");
 
     try {
       const response = await fetch(manifestUrl, {
@@ -279,6 +280,8 @@ export class Soundscape {
   }
 
   async initFromManifest() {
+    const BASE = resolveBaseUrl();
+    const audioBase = joinPath(BASE, "audio");
     const manifest = await this.loadManifest();
     if (!manifest) {
       this.ready = true;
@@ -291,7 +294,6 @@ export class Soundscape {
       if (/^(?:[a-z]+:)?\/\//i.test(raw)) {
         return raw;
       }
-      const audioBase = joinPath(resolveBaseUrl(), "audio");
       return joinPath(audioBase, raw);
     };
 
