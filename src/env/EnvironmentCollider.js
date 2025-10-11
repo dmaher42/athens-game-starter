@@ -1,6 +1,16 @@
-import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { MeshBVH } from 'three-mesh-bvh';
+import { MeshBVH, acceleratedRaycast } from "three-mesh-bvh";
+import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+
+// Safe registration (idempotent)
+if (
+  THREE.Mesh &&
+  typeof THREE.Mesh.prototype.raycast === "function" &&
+  !THREE.Mesh.prototype.__bvhRaycastPatched
+) {
+  THREE.Mesh.prototype.raycast = acceleratedRaycast;
+  THREE.Mesh.prototype.__bvhRaycastPatched = true;
+}
 
 const EPSILON = 1e-6;
 const _instanceMatrix = new THREE.Matrix4();
