@@ -130,9 +130,11 @@ function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
   return value
     .trim()
+    // strip leading slashes FIRST so repo-folder stripping matches
     .replace(/^\/+/, "")
     .replace(/^public\//i, "")
     .replace(/^docs\//i, "")
+    .replace(/^athens-game-starter\//i, "")
     .replace(/^\.\//, "");
 }
 const ARISTOTLE_CANDIDATES = [
@@ -186,13 +188,17 @@ async function resolveFirstAvailableAsset(candidates = []) {
       continue;
     }
 
+    const startsAtRoot = trimmed.startsWith("/");
     const relative = sanitizeRelativePath(trimmed);
-    if (!relative) {
+    if (!relative && !startsAtRoot) {
       continue;
     }
 
     const candidatesToTry = Array.from(
-      new Set([joinPath(BASE_URL, relative), relative].filter(Boolean))
+      // If full URL or starts-with-root, try as-is; otherwise try base-joined then relative
+      new Set(
+        startsAtRoot ? [trimmed] : [joinPath(BASE_URL, relative), relative]
+      )
     );
 
     for (const candidate of candidatesToTry) {
@@ -1221,10 +1227,7 @@ async function mainApp() {
 
     if (url !== heroRootPath) {
       console.info(
-        `Hero GLB not found at ${joinPath(
-          BASE_URL,
-          "models/character/hero.glb"
-        )}; using bundled astronaut sample from ${url}.`
+        `Hero GLB not found at ${joinPath(BASE_URL, "models/character/hero.glb")}; using bundled astronaut sample from ${url}.`
       );
     }
     console.log("[Hero] Loaded:", url);
