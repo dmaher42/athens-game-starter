@@ -37,21 +37,24 @@ export const CITY_CHUNK_SIZE = new THREE.Vector2(140, 110); // city grid footpri
 export const CITY_SEED = 0x4d534349;
 
 // Harbor water extents (limit the ocean to the bay only)
-export const HARBOR_WATER_RADIUS = 170; // if using circular water
+export const HARBOR_WATER_RADIUS = 70; // if using circular water
 
 // Harbor water extents (rectangle) and seaward offset
-export const HARBOR_WATER_SIZE = new THREE.Vector2(260, 100); // reduce Z extent (depth)
-export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, -100); // push water toward open sea (−Z)
+export const HARBOR_WATER_SIZE = new THREE.Vector2(140, 120); // confine water footprint to the harbor basin
+export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, 0); // center the water plane on the harbor location
 // Keep the harbor water strictly on the seaward (western) side of the pier
 export const PIER_EDGE_OFFSET = 4.5; // distance from harbor center to pier edge
 export const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x - PIER_EDGE_OFFSET; // align with western (seaward) edge of pier
 export const HARBOR_WATER_BACK = 0; // max inland distance allowed (in Z half-extent)
 
+const HARBOR_WATER_HALF_WIDTH = 70; // meters west of the pier (keeps water inside the harbor)
+const HARBOR_WATER_HALF_DEPTH = 60; // meters north/south from harbor center
+
 export const HARBOR_WATER_BOUNDS = {
-  west: -190,
-  east: -117,
-  north: -120,
-  south: 0,
+  west: HARBOR_CENTER_3D.x - HARBOR_WATER_HALF_WIDTH,
+  east: HARBOR_WATER_EAST_LIMIT,
+  north: HARBOR_CENTER_3D.z - HARBOR_WATER_HALF_DEPTH,
+  south: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH,
 };
 
 // Convenience centers

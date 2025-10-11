@@ -3,6 +3,7 @@ import { Water } from "three/addons/objects/Water.js";
 import {
   HARBOR_WATER_CENTER,
   HARBOR_WATER_SIZE,
+  HARBOR_WATER_EAST_LIMIT,
   SEA_LEVEL_Y,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
@@ -11,6 +12,53 @@ function generateNormalComponent(x, y, octave) {
   const frequency = Math.pow(2, octave);
   const angle = (x * frequency + y * frequency * 1.3) * 0.12;
   return Math.sin(angle * 1.7 + octave * 1.1) * 0.6;
+}
+
+const textureLoader = new THREE.TextureLoader();
+
+export const DEFAULT_WATER_NORMAL_CANDIDATES = [
+  "/assets/ground/water_normals.png",
+  "/assets/ground/waternormals.jpg",
+  "/assets/ground/shader.png",
+  "/assets/ground/step_sea.gif",
+];
+
+function configureWaterNormalsTexture(texture) {
+  if (!texture) return;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.anisotropy = 4;
+  if ("colorSpace" in texture && THREE.LinearSRGBColorSpace !== undefined) {
+    texture.colorSpace = THREE.LinearSRGBColorSpace;
+  }
+  texture.needsUpdate = true;
+}
+
+function loadWaterNormalsTexture(url) {
+  return new Promise((resolve, reject) => {
+    let disposed = false;
+    try {
+      const texture = textureLoader.load(
+        url,
+        () => {
+          if (disposed) return;
+          configureWaterNormalsTexture(texture);
+          resolve(texture);
+        },
+        undefined,
+        (error) => {
+          if (!disposed) {
+            disposed = true;
+            texture.dispose();
+          }
+          reject(error);
+        },
+      );
+      configureWaterNormalsTexture(texture);
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 function createProceduralWaterNormals(size = 256) {
@@ -38,11 +86,7 @@ function createProceduralWaterNormals(size = 256) {
   }
 
   const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  // Maintain conservative anisotropy to avoid potential mobile performance regressions.
-  texture.anisotropy = 4;
-  texture.needsUpdate = true;
+  configureWaterNormalsTexture(texture);
   return texture;
 }
 
@@ -52,7 +96,60 @@ const _moodWaterColor = new THREE.Color();
 
 const FRONT_Z_HARD = -117;
 
-let cachedNormals = null;
+let cachedWaterNormalsTexture = null;
+let cachedWaterNormalsKey = null;
+
+async function resolveWaterNormalsTexture(options) {
+  const candidates = [];
+
+  if (typeof options === "string") {
+    candidates.push(options);
+  } else if (Array.isArray(options)) {
+    candidates.push(...options);
+  } else if (options && typeof options === "object") {
+    if (typeof options.url === "string") {
+      candidates.push(options.url);
+    }
+    if (Array.isArray(options.candidates)) {
+      candidates.push(...options.candidates);
+    }
+    if (Array.isArray(options.urls)) {
+      candidates.push(...options.urls);
+    }
+  }
+
+  candidates.push(...DEFAULT_WATER_NORMAL_CANDIDATES);
+
+  const tried = new Set();
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const normalized = candidate.trim();
+    if (!normalized || tried.has(normalized)) continue;
+    tried.add(normalized);
+
+    if (cachedWaterNormalsTexture && cachedWaterNormalsKey === normalized) {
+      return cachedWaterNormalsTexture;
+    }
+
+    try {
+      const texture = await loadWaterNormalsTexture(normalized);
+      cachedWaterNormalsTexture = texture;
+      cachedWaterNormalsKey = normalized;
+      return texture;
+    } catch (error) {
+      if (import.meta.env?.DEV) {
+        console.info("[water] Failed to load normal map candidate", normalized, error);
+      }
+    }
+  }
+
+  if (!cachedWaterNormalsTexture || cachedWaterNormalsKey !== "procedural") {
+    cachedWaterNormalsTexture = createProceduralWaterNormals();
+    cachedWaterNormalsKey = "procedural";
+  }
+
+  return cachedWaterNormalsTexture;
+}
 
 function resolveDevicePixelRatio(options) {
   if (options && Number.isFinite(options.devicePixelRatio)) {
@@ -72,11 +169,17 @@ function computeRenderTargetSize(options) {
 }
 
 export async function createOcean(scene, options = {}) {
-  if (!cachedNormals) {
-    cachedNormals = createProceduralWaterNormals();
-  }
-
   const renderTargetSize = computeRenderTargetSize(options);
+
+  const waterNormalsOptions =
+    options?.waterNormals !== undefined
+      ? options.waterNormals
+      : {
+          url: options?.waterNormalsUrl,
+          candidates: options?.waterNormalsCandidates,
+        };
+
+  const waterNormals = await resolveWaterNormalsTexture(waterNormalsOptions);
 
   // remove prior water meshes if any
   scene.traverse((o) => {
@@ -126,9 +229,9 @@ export async function createOcean(scene, options = {}) {
     const zBack = cz + halfZBack;
 
     west = cx - halfX;
-    east = cx + halfX;
-    north = zFrontDesired;
-    south = zBack;
+    east = Math.min(cx + halfX, HARBOR_WATER_EAST_LIMIT);
+    north = zFront;
+    south = Math.max(zBack, north);
 
     if (import.meta.env?.DEV) {
       console.log("[water clip]", { cx, cz, zFront, zBack, FRONT_Z_HARD });
@@ -149,7 +252,7 @@ export async function createOcean(scene, options = {}) {
   const water = new Water(geometry, {
     textureWidth: renderTargetSize,
     textureHeight: renderTargetSize,
-    waterNormals: cachedNormals,
+    waterNormals,
     sunDirection: new THREE.Vector3(0.707, 0.5, 0.5).normalize(),
     sunColor: 0xf2f8ff,
     waterColor: _dayWaterColor.clone(),
@@ -208,6 +311,10 @@ export async function createOcean(scene, options = {}) {
     });
     const debugCenter = new THREE.Vector3(cx, HARBOR_WATER_CENTER.y, cz);
     const debugSize = new THREE.Vector2(width, depth);
+    const existingBoundsHelper = scene.getObjectByName?.("WaterBoundsDebug");
+    if (existingBoundsHelper) {
+      scene.remove(existingBoundsHelper);
+    }
     mountWaterBoundsDebug(scene, debugCenter, debugSize);
   }
 
