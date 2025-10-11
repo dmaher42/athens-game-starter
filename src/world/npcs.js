@@ -150,48 +150,34 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
   }
 
   const baseUrl = resolveBaseUrl();
-  const manifestCandidates = Array.from(
-    new Set([
-      joinPath(baseUrl, 'models/npcs/manifest.json'),
-      'models/npcs/manifest.json',
-    ].filter(Boolean))
-  );
-
-  let manifestUrl = null;
-  for (const candidate of manifestCandidates) {
-    const ok = await headOk(candidate);
-    if (ok) {
-      manifestUrl = candidate;
-      break;
-    }
-  }
-
-  if (!manifestUrl) {
-    warnOnce(
-      manifestWarnings,
-      'missing-manifest',
-      '[NPC Manifest] Missing models/npcs/manifest.json; skipping GLB NPCs.'
-    );
-    return { npcs: [], updaters: [] };
-  }
+  const manifestUrl = joinPath(baseUrl, 'models/npcs/manifest.json');
 
   let manifest = null;
   try {
-    const response = await fetch(manifestUrl, { cache: 'no-cache' });
+    const response = await fetch(manifestUrl, { method: 'GET', cache: 'no-cache' });
     if (!response.ok) {
-      warnOnce(
-        manifestWarnings,
-        'manifest-fetch',
-        `[NPC Manifest] Failed to load ${manifestUrl}: ${response.status} ${response.statusText}`
-      );
+      if (response.status === 404) {
+        warnOnce(
+          manifestWarnings,
+          'missing-manifest',
+          '[NPC Manifest] Missing models/npcs/manifest.json; skipping GLB NPCs.'
+        );
+      } else {
+        warnOnce(
+          manifestWarnings,
+          'manifest-fetch',
+          `[NPC Manifest] Failed to load ${manifestUrl}: ${response.status} ${response.statusText}`
+        );
+      }
       return { npcs: [], updaters: [] };
     }
     manifest = await response.json();
   } catch (error) {
+    const statusMessage = error?.message || error;
     warnOnce(
       manifestWarnings,
       'manifest-error',
-      `[NPC Manifest] Failed to load ${manifestUrl}: ${error?.message || error}`
+      `[NPC Manifest] Failed to load ${manifestUrl}: ${statusMessage}`
     );
     return { npcs: [], updaters: [] };
   }
