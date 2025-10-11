@@ -154,20 +154,9 @@ async function resolveFirstAvailableAsset(candidates = []) {
       continue;
     }
 
-    const candidatesToTry = [];
-    if (trimmed.startsWith("/")) {
-      const rootCandidate = `/${relative}`;
-      candidatesToTry.push(rootCandidate);
-    }
-
-    const withBase = joinPath(BASE_URL, relative);
-    if (withBase) {
-      candidatesToTry.push(withBase);
-    }
-
-    if (!candidatesToTry.includes(relative)) {
-      candidatesToTry.push(relative);
-    }
+    const candidatesToTry = Array.from(
+      new Set([joinPath(BASE_URL, relative), relative].filter(Boolean))
+    );
 
     for (const candidate of candidatesToTry) {
       if (seen.has(candidate)) continue;
@@ -178,6 +167,28 @@ async function resolveFirstAvailableAsset(candidates = []) {
     }
   }
   throw new Error("No candidate asset reachable: " + candidates.join(", "));
+}
+
+async function runAssetQuickChecks() {
+  const baseUrl = resolveBaseUrl();
+  const checks = [
+    { label: "Audio Manifest", path: joinPath(baseUrl, "audio/manifest.json") },
+    { label: "Aristotle Tomb", path: joinPath(baseUrl, "models/landmarks/aristotle_tomb.glb") },
+    { label: "District Rules", path: joinPath(baseUrl, "config/districts.json") },
+    { label: "Water Normals", path: joinPath(baseUrl, "textures/ground/water_normals.png") },
+  ];
+
+  const results = [];
+  for (const { label, path } of checks) {
+    const exists = await headOk(path);
+    results.push({ label, path, status: exists ? "ok" : "missing" });
+  }
+
+  if (typeof console?.table === "function") {
+    console.table(results, ["label", "path", "status"]);
+  } else {
+    console.log("Asset QuickChecks", results);
+  }
 }
 
 function configureRendererShadows(renderer) {
@@ -452,6 +463,9 @@ function startTimeOfDayCycle(options = {}) {
 
 async function mainApp() {
   console.log("🔧 Athens mainApp start");
+  runAssetQuickChecks().catch((err) => {
+    console.warn("Asset QuickChecks failed", err);
+  });
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;

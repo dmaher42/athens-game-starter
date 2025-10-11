@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
+import { resolveBaseUrl, joinPath, normalizeAssetPath } from "../utils/baseUrl.js";
 import {
   HARBOR_WATER_CENTER,
   HARBOR_WATER_SIZE,
@@ -16,11 +17,12 @@ function generateNormalComponent(x, y, octave) {
 
 const textureLoader = new THREE.TextureLoader();
 
+const BASE = resolveBaseUrl();
 export const DEFAULT_WATER_NORMAL_CANDIDATES = [
-  "/assets/ground/water_normals.png",
-  "/assets/ground/waternormals.jpg",
-  "/assets/ground/shader.png",
-  "/assets/ground/step_sea.gif",
+  joinPath(BASE, "textures/ground/water_normals.png"),
+  joinPath(BASE, "textures/ground/water_normals.jpg"),
+  joinPath(BASE, "textures/ground/shader.png"),
+  joinPath(BASE, "textures/ground/step_sea.gif"),
 ];
 
 function configureWaterNormalsTexture(texture) {
@@ -124,21 +126,28 @@ async function resolveWaterNormalsTexture(options) {
   for (const candidate of candidates) {
     if (typeof candidate !== "string") continue;
     const normalized = candidate.trim();
-    if (!normalized || tried.has(normalized)) continue;
-    tried.add(normalized);
+    if (!normalized) continue;
 
-    if (cachedWaterNormalsTexture && cachedWaterNormalsKey === normalized) {
+    const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(normalized) || normalized.startsWith("data:");
+    const resolved = isAbsolute
+      ? normalized
+      : joinPath(BASE, normalizeAssetPath(normalized));
+
+    if (!resolved || tried.has(resolved)) continue;
+    tried.add(resolved);
+
+    if (cachedWaterNormalsTexture && cachedWaterNormalsKey === resolved) {
       return cachedWaterNormalsTexture;
     }
 
     try {
-      const texture = await loadWaterNormalsTexture(normalized);
+      const texture = await loadWaterNormalsTexture(resolved);
       cachedWaterNormalsTexture = texture;
-      cachedWaterNormalsKey = normalized;
+      cachedWaterNormalsKey = resolved;
       return texture;
     } catch (error) {
       if (import.meta.env?.DEV) {
-        console.info("[water] Failed to load normal map candidate", normalized, error);
+        console.info("[water] Failed to load normal map candidate", resolved, error);
       }
     }
   }

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { resolveBaseUrl, joinPath, normalizeAssetPath } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 // Ensure we always work with strings; accept object forms like { url: "..." }
 function ensureUrl(input) {
@@ -7,6 +7,8 @@ function ensureUrl(input) {
   if (input && typeof input.url === "string") return input.url;
   return "";
 }
+
+let manifestWarningLogged = false;
 
 /**
  * Living City Soundscape
@@ -59,8 +61,6 @@ export class Soundscape {
     this.ready = false;
     this.manifestLoaded = false;
     this._manifest = null;
-    this._manifestUrl = "";
-    this._resolveAssetPath = (path) => path;
 
     // Zones
     this.zones = {
@@ -71,7 +71,8 @@ export class Soundscape {
   }
 
   logMissing(name, url) {
-    console.info(`[audio] Optional asset missing: ${name} (${url}). Drop a file at public/${url} to enable.`);
+    const hint = url && !/^(?:[a-z]+:)?\/\//i.test(url) ? `public/${url}` : url;
+    console.info(`[audio] Optional asset missing: ${name} (${url}). Drop a file at ${hint} to enable.`);
   }
 
   async loadBuffer(name, url) {
@@ -139,73 +140,6 @@ export class Soundscape {
     return src;
   }
 
-  async _fetchManifest(candidateUrl) {
-    const s = typeof candidateUrl === "string" ? candidateUrl : String(candidateUrl ?? "");
-    const url = s.trim();
-    if (!url) return null;
-    if (!url.endsWith(".json")) return null;
-    try {
-      const res = await fetch(url, { method: "GET" });
-      if (!res.ok) return null;
-      const contentType = res.headers.get("content-type") || "";
-      if (contentType.includes("application/json")) {
-        return await res.json();
-      }
-      const text = await res.text();
-      try {
-        return JSON.parse(text);
-      } catch {
-        return null;
-      }
-    } catch (err) {
-      console.warn("[audio] manifest fetch error:", url, err);
-      return null;
-    }
-  }
-
-  _createAssetResolver(manifestUrl) {
-    const url = ensureUrl(manifestUrl);
-    if (!url) {
-      return (path) => path;
-    }
-
-    let baseReference = null;
-    try {
-      const origin = typeof window !== "undefined" && window.location?.origin
-        ? window.location.origin
-        : "http://localhost";
-      const resolved = new URL(url, origin);
-      resolved.hash = "";
-      resolved.search = "";
-      const pathname = resolved.pathname || "/";
-      const lastSlash = pathname.lastIndexOf("/");
-      const directory = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
-      resolved.pathname = directory;
-      baseReference = resolved;
-    } catch {
-      const clean = url.replace(/[#?].*$/, "");
-      const lastSlash = clean.lastIndexOf("/");
-      baseReference = lastSlash >= 0 ? clean.slice(0, lastSlash + 1) : "";
-    }
-
-    return (path) => {
-      if (!path || typeof path !== "string") return path;
-      if (/^[a-z]+:/i.test(path) || path.startsWith("//") || path.startsWith("/")) {
-        return path;
-      }
-      if (baseReference instanceof URL) {
-        try {
-          return new URL(path, baseReference).toString();
-        } catch {
-          // ignore fallthrough
-        }
-      }
-      const normalized = normalizeAssetPath(path);
-      const prefix = typeof baseReference === "string" ? baseReference : "";
-      return joinPath(prefix, normalized);
-    };
-  }
-
   _normalizeManifestSchema(rawManifest) {
     if (!rawManifest || typeof rawManifest !== "object" || Array.isArray(rawManifest)) {
       return rawManifest;
@@ -264,70 +198,48 @@ export class Soundscape {
     };
   }
 
-  async loadManifest(manifestUrl = "audio/manifest.json") {
-    const baseUrl = resolveBaseUrl();
-    const fallbackManifest = joinPath(baseUrl, "audio/manifest.json");
-    const provided = Array.isArray(manifestUrl) ? manifestUrl : [manifestUrl];
-    const queue = [...provided, fallbackManifest, "audio/manifest.json"];
-    const seen = new Set();
-    const candidates = [];
-
-    for (const entry of queue) {
-      const value = ensureUrl(entry) || entry;
-      if (!value) continue;
-      const str = typeof value === "string" ? value : String(value ?? "");
-      const trimmed = str.trim();
-      if (!trimmed) continue;
-
-      const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(trimmed);
-      const isRoot = trimmed.startsWith("/");
-      const normalized = normalizeAssetPath(trimmed);
-
-      const localCandidates = [];
-      if (isAbsolute) {
-        localCandidates.push(trimmed);
-      } else {
-        if (isRoot && normalized) {
-          localCandidates.push(`/${normalized}`);
-        }
-        if (normalized) {
-          localCandidates.push(joinPath(baseUrl, normalized));
-          localCandidates.push(normalized);
-        }
-      }
-
-      for (const candidate of localCandidates) {
-        if (!candidate || seen.has(candidate)) continue;
-        seen.add(candidate);
-        candidates.push(candidate);
-      }
-    }
-
-    for (const candidate of candidates) {
-      const data = await this._fetchManifest(candidate);
-      if (!data) continue;
-      this._manifestUrl = candidate;
-      this._manifest = this._normalizeManifestSchema(data);
-      this._resolveAssetPath = this._createAssetResolver(ensureUrl(this._manifestUrl));
-      this.manifestLoaded = true;
-      console.log("[audio] manifest loaded:", this._manifestUrl);
+  async loadManifest() {
+    if (this.manifestLoaded) {
       return this._manifest;
     }
 
-    this.manifestLoaded = false;
-    this._manifest = null;
-    this._manifestUrl = "";
-    this._resolveAssetPath = (path) => path;
-    throw new Error("[audio] manifest.json missing");
+    const manifestUrl = joinPath(resolveBaseUrl(), "audio/manifest.json");
+
+    try {
+      const response = await fetch(manifestUrl, { method: "GET" });
+      if (!response.ok) {
+        if (!manifestWarningLogged) {
+          console.warn(`[audio] manifest missing: ${manifestUrl}`);
+          manifestWarningLogged = true;
+        }
+        this.manifestLoaded = true;
+        this._manifest = null;
+        return null;
+      }
+
+      const manifest = await response.json();
+      this._manifest = this._normalizeManifestSchema(manifest);
+      this.manifestLoaded = true;
+      console.log("[audio] manifest loaded:", manifestUrl);
+      return this._manifest;
+    } catch (err) {
+      if (!manifestWarningLogged) {
+        console.warn(`[audio] manifest fetch error: ${manifestUrl}`, err);
+        manifestWarningLogged = true;
+      }
+      this.manifestLoaded = true;
+      this._manifest = null;
+      return null;
+    }
   }
 
-  async _initFromCategorizedManifest(categories, resolveAssetPath) {
+  async _initFromCategorizedManifest(categories, toUrl) {
     const ambience = Array.isArray(categories?.ambience)
       ? categories.ambience.filter((entry) => entry && entry.file)
       : [];
     for (const [index, entry] of ambience.entries()) {
       const key = entry?.id || entry?.file || `ambience-${index}`;
-      const buffer = await this.loadBuffer(key, resolveAssetPath(entry?.file));
+      const buffer = await this.loadBuffer(key, toUrl(entry?.file));
       if (!buffer) continue;
       const opts = {
         loop: entry.loop !== false,
@@ -350,7 +262,7 @@ export class Soundscape {
       : [];
     for (const [index, entry] of fx.entries()) {
       const key = entry?.id || entry?.file || `fx-${index}`;
-      await this.loadBuffer(key, resolveAssetPath(entry?.file));
+      await this.loadBuffer(key, toUrl(entry?.file));
     }
 
     if (!ambience.length && !fx.length) {
@@ -363,20 +275,26 @@ export class Soundscape {
     }
   }
 
-  async initFromManifest(manifestUrl = "audio/manifest.json") {
-    if (!this._manifest) {
-      try {
-        await this.loadManifest(manifestUrl);
-      } catch {
-        // loadManifest already logged warnings when appropriate
-      }
+  async initFromManifest() {
+    const manifest = await this.loadManifest();
+    if (!manifest) {
+      this.ready = true;
+      return;
     }
 
-    const mf = this._manifest ?? { ambient: {}, effects: {} };
-    const resolveAssetPath = this._resolveAssetPath || ((path) => path);
+    const toUrl = (file) => {
+      const raw = ensureUrl(file) || (file != null ? String(file) : "");
+      if (!raw) return "";
+      if (/^(?:[a-z]+:)?\/\//i.test(raw)) {
+        return raw;
+      }
+      return joinPath(resolveBaseUrl(), "audio", raw);
+    };
+
+    const mf = manifest ?? { ambient: {}, effects: {} };
 
     if (mf?.categories) {
-      await this._initFromCategorizedManifest(mf.categories, resolveAssetPath);
+      await this._initFromCategorizedManifest(mf.categories, toUrl);
       this.ready = true;
       return;
     }
@@ -385,17 +303,17 @@ export class Soundscape {
     const effects = mf.effects ?? {};
 
     // Ambient layers
-    const sea = await this.loadBuffer("sea", resolveAssetPath(ambient.sea));
-    const gulls = await this.loadBuffer("gulls", resolveAssetPath(ambient.gulls));
-    const wind = await this.loadBuffer("wind", resolveAssetPath(ambient.wind));
-    const market = await this.loadBuffer("market", resolveAssetPath(ambient.market));
-    const fountain = await this.loadBuffer("fountain", resolveAssetPath(ambient.fountain));
-    const lyre = await this.loadBuffer("lyre", resolveAssetPath(ambient.lyre));
+    const sea = await this.loadBuffer("sea", toUrl(ambient.sea));
+    const gulls = await this.loadBuffer("gulls", toUrl(ambient.gulls));
+    const wind = await this.loadBuffer("wind", toUrl(ambient.wind));
+    const market = await this.loadBuffer("market", toUrl(ambient.market));
+    const fountain = await this.loadBuffer("fountain", toUrl(ambient.fountain));
+    const lyre = await this.loadBuffer("lyre", toUrl(ambient.lyre));
 
     // Effects / one-shots
-    const blacksmith = await this.loadBuffer("blacksmith", resolveAssetPath(effects.blacksmith));
-    const goats = await this.loadBuffer("goats", resolveAssetPath(effects.goats));
-    const cart = await this.loadBuffer("cart", resolveAssetPath(effects.cart));
+    const blacksmith = await this.loadBuffer("blacksmith", toUrl(effects.blacksmith));
+    const goats = await this.loadBuffer("goats", toUrl(effects.goats));
+    const cart = await this.loadBuffer("cart", toUrl(effects.cart));
 
     // Global ambient: sea + wind (wind mixed more at night)
     this._makeGlobal(sea, "ambience", { volume: 0.25 })?.play();

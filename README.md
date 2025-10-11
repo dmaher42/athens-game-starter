@@ -30,7 +30,7 @@ hosting on GitHub Pages or any static site provider.
 
 ### Custom ground textures
 
-Drop photographic ground tiles in `public/assets/ground/` and reference them
+Drop photographic ground tiles in `public/textures/ground/` and reference them
 from `src/world/groundTextureConfig.js`. The runtime keeps the existing vertex
 colors as a fallback, then layers your JPGs using height-aware masks so dirt can
 fade into rocky cliffs or lush grass in lowlands. Update the config to tune
