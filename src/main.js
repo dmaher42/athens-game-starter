@@ -71,6 +71,7 @@ console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
 
 (async () => {
   const BASE = resolveBaseUrl();
+  console.log("[base:resolved]", BASE);
   const probes = [
     "audio/manifest.json",
     "models/npcs/manifest.json",
@@ -129,11 +130,11 @@ function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
   return value
     .trim()
+    .replace(/^\/+/, "")
     .replace(/^public\//i, "")
     .replace(/^docs\//i, "")
     .replace(/^athens-game-starter\//i, "")
-    .replace(/^\.\//, "")
-    .replace(/^\/+/, "");
+    .replace(/^\.\//, "");
 }
 const ARISTOTLE_CANDIDATES = [
   "models/buildings/aristotle_tomb.glb",
@@ -1186,7 +1187,6 @@ async function mainApp() {
   };
 
   const character = new Character();
-  const heroPath = joinPath(BASE_URL, "models/character/hero.glb");
   const heroRootPath = "models/character/hero.glb";
   const bundledHeroName = encodeURIComponent("astronaut.glb");
   const characterDir = joinPath(BASE_URL, "models/character");
@@ -1200,9 +1200,7 @@ async function mainApp() {
   };
 
   const heroCandidates = Array.from(
-    new Set(
-      [heroPath, heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
-    )
+    new Set([heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean))
   );
 
   try {
@@ -1222,19 +1220,26 @@ async function mainApp() {
     character.initializeFromGLTF(root, gltf.animations);
     player.attachCharacter(character);
 
-    if (url !== heroPath && url !== heroRootPath) {
+    if (url !== heroRootPath) {
       console.info(
-        `Hero GLB not found at ${heroPath}; using bundled astronaut sample from ${url}.`
+        `Hero GLB not found at ${joinPath(
+          BASE_URL,
+          "models/character/hero.glb"
+        )}; using bundled astronaut sample from ${url}.`
       );
     }
     console.log("[Hero] Loaded:", url);
+    console.log("[Hero] Expected primary path:", joinPath(BASE_URL, "models/character/hero.glb"));
   } catch (error) {
     console.error(
       `[Hero] All candidates failed, using fallback avatar:`,
       error?.message || error
     );
     console.info(
-      `Add your own hero model at ${heroPath}; the bundled astronaut sample will load otherwise.`
+      `Add your own hero model at ${joinPath(
+        BASE_URL,
+        "models/character/hero.glb"
+      )}; the bundled astronaut sample will load otherwise.`
     );
     attachFallbackAvatar();
   }
