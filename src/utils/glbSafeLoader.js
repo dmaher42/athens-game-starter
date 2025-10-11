@@ -10,10 +10,11 @@ function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
   return value
     .trim()
-    // Strip leading slashes FIRST so repo-folder stripping can match
+    // strip leading slashes FIRST so repo-folder stripping matches
     .replace(/^\/+/, "")
     .replace(/^public\//i, "")
     .replace(/^docs\//i, "")
+    .replace(/^athens-game-starter\//i, "")
     .replace(/^\.\//, "");
 }
 
@@ -80,58 +81,67 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
     const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) ||
       /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
     const startsAtRoot = !isAbsolute && raw.startsWith("/");
-    const normalized = sanitizeRelativePath(raw);
-    if (!isAbsolute && !normalized) {
+
+    const relative = sanitizeRelativePath(raw);
+    if (!relative && !(isAbsolute || startsAtRoot)) {
       continue;
     }
 
-    const relative = (isAbsolute || startsAtRoot) ? raw : normalized;
-    const url = (isAbsolute || startsAtRoot) ? raw : joinPath(baseUrl, relative);
+    const candidatesToTry = Array.from(
+      new Set(
+        (isAbsolute || startsAtRoot)
+          ? [raw]
+          : [joinPath(baseUrl, relative), relative]
+      )
+    );
 
-    if (seen.has(url)) {
-      continue;
-    }
-    seen.add(url);
-
-    if (!(await headOk(url))) {
-      tried.push([url, 404]);
-      continue;
-    }
-    try {
-      const gltf = await loader.loadAsync(url);
-      const { scene, scenes } = gltf || {};
-      const bufferScene = scene || (Array.isArray(scenes) ? scenes[0] : null);
-      const root = bufferScene || null;
-      if (!root) throw new Error(`No scene in GLB: ${url}`);
-
-      if (targetHeight && targetHeight > 0) {
-        root.updateMatrixWorld(true);
-        const box = new THREE.Box3().setFromObject(root);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const currentH = size.y || 1;
-        const scaleFactor = currentH !== 0 ? targetHeight / currentH : 1;
-        if (Number.isFinite(scaleFactor) && scaleFactor > 0) {
-          root.scale.multiplyScalar(scaleFactor);
+      for (const url of candidatesToTry) {
+        if (!url) continue;
+        if (seen.has(url)) {
+          continue;
         }
-      }
+        seen.add(url);
 
-      applyTextureBudgetToObject(root, { renderer });
-
-      if (typeof onLoaded === "function") {
+        if (!(await headOk(url))) {
+          tried.push([url, 404]);
+          continue;
+        }
         try {
-          onLoaded({ url, gltf, root });
-        } catch (hookError) {
-          console.warn("[GLB Fallback] onLoaded hook failed", hookError);
+          const gltf = await loader.loadAsync(url);
+          const { scene, scenes } = gltf || {};
+          const bufferScene = scene || (Array.isArray(scenes) ? scenes[0] : null);
+          const root = bufferScene || null;
+          if (!root) throw new Error(`No scene in GLB: ${url}`);
+
+          if (targetHeight && targetHeight > 0) {
+            root.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(root);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            const currentH = size.y || 1;
+            const scaleFactor = currentH !== 0 ? targetHeight / currentH : 1;
+            if (Number.isFinite(scaleFactor) && scaleFactor > 0) {
+              root.scale.multiplyScalar(scaleFactor);
+            }
+          }
+
+          applyTextureBudgetToObject(root, { renderer });
+
+          if (typeof onLoaded === "function") {
+            try {
+              onLoaded({ url, gltf, root });
+            } catch (hookError) {
+              console.warn("[GLB Fallback] onLoaded hook failed", hookError);
+            }
+          }
+
+          return { url, gltf, root };
+        } catch (err) {
+          lastErr = err instanceof Error ? err : new Error(String(err));
+          tried.push([url, "load-fail"]);
         }
       }
-
-      return { url, gltf, root };
-    } catch (err) {
-      lastErr = err instanceof Error ? err : new Error(String(err));
-      tried.push([url, "load-fail"]);
     }
-  }
 
   if (tried.length) {
     const attemptedUrls = tried.map(([url]) => url);

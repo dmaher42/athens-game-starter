@@ -6,10 +6,12 @@ function sanitizeRelativePath(value) {
   if (typeof value !== 'string') return '';
   return value
     .trim()
+    // strip leading slashes FIRST so repo-folder stripping matches
+    .replace(/^\/+/, '')
     .replace(/^public\//i, '')
     .replace(/^docs\//i, '')
-    .replace(/^\.\//, '')
-    .replace(/^\/+/, '');
+    .replace(/^athens-game-starter\//i, '')
+    .replace(/^\.\//, '');
 }
 
 async function headOk(url) {
@@ -178,19 +180,11 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
   try {
     const response = await fetch(manifestUrl, { method: 'GET', cache: 'no-cache' });
     if (!response.ok) {
-      if (response.status === 404) {
-        warnOnce(
-          manifestWarnings,
-          'missing-manifest',
-          '[NPC Manifest] Missing models/npcs/manifest.json; skipping GLB NPCs.'
-        );
-      } else {
-        warnOnce(
-          manifestWarnings,
-          'manifest-fetch',
-          `[NPC Manifest] Failed to load ${manifestUrl}: ${response.status} ${response.statusText}`
-        );
-      }
+      warnOnce(
+        manifestWarnings,
+        'missing-manifest',
+        '[NPC Manifest] Missing models/npcs/manifest.json; skipping GLB NPCs.'
+      );
       return { npcs: [], updaters: [] };
     }
     manifest = await response.json();

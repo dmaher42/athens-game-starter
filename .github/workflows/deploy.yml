@@ -61,10 +61,12 @@ jobs:
           set -euo pipefail
           echo "== Sanity checks =="
           missing=0
-          for f in \
-            "$BUILD_DIR/index.html" \
+          must_have=(
+            "$BUILD_DIR/index.html"
+            "$BUILD_DIR/audio/manifest.json"
             "$BUILD_DIR/config/districts.json"
-          do
+          )
+          for f in "${must_have[@]}"; do
             if [[ -f "$f" ]]; then
               echo "OK  $f"
             else
