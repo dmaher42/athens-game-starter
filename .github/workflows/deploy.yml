@@ -71,6 +71,7 @@ jobs:
           must_have=(
             "$BUILD_DIR/index.html"
             "$BUILD_DIR/audio/manifest.json"
+            "$BUILD_DIR/models/npcs/manifest.json"
             "$BUILD_DIR/config/districts.json"
           )
           missing=0
@@ -82,7 +83,7 @@ jobs:
               missing=1
             fi
           done
-          # Optional: textures (comment out if you don't ship it yet)
+          # Optional texture check; keep as warning only
           if [[ -f "$BUILD_DIR/textures/ground/water_normals.png" || -f "$BUILD_DIR/textures/ground/water_normals.jpg" ]]; then
             echo "OK  $BUILD_DIR/textures/ground/water_normals.(png|jpg)"
           else
