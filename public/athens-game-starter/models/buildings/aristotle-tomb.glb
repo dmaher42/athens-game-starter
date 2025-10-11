@@ -13,7 +13,12 @@
   "nodes": [
     {
       "name": "AristotleTomb",
-      "mesh": 0
+      "mesh": 0,
+      "scale": [
+        3.0,
+        3.0,
+        3.0
+      ]
     }
   ],
   "meshes": [
