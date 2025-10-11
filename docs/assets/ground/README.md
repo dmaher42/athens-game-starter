@@ -28,3 +28,16 @@ export const GROUND_TEXTURE_CONFIG = {
 
 Restart or refresh the dev server after editing the config to ensure Three.js
 recompiles the material shader.
+
+## Harbor water normal maps
+
+If you add a water normal map here (for example `water_normals.png` or
+`waternormals.jpg`), the harbor ocean helper will automatically try to load it
+before falling back to the built-in procedural normals. The lookup order is:
+
+1. Any URL you pass to `createOcean(scene, { waterNormals: { ... } })`.
+2. The files `water_normals.png`, `waternormals.jpg`, `shader.png`, or `step_sea.gif`
+   in this folder.
+
+Run `npm run build` (or restart `npm run dev`) after dropping in new images so
+Vite copies them into `docs/assets/ground/` for deployment.
