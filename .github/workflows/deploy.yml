@@ -59,20 +59,12 @@ jobs:
           BUILD_DIR: ${{ steps.detect-build-dir.outputs.dir }}
         run: |
           set -euo pipefail
-          echo "== Tree (depth 2) =="
-          if command -v tree >/dev/null 2>&1; then
-            tree -a -L 2 "$BUILD_DIR" || true
-          else
-            find "$BUILD_DIR" -maxdepth 2 -type f | sort
-          fi
-          echo ""
           echo "== Sanity checks =="
           missing=0
-          must_have=(
-            "$BUILD_DIR/index.html"
-            "$BUILD_DIR/audio/manifest.json"
-          )
-          for f in "${must_have[@]}"; do
+          for f in \
+            "$BUILD_DIR/index.html" \
+            "$BUILD_DIR/config/districts.json"
+          do
             if [[ -f "$f" ]]; then
               echo "OK  $f"
             else
@@ -80,12 +72,9 @@ jobs:
               missing=1
             fi
           done
-          # Optional warnings (not fatal)
-          if [[ ! -f "$BUILD_DIR/models/character/hero.glb" ]]; then
-            echo "::warning title=Hero GLB not found::Expected $BUILD_DIR/models/character/hero.glb (fallback avatar will be used)"
-          fi
+          # Warn if someone reintroduces nested paths
           if [[ -d "$BUILD_DIR/athens-game-starter" ]]; then
-            echo "::error title=Nested folder detected::Remove 'public/athens-game-starter/*' so assets publish to '$BUILD_DIR/*'"
+            echo "::error title=Nested folder detected::Move assets to public/* so they publish under $BUILD_DIR/*"
             missing=1
           fi
           test $missing -eq 0
