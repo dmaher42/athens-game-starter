@@ -10,11 +10,12 @@ function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
   return value
     .trim()
+    // Strip leading slashes FIRST so repo-folder stripping can match
+    .replace(/^\/+/, "")
     .replace(/^public\//i, "")
     .replace(/^docs\//i, "")
     .replace(/^athens-game-starter\//i, "")
-    .replace(/^\.\//, "")
-    .replace(/^\/+/, "");
+    .replace(/^\.\//, "");
 }
 
 export function createGLTFLoader(renderer) {
@@ -79,13 +80,14 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
 
     const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) ||
       /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
+    const startsAtRoot = !isAbsolute && raw.startsWith("/");
     const normalized = sanitizeRelativePath(raw);
     if (!isAbsolute && !normalized) {
       continue;
     }
 
-    const relative = isAbsolute ? raw : normalized;
-    const url = isAbsolute ? raw : joinPath(baseUrl, relative);
+    const relative = (isAbsolute || startsAtRoot) ? raw : normalized;
+    const url = (isAbsolute || startsAtRoot) ? raw : joinPath(baseUrl, relative);
 
     if (seen.has(url)) {
       continue;
