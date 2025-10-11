@@ -79,6 +79,20 @@ jobs:
           fi
           test $missing -eq 0
 
+      - name: Guard: bundle must not contain bare imports
+        env:
+          BUILD_DIR: ${{ steps.detect-build-dir.outputs.dir }}
+        run: |
+          set -euo pipefail
+          # If any built JS still contains 'from "three-mesh-bvh"' or "from 'three-mesh-bvh'",
+          # bundling failed or it was imported from /public.
+          if grep -R --include='*.js' -nE "from ['\"]three-mesh-bvh['\"]" "$BUILD_DIR" ; then
+            echo "::error ::Bundled output still imports three-mesh-bvh at runtime. Ensure imports live under src/** and Vite bundles them."
+            exit 1
+          else
+            echo "OK: no bare imports of three-mesh-bvh found in built output."
+          fi
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
