@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  // IMPORTANT: For GH Pages *repo* sites, base must be the repo path:
-  base: "/athens-game-starter/",
+  // Base set to "/" for direct docs/ publishing to GitHub Pages
+  base: "/",
   build: {
     outDir: "docs",
     emptyOutDir: true,

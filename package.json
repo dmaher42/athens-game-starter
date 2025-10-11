@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/ensure-three-bundled.mjs && node scripts/create-base-entrypoints.mjs",
+    "build": "vite build && node scripts/ensure-three-bundled.mjs",
     "preview": "vite preview --strictPort",
     "typecheck": "tsc -p . || true",
     "generate:favicon": "node scripts/generate-favicon.mjs",
