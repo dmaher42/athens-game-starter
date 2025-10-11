@@ -6,7 +6,7 @@ export async function loadDistrictRules(baseUrl = "") {
   const url = joinPath(resolvedBase, "config/districts.json");
 
   try {
-    const res = await fetch(url, { cache: "no-cache" });
+    const res = await fetch(url, { method: "GET", cache: "no-cache" });
     if (res.ok) {
       const json = await res.json();
       return normalizeRules(json);

@@ -206,7 +206,10 @@ export class Soundscape {
     const manifestUrl = joinPath(resolveBaseUrl(), "audio/manifest.json");
 
     try {
-      const response = await fetch(manifestUrl, { method: "GET" });
+      const response = await fetch(manifestUrl, {
+        method: "GET",
+        cache: "no-cache",
+      });
       if (!response.ok) {
         if (!manifestWarningLogged) {
           console.warn(`[audio] manifest missing: ${manifestUrl}`);
