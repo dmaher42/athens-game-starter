@@ -15,7 +15,6 @@ function sanitizeRelativePath(value) {
     .trim()
     .replace(/^public\//i, "")
     .replace(/^docs\//i, "")
-    .replace(/^athens-game-starter\//i, "")
     .replace(/^\.\//, "")
     .replace(/^\/+/, "");
 }
