@@ -9,6 +9,17 @@ import {
 } from "three";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
+function sanitizeRelativePath(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .trim()
+    .replace(/^public\//i, "")
+    .replace(/^docs\//i, "")
+    .replace(/^athens-game-starter\//i, "")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
+
 const headCache = new Map();
 
 /** HEAD-check a URL (returns true/false; never throws) */
@@ -31,12 +42,13 @@ export async function urlExists(url) {
 /** Load a texture if present; returns null if 404/missing */
 async function loadAny(loader, stem, { isSRGB = false } = {}) {
   if (typeof stem !== "string" || stem.length === 0) return null;
-  const baseStem = joinPath(stem);
+  const trimmedStem = stem.trim();
+  if (!trimmedStem) return null;
   const variants = Array.from(
     new Set(
       [
-        baseStem,
-        baseStem
+        trimmedStem,
+        trimmedStem
           .replace("basecolor", "albedo")
           .replace("gravel/", "gravel_path-"),
       ].filter(Boolean)
@@ -45,9 +57,28 @@ async function loadAny(loader, stem, { isSRGB = false } = {}) {
   const exts = ["webp", "jpg", "png"];
   const baseUrl = resolveBaseUrl();
   for (const variant of variants) {
+    const variantStem = typeof variant === "string" ? variant.trim() : "";
+    if (!variantStem) continue;
+    const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(variantStem) || variantStem.startsWith("data:");
     for (const ext of exts) {
-      const rel = `${variant}.${ext}`;
-      const url = joinPath(baseUrl, rel);
+      const candidateStem = `${variantStem}.${ext}`;
+      if (!isAbsolute) {
+        const relativeCandidate = sanitizeRelativePath(candidateStem);
+        if (!relativeCandidate) {
+          continue;
+        }
+        const url = joinPath(baseUrl, relativeCandidate);
+        if (!(await urlExists(url))) continue;
+        const tex = await loader.loadAsync(url);
+        if (tex && isSRGB) {
+          tex.colorSpace = SRGBColorSpace;
+        }
+        if (tex) {
+          return tex;
+        }
+        continue;
+      }
+      const url = candidateStem;
       if (!(await urlExists(url))) continue;
       const tex = await loader.loadAsync(url);
       if (tex && isSRGB) {

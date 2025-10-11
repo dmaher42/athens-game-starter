@@ -1,6 +1,29 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
-import { resolveBaseUrl, joinPath, normalizeAssetPath, headOk } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+
+function sanitizeRelativePath(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .trim()
+    .replace(/^public\//i, "")
+    .replace(/^docs\//i, "")
+    .replace(/^athens-game-starter\//i, "")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
+
+async function headOk(url) {
+  if (!url) return false;
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+    if (!response.ok) return false;
+    const contentType = response.headers?.get?.("content-type") || "";
+    return !contentType.toLowerCase().includes("text/html");
+  } catch {
+    return false;
+  }
+}
 
 const glbAvailability = new Map();
 const onceFlags = new Set();
@@ -62,7 +85,7 @@ async function tryLoadGLB(urls) {
       }
 
       const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(url);
-      const normalized = normalizeAssetPath(url);
+      const normalized = sanitizeRelativePath(url);
       if (!isAbsolute && !normalized) {
         continue;
       }
@@ -219,7 +242,7 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
 
       if (trimmedGlb.length > 0) {
         const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(trimmedGlb);
-        const normalizedPath = normalizeAssetPath(trimmedGlb);
+        const normalizedPath = sanitizeRelativePath(trimmedGlb);
         const legacyRelative = isAbsolute ? null : trimmedGlb.replace(/^\/+/, "");
         const cacheKey = isAbsolute ? trimmedGlb : normalizedPath || legacyRelative;
         const candidateUrls = Array.from(

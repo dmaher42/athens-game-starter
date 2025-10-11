@@ -209,7 +209,8 @@ glTF/glb assets before importing them into the project.
 
 This project deploys automatically on **push to `main`** and now also provides **PR preview links**.
 
-- Vite `base` is set to `./` in `vite.config.ts` so the built site runs at the domain root (GitHub Pages).
+- On GitHub Pages *repo* sites, Vite must use `base: '/athens-game-starter/'` in `vite.config.ts`.
+- All runtime asset URLs are relative to that base (no leading '/').
 - Workflow: `.github/workflows/deploy.yml` builds with Vite and publishes `docs/` to GitHub Pages.
 - For PRs, the same workflow attaches a **preview deployment** to the PR under “Deployments”.
 

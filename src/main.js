@@ -55,13 +55,38 @@ import { attachHeightSampler } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
 import { createGLTFLoader, loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
-import { resolveBaseUrl, joinPath, normalizeAssetPath } from "./utils/baseUrl.js";
+import { resolveBaseUrl, joinPath } from "./utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
 import { LandmarkManager } from "./world/LandmarkManager.js";
 import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "./features/aristotle-texture.js";
 import { applyGravelToRoads } from "./features/roads-gravel.js";
+
+// @ts-ignore
+console.info("[build]", { time: __BUILD_TIME__, sha: __BUILD_SHA__ });
+
+(async () => {
+  const BASE = resolveBaseUrl();
+  const probes = [
+    "audio/manifest.json",
+    "models/npcs/manifest.json",
+    "config/districts.json",
+    // keep GLBs optional; uncomment as you add binaries:
+    // "models/landmarks/akropol.glb",
+    // "models/landmarks/poseidon_temple.glb",
+  ];
+  for (const p of probes) {
+    const u = joinPath(BASE, p);
+    try {
+      const r = await fetch(u, { method: p.endsWith(".json") ? "GET" : "HEAD", cache: "no-cache" });
+      console.log("[probe]", p, r.status, r.ok, u);
+    } catch (e) {
+      console.warn("[probe-failed]", p, u, e);
+    }
+  }
+  console.log("[base]", BASE);
+})();
 
 const WORLD_ROOT_NAME = "WorldRoot";
 const USE_THIRD_PERSON = true;
@@ -98,6 +123,17 @@ window.addEventListener("unhandledrejection", (ev) => {
 });
 
 const BASE_URL = resolveBaseUrl();
+
+function sanitizeRelativePath(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .trim()
+    .replace(/^public\//i, "")
+    .replace(/^docs\//i, "")
+    .replace(/^athens-game-starter\//i, "")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
 const ARISTOTLE_CANDIDATES = [
   "models/buildings/aristotle_tomb.glb",
   "models/buildings/aristotle_tomb_in_macedonia_greece.glb",
@@ -149,7 +185,7 @@ async function resolveFirstAvailableAsset(candidates = []) {
       continue;
     }
 
-    const relative = normalizeAssetPath(trimmed);
+    const relative = sanitizeRelativePath(trimmed);
     if (!relative) {
       continue;
     }
@@ -1152,8 +1188,9 @@ async function mainApp() {
   const heroPath = joinPath(BASE_URL, "models/character/hero.glb");
   const heroRootPath = "models/character/hero.glb";
   const bundledHeroName = encodeURIComponent("Hooded Adventurer.glb");
-  const bundledHeroPath = joinPath(BASE_URL, "models/character", bundledHeroName);
-  const bundledHeroRootPath = joinPath("models/character", bundledHeroName);
+  const characterDir = joinPath(BASE_URL, "models/character");
+  const bundledHeroPath = joinPath(characterDir, bundledHeroName);
+  const bundledHeroRootPath = `models/character/${bundledHeroName}`;
   const attachFallbackAvatar = () => {
     removeExistingAvatar();
     const fallbackAvatar = createFallbackAvatar();

@@ -1,6 +1,29 @@
 import * as THREE from 'three';
 import { Character } from '../characters/Character.js';
-import { resolveBaseUrl, joinPath, normalizeAssetPath, headOk } from '../utils/baseUrl.js';
+import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
+
+function sanitizeRelativePath(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .trim()
+    .replace(/^public\//i, '')
+    .replace(/^docs\//i, '')
+    .replace(/^athens-game-starter\//i, '')
+    .replace(/^\.\//, '')
+    .replace(/^\/+/, '');
+}
+
+async function headOk(url) {
+  if (!url) return false;
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    if (!response.ok) return false;
+    const contentType = response.headers?.get?.('content-type') || '';
+    return !contentType.toLowerCase().includes('text/html');
+  } catch {
+    return false;
+  }
+}
 
 const manifestWarnings = new Set();
 const npcWarnings = new Set();
@@ -188,7 +211,7 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
   }
 
   const fileNames = entries
-    .map((value) => (typeof value === 'string' ? normalizeAssetPath(value) : ''))
+    .map((value) => (typeof value === 'string' ? sanitizeRelativePath(value) : ''))
     .filter((value) => value.length > 0);
 
   if (!fileNames.length) {
@@ -206,10 +229,12 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
 
   for (let i = 0; i < fileNames.length; i += 1) {
     const fileName = fileNames[i];
+    const npcDir = joinPath(baseUrl, 'models/npcs');
+    const relativeNpcPath = `models/npcs/${fileName}`;
     const urlCandidates = Array.from(
       new Set([
-        joinPath(baseUrl, 'models/npcs', fileName),
-        joinPath('models/npcs', fileName),
+        joinPath(npcDir, fileName),
+        relativeNpcPath,
         joinPath(baseUrl, fileName),
         fileName,
       ].filter(Boolean))
