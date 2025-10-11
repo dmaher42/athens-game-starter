@@ -81,7 +81,7 @@ jobs:
           fi
           test $missing -eq 0
 
-      - name: Guard: bundle must not contain bare imports
+      - name: "Guard: bundle must not contain bare imports"
         env:
           BUILD_DIR: ${{ steps.detect-build-dir.outputs.dir }}
         run: |
