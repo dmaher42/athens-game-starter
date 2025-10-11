@@ -134,11 +134,14 @@ The loader tries decoder paths in this order:
 3. Local path `draco/` (relative to your deployment)
 4. Google's hosted CDN (fallback)
 
-To self-host the decoder (recommended to avoid ad blocker issues), download the
-contents of the [Draco `decoders/` folder](https://www.gstatic.com/draco/versioned/decoders/1.5.6/) and either:
+To self-host the decoder (recommended to avoid ad blocker issues), run
+`npm install` (or `npm run download:draco`) to pull down the official
+decoder bundle into `public/draco/`. You can override the download source by
+setting `DRACO_DECODER_URL` before invoking the script. After the files exist,
+either:
 
-1. Place them in `public/draco/`, then set the environment variable
-   `VITE_DRACO_DECODER_PATH=/draco/` when running the dev server or build.
+1. Set the environment variable `VITE_DRACO_DECODER_PATH=/draco/` when running
+   the dev server or build.
 2. Expose a global in your HTML before the app boots:
 
    ```html
