@@ -1195,7 +1195,7 @@ async function mainApp() {
   const character = new Character();
   const heroPath = joinPath(BASE_URL, "models/character/hero.glb");
   const heroRootPath = "models/character/hero.glb";
-  const bundledHeroName = encodeURIComponent("Hooded Adventurer.glb");
+  const bundledHeroName = encodeURIComponent("astronaut.glb");
   const characterDir = joinPath(BASE_URL, "models/character");
   const bundledHeroPath = joinPath(characterDir, bundledHeroName);
   const bundledHeroRootPath = `models/character/${bundledHeroName}`;
@@ -1231,7 +1231,7 @@ async function mainApp() {
 
     if (url !== heroPath && url !== heroRootPath) {
       console.info(
-        `Hero GLB not found at ${heroPath}; using fallback avatar from ${url}.`
+        `Hero GLB not found at ${heroPath}; using bundled astronaut sample from ${url}.`
       );
     }
     console.log("[Hero] Loaded:", url);
@@ -1240,7 +1240,9 @@ async function mainApp() {
       `[Hero] All candidates failed, using fallback avatar:`,
       error?.message || error
     );
-    console.info(`Add your own hero model at ${heroPath}.`);
+    console.info(
+      `Add your own hero model at ${heroPath}; the bundled astronaut sample will load otherwise.`
+    );
     attachFallbackAvatar();
   }
 
