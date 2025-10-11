@@ -23,7 +23,7 @@ hosting on GitHub Pages or any static site provider.
 
 > ℹ️ Drop a hero character model at `public/models/character/hero.glb` to see the
 > fully animated avatar. When the file is missing the runtime first tries the
-> bundled "Hooded Adventurer" sample before falling back to a simple capsule so
+> bundled `astronaut.glb` sample before falling back to a simple capsule so
 > movement and interactions remain testable. Large binary GLB assets are not
 > tracked in this repository; download or supply your own models locally before
 > building or deploying the project.
