@@ -8,7 +8,7 @@ import {
   DEFAULT_BASIS_TRANSCODER_PATH,
 } from "../utils/ktx2.js";
 import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
-import { resolveBaseUrl, joinPath, normalizeAssetPath } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath, normalizeAssetPath, headOk } from "../utils/baseUrl.js";
 import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
 
 /**
@@ -23,6 +23,16 @@ import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
  */
 
 const BASE_URL = resolveBaseUrl();
+const missingLandmarkWarnings = new Set();
+
+function warnMissingLandmark(key, message) {
+  if (!key) return;
+  if (missingLandmarkWarnings.has(key)) {
+    return;
+  }
+  missingLandmarkWarnings.add(key);
+  console.warn(message);
+}
 
 // Reuse a single loader instance so we don't repeatedly allocate it whenever we
 // load a new landmark. GLTFLoader understands the .glb format which packages a
@@ -327,11 +337,33 @@ export async function loadLandmark(scene, url, options = {}) {
     }
 
     const urls = Array.from(urlSet).filter(Boolean);
+    const cacheKey = isProtocolAbsolute ? sanitizedUrl : normalized;
+
+    let availableUrl = null;
+    for (const candidate of urls) {
+      const ok = await headOk(candidate);
+      if (ok) {
+        availableUrl = candidate;
+        break;
+      }
+    }
+
+    if (!availableUrl) {
+      warnMissingLandmark(cacheKey || sanitizedUrl, `[landmarks] Missing GLB: ${sanitizedUrl}`);
+      removePlaceholder(entry);
+      trackedLandmarks.delete(entry);
+      return null;
+    }
+
+    const prioritizedUrls = [
+      availableUrl,
+      ...urls.filter((candidate) => candidate !== availableUrl),
+    ];
 
     const { materialPreset } = options;
     const resolvedRenderer = resolveRenderer(scene, options?.renderer);
 
-    const loaded = await loadGLBWithFallbacks(loader, urls, {
+    const loaded = await loadGLBWithFallbacks(loader, prioritizedUrls, {
       renderer: resolvedRenderer,
       targetHeight: options?.targetHeight || null,
     });

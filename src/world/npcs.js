@@ -1,6 +1,38 @@
 import * as THREE from 'three';
 import { Character } from '../characters/Character.js';
-import { resolveBaseUrl, joinPath, normalizeAssetPath } from '../utils/baseUrl.js';
+import { resolveBaseUrl, joinPath, normalizeAssetPath, headOk } from '../utils/baseUrl.js';
+
+const manifestWarnings = new Set();
+const npcWarnings = new Set();
+const npcAvailability = new Map();
+
+function warnOnce(set, key, ...args) {
+  if (!key) return;
+  if (set.has(key)) {
+    return;
+  }
+  set.add(key);
+  console.warn(...args);
+}
+
+async function resolveNpcUrl(key, candidates) {
+  if (npcAvailability.has(key)) {
+    return npcAvailability.get(key);
+  }
+
+  let resolved = null;
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const ok = await headOk(candidate);
+    if (ok) {
+      resolved = candidate;
+      break;
+    }
+  }
+
+  npcAvailability.set(key, resolved);
+  return resolved;
+}
 
 function createCitizenModel(primaryColor, secondaryColor) {
   const group = new THREE.Group();
@@ -125,16 +157,43 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
     ].filter(Boolean))
   );
 
-  let manifest = null;
+  let manifestUrl = null;
   for (const candidate of manifestCandidates) {
-    try {
-      const response = await fetch(candidate, { cache: 'no-cache' });
-      if (!response.ok) continue;
-      manifest = await response.json();
+    const ok = await headOk(candidate);
+    if (ok) {
+      manifestUrl = candidate;
       break;
-    } catch (error) {
-      console.warn('[NPC Manifest] Failed to load', candidate, error);
     }
+  }
+
+  if (!manifestUrl) {
+    warnOnce(
+      manifestWarnings,
+      'missing-manifest',
+      '[NPC Manifest] Missing models/npcs/manifest.json; skipping GLB NPCs.'
+    );
+    return { npcs: [], updaters: [] };
+  }
+
+  let manifest = null;
+  try {
+    const response = await fetch(manifestUrl, { cache: 'no-cache' });
+    if (!response.ok) {
+      warnOnce(
+        manifestWarnings,
+        'manifest-fetch',
+        `[NPC Manifest] Failed to load ${manifestUrl}: ${response.status} ${response.statusText}`
+      );
+      return { npcs: [], updaters: [] };
+    }
+    manifest = await response.json();
+  } catch (error) {
+    warnOnce(
+      manifestWarnings,
+      'manifest-error',
+      `[NPC Manifest] Failed to load ${manifestUrl}: ${error?.message || error}`
+    );
+    return { npcs: [], updaters: [] };
   }
 
   const entries = Array.isArray(manifest?.npcs) ? manifest.npcs : [];
@@ -165,21 +224,49 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
       new Set([
         joinPath(baseUrl, 'models/npcs', fileName),
         joinPath('models/npcs', fileName),
+        joinPath(baseUrl, fileName),
+        fileName,
       ].filter(Boolean))
     );
+
+    const availableUrl = await resolveNpcUrl(fileName, urlCandidates);
+    if (!availableUrl) {
+      warnOnce(
+        npcWarnings,
+        `missing:${fileName}`,
+        `[NPC Loader] Missing GLB for ${fileName}; skipping.`
+      );
+      continue;
+    }
+
+    const prioritizedCandidates = [
+      availableUrl,
+      ...urlCandidates.filter((candidate) => candidate !== availableUrl),
+    ];
 
     const character = new Character();
     character.name = `GLBNPC:${fileName}`;
     character.userData.noCollision = true;
 
     try {
-      await character.load(urlCandidates, scene.userData?.renderer, { targetHeight: 1.7 });
+      await character.load(prioritizedCandidates, scene.userData?.renderer, { targetHeight: 1.7 });
     } catch (error) {
       const message = error?.message || String(error);
       if (message && message.includes('Downloaded HTML instead of GLB')) {
-        console.warn('[NPC Loader] Skipping NPC due to HTML response', fileName);
+        warnOnce(
+          npcWarnings,
+          `html:${fileName}`,
+          '[NPC Loader] Skipping NPC due to HTML response',
+          fileName
+        );
       } else {
-        console.warn('[NPC Loader] Failed to load NPC', fileName, message);
+        warnOnce(
+          npcWarnings,
+          `error:${fileName}`,
+          '[NPC Loader] Failed to load NPC',
+          fileName,
+          message
+        );
       }
       continue;
     }

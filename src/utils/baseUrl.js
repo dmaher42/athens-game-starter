@@ -20,3 +20,29 @@ export function normalizeAssetPath(path) {
     .replace(/^\//, "");
   return joinPath(stripped);
 }
+
+const headCache = new Map();
+
+export async function headOk(url) {
+  if (typeof url !== "string" || url.length === 0) {
+    return false;
+  }
+
+  if (headCache.has(url)) {
+    return headCache.get(url);
+  }
+
+  let ok = false;
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+    if (response.ok) {
+      const contentType = response.headers.get("content-type") || "";
+      ok = !contentType.toLowerCase().includes("text/html");
+    }
+  } catch (error) {
+    ok = false;
+  }
+
+  headCache.set(url, ok);
+  return ok;
+}

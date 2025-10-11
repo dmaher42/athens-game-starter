@@ -31,12 +31,17 @@ hosting on GitHub Pages or any static site provider.
 ### Custom ground textures
 
 Drop photographic ground tiles in `public/textures/ground/` and reference them
-from `src/world/groundTextureConfig.js`. The runtime keeps the existing vertex
-colors as a fallback, then layers your JPGs using height-aware masks so dirt can
-fade into rocky cliffs or lush grass in lowlands. Update the config to tune
-repeat counts, tint, blend mode (`"multiply"` or `"mix"`), and the height
-interval where each texture appears. Refresh the dev server after editing the
-config to trigger shader recompilation.
+from `src/world/groundTextureConfig.js`. Use relative URLs such as
+`textures/ground/marble.jpg` (no leading slash) or
+`joinPath(resolveBaseUrl(), 'textures/ground/marble.jpg')` so paths survive
+GitHub Pages subdirectory deployments. When you run `npm run build`, the same
+files are copied to `docs/textures/ground/`, which is the folder published to
+Pages. The runtime keeps the existing vertex colors as a fallback, then layers
+your JPGs using height-aware masks so dirt can fade into rocky cliffs or lush
+grass in lowlands. Update the config to tune repeat counts, tint, blend mode
+(`"multiply"` or `"mix"`), and the height interval where each texture appears.
+Refresh the dev server after editing the config to trigger shader
+recompilation.
 
 ### Controls
 

@@ -6,6 +6,7 @@ dist/
 !public/audio/**
 !public/textures/**
 !public/config/**
+!docs/**
 
 # Build output is docs/. It is published by Pages via CI,
 # but do not hand-edit docs/ in this PR. Build fills it.
