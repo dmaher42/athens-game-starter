@@ -288,7 +288,8 @@ export class Soundscape {
       if (/^(?:[a-z]+:)?\/\//i.test(raw)) {
         return raw;
       }
-      return joinPath(resolveBaseUrl(), "audio", raw);
+      const audioBase = joinPath(resolveBaseUrl(), "audio");
+      return joinPath(audioBase, raw);
     };
 
     const mf = manifest ?? { ambient: {}, effects: {} };

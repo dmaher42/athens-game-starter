@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
-import { resolveBaseUrl, joinPath, normalizeAssetPath } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import {
   HARBOR_WATER_CENTER,
   HARBOR_WATER_SIZE,
@@ -17,13 +17,26 @@ function generateNormalComponent(x, y, octave) {
 
 const textureLoader = new THREE.TextureLoader();
 
-const BASE = resolveBaseUrl();
-export const DEFAULT_WATER_NORMAL_CANDIDATES = [
-  joinPath(BASE, "textures/ground/water_normals.png"),
-  joinPath(BASE, "textures/ground/water_normals.jpg"),
-  joinPath(BASE, "textures/ground/shader.png"),
-  joinPath(BASE, "textures/ground/step_sea.gif"),
-];
+function sanitizeRelativePath(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .trim()
+    .replace(/^public\//i, "")
+    .replace(/^docs\//i, "")
+    .replace(/^athens-game-starter\//i, "")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
+
+export function getDefaultWaterNormalCandidates() {
+  const base = resolveBaseUrl();
+  return [
+    joinPath(base, "textures/ground/water_normals.png"),
+    joinPath(base, "textures/ground/water_normals.jpg"),
+    joinPath(base, "textures/ground/shader.png"),
+    joinPath(base, "textures/ground/step_sea.gif"),
+  ];
+}
 
 function configureWaterNormalsTexture(texture) {
   if (!texture) return;
@@ -120,7 +133,14 @@ async function resolveWaterNormalsTexture(options) {
     }
   }
 
-  candidates.push(...DEFAULT_WATER_NORMAL_CANDIDATES);
+  const base = resolveBaseUrl();
+  const defaultCandidates = getDefaultWaterNormalCandidates();
+  candidates.push(...defaultCandidates.map((candidate) => {
+    if (typeof candidate === "string") {
+      return candidate;
+    }
+    return null;
+  }).filter(Boolean));
 
   const tried = new Set();
   for (const candidate of candidates) {
@@ -131,7 +151,7 @@ async function resolveWaterNormalsTexture(options) {
     const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(normalized) || normalized.startsWith("data:");
     const resolved = isAbsolute
       ? normalized
-      : joinPath(BASE, normalizeAssetPath(normalized));
+      : joinPath(base, sanitizeRelativePath(normalized));
 
     if (!resolved || tried.has(resolved)) continue;
     tried.add(resolved);

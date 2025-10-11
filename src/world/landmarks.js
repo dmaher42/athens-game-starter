@@ -8,7 +8,7 @@ import {
   DEFAULT_BASIS_TRANSCODER_PATH,
 } from "../utils/ktx2.js";
 import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
-import { resolveBaseUrl, joinPath, normalizeAssetPath, headOk } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
 
 /**
@@ -22,7 +22,28 @@ import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
  * ```
  */
 
-const BASE_URL = resolveBaseUrl();
+function sanitizeRelativePath(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .trim()
+    .replace(/^public\//i, "")
+    .replace(/^docs\//i, "")
+    .replace(/^athens-game-starter\//i, "")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
+
+async function headOk(url) {
+  if (!url) return false;
+  try {
+    const response = await fetch(url, { method: "HEAD" });
+    if (!response.ok) return false;
+    const contentType = response.headers?.get?.("content-type") || "";
+    return !contentType.toLowerCase().includes("text/html");
+  } catch {
+    return false;
+  }
+}
 const missingLandmarkWarnings = new Set();
 
 function warnMissingLandmark(key, message) {
@@ -324,14 +345,15 @@ export async function loadLandmark(scene, url, options = {}) {
 
     const isProtocolAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(sanitizedUrl) ||
       /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(sanitizedUrl);
-    const normalized = normalizeAssetPath(sanitizedUrl);
+    const normalized = sanitizeRelativePath(sanitizedUrl);
 
     const urlSet = new Set();
     if (isProtocolAbsolute) {
       urlSet.add(sanitizedUrl);
     } else {
       if (normalized) {
-        urlSet.add(joinPath(BASE_URL, normalized));
+        const baseUrl = resolveBaseUrl();
+        urlSet.add(joinPath(baseUrl, normalized));
         urlSet.add(normalized);
       }
     }

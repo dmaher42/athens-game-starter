@@ -4,7 +4,18 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 import { createKTX2Loader } from "./ktx2.js";
 import { createDracoLoader } from "./draco.js";
 import { applyTextureBudgetToObject } from "./textureBudget.js";
-import { joinPath, resolveBaseUrl, normalizeAssetPath } from "./baseUrl.js";
+import { joinPath, resolveBaseUrl } from "./baseUrl.js";
+
+function sanitizeRelativePath(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .trim()
+    .replace(/^public\//i, "")
+    .replace(/^docs\//i, "")
+    .replace(/^athens-game-starter\//i, "")
+    .replace(/^\.\//, "")
+    .replace(/^\/+/, "");
+}
 
 export function createGLTFLoader(renderer) {
   const loader = new GLTFLoader();
@@ -68,7 +79,7 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
 
     const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) ||
       /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
-    const normalized = normalizeAssetPath(raw);
+    const normalized = sanitizeRelativePath(raw);
     if (!isAbsolute && !normalized) {
       continue;
     }

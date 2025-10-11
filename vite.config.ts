@@ -1,15 +1,14 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: './',
+  // IMPORTANT: On GH Pages repo sites, base must be the repo name path.
+  base: "/athens-game-starter/",
   build: {
-    outDir: 'docs',     // ✅ GH Pages expects the built site here
-    emptyOutDir: true,  // ✅ clears old builds before rebuilding
+    outDir: "docs",
+    emptyOutDir: true,
   },
-  resolve: {
-    alias: {
-      // Prevents accidental externalization of Three.js dependency
-      three: 'three',
-    },
+  define: {
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __BUILD_SHA__: JSON.stringify(process.env.GITHUB_SHA || ""),
   },
 });
