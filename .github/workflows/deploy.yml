@@ -54,6 +54,42 @@ jobs:
         run: |
           if [ -f "$BUILD_DIR/index.html" ]; then cp "$BUILD_DIR/index.html" "$BUILD_DIR/404.html"; fi
 
+      # 🔎 NEW: List what we're publishing and fail fast if key files are missing
+      - name: Inspect built files
+        env:
+          BUILD_DIR: ${{ steps.detect-build-dir.outputs.dir }}
+        run: |
+          set -euo pipefail
+          echo "== $BUILD_DIR tree (depth 2) =="
+          if command -v tree >/dev/null 2>&1; then
+            tree -a -L 2 "$BUILD_DIR" || true
+          else
+            find "$BUILD_DIR" -maxdepth 2 -type f | sort
+          fi
+          echo ""
+          echo "== sanity checks =="
+          must_have=(
+            "$BUILD_DIR/index.html"
+            "$BUILD_DIR/audio/manifest.json"
+            "$BUILD_DIR/config/districts.json"
+          )
+          missing=0
+          for f in "${must_have[@]}"; do
+            if [[ -f "$f" ]]; then
+              echo "OK  $f"
+            else
+              echo "::error title=Missing build file::$f"
+              missing=1
+            fi
+          done
+          # Optional: textures (comment out if you don't ship it yet)
+          if [[ -f "$BUILD_DIR/textures/ground/water_normals.png" || -f "$BUILD_DIR/textures/ground/water_normals.jpg" ]]; then
+            echo "OK  $BUILD_DIR/textures/ground/water_normals.(png|jpg)"
+          else
+            echo "::warning title=Optional texture not found::$BUILD_DIR/textures/ground/water_normals.(png|jpg)"
+          fi
+          test $missing -eq 0
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
