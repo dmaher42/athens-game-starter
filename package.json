@@ -10,7 +10,8 @@
     "typecheck": "tsc -p . || true",
     "generate:favicon": "node scripts/generate-favicon.mjs",
     "download:aristotle": "node scripts/download-aristotle-tomb.mjs",
-    "postinstall": "npm run generate:favicon"
+    "download:draco": "node scripts/download-draco-decoder.mjs",
+    "postinstall": "npm run download:draco && npm run generate:favicon"
   },
   "dependencies": {
     "three": "^0.180.0"
