@@ -320,9 +320,6 @@ export async function loadLandmark(scene, url, options = {}) {
     if (isProtocolAbsolute) {
       urlSet.add(sanitizedUrl);
     } else {
-      if (sanitizedUrl.startsWith("/") && normalized) {
-        urlSet.add(`/${normalized}`);
-      }
       if (normalized) {
         urlSet.add(joinPath(BASE_URL, normalized));
         urlSet.add(normalized);

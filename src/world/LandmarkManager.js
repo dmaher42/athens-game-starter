@@ -16,7 +16,7 @@ import * as THREE from "three";
 import { loadLandmark } from "./landmarks.js";
 import { SEA_LEVEL_Y } from "./locations.js";
 import { snapAboveGround } from "./ground.js";
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath, normalizeAssetPath } from "../utils/baseUrl.js";
 
 function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
@@ -253,12 +253,8 @@ export class LandmarkManager {
         continue;
       }
 
-      if (trimmed.startsWith("/")) {
-        push(trimmed);
-        continue;
-      }
-
-      const normalised = trimmed.replace(/^\.\/+/, "");
+      const normalised = normalizeAssetPath(trimmed);
+      if (!normalised) continue;
       push(joinPath(this.baseUrl, normalised));
       push(normalised);
     }

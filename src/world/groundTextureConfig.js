@@ -1,6 +1,6 @@
 // Configuration describing how terrain textures should be layered on top of the
 // existing vertex-colored ground. The JPG files referenced here should live in
-// the public/assets/ground directory. Values are safe defaults that won't try
+// the public/textures/ground directory. Values are safe defaults that won't try
 // to load textures until you provide URLs.
 export const GROUND_TEXTURE_CONFIG = {
   /**
