@@ -1,12 +1,18 @@
 import * as THREE from "three";
+import { SEA_LEVEL_Y } from "./locations.js";
 
 /** Ensure terrain.userData.getHeightAt(x,z) exists. */
+let activeHeightSampler = null;
+
 export function attachHeightSampler(terrain) {
   if (!terrain) return;
   const existing = terrain?.userData?.getHeightAt;
   if (typeof existing === "function") {
     const test = existing(0, 0);
-    if (Number.isFinite(test)) return;
+    if (Number.isFinite(test)) {
+      activeHeightSampler = existing;
+      return;
+    }
   }
   const raycaster = new THREE.Raycaster();
   raycaster.firstHitOnly = true;
@@ -25,4 +31,16 @@ export function attachHeightSampler(terrain) {
 
   terrain.userData = terrain.userData || {};
   terrain.userData.getHeightAt = getHeightAt;
+  activeHeightSampler = terrain.userData.getHeightAt;
+}
+
+export function probeAt(x, z) {
+  const sampler = activeHeightSampler;
+  const yTerrain = typeof sampler === "function" ? sampler(x, z) : NaN;
+  const ySea = SEA_LEVEL_Y;
+  return {
+    yTerrain,
+    ySea,
+    isSubmerged: yTerrain < ySea,
+  };
 }
