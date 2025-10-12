@@ -14,7 +14,15 @@
     <div id="app"></div>
     <script>
       (function installFallbackImportMapWhenNeeded() {
-        if (window.location.protocol !== "file:") {
+        const isFileProtocol = window.location.protocol === "file:";
+        const hasImportMap = Boolean(
+          document.querySelector("script[type=\"importmap\"]")
+        );
+        const isViteDevServer = Boolean(
+          document.querySelector('script[type="module"][src^="/@vite/"]')
+        );
+
+        if (!isFileProtocol && (hasImportMap || isViteDevServer)) {
           return;
         }
 
