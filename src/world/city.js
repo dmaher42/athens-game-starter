@@ -494,7 +494,7 @@ export async function createCity(scene, terrain, options = {}) {
       }
 
       const centerHeight = sampleHeight(terrain, centerX, centerZ, null);
-      if (!Number.isFinite(centerHeight) || centerHeight < SEA_LEVEL_Y) {
+      if (!Number.isFinite(centerHeight) || centerHeight < SEA_LEVEL_Y + SURFACE_OFFSET) {
         continue;
       }
 
@@ -502,7 +502,7 @@ export async function createCity(scene, terrain, options = {}) {
         Math.hypot(centerX - pierPlazaTarget.x, centerZ - pierPlazaTarget.z) <=
         Math.min(spacingX, spacingZ) * 0.6;
       if (isPierPlazaCell) {
-        const plazaHeight = Math.max(centerHeight + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET);
+        const plazaHeight = Math.max(centerHeight, SEA_LEVEL_Y) + SURFACE_OFFSET;
         pocketPlazas.push({ x: centerX, y: plazaHeight, z: centerZ });
         continue;
       }
@@ -547,10 +547,7 @@ export async function createCity(scene, terrain, options = {}) {
 
       const isPocketPlaza = intersectionCounter % 5 === 0;
       if (isPocketPlaza) {
-        const plazaHeight = Math.max(
-          lot.height + SURFACE_OFFSET,
-          SEA_LEVEL_Y + SURFACE_OFFSET
-        );
+        const plazaHeight = Math.max(lot.height, SEA_LEVEL_Y) + SURFACE_OFFSET;
         pocketPlazas.push({ x: centerX, y: plazaHeight, z: centerZ });
         continue;
       }
@@ -592,6 +589,7 @@ export async function createCity(scene, terrain, options = {}) {
       const x = roadStartX + ix * spacingX;
       const height = sampleHeight(terrain, x, z, null);
       if (!Number.isFinite(height) || height < SEA_LEVEL_Y + SURFACE_OFFSET) {
+        // below-sea cells
         row.push(null);
         continue;
       }
