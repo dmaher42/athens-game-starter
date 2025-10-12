@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Water } from "three/addons/objects/Water.js";
+import { Water } from "three/examples/jsm/objects/Water.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import {
   HARBOR_WATER_CENTER,
