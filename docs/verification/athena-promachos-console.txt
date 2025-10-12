@@ -1,6 +1,0 @@
-RESPONSE 200 http://127.0.0.1:4173/athens-game-starter/models/landmarks/akropol.glb
-RESPONSE 200 http://127.0.0.1:4173/athens-game-starter/athens-game-starter/models/landmarks/akropol.glb
-RESPONSE 200 http://127.0.0.1:4173/athens-game-starter/models/landmarks/athena_promachos.glb
-CONSOLE[warning]: [landmarks] Missing GLB: /athens-game-starter/models/landmarks/athena_promachos.glb
-CONSOLE[timeEnd]: loadLandmark:/athens-game-starter/models/landmarks/akropol.glb: 13.14697265625 ms
-CONSOLE[info]: [LandmarkManager] Loaded 1 landmarks: Historic Athens layout covering the Acropolis, Agora, and civic outskirts.
