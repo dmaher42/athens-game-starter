@@ -32,10 +32,47 @@ function sanitizeRelativePath(value) {
     .replace(/^\/+/, "");
 }
 
+function deriveGithubRawCandidates(relativePath) {
+  if (typeof window === "undefined") return [];
+
+  const { hostname, pathname } = window.location || {};
+  if (!hostname || !pathname) return [];
+
+  const hostMatch = hostname.match(/^([^.:]+)\.github\.io$/i);
+  if (!hostMatch) return [];
+
+  const owner = hostMatch[1];
+  const segments = pathname.split("/").filter(Boolean);
+  if (!segments.length) return [];
+
+  const repo = segments[0];
+  const sanitizedRelative = String(relativePath || "").replace(/^\/+/, "");
+  if (!sanitizedRelative) return [];
+
+  const pathCandidates = new Set([sanitizedRelative]);
+  if (!sanitizedRelative.toLowerCase().startsWith("public/")) {
+    pathCandidates.add(`public/${sanitizedRelative}`);
+  }
+  if (!sanitizedRelative.toLowerCase().startsWith("docs/")) {
+    pathCandidates.add(`docs/${sanitizedRelative}`);
+  }
+
+  const branches = ["main", "master", "gh-pages"];
+  const urls = [];
+
+  for (const branch of branches) {
+    for (const candidate of pathCandidates) {
+      urls.push(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${candidate}`);
+    }
+  }
+
+  return urls;
+}
+
 async function headOk(url) {
   if (!url) return false;
   try {
-    const response = await fetch(url, { method: "HEAD" });
+    const response = await fetch(url, { method: "HEAD", cache: "no-cache" });
     if (!response.ok) return false;
     const contentType = response.headers?.get?.("content-type") || "";
     return !contentType.toLowerCase().includes("text/html");
@@ -354,6 +391,13 @@ export async function loadLandmark(scene, url, options = {}) {
         const baseUrl = resolveBaseUrl();
         urlSet.add(joinPath(baseUrl, normalized));
         urlSet.add(normalized);
+      }
+    }
+
+    if (!isProtocolAbsolute && normalized) {
+      const githubRawCandidates = deriveGithubRawCandidates(normalized);
+      for (const candidate of githubRawCandidates) {
+        urlSet.add(candidate);
       }
     }
 
