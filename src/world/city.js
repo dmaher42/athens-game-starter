@@ -310,6 +310,13 @@ function createVisibleRoad(start, end, scene, terrain, options = {}) {
 }
 
 const SURFACE_OFFSET = 0.05;
+const MIN_CITY_GRADE = SEA_LEVEL_Y + MIN_ABOVE_SEA;
+const MIN_CITY_SURFACE = MIN_CITY_GRADE + SURFACE_OFFSET;
+
+function clampSurfaceHeight(height) {
+  const base = Number.isFinite(height) ? height : MIN_CITY_GRADE;
+  return Math.max(base + SURFACE_OFFSET, MIN_CITY_SURFACE);
+}
 
 const _matrix = new THREE.Matrix4();
 const _quaternion = new THREE.Quaternion();
@@ -494,7 +501,7 @@ export async function createCity(scene, terrain, options = {}) {
       }
 
       const centerHeight = sampleHeight(terrain, centerX, centerZ, null);
-      if (!Number.isFinite(centerHeight) || centerHeight < SEA_LEVEL_Y + SURFACE_OFFSET) {
+      if (!Number.isFinite(centerHeight) || centerHeight < MIN_CITY_GRADE) {
         continue;
       }
 
@@ -502,7 +509,7 @@ export async function createCity(scene, terrain, options = {}) {
         Math.hypot(centerX - pierPlazaTarget.x, centerZ - pierPlazaTarget.z) <=
         Math.min(spacingX, spacingZ) * 0.6;
       if (isPierPlazaCell) {
-        const plazaHeight = Math.max(centerHeight, SEA_LEVEL_Y) + SURFACE_OFFSET;
+        const plazaHeight = clampSurfaceHeight(centerHeight);
         pocketPlazas.push({ x: centerX, y: plazaHeight, z: centerZ });
         continue;
       }
@@ -547,7 +554,7 @@ export async function createCity(scene, terrain, options = {}) {
 
       const isPocketPlaza = intersectionCounter % 5 === 0;
       if (isPocketPlaza) {
-        const plazaHeight = Math.max(lot.height, SEA_LEVEL_Y) + SURFACE_OFFSET;
+        const plazaHeight = clampSurfaceHeight(lot.height);
         pocketPlazas.push({ x: centerX, y: plazaHeight, z: centerZ });
         continue;
       }
@@ -556,10 +563,7 @@ export async function createCity(scene, terrain, options = {}) {
         continue;
       }
 
-      const groundHeight = Math.max(
-        lot.height + SURFACE_OFFSET,
-        SEA_LEVEL_Y + SURFACE_OFFSET
-      );
+      const groundHeight = clampSurfaceHeight(lot.height);
       placements.push({
         x: centerX,
         y: groundHeight,
@@ -588,7 +592,7 @@ export async function createCity(scene, terrain, options = {}) {
     for (let ix = 0; ix <= countX; ix++) {
       const x = roadStartX + ix * spacingX;
       const height = sampleHeight(terrain, x, z, null);
-      if (!Number.isFinite(height) || height < SEA_LEVEL_Y + SURFACE_OFFSET) {
+      if (!Number.isFinite(height) || height < MIN_CITY_GRADE) {
         // below-sea cells
         row.push(null);
         continue;
@@ -789,7 +793,7 @@ export async function createCity(scene, terrain, options = {}) {
             if (Number.isFinite(height)) {
               secondaryBoulevardLightPositions.push({
                 x: position.x,
-                y: Math.max(height, SEA_LEVEL_Y) + SURFACE_OFFSET,
+                y: clampSurfaceHeight(height),
                 z: position.z,
               });
             }
@@ -840,7 +844,7 @@ export async function createCity(scene, terrain, options = {}) {
             if (Number.isFinite(height)) {
               secondaryBoulevardLightPositions.push({
                 x: position.x,
-                y: Math.max(height, SEA_LEVEL_Y) + SURFACE_OFFSET,
+                y: clampSurfaceHeight(height),
                 z: position.z,
               });
             }
@@ -860,12 +864,12 @@ export async function createCity(scene, terrain, options = {}) {
   const quayEndHeight = sampleHeight(terrain, quayX, quayEndZ, SEA_LEVEL_Y);
   const quayStart = new THREE.Vector3(
     quayX,
-    Math.max(quayStartHeight, SEA_LEVEL_Y) + SURFACE_OFFSET,
+    clampSurfaceHeight(quayStartHeight),
     quayStartZ
   );
   const quayEnd = new THREE.Vector3(
     quayX,
-    Math.max(quayEndHeight, SEA_LEVEL_Y) + SURFACE_OFFSET,
+    clampSurfaceHeight(quayEndHeight),
     quayEndZ
   );
   const prePromenadeCount = roadGeometries.length;
@@ -894,8 +898,7 @@ export async function createCity(scene, terrain, options = {}) {
 
     const boulevardPoints = segment.map((point) => {
       const height = sampleHeight(terrain, point.x, point.z, SEA_LEVEL_Y);
-      const y = Number.isFinite(height) ? height : SEA_LEVEL_Y;
-      return new THREE.Vector3(point.x, Math.max(y, SEA_LEVEL_Y) + SURFACE_OFFSET, point.z);
+      return new THREE.Vector3(point.x, clampSurfaceHeight(height), point.z);
     });
 
     let distanceAccum = 0;
@@ -925,7 +928,7 @@ export async function createCity(scene, terrain, options = {}) {
         if (Number.isFinite(height)) {
           mainAvenueLightPositions.push({
             x: position.x,
-            y: Math.max(height, SEA_LEVEL_Y) + SURFACE_OFFSET,
+            y: clampSurfaceHeight(height),
             z: position.z,
           });
         }
@@ -1192,10 +1195,7 @@ export async function createCity(scene, terrain, options = {}) {
       pierPlazaCenter.z,
       SEA_LEVEL_Y
     );
-    const plazaBaseHeight = Math.max(
-      (Number.isFinite(plazaHeightSample) ? plazaHeightSample : SEA_LEVEL_Y) + SURFACE_OFFSET,
-      SEA_LEVEL_Y + SURFACE_OFFSET
-    );
+    const plazaBaseHeight = clampSurfaceHeight(plazaHeightSample);
     addFoundationPad(city, pierPlazaCenter.x, plazaBaseHeight, pierPlazaCenter.z, 3.2);
   }
 
@@ -1328,7 +1328,7 @@ export async function createCity(scene, terrain, options = {}) {
           if (!Number.isFinite(terrainHeight)) {
             continue;
           }
-          const groundY = Math.max(terrainHeight + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET);
+          const groundY = clampSurfaceHeight(terrainHeight);
 
           _position.set(x, groundY, z);
           _quaternion.identity();
@@ -1446,7 +1446,7 @@ export async function createCity(scene, terrain, options = {}) {
             continue;
           }
 
-          const groundY = Math.max(terrainHeight + SURFACE_OFFSET, SEA_LEVEL_Y + SURFACE_OFFSET);
+          const groundY = clampSurfaceHeight(terrainHeight);
 
           _position.set(x, groundY, z);
           _quaternion.setFromAxisAngle(_rotationAxis, rng() * Math.PI * 2);
@@ -1502,10 +1502,7 @@ export async function createCity(scene, terrain, options = {}) {
       for (let i = 0; i < lampPositions.length; i++) {
         const target = lampPositions[i];
         const terrainHeight = sampleHeight(terrain, target.x, target.z, SEA_LEVEL_Y);
-        const groundY = Math.max(
-          (Number.isFinite(terrainHeight) ? terrainHeight : SEA_LEVEL_Y) + SURFACE_OFFSET,
-          SEA_LEVEL_Y + SURFACE_OFFSET
-        );
+        const groundY = clampSurfaceHeight(terrainHeight);
 
         _position.set(target.x, groundY, target.z);
         _quaternion.identity();
@@ -1538,10 +1535,7 @@ export async function createCity(scene, terrain, options = {}) {
       pierPlazaCenter.z,
       SEA_LEVEL_Y
     );
-    const interactiveLampY = Math.max(
-      (Number.isFinite(interactiveLampHeight) ? interactiveLampHeight : SEA_LEVEL_Y) + SURFACE_OFFSET,
-      SEA_LEVEL_Y + SURFACE_OFFSET
-    );
+    const interactiveLampY = clampSurfaceHeight(interactiveLampHeight);
 
     const lampGroup = new THREE.Group();
     lampGroup.name = "HarborPlazaLamp";
@@ -1637,8 +1631,8 @@ export async function createCity(scene, terrain, options = {}) {
     const alpha = i / 4;
     const x = origin.x - walkwaySpan * 0.5 + walkwaySpan * alpha;
     const z = origin.z + Math.sin(alpha * Math.PI * 1.2 - Math.PI * 0.3) * (gridSize.y * 0.45);
-    const y = sampleHeight(terrain, x, z, SEA_LEVEL_Y) + SURFACE_OFFSET;
-    walkwayPoints.push(new THREE.Vector3(x, y, z));
+    const terrainHeight = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
+    walkwayPoints.push(new THREE.Vector3(x, clampSurfaceHeight(terrainHeight), z));
   }
   if (walkwayPoints.length >= 2) {
     const walkway = createRoad(city, walkwayPoints, {
