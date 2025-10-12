@@ -127,15 +127,23 @@ export class MainCharacter {
 
       // ---------------------------------------------------------------
       // Rotation: smoothly turn the character towards the desired direction.
-      const targetYaw = Math.atan2(moveDirection.x, -moveDirection.z);
-      const angleDifference = MathUtils.euclideanModulo(
-        targetYaw - this.yaw + Math.PI,
-        Math.PI * 2
-      ) - Math.PI;
-      const maxStep = this.angularSpeed * deltaTime;
-      const yawStep = MathUtils.clamp(angleDifference, -maxStep, maxStep);
-      this.yaw += yawStep;
-      this.mesh.rotation.y = this.yaw;
+      const isPureBackward =
+        this.moveBackward &&
+        !this.moveForward &&
+        !this.moveLeft &&
+        !this.moveRight;
+
+      if (!isPureBackward) {
+        const targetYaw = Math.atan2(moveDirection.x, -moveDirection.z);
+        const angleDifference = MathUtils.euclideanModulo(
+          targetYaw - this.yaw + Math.PI,
+          Math.PI * 2
+        ) - Math.PI;
+        const maxStep = this.angularSpeed * deltaTime;
+        const yawStep = MathUtils.clamp(angleDifference, -maxStep, maxStep);
+        this.yaw += yawStep;
+        this.mesh.rotation.y = this.yaw;
+      }
 
       // ---------------------------------------------------------------
       // Movement: convert local direction (forward is -Z) into world space and
