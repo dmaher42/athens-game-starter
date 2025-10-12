@@ -10,24 +10,26 @@
   <body>
     <div id="app"></div>
     <script>
-      // Provide bare module fallbacks when running directly from the filesystem
-      if (window.location.protocol === "file:") {
-        const importMap = {
+      (function installFallbackImportMapWhenNeeded() {
+        if (window.location.protocol !== "file:") {
+          return;
+        }
+
+        const FALLBACK_IMPORT_MAP = {
           imports: {
-            three: "./node_modules/three/build/three.module.js",
-            "three/examples/jsm/": "./node_modules/three/examples/jsm/",
-            "three-mesh-bvh": "./node_modules/three-mesh-bvh/build/index.module.js",
+            three: "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+            "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+            "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.1/build/index.module.js",
           },
         };
 
-        const script = document.createElement("script");
-        script.type = "importmap";
-        script.textContent = JSON.stringify(importMap, null, 2);
-        document.currentScript?.parentNode?.insertBefore(
-          script,
-          document.currentScript.nextSibling,
-        );
-      }
+        const importMapScript = document.createElement("script");
+        importMapScript.type = "importmap";
+        importMapScript.textContent = JSON.stringify(FALLBACK_IMPORT_MAP, null, 2);
+
+        const currentScript = document.currentScript;
+        currentScript?.parentNode?.insertBefore(importMapScript, currentScript);
+      })();
     </script>
   </body>
 </html>
