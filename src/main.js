@@ -1684,6 +1684,7 @@ async function mainApp() {
     }
 
     const phase = timeOfDayState.timeOfDayPhase ?? 0;
+    timeOfDayState.elapsedSeconds = elapsed;
     const sunDir = updateSky(skyObj, timeOfDayState);
 
     // Update sky dome, atmospheric lighting, and celestial bodies each frame.
