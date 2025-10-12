@@ -21,6 +21,46 @@ const CONTROL_KEYS = new Set([
   "KeyF",
 ]);
 
+const NON_TYPING_INPUT_TYPES = new Set([
+  "button",
+  "checkbox",
+  "radio",
+  "range",
+  "submit",
+  "reset",
+  "file",
+  "color",
+  "image",
+]);
+
+/**
+ * @param {EventTarget | null} target
+ */
+function isEditableTarget(target) {
+  if (!target || typeof target !== "object") {
+    return false;
+  }
+
+  if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  if (typeof HTMLInputElement !== "undefined" && target instanceof HTMLInputElement) {
+    const type = target.type?.toLowerCase?.() ?? "";
+    return !NON_TYPING_INPUT_TYPES.has(type);
+  }
+
+  if (typeof HTMLTextAreaElement !== "undefined" && target instanceof HTMLTextAreaElement) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * @typedef {{ yaw: number, pitch: number }} LookDelta
  */
@@ -48,6 +88,9 @@ export class InputMap {
 
     /** @private */
     this.keyDownHandler = (event) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
       this.keys.add(event.code);
       if (event.code === "KeyF" && !event.repeat) {
         this.flyToggleQueued = true;
@@ -58,6 +101,9 @@ export class InputMap {
     };
     /** @private */
     this.keyUpHandler = (event) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
       this.keys.delete(event.code);
       if (CONTROL_KEYS.has(event.code)) {
         event.preventDefault();
