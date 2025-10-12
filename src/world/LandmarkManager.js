@@ -17,6 +17,7 @@ import { loadLandmark } from "./landmarks.js";
 import { SEA_LEVEL_Y } from "./locations.js";
 import { snapAboveGround } from "./ground.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { buildTemple } from "../features/temples.js";
 
 function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
@@ -275,6 +276,80 @@ export class LandmarkManager {
     }
   }
 
+  placeProcedural(spec = {}) {
+    const procId = spec.proc || spec.kind || spec.builder || spec.id;
+    const builder =
+      (typeof spec.build === "function" && spec.build) ||
+      (typeof PROCEDURAL_BUILDERS[spec.proc] === "function" && PROCEDURAL_BUILDERS[spec.proc]) ||
+      (typeof PROCEDURAL_BUILDERS[procId] === "function" && PROCEDURAL_BUILDERS[procId]);
+
+    if (typeof builder !== "function") {
+      if (!this.quietMissing) {
+        this.logMessage(
+          "warn",
+          `[LandmarkManager] Unknown procedural builder "${spec.proc || spec.kind || spec.id || "unknown"}"`
+        );
+      }
+      return null;
+    }
+
+    const transformInfo = this.prepareTransform(spec);
+    const params = { ...(spec.params || {}) };
+    if (params.scale == null && transformInfo?.options?.scale != null) {
+      params.scale = transformInfo.options.scale;
+      delete transformInfo.options.scale;
+    }
+
+    let object = null;
+    try {
+      object = builder(params);
+    } catch (error) {
+      if (!this.quietMissing) {
+        this.logMessage(
+          "warn",
+          `[LandmarkManager] Procedural builder failed for ${spec.name || spec.id || procId || "procedural"}`
+        );
+        this.logMessage("warn", error);
+      }
+      return null;
+    }
+
+    if (!object) {
+      if (!this.quietMissing) {
+        this.logMessage(
+          "warn",
+          `[LandmarkManager] Procedural builder returned nothing for ${spec.name || spec.id || procId || "entry"}`
+        );
+      }
+      return null;
+    }
+
+    if (!object.isObject3D) {
+      const group = new THREE.Group();
+      group.name = spec.name || spec.id || `Procedural_${procId || "object"}`;
+      group.add(object);
+      object = group;
+    }
+
+    if (spec.name && object.name !== spec.name) {
+      object.name = spec.name;
+    }
+
+    applyTransformToObject(object, transformInfo?.options || {});
+    this.snapObject(object, transformInfo);
+
+    const parent = this.parent || this.scene;
+    parent?.add?.(object);
+
+    this.applyCollisionSettings(object, spec.collision);
+
+    if (spec.collision && typeof this.envCollider?.refresh === "function") {
+      this.envCollider.refresh();
+    }
+
+    return object;
+  }
+
   snapObject(object, transformInfo) {
     if (!object || !transformInfo?.position) return;
     const { position, surfaceOffset, snapOptions } = transformInfo;
@@ -349,6 +424,10 @@ export class LandmarkManager {
 
   async attemptLoad(urls, spec, transformInfo, label) {
     if (!urls.length) return null;
+    if (spec?.type === "procedural") {
+      return this.placeProcedural(spec);
+    }
+
     const name = spec.name || spec.id || "Landmark";
     for (const url of urls) {
       const loadOptions = cloneTransformOptions(transformInfo.options);
@@ -465,3 +544,43 @@ function sanitizeRelativePath(value) {
     .replace(/^\.\//, "")
     .replace(/^\/+/, "");
 }
+const PROCEDURAL_BUILDERS = {
+  temple: (params = {}) => buildTemple(params),
+};
+
+function applyTransformToObject(object, options = {}) {
+  if (!object) return;
+  const { position, rotation, scale } = options;
+  if (position) {
+    object.position.set(
+      position.x ?? position[0] ?? 0,
+      position.y ?? position[1] ?? 0,
+      position.z ?? position[2] ?? 0
+    );
+  }
+  if (rotation) {
+    object.rotation.set(
+      rotation.x ?? rotation[0] ?? 0,
+      rotation.y ?? rotation[1] ?? 0,
+      rotation.z ?? rotation[2] ?? 0
+    );
+  }
+  if (scale !== undefined) {
+    if (typeof scale === "number") {
+      object.scale.setScalar(scale);
+    } else if (scale?.isVector3) {
+      object.scale.copy(scale);
+    } else if (Array.isArray(scale)) {
+      const sx = scale[0] ?? 1;
+      const sy = scale[1] ?? sx;
+      const sz = scale[2] ?? sx;
+      object.scale.set(sx, sy, sz);
+    } else if (typeof scale === "object") {
+      const sx = scale.x ?? 1;
+      const sy = scale.y ?? sx;
+      const sz = scale.z ?? sx;
+      object.scale.set(sx, sy, sz);
+    }
+  }
+}
+
