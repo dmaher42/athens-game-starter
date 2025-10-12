@@ -50,6 +50,12 @@ import { mountExposureSlider } from "./ui/exposureSlider.js";
 import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
 import { mountDevHUD } from "./ui/devHud.js";
 import { mount as mountHUDCameraSettings } from "./ui/HUDCameraSettings.js";
+import {
+  showLoadingScreen,
+  updateLoadingStatus,
+  showLoadingError,
+  hideLoadingScreen,
+} from "./ui/loadingScreen.js";
 import { createPin } from "./world/pins.js";
 import { attachHeightSampler, probeAt } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
@@ -506,6 +512,10 @@ function startTimeOfDayCycle(options = {}) {
 
 async function mainApp() {
   console.log("🔧 Athens mainApp start");
+  showLoadingScreen({
+    initialStatus: "Preparing the experience...",
+  });
+  updateLoadingStatus("Preparing renderer and interface...");
   runAssetQuickChecks().catch((err) => {
     console.warn("Asset QuickChecks failed", err);
   });
@@ -539,6 +549,7 @@ async function mainApp() {
   initializeAssetTranscoders(renderer);
   attachCrosshair();
   mountHotkeyOverlay({ toggleKey: "KeyH" });
+  updateLoadingStatus("Listening for the bustle of ancient Athens...");
 
   let devHud = null;
   let pendingOceanStatus = null;
@@ -715,6 +726,7 @@ async function mainApp() {
   });
   await soundscape.initFromManifest("audio/manifest.json");
   await soundscape.ensureUserGestureResume();
+  updateLoadingStatus("Sculpting the Attic landscape...");
 
   // Volume mixer overlay (F10 toggles visibility)
   const SHOW_AUDIO_MIXER = shouldShowOverlay({
@@ -897,6 +909,7 @@ async function mainApp() {
     seed: 42,
     buildingCount: 140,
   });
+  updateLoadingStatus("Raising temples, homes, and harbors...");
 
   try {
     await applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] });
@@ -1282,6 +1295,7 @@ async function mainApp() {
     );
     attachFallbackAvatar();
   }
+  updateLoadingStatus("Welcoming Athenians to the city...");
 
   const buildingMgr = new BuildingManager(envCollider);
   const terrainHeightSampler = terrain?.userData?.getHeightAt;
@@ -1776,6 +1790,8 @@ async function mainApp() {
   }
 
   animate();
+  updateLoadingStatus("Opening the gates to ancient Athens...");
+  hideLoadingScreen();
 
   // Utility getters for HUD
   const getPosition = () => {
@@ -1866,6 +1882,9 @@ async function mainApp() {
     await mainApp();
     console.log("✅ mainApp loaded successfully");
   } catch (err) {
+    showLoadingError(
+      "We couldn't finish loading Athens. Please refresh to try again."
+    );
     console.error("❌ Error in mainApp:", err);
   }
 })();
