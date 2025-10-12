@@ -1,10 +1,47 @@
 import * as THREE from "three";
 
-const EXISTING_SEA_LEVEL_Y =
-  typeof globalThis !== "undefined" &&
-  typeof globalThis.SEA_LEVEL_Y !== "undefined"
-    ? globalThis.SEA_LEVEL_Y
-    : undefined;
+const parseValidNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const EXISTING_SEA_LEVEL_Y = (() => {
+  if (
+    typeof globalThis !== "undefined" &&
+    typeof globalThis.SEA_LEVEL_Y !== "undefined"
+  ) {
+    const override = parseValidNumber(globalThis.SEA_LEVEL_Y);
+    if (typeof override !== "undefined") {
+      return override;
+    }
+  }
+
+  if (
+    typeof globalThis !== "undefined" &&
+    typeof globalThis.location === "object" &&
+    globalThis.location !== null
+  ) {
+    const { search } = globalThis.location;
+
+    if (typeof search === "string" && search.length > 0) {
+      try {
+        const params = new URLSearchParams(
+          search.startsWith("?") ? search : `?${search}`
+        );
+        const paramValue = params.get("sea");
+        const parsedParam = parseValidNumber(paramValue);
+
+        if (typeof parsedParam !== "undefined") {
+          return parsedParam;
+        }
+      } catch (error) {
+        // Ignore malformed query strings or missing URLSearchParams
+      }
+    }
+  }
+
+  return undefined;
+})();
 
 export const SEA_LEVEL_Y =
   typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 0; // keep existing if defined
