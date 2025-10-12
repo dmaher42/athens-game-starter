@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 import { createProceduralMarbleTextures } from "../main.js";
 
 function createSolidDataTexture(color, { colorSpace = THREE.SRGBColorSpace } = {}) {
@@ -44,8 +45,60 @@ function cloneTexture(texture, options = {}) {
   return texture;
 }
 
-export function makeMarbleMaterialSet() {
-  const generated = createProceduralMarbleTextures?.();
+const MARBLE_TEXTURE_DEFAULTS = {
+  map: "textures/marble_base.jpg",
+  normal: "textures/marble_normal.jpg",
+  rough: "textures/marble_rough.jpg",
+  ao: "textures/marble_ao.jpg",
+};
+
+const marbleTextureLoader = new THREE.TextureLoader();
+
+function resolveTextureUrl(baseUrl, candidate) {
+  if (typeof candidate !== "string") return null;
+  const trimmed = candidate.trim();
+  if (!trimmed) return null;
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
+    return trimmed;
+  }
+  const root = typeof baseUrl === "string" && baseUrl ? baseUrl : resolveBaseUrl();
+  return joinPath(root, trimmed);
+}
+
+async function loadTextureCandidate({ baseUrl, candidate, colorSpace }) {
+  const url = resolveTextureUrl(baseUrl, candidate);
+  if (!url) return null;
+  try {
+    const texture = await marbleTextureLoader.loadAsync(url);
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = 4;
+    texture.colorSpace = colorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  } catch (error) {
+    console.warn("[buildingKit] Marble texture load failed", url, error);
+    return null;
+  }
+}
+
+/**
+ * Optional PBR texture hook: drop JPG/PNG files under `public/textures/` to override the
+ * procedural marble maps. Vite will serve them from `docs/textures/` when building.
+ */
+export async function makeMarbleMaterialSet({
+  baseUrl = resolveBaseUrl(),
+  map = MARBLE_TEXTURE_DEFAULTS.map,
+  normal = MARBLE_TEXTURE_DEFAULTS.normal,
+  rough = MARBLE_TEXTURE_DEFAULTS.rough,
+  ao = MARBLE_TEXTURE_DEFAULTS.ao,
+} = {}) {
+  let generated = null;
+  const ensureGenerated = () => {
+    if (!generated) {
+      generated = createProceduralMarbleTextures?.() || null;
+    }
+    return generated;
+  };
 
   const fallback = {
     map: createSolidDataTexture(0xefecea, { colorSpace: THREE.SRGBColorSpace }),
@@ -54,15 +107,20 @@ export function makeMarbleMaterialSet() {
     aoMap: createSolidDataTexture(0xe0e0e0, { colorSpace: THREE.LinearSRGBColorSpace }),
   };
 
-  if (!generated || typeof generated !== "object") {
-    return fallback;
-  }
+  const [mapTexture, normalTexture, roughTexture, aoTexture] = await Promise.all([
+    loadTextureCandidate({ baseUrl, candidate: map, colorSpace: THREE.SRGBColorSpace }),
+    loadTextureCandidate({ baseUrl, candidate: normal, colorSpace: THREE.LinearSRGBColorSpace }),
+    loadTextureCandidate({ baseUrl, candidate: rough, colorSpace: THREE.LinearSRGBColorSpace }),
+    loadTextureCandidate({ baseUrl, candidate: ao, colorSpace: THREE.LinearSRGBColorSpace }),
+  ]);
+
+  const procedural = ensureGenerated();
 
   return {
-    map: generated.map || fallback.map,
-    normalMap: generated.normalMap || fallback.normalMap,
-    roughnessMap: generated.roughnessMap || fallback.roughnessMap,
-    aoMap: generated.aoMap || fallback.aoMap,
+    map: mapTexture || procedural?.map || fallback.map,
+    normalMap: normalTexture || procedural?.normalMap || fallback.normalMap,
+    roughnessMap: roughTexture || procedural?.roughnessMap || fallback.roughnessMap,
+    aoMap: aoTexture || procedural?.aoMap || fallback.aoMap,
   };
 }
 
@@ -82,15 +140,16 @@ export function makeTerracottaMaterial({ color = 0xb96540 } = {}) {
   });
 }
 
-export function makeColumn({
+export async function makeColumn({
   height = 7,
   radiusTop = 0.7,
   radiusBottom = 0.75,
   radialSegments = 32,
   heightSegments = 1,
   material = null,
+  materialOptions = {},
 } = {}) {
-  const marbleSet = makeMarbleMaterialSet();
+  const marbleSet = await makeMarbleMaterialSet(materialOptions);
   const columnMaterial =
     material ||
     new THREE.MeshPhysicalMaterial({
@@ -126,18 +185,19 @@ export function makeColumn({
   return mesh;
 }
 
-export function makeStylobateSteps({
+export async function makeStylobateSteps({
   width = 20,
   depth = 38,
   stepCount = 3,
   stepHeight = 0.35,
   stepInset = 0.6,
   material = null,
+  materialOptions = {},
 } = {}) {
   const group = new THREE.Group();
   group.name = "StylobateSteps";
 
-  const marbleSet = makeMarbleMaterialSet();
+  const marbleSet = await makeMarbleMaterialSet(materialOptions);
   const stepMaterial =
     material ||
     new THREE.MeshPhysicalMaterial({
@@ -175,16 +235,17 @@ export function makeStylobateSteps({
   return group;
 }
 
-export function makePediment({
+export async function makePediment({
   width = 20,
   depth = 1.6,
   height = 4.2,
   material = null,
+  materialOptions = {},
 } = {}) {
   const group = new THREE.Group();
   group.name = "TemplePediment";
 
-  const marbleSet = makeMarbleMaterialSet();
+  const marbleSet = await makeMarbleMaterialSet(materialOptions);
   const pedimentMaterial =
     material ||
     new THREE.MeshPhysicalMaterial({
@@ -316,16 +377,17 @@ export function makeRoof({
   return group;
 }
 
-export function makeColonnadeInstanced({
+export async function makeColonnadeInstanced({
   countX = 6,
   countZ = 12,
   spacingX = 4,
   spacingZ = 4.5,
   columnGeom = null,
   columnMat = null,
+  materialOptions = {},
 } = {}) {
   const needsSampleColumn = !(columnGeom instanceof THREE.BufferGeometry && columnMat);
-  const baseColumn = needsSampleColumn ? makeColumn() : null;
+  const baseColumn = needsSampleColumn ? await makeColumn({ materialOptions }) : null;
   const geometry = columnGeom instanceof THREE.BufferGeometry ? columnGeom : baseColumn.geometry;
   const material = columnMat || baseColumn.material;
 

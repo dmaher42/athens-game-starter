@@ -29,8 +29,8 @@ function cloneTexture(texture) {
   return texture;
 }
 
-function createMarbleMaterial(overrides = {}) {
-  const marbleSet = makeMarbleMaterialSet();
+async function createMarbleMaterial(overrides = {}, materialOptions = {}) {
+  const marbleSet = await makeMarbleMaterialSet(materialOptions);
   const material = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
     roughness: 0.45,
@@ -57,7 +57,7 @@ function setCollisionTag(object, shouldCollide = true) {
   });
 }
 
-export function buildTemple(options = {}) {
+export async function buildTemple(options = {}) {
   const {
     width = 22,
     depth = 42,
@@ -70,6 +70,7 @@ export function buildTemple(options = {}) {
     entablatureHeight: entablatureHeightOverride,
     pedimentHeight: pedimentHeightOverride,
     roofHeight: roofHeightOverride,
+    materialOptions = {},
   } = options;
 
   const group = new THREE.Group();
@@ -85,11 +86,12 @@ export function buildTemple(options = {}) {
   const stylobateSteps = Math.max(3, Math.floor(options.stepCount ?? 3));
   const stylobateWidth = width + Math.max(2, (colX - 1) * 0.2);
   const stylobateDepth = depth + Math.max(2, (colZ - 1) * 0.2);
-  const stylobate = makeStylobateSteps({
+  const stylobate = await makeStylobateSteps({
     width: stylobateWidth,
     depth: stylobateDepth,
     stepCount: stylobateSteps,
     stepHeight: stylobateStepHeight,
+    materialOptions,
   });
   group.add(stylobate);
 
@@ -99,18 +101,20 @@ export function buildTemple(options = {}) {
   const pedimentHeight = pedimentHeightOverride ?? columnHeight * 0.22;
   const roofHeight = roofHeightOverride ?? columnHeight * 0.3;
 
-  const columnSample = makeColumn({
+  const columnSample = await makeColumn({
     height: columnHeight,
+    materialOptions,
   });
   const spacingX = colX > 1 ? width / (colX - 1) : width;
   const spacingZ = colZ > 1 ? depth / (colZ - 1) : depth;
-  const colonnade = makeColonnadeInstanced({
+  const colonnade = await makeColonnadeInstanced({
     countX: colX,
     countZ: colZ,
     spacingX,
     spacingZ,
     columnGeom: columnSample.geometry,
     columnMat: columnSample.material,
+    materialOptions,
   });
   colonnade.position.y = stylobateHeight;
   group.add(colonnade);
@@ -123,7 +127,8 @@ export function buildTemple(options = {}) {
     entablatureDepth
   );
   ensureUv2Attribute(entablatureGeometry);
-  const entablature = new THREE.Mesh(entablatureGeometry, createMarbleMaterial());
+  const entablatureMaterial = await createMarbleMaterial({}, materialOptions);
+  const entablature = new THREE.Mesh(entablatureGeometry, entablatureMaterial);
   entablature.castShadow = true;
   entablature.receiveShadow = true;
   entablature.position.y = stylobateHeight + columnHeight + entablatureHeight / 2;
@@ -131,26 +136,28 @@ export function buildTemple(options = {}) {
   entablature.userData.noCollision = false;
   group.add(entablature);
 
-  const pedimentMaterial = createMarbleMaterial({
+  const pedimentMaterial = await createMarbleMaterial({
     roughness: 0.42,
     clearcoat: 0.25,
-  });
+  }, materialOptions);
   const pedimentDepth = Math.max(1.2, spacingZ * 0.4);
-  const frontPediment = makePediment({
+  const frontPediment = await makePediment({
     width: entablatureWidth,
     depth: pedimentDepth,
     height: pedimentHeight,
     material: pedimentMaterial.clone(),
+    materialOptions,
   });
   frontPediment.position.y = stylobateHeight + columnHeight + entablatureHeight;
   frontPediment.position.z = depth / 2 + pedimentDepth * 0.5;
   group.add(frontPediment);
 
-  const rearPediment = makePediment({
+  const rearPediment = await makePediment({
     width: entablatureWidth,
     depth: pedimentDepth,
     height: pedimentHeight,
     material: pedimentMaterial.clone(),
+    materialOptions,
   });
   rearPediment.rotation.y = Math.PI;
   rearPediment.position.y = stylobateHeight + columnHeight + entablatureHeight;

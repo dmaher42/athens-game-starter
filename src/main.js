@@ -83,6 +83,13 @@ console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
     "models/npcs/manifest.json",
     "config/districts.json",
   ];
+  if (!FORCE_PROC) {
+    probes.push(
+      "models/landmarks/poseidon_temple.glb",
+      "models/landmarks/akropol.glb",
+      "models/landmarks/aristotle_tomb.glb"
+    );
+  }
   for (const p of probes) {
     const u = joinPath(BASE, p);
     try {
@@ -132,6 +139,19 @@ window.addEventListener("unhandledrejection", (ev) => {
 
 const BASE_URL = resolveBaseUrl();
 
+const QUERY_PARAMS = (() => {
+  if (typeof window === "undefined" || typeof window.location === "undefined") {
+    return new URLSearchParams("");
+  }
+  try {
+    return new URLSearchParams(window.location.search ?? "");
+  } catch {
+    return new URLSearchParams("");
+  }
+})();
+
+const FORCE_GLB = QUERY_PARAMS.has("glb") && QUERY_PARAMS.get("glb") !== "0";
+
 function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
   return value
@@ -180,6 +200,9 @@ async function headOk(url) {
 
 // --- util: resolveFirstAvailableAsset (fetch HEAD, skip HTML) ---
 async function resolveFirstAvailableAsset(candidates = []) {
+  if (FORCE_PROC) {
+    return null;
+  }
   const seen = new Set();
   for (const url of candidates) {
     if (typeof url !== "string") continue;
@@ -460,17 +483,16 @@ function parseToggleValue(value, defaultValue = true) {
   if (FALSE_VALUES.has(normalized)) return false;
   return defaultValue;
 }
-
-function shouldUseProceduralLandmarks() {
-  if (typeof window === "undefined") return false;
-  const params = new URLSearchParams(window.location.search);
-  if (!params.has("proc")) {
-    return false;
+const FORCE_PROC = (() => {
+  const defaultValue = !FORCE_GLB; // default to procedural
+  if (!QUERY_PARAMS.has("proc")) {
+    return defaultValue;
   }
-  return parseToggleValue(params.get("proc"), true);
-}
+  return parseToggleValue(QUERY_PARAMS.get("proc"), defaultValue);
+})();
 
-const FORCE_PROCEDURAL_LANDMARKS = shouldUseProceduralLandmarks();
+const FORCE_PROCEDURAL_LANDMARKS = FORCE_PROC;
+console.info("[proc] mode =", FORCE_PROC ? "procedural" : "glb");
 let proceduralLandmarkCount = 0;
 
 function shouldShowOverlay({
@@ -565,26 +587,12 @@ async function mainApp() {
 
   let devHud = null;
   let pendingOceanStatus = null;
-  const proceduralQueryEnabled = (() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-    try {
-      const params = new URLSearchParams(window.location.search);
-      if (!params.has("proc")) {
-        return false;
-      }
-      return parseToggleValue(params.get("proc"), false);
-    } catch (error) {
-      console.warn("[proc] Failed to parse procedural flag", error);
-      return false;
-    }
-  })();
+  const proceduralQueryEnabled = QUERY_PARAMS.has("proc");
   if (proceduralQueryEnabled) {
-    console.info("[proc] Forcing procedural landmarks.");
+    console.info("[proc] Query override:", QUERY_PARAMS.get("proc"));
   }
   let proceduralLandmarkCount = 0;
-  let proceduralStatusMessage = proceduralQueryEnabled ? "Procedural: on" : "Procedural: off";
+  let proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
   const updateOceanHudStatus = () => {
     if (!pendingOceanStatus || !devHud) {
       return;
@@ -862,7 +870,7 @@ async function mainApp() {
     }
   }
 
-  if (!FORCE_PROCEDURAL_LANDMARKS) {
+  if (!FORCE_PROC) {
     // --- Aristotle's Tomb (local GLB) ---------------------------------------
     // We prefer a local asset the repo expects at:
     //   public/models/landmarks/aristotle_tomb.glb
@@ -925,7 +933,7 @@ async function mainApp() {
     }
     // ------------------------------------------------------------------------
   } else {
-    console.log("[proc] Skipping landmark GLB imports in procedural mode.");
+    console.info("[proc] GLB loading disabled (procedural default)");
   }
 
   // Plazas (agora + acropolis terraces) — disabled per request to remove large discs
@@ -934,6 +942,7 @@ async function mainApp() {
   const harborCity = await createCity(worldRoot, terrain, {
     roadsVisible,
     useProceduralBlocks: FORCE_PROCEDURAL_LANDMARKS,
+    forceProcedural: FORCE_PROC,
   });
 
   // Hill-city buildings (uses terrain sampler + road curve)
@@ -1636,7 +1645,7 @@ async function mainApp() {
     return new THREE.Vector3(x, y, z);
   };
 
-  if (!FORCE_PROCEDURAL_LANDMARKS) {
+  if (!FORCE_PROC) {
     const sampleBuildingSpecs = [
       {
         url: joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
@@ -1685,7 +1694,7 @@ async function mainApp() {
       }
     });
   } else {
-    console.log("[proc] Skipping sample building GLBs.");
+    console.info("[proc] Skipping GLB sample buildings; using procedural city fill.");
   }
 
   const landmarkManager = new LandmarkManager({
@@ -1695,6 +1704,7 @@ async function mainApp() {
     heightSampler: terrainHeightSampler,
     envCollider,
     renderer,
+    forceProcedural: FORCE_PROC,
     spawnPlaceholder: (options = {}) =>
       spawnPlaceholderMonument({
         ...options,
@@ -1932,17 +1942,17 @@ async function mainApp() {
     onSetLightingPreset: applyLightingPreset,
     lightingPresets: LIGHTING_PRESETS,
   });
-  proceduralStatusMessage = FORCE_PROCEDURAL_LANDMARKS
-    ? `Procedural: on (${proceduralLandmarkCount})`
-    : "Procedural: off";
-  devHud?.setStatusLine?.("proc", proceduralStatusMessage);
+  proceduralStatusMessage = FORCE_PROC
+    ? `Procedural: ON (${proceduralLandmarkCount})`
+    : "Procedural: OFF";
+  devHud?.setStatusLine?.("proc", FORCE_PROC ? "Procedural: ON" : "Procedural: OFF");
   mountHUDCameraSettings(devHud?.rootElement ?? null);
   updateOceanHudStatus();
   if (audioManifestMissing) {
     devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
   }
   if (devHud?.setStatusLine) {
-    devHud.setStatusLine("proc", proceduralStatusMessage);
+    devHud.setStatusLine("proc", FORCE_PROC ? "Procedural: ON" : "Procedural: OFF");
   }
 
   // Simple controls: clicking the canvas or pressing E will run the onUse

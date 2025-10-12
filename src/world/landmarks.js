@@ -399,7 +399,11 @@ function finalizeLandmarkObject(entry, object, scene, options, materialPreset) {
   return object;
 }
 
-export function spawnProceduralFallback({ kind = "temple", params = {}, transform = {} } = {}) {
+export async function spawnProceduralFallback({
+  kind = "temple",
+  params = {},
+  transform = {},
+} = {}) {
   const finalParams = { ...(params || {}) };
   const transformOptions = { ...(transform || {}) };
 
@@ -411,7 +415,7 @@ export function spawnProceduralFallback({ kind = "temple", params = {}, transfor
   let object = null;
   switch (kind) {
     case "temple":
-      object = buildTemple(finalParams);
+      object = await buildTemple(finalParams);
       break;
     default:
       console.warn(`[landmarks] Unknown procedural fallback kind: ${kind}`);
@@ -516,6 +520,16 @@ export async function loadLandmark(scene, url, options = {}) {
       throw new Error("loadLandmark requires a non-empty URL");
     }
 
+    const skipGlb = options.forceProcedural === true;
+    if (skipGlb) {
+      const fallbackObject = await tryProceduralFallback("force-procedural");
+      if (fallbackObject) {
+        return fallbackObject;
+      }
+      cleanupEntry();
+      return null;
+    }
+
     const isProtocolAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(sanitizedUrl) ||
       /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(sanitizedUrl);
     const normalized = sanitizeRelativePath(sanitizedUrl);
@@ -571,6 +585,7 @@ export async function loadLandmark(scene, url, options = {}) {
     const loaded = await loadGLBWithFallbacks(loader, prioritizedUrls, {
       renderer: resolvedRenderer,
       targetHeight: options?.targetHeight || null,
+      forceProcedural: options.forceProcedural === true,
     });
 
     if (!loaded || !loaded.root) {

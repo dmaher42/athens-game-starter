@@ -663,6 +663,10 @@ export async function createCity(scene, terrain, options = {}) {
         continue;
       }
 
+      if (!Number.isFinite(lot.height) || lot.height <= SEA_LEVEL_Y + 0.01) {
+        continue;
+      }
+
       const groundHeight = clampSurfaceHeight(lot.height);
       placements.push({
         x: centerX,
