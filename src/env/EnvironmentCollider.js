@@ -143,7 +143,16 @@ export class EnvironmentCollider {
 
     const oldGeometry = this.mesh.geometry;
     if (this.boundsTree) {
-      this.boundsTree.dispose();
+      try {
+        if (typeof this.boundsTree.dispose === "function") {
+          this.boundsTree.dispose();
+        } else if (typeof this.boundsTree.release === "function") {
+          // Older builds exposed release() instead of dispose().
+          this.boundsTree.release();
+        }
+      } catch (err) {
+        console.warn("EnvironmentCollider boundsTree dispose skipped", err);
+      }
       this.boundsTree = null;
     }
 
