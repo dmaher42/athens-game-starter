@@ -11,6 +11,7 @@ import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
 import { queueSceneInteractable } from "./interactions.js";
+import { buildTemple } from "../features/temples.js";
 
 /**
  * Example usage:
@@ -314,6 +315,116 @@ function removePlaceholder(entry) {
   entry.placeholder = null;
 }
 
+function finalizeLandmarkObject(entry, object, scene, options, materialPreset) {
+  if (!object || !scene || !entry) {
+    return null;
+  }
+
+  applyTransform(object, options || {});
+  removePlaceholder(entry);
+
+  if (entry.disposed) {
+    disposeObject(object);
+    trackedLandmarks.delete(entry);
+    return null;
+  }
+
+  const initialY = Number.isFinite(object?.position?.y) ? object.position.y : 0;
+  const liftedY = liftObjectAboveGround(scene, object, 0.05);
+  if (Number.isFinite(liftedY)) {
+    object.position.y = Math.max(initialY, liftedY);
+  }
+
+  scene.add(object);
+  entry.object = object;
+
+  object.userData = object.userData || {};
+  object.userData.interactable = true;
+  object.userData.onUse = () => {
+    const label = object.name || "a landmark";
+    console.log(`You interacted with ${label}`);
+  };
+
+  object.traverse?.((mesh) => {
+    if (!mesh?.isMesh || typeof mesh.name !== "string") return;
+    const isInteractiveDoor = mesh.name === "Door" || mesh.name.startsWith("INT_");
+    if (!isInteractiveDoor) return;
+
+    mesh.userData = mesh.userData || {};
+    mesh.userData.interactable = true;
+    mesh.userData.onUse = () => {
+      mesh.userData.isOpen = !mesh.userData.isOpen;
+      const isDoor = mesh.name === "Door";
+      mesh.rotation.y = mesh.userData.isOpen ? Math.PI / 2 : 0;
+      if (isDoor) {
+        console.log(mesh.userData.isOpen ? "Door opened!" : "Door closed!");
+      } else {
+        console.log(`You interacted with ${mesh.name}`);
+      }
+    };
+  });
+
+  queueSceneInteractable(scene, object);
+
+  if (materialPreset) {
+    const factory = MATERIAL_PRESETS[materialPreset];
+    const presetMaterial = typeof factory === "function" ? factory(THREE) : null;
+
+    if (presetMaterial) {
+      object.traverse?.((mesh) => {
+        if (!mesh?.isMesh) return;
+
+        if (Array.isArray(mesh.material)) {
+          const nextMaterials = mesh.material.map((material) => {
+            const clonedMaterial = presetMaterial.clone();
+            copyMaterialFlags(material, clonedMaterial);
+            material?.dispose?.();
+            return clonedMaterial;
+          });
+          mesh.material = nextMaterials;
+        } else if (mesh.material) {
+          const currentMaterial = mesh.material;
+          const clonedMaterial = presetMaterial.clone();
+          copyMaterialFlags(currentMaterial, clonedMaterial);
+          currentMaterial.dispose?.();
+          mesh.material = clonedMaterial;
+        } else {
+          mesh.material = presetMaterial.clone();
+        }
+      });
+      presetMaterial.dispose?.();
+    }
+  }
+
+  return object;
+}
+
+export function spawnProceduralFallback({ kind = "temple", params = {}, transform = {} } = {}) {
+  const finalParams = { ...(params || {}) };
+  const transformOptions = { ...(transform || {}) };
+
+  if (finalParams.scale == null && transformOptions.scale != null) {
+    finalParams.scale = transformOptions.scale;
+    delete transformOptions.scale;
+  }
+
+  let object = null;
+  switch (kind) {
+    case "temple":
+      object = buildTemple(finalParams);
+      break;
+    default:
+      console.warn(`[landmarks] Unknown procedural fallback kind: ${kind}`);
+      return null;
+  }
+
+  if (!object || typeof object !== "object") {
+    return null;
+  }
+
+  return { object, transform: transformOptions };
+}
+
 /**
  * Load a landmark model and keep track of it so we can dispose everything later.
  * We immediately add a placeholder mesh to the scene so players get instant
@@ -513,92 +624,16 @@ export async function loadLandmark(scene, url, options = {}) {
       }
     }
 
-    applyTransform(finalObject, options);
-    removePlaceholder(entry);
-
-    if (entry.disposed) {
-      disposeObject(finalObject);
-      trackedLandmarks.delete(entry);
-      return null;
+    const finalized = finalizeLandmarkObject(entry, finalObject, scene, options, materialPreset);
+    if (finalized) {
+      return finalized;
     }
-
-    const initialY = Number.isFinite(finalObject?.position?.y)
-      ? finalObject.position.y
-      : 0;
-    const liftedY = liftObjectAboveGround(scene, finalObject, 0.05);
-    if (Number.isFinite(liftedY)) {
-      finalObject.position.y = Math.max(initialY, liftedY);
-    }
-    scene.add(finalObject);
-    entry.object = finalObject;
-
-    // userData is a plain JavaScript object attached to every 3D node. We use
-    // it like a sticky note to tag meshes that should respond to interactions.
-    // Anything that has `userData.interactable = true` will be picked up by the
-    // interaction helper so beginners can wire up behaviours without subclassing.
-    finalObject.userData = finalObject.userData || {};
-    finalObject.userData.interactable = true;
-    finalObject.userData.onUse = () => {
-      const label = finalObject.name || "a landmark";
-      console.log(`You interacted with ${label}`);
-    };
-
-    // Optionally bubble interactivity down to specific meshes. Artists can name
-    // sub-meshes "Door" or prefix them with "INT_" to opt-in. Here we just spin
-    // the mesh by 90 degrees to mimic a simple door toggle.
-    finalObject.traverse?.((mesh) => {
-      if (!mesh?.isMesh || typeof mesh.name !== "string") return;
-      const isInteractiveDoor = mesh.name === "Door" || mesh.name.startsWith("INT_");
-      if (!isInteractiveDoor) return;
-
-      mesh.userData = mesh.userData || {};
-      mesh.userData.interactable = true;
-      mesh.userData.onUse = () => {
-        mesh.userData.isOpen = !mesh.userData.isOpen;
-        const isDoor = mesh.name === "Door";
-        mesh.rotation.y = mesh.userData.isOpen ? Math.PI / 2 : 0;
-        if (isDoor) {
-          console.log(mesh.userData.isOpen ? "Door opened!" : "Door closed!");
-        } else {
-          console.log(`You interacted with ${mesh.name}`);
-        }
-      };
-    });
-
-    queueSceneInteractable(scene, finalObject);
-
-    if (materialPreset) {
-      const factory = MATERIAL_PRESETS[materialPreset];
-      const presetMaterial = typeof factory === "function" ? factory(THREE) : null;
-
-      if (presetMaterial) {
-        finalObject.traverse?.((mesh) => {
-          if (!mesh?.isMesh) return;
-
-          if (Array.isArray(mesh.material)) {
-            const nextMaterials = mesh.material.map((material) => {
-              const clonedMaterial = presetMaterial.clone();
-              copyMaterialFlags(material, clonedMaterial);
-              material?.dispose?.();
-              return clonedMaterial;
-            });
-            mesh.material = nextMaterials;
-          } else if (mesh.material) {
-            const currentMaterial = mesh.material;
-            const clonedMaterial = presetMaterial.clone();
-            copyMaterialFlags(currentMaterial, clonedMaterial);
-            currentMaterial.dispose?.();
-            mesh.material = clonedMaterial;
-          } else {
-            mesh.material = presetMaterial.clone();
-          }
-        });
-        presetMaterial.dispose?.();
-      }
-    }
-
-    return finalObject;
+    return null;
   } catch (error) {
+    const fallbackObject = attemptProceduralFallback("glb-exception");
+    if (fallbackObject) {
+      return fallbackObject;
+    }
     removePlaceholder(entry);
     trackedLandmarks.delete(entry);
     throw error;

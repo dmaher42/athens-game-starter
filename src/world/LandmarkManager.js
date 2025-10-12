@@ -500,6 +500,10 @@ export class LandmarkManager {
 
   async attemptLoad(urls, spec, transformInfo, label) {
     if (!urls.length) return null;
+    if (spec?.type === "procedural") {
+      return this.placeProcedural(spec);
+    }
+
     const name = spec.name || spec.id || "Landmark";
     for (const url of urls) {
       const loadOptions = cloneTransformOptions(transformInfo.options);
@@ -634,3 +638,43 @@ function sanitizeRelativePath(value) {
     .replace(/^\.\//, "")
     .replace(/^\/+/, "");
 }
+const PROCEDURAL_BUILDERS = {
+  temple: (params = {}) => buildTemple(params),
+};
+
+function applyTransformToObject(object, options = {}) {
+  if (!object) return;
+  const { position, rotation, scale } = options;
+  if (position) {
+    object.position.set(
+      position.x ?? position[0] ?? 0,
+      position.y ?? position[1] ?? 0,
+      position.z ?? position[2] ?? 0
+    );
+  }
+  if (rotation) {
+    object.rotation.set(
+      rotation.x ?? rotation[0] ?? 0,
+      rotation.y ?? rotation[1] ?? 0,
+      rotation.z ?? rotation[2] ?? 0
+    );
+  }
+  if (scale !== undefined) {
+    if (typeof scale === "number") {
+      object.scale.setScalar(scale);
+    } else if (scale?.isVector3) {
+      object.scale.copy(scale);
+    } else if (Array.isArray(scale)) {
+      const sx = scale[0] ?? 1;
+      const sy = scale[1] ?? sx;
+      const sz = scale[2] ?? sx;
+      object.scale.set(sx, sy, sz);
+    } else if (typeof scale === "object") {
+      const sx = scale.x ?? 1;
+      const sy = scale.y ?? sx;
+      const sz = scale.z ?? sx;
+      object.scale.set(sx, sy, sz);
+    }
+  }
+}
+

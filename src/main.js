@@ -565,6 +565,26 @@ async function mainApp() {
 
   let devHud = null;
   let pendingOceanStatus = null;
+  const proceduralQueryEnabled = (() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("proc")) {
+        return false;
+      }
+      return parseToggleValue(params.get("proc"), false);
+    } catch (error) {
+      console.warn("[proc] Failed to parse procedural flag", error);
+      return false;
+    }
+  })();
+  if (proceduralQueryEnabled) {
+    console.info("[proc] Forcing procedural landmarks.");
+  }
+  let proceduralLandmarkCount = 0;
+  let proceduralStatusMessage = proceduralQueryEnabled ? "Procedural: on" : "Procedural: off";
   const updateOceanHudStatus = () => {
     if (!pendingOceanStatus || !devHud) {
       return;
@@ -1920,6 +1940,9 @@ async function mainApp() {
   updateOceanHudStatus();
   if (audioManifestMissing) {
     devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
+  }
+  if (devHud?.setStatusLine) {
+    devHud.setStatusLine("proc", proceduralStatusMessage);
   }
 
   // Simple controls: clicking the canvas or pressing E will run the onUse
