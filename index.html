@@ -8,26 +8,49 @@
   </head>
   <body>
     <div id="app"></div>
-    <script>
-      // Provide bare module fallbacks when running directly from the filesystem
-      if (window.location.protocol === "file:") {
-        const importMap = {
-          imports: {
-            three: "./node_modules/three/build/three.module.js",
-            "three/examples/jsm/": "./node_modules/three/examples/jsm/",
-            "three-mesh-bvh": "./node_modules/three-mesh-bvh/build/index.module.js",
-          },
-        };
+    <script type="module">
+      const FALLBACK_IMPORT_MAP = {
+        imports: {
+          three: "./node_modules/three/build/three.module.js",
+          "three/examples/jsm/": "./node_modules/three/examples/jsm/",
+          "three-mesh-bvh": "./node_modules/three-mesh-bvh/build/index.module.js",
+        },
+      };
 
+      async function tryImportBareModule(specifier) {
+        try {
+          await import(specifier);
+          return true;
+        } catch (error) {
+          console.warn(
+            `[importmap-fallback] Failed to import "${specifier}" using bare specifier.`,
+            error,
+          );
+          return false;
+        }
+      }
+
+      function installFallbackImportMap() {
         const script = document.createElement("script");
         script.type = "importmap";
-        script.textContent = JSON.stringify(importMap, null, 2);
-        document.currentScript?.parentNode?.insertBefore(
-          script,
-          document.currentScript.nextSibling,
+        script.textContent = JSON.stringify(FALLBACK_IMPORT_MAP, null, 2);
+        document.head.appendChild(script);
+      }
+
+      let bareImportReady = await tryImportBareModule("three");
+
+      if (!bareImportReady) {
+        installFallbackImportMap();
+        bareImportReady = await tryImportBareModule("three");
+      }
+
+      if (!bareImportReady) {
+        throw new Error(
+          "Failed to resolve the \"three\" module even after installing a fallback import map.",
         );
       }
+
+      await import("./src/main.js");
     </script>
-    <script type="module" src="./src/main.js"></script>
   </body>
 </html>
