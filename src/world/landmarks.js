@@ -485,38 +485,28 @@ export async function loadLandmark(scene, url, options = {}) {
   const entry = { scene, url, placeholder, object: null };
   trackedLandmarks.add(entry);
 
-  const attemptProceduralFallback = (reason = "unknown") => {
-    const fallbackConfig = options?.proceduralFallback || {};
-    const fallbackKind = fallbackConfig.kind || "temple";
-    const fallbackResult = spawnProceduralFallback({
-      kind: fallbackKind,
-      params: fallbackConfig.params || {},
-      transform: {
-        position: options?.position,
-        rotation: options?.rotation,
-        scale: options?.scale,
-      },
-    });
+  const cleanupEntry = () => {
+    removePlaceholder(entry);
+    trackedLandmarks.delete(entry);
+  };
 
-    if (fallbackResult?.object) {
-      fallbackResult.object.name ||= `${fallbackKind}_ProceduralFallback`;
-      fallbackResult.object.userData = fallbackResult.object.userData || {};
-      fallbackResult.object.userData.proceduralFallback = true;
-      fallbackResult.object.userData.proceduralKind = fallbackKind;
-      fallbackResult.object.userData.fallbackReason = reason;
-
-      const finalized = finalizeLandmarkObject(
-        entry,
-        fallbackResult.object,
-        scene,
-        fallbackResult.transform,
-        options?.materialPreset
-      );
-      if (finalized) {
-        return finalized;
-      }
+  const tryProceduralFallback = async (reason, extra = {}) => {
+    if (typeof options?.proceduralFallback !== "function") {
+      return null;
     }
-
+    try {
+      const result = await options.proceduralFallback({
+        reason,
+        url,
+        ...extra,
+      });
+      if (result) {
+        cleanupEntry();
+        return result;
+      }
+    } catch (fallbackError) {
+      console.warn("[landmarks] Procedural fallback failed", fallbackError);
+    }
     return null;
   };
 
@@ -561,13 +551,12 @@ export async function loadLandmark(scene, url, options = {}) {
     }
 
     if (!availableUrl) {
-      warnMissingLandmark(cacheKey || sanitizedUrl, `[landmarks] Missing GLB: ${sanitizedUrl}`);
-      const fallbackObject = attemptProceduralFallback("missing-glb");
+      const fallbackObject = await tryProceduralFallback("missing-url", { requestedUrl: sanitizedUrl });
       if (fallbackObject) {
         return fallbackObject;
       }
-      removePlaceholder(entry);
-      trackedLandmarks.delete(entry);
+      warnMissingLandmark(cacheKey || sanitizedUrl, `[landmarks] Missing GLB: ${sanitizedUrl}`);
+      cleanupEntry();
       return null;
     }
 
@@ -585,12 +574,11 @@ export async function loadLandmark(scene, url, options = {}) {
     });
 
     if (!loaded || !loaded.root) {
-      const fallbackObject = attemptProceduralFallback("glb-load-failed");
+      const fallbackObject = await tryProceduralFallback("load-failed", { requestedUrl: availableUrl });
       if (fallbackObject) {
         return fallbackObject;
       }
-      removePlaceholder(entry);
-      trackedLandmarks.delete(entry);
+      cleanupEntry();
       return null;
     }
 

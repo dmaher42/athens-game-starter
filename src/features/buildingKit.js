@@ -1,101 +1,112 @@
 import * as THREE from "three";
 import { createProceduralMarbleTextures } from "../main.js";
 
-function createSolidTexture(color, colorSpace = THREE.SRGBColorSpace) {
-  const target = new THREE.Color(color);
-  const data = new Uint8Array([
-    Math.round(target.r * 255),
-    Math.round(target.g * 255),
-    Math.round(target.b * 255),
-    255,
-  ]);
+function createSolidDataTexture(color, { colorSpace = THREE.SRGBColorSpace } = {}) {
+  const data = new Uint8Array(4);
+  data[0] = (color >> 16) & 0xff;
+  data[1] = (color >> 8) & 0xff;
+  data[2] = color & 0xff;
+  data[3] = 0xff;
   const texture = new THREE.DataTexture(data, 1, 1, THREE.RGBAFormat);
   texture.colorSpace = colorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   texture.needsUpdate = true;
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
   return texture;
 }
 
-function cloneTexture(texture) {
-  if (!texture) return null;
-  const cloned = texture.clone();
-  if (cloned.image && texture.image && texture.image.data) {
-    const source = texture.image.data;
-    cloned.image = { ...texture.image, data: source.slice ? source.slice(0) : source };
-  }
-  cloned.needsUpdate = true;
-  return cloned;
-}
-
-function ensureUv2(geometry) {
-  if (!geometry || geometry.getAttribute("uv2")) {
-    return geometry;
-  }
+function ensureUv2Attribute(geometry) {
+  if (!geometry) return geometry;
   const uv = geometry.getAttribute("uv");
   if (!uv) return geometry;
-  const uv2 = uv.clone();
-  geometry.setAttribute("uv2", uv2);
+  if (!geometry.getAttribute("uv2")) {
+    const uv2 = uv.clone();
+    geometry.setAttribute("uv2", uv2);
+  }
   return geometry;
 }
 
-export function makeMarbleMaterialSet() {
-  let textures = null;
-  try {
-    textures = createProceduralMarbleTextures?.();
-  } catch (error) {
-    console.warn("[buildingKit] Failed to create procedural marble textures", error);
+function cloneTexture(texture, options = {}) {
+  if (!texture) return null;
+  if (typeof texture.clone === "function") {
+    const cloned = texture.clone();
+    cloned.needsUpdate = texture.needsUpdate;
+    if (options.repeat) {
+      cloned.repeat.copy(texture.repeat ?? new THREE.Vector2(1, 1));
+    }
+    cloned.wrapS = texture.wrapS;
+    cloned.wrapT = texture.wrapT;
+    cloned.offset.copy?.(texture.offset ?? new THREE.Vector2());
+    cloned.center?.copy?.(texture.center ?? new THREE.Vector2());
+    cloned.rotation = texture.rotation;
+    cloned.colorSpace = texture.colorSpace;
+    return cloned;
   }
+  return texture;
+}
 
-  if (!textures || !textures.map) {
-    const fallback = {
-      map: createSolidTexture(0xefecea, THREE.SRGBColorSpace),
-      normalMap: createSolidTexture(0x8080ff, THREE.LinearSRGBColorSpace),
-      roughnessMap: createSolidTexture(0xb3b3b3, THREE.LinearSRGBColorSpace),
-      aoMap: createSolidTexture(0xe0e0e0, THREE.LinearSRGBColorSpace),
-    };
+export function makeMarbleMaterialSet() {
+  const generated = createProceduralMarbleTextures?.();
+
+  const fallback = {
+    map: createSolidDataTexture(0xefecea, { colorSpace: THREE.SRGBColorSpace }),
+    normalMap: createSolidDataTexture(0x8080ff, { colorSpace: THREE.LinearSRGBColorSpace }),
+    roughnessMap: createSolidDataTexture(0xb3b3b3, { colorSpace: THREE.LinearSRGBColorSpace }),
+    aoMap: createSolidDataTexture(0xe0e0e0, { colorSpace: THREE.LinearSRGBColorSpace }),
+  };
+
+  if (!generated || typeof generated !== "object") {
     return fallback;
   }
 
   return {
-    map: cloneTexture(textures.map) || createSolidTexture(0xefecea, THREE.SRGBColorSpace),
-    normalMap:
-      cloneTexture(textures.normalMap) || createSolidTexture(0x8080ff, THREE.LinearSRGBColorSpace),
-    roughnessMap:
-      cloneTexture(textures.roughnessMap) || createSolidTexture(0xb3b3b3, THREE.LinearSRGBColorSpace),
-    aoMap: cloneTexture(textures.aoMap) || createSolidTexture(0xe0e0e0, THREE.LinearSRGBColorSpace),
+    map: generated.map || fallback.map,
+    normalMap: generated.normalMap || fallback.normalMap,
+    roughnessMap: generated.roughnessMap || fallback.roughnessMap,
+    aoMap: generated.aoMap || fallback.aoMap,
   };
 }
 
-export function makePlasterMaterial(options = {}) {
-  const material = new THREE.MeshStandardMaterial({
-    color: 0xf5f0e6,
-    roughness: 0.78,
+export function makePlasterMaterial({ color = 0xd8d1c4, roughness = 0.65 } = {}) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness,
     metalness: 0.04,
-    ...options,
   });
-  return material;
 }
 
-export function makeTerracottaMaterial(options = {}) {
-  const material = new THREE.MeshStandardMaterial({
-    color: 0xb45f3c,
-    roughness: 0.65,
+export function makeTerracottaMaterial({ color = 0xb96540 } = {}) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.6,
     metalness: 0.08,
-    ...options,
   });
-  return material;
 }
 
 export function makeColumn({
   height = 7,
-  radiusTop = 0.62,
-  radiusBottom = 0.68,
+  radiusTop = 0.7,
+  radiusBottom = 0.75,
   radialSegments = 32,
   heightSegments = 1,
   material = null,
 } = {}) {
-  const columnGeometry = new THREE.CylinderGeometry(
+  const marbleSet = makeMarbleMaterialSet();
+  const columnMaterial =
+    material ||
+    new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      roughness: 0.42,
+      metalness: 0.08,
+      map: cloneTexture(marbleSet.map, { repeat: true }),
+      normalMap: cloneTexture(marbleSet.normalMap, { repeat: true }),
+      roughnessMap: cloneTexture(marbleSet.roughnessMap, { repeat: true }),
+      aoMap: cloneTexture(marbleSet.aoMap, { repeat: true }),
+      clearcoat: 0.28,
+      clearcoatRoughness: 0.5,
+      envMapIntensity: 0.9,
+    });
+
+  const geometry = new THREE.CylinderGeometry(
     radiusTop,
     radiusBottom,
     height,
@@ -103,177 +114,271 @@ export function makeColumn({
     heightSegments,
     false
   );
-  ensureUv2(columnGeometry);
-  const columnMaterial =
-    material ||
-    new THREE.MeshStandardMaterial({
-      color: 0xf0ece4,
-      roughness: 0.55,
-      metalness: 0.08,
-    });
-  const mesh = new THREE.Mesh(columnGeometry, columnMaterial);
+  geometry.translate(0, height / 2, 0);
+  ensureUv2Attribute(geometry);
+
+  const mesh = new THREE.Mesh(geometry, columnMaterial);
   mesh.name = "ProceduralColumn";
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData = mesh.userData || {};
+  mesh.userData.noCollision = false;
   return mesh;
 }
 
 export function makeStylobateSteps({
-  width = 18,
-  depth = 32,
-  steps = 3,
+  width = 20,
+  depth = 38,
+  stepCount = 3,
   stepHeight = 0.35,
   stepInset = 0.6,
   material = null,
 } = {}) {
   const group = new THREE.Group();
-  group.name = "Stylobate";
-  const baseMaterial =
+  group.name = "StylobateSteps";
+
+  const marbleSet = makeMarbleMaterialSet();
+  const stepMaterial =
     material ||
-    new THREE.MeshStandardMaterial({
-      color: 0xf3eee3,
-      roughness: 0.6,
-      metalness: 0.05,
+    new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      roughness: 0.5,
+      metalness: 0.04,
+      map: cloneTexture(marbleSet.map, { repeat: true }),
+      normalMap: cloneTexture(marbleSet.normalMap, { repeat: true }),
+      roughnessMap: cloneTexture(marbleSet.roughnessMap, { repeat: true }),
+      aoMap: cloneTexture(marbleSet.aoMap, { repeat: true }),
+      clearcoat: 0.18,
+      clearcoatRoughness: 0.4,
+      envMapIntensity: 0.85,
     });
 
-  for (let i = 0; i < steps; i += 1) {
-    const level = steps - 1 - i;
-    const stepWidth = width + stepInset * 2 * level;
-    const stepDepth = depth + stepInset * 2 * level;
+  const clampedSteps = Math.max(1, Math.floor(stepCount));
+  const safeInset = Math.max(0, stepInset);
+
+  for (let i = 0; i < clampedSteps; i++) {
+    const inset = (clampedSteps - 1 - i) * safeInset;
+    const stepWidth = Math.max(0.5, width + inset * 2);
+    const stepDepth = Math.max(0.5, depth + inset * 2);
     const geometry = new THREE.BoxGeometry(stepWidth, stepHeight, stepDepth);
-    ensureUv2(geometry);
-    const mesh = new THREE.Mesh(geometry, baseMaterial);
-    mesh.position.y = stepHeight * 0.5 + i * stepHeight;
-    mesh.name = `StylobateStep${i}`;
+    ensureUv2Attribute(geometry);
+    const mesh = new THREE.Mesh(geometry, stepMaterial);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.position.y = stepHeight * (i + 0.5);
+    mesh.userData = mesh.userData || {};
+    mesh.userData.noCollision = false;
+    mesh.name = `StylobateStep_${i}`;
     group.add(mesh);
   }
 
-  group.userData.isStylobate = true;
   return group;
 }
 
 export function makePediment({
-  width = 14,
+  width = 20,
   depth = 1.6,
-  height = 3.2,
+  height = 4.2,
   material = null,
 } = {}) {
-  const shape = new THREE.Shape();
-  shape.moveTo(-width / 2, 0);
-  shape.lineTo(width / 2, 0);
-  shape.lineTo(0, height);
-  shape.lineTo(-width / 2, 0);
+  const group = new THREE.Group();
+  group.name = "TemplePediment";
 
-  const geometry = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
-  geometry.translate(0, 0, -depth / 2);
-  ensureUv2(geometry);
-
+  const marbleSet = makeMarbleMaterialSet();
   const pedimentMaterial =
     material ||
-    new THREE.MeshStandardMaterial({
-      color: 0xf4efe5,
-      roughness: 0.55,
-      metalness: 0.04,
+    new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      roughness: 0.48,
+      metalness: 0.05,
+      map: cloneTexture(marbleSet.map, { repeat: true }),
+      normalMap: cloneTexture(marbleSet.normalMap, { repeat: true }),
+      roughnessMap: cloneTexture(marbleSet.roughnessMap, { repeat: true }),
+      aoMap: cloneTexture(marbleSet.aoMap, { repeat: true }),
+      clearcoat: 0.2,
+      clearcoatRoughness: 0.45,
+      envMapIntensity: 0.85,
     });
 
-  const mesh = new THREE.Mesh(geometry, pedimentMaterial);
-  mesh.name = "Pediment";
+  const shape = new THREE.Shape();
+  const halfWidth = width / 2;
+  shape.moveTo(-halfWidth, 0);
+  shape.lineTo(0, height);
+  shape.lineTo(halfWidth, 0);
+  shape.closePath();
+
+  const extrude = new THREE.ExtrudeGeometry(shape, {
+    depth,
+    bevelEnabled: false,
+    steps: 1,
+  });
+  extrude.translate(0, 0, -depth / 2);
+  ensureUv2Attribute(extrude);
+
+  const mesh = new THREE.Mesh(extrude, pedimentMaterial);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData = mesh.userData || {};
+  mesh.userData.noCollision = false;
+  group.add(mesh);
+
+  return group;
+}
+
+function createRoofSide({ width, depth, height, material, flip = false }) {
+  const halfDepth = depth / 2;
+  const halfWidth = width / 2;
+  const baseX = flip ? halfWidth : -halfWidth;
+  const ridgeX = 0;
+
+  const positions = new Float32Array([
+    baseX,
+    0,
+    -halfDepth,
+    baseX,
+    0,
+    halfDepth,
+    ridgeX,
+    height,
+    halfDepth,
+    ridgeX,
+    height,
+    -halfDepth,
+  ]);
+
+  const uvs = new Float32Array([
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    0,
+  ]);
+
+  const indices = flip ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3];
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  ensureUv2Attribute(geometry);
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = false;
+  mesh.userData = mesh.userData || {};
+  mesh.userData.noCollision = false;
   return mesh;
 }
 
 export function makeRoof({
-  width = 18,
-  depth = 32,
+  width = 20,
+  depth = 38,
   height = 4,
+  overhang = 1.4,
   material = null,
 } = {}) {
-  const shape = new THREE.Shape();
-  shape.moveTo(-depth / 2, 0);
-  shape.lineTo(depth / 2, 0);
-  shape.lineTo(0, height);
-  shape.lineTo(-depth / 2, 0);
-
-  const geometry = new THREE.ExtrudeGeometry(shape, { depth: width, bevelEnabled: false });
-  geometry.translate(0, 0, -width / 2);
-  geometry.rotateY(Math.PI / 2);
-  ensureUv2(geometry);
+  const group = new THREE.Group();
+  group.name = "TempleRoof";
 
   const roofMaterial =
     material ||
     new THREE.MeshStandardMaterial({
-      color: 0xb35a36,
-      roughness: 0.55,
-      metalness: 0.12,
+      color: 0xc86f42,
+      roughness: 0.62,
+      metalness: 0.05,
     });
 
-  const mesh = new THREE.Mesh(geometry, roofMaterial);
-  mesh.name = "TempleRoof";
-  return mesh;
+  const effectiveWidth = width + overhang * 2;
+  const effectiveDepth = depth + overhang * 2;
+
+  const left = createRoofSide({
+    width: effectiveWidth,
+    depth: effectiveDepth,
+    height,
+    material: roofMaterial,
+    flip: false,
+  });
+  const right = createRoofSide({
+    width: effectiveWidth,
+    depth: effectiveDepth,
+    height,
+    material: roofMaterial,
+    flip: true,
+  });
+
+  group.add(left);
+  group.add(right);
+
+  return group;
 }
 
 export function makeColonnadeInstanced({
   countX = 6,
-  countZ = 13,
+  countZ = 12,
   spacingX = 4,
-  spacingZ = 4,
-  columnGeom,
-  columnMat,
-  name = "Colonnade",
+  spacingZ = 4.5,
+  columnGeom = null,
+  columnMat = null,
 } = {}) {
-  if (!columnGeom || !columnMat) {
-    throw new Error("makeColonnadeInstanced requires geometry and material");
-  }
+  const needsSampleColumn = !(columnGeom instanceof THREE.BufferGeometry && columnMat);
+  const baseColumn = needsSampleColumn ? makeColumn() : null;
+  const geometry = columnGeom instanceof THREE.BufferGeometry ? columnGeom : baseColumn.geometry;
+  const material = columnMat || baseColumn.material;
 
-  ensureUv2(columnGeom);
+  ensureUv2Attribute(geometry);
 
   const perimeterCount =
-    countX > 0 && countZ > 0
-      ? countX * 2 + Math.max(0, countZ - 2) * 2
-      : 0;
-  const mesh = new THREE.InstancedMesh(columnGeom, columnMat, Math.max(perimeterCount, 1));
-  mesh.name = name;
-  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    Math.max(0, countX) * 2 + Math.max(0, countZ - 2) * 2;
+  const instanceCount = Math.max(1, perimeterCount);
+  const instanced = new THREE.InstancedMesh(geometry, material, instanceCount);
+  instanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  instanced.castShadow = true;
+  instanced.receiveShadow = true;
+  instanced.name = "TempleColonnade";
+  instanced.userData = instanced.userData || {};
+  instanced.userData.noCollision = false;
 
-  const widthSpan = countX > 1 ? spacingX * (countX - 1) : 0;
-  const depthSpan = countZ > 1 ? spacingZ * (countZ - 1) : 0;
   const dummy = new THREE.Object3D();
+  const halfSpanX = spacingX * Math.max(0, countX - 1) * 0.5;
+  const halfSpanZ = spacingZ * Math.max(0, countZ - 1) * 0.5;
   let index = 0;
 
   const placeColumn = (x, z) => {
     dummy.position.set(x, 0, z);
     dummy.rotation.set(0, 0, 0);
-    dummy.scale.set(1, 1, 1);
     dummy.updateMatrix();
-    mesh.setMatrixAt(index, dummy.matrix);
-    index += 1;
+    if (index < instanced.count) {
+      instanced.setMatrixAt(index, dummy.matrix);
+      index += 1;
+    }
   };
 
-  for (let i = 0; i < countX; i += 1) {
-    const x = -widthSpan / 2 + i * spacingX;
-    placeColumn(x, -depthSpan / 2);
-    if (perimeterCount > index) {
-      placeColumn(x, depthSpan / 2);
+  for (let ix = 0; ix < countX; ix++) {
+    const x = -halfSpanX + ix * spacingX;
+    placeColumn(x, -halfSpanZ);
+    if (countZ > 1) {
+      placeColumn(x, halfSpanZ);
     }
   }
 
-  for (let j = 1; j < countZ - 1; j += 1) {
-    const z = -depthSpan / 2 + j * spacingZ;
-    placeColumn(-widthSpan / 2, z);
-    if (perimeterCount > index) {
-      placeColumn(widthSpan / 2, z);
+  if (countZ > 2) {
+    for (let iz = 1; iz < countZ - 1; iz++) {
+      const z = -halfSpanZ + iz * spacingZ;
+      placeColumn(-halfSpanX, z);
+      if (countX > 1) {
+        placeColumn(halfSpanX, z);
+      }
     }
   }
 
-  mesh.count = index;
-  mesh.instanceMatrix.needsUpdate = true;
-  return mesh;
+  instanced.count = index;
+  instanced.instanceMatrix.needsUpdate = true;
+
+  return instanced;
 }
 
-export default {
-  makeMarbleMaterialSet,
-  makePlasterMaterial,
-  makeTerracottaMaterial,
-  makeColumn,
-  makeStylobateSteps,
-  makePediment,
-  makeRoof,
-  makeColonnadeInstanced,
-};
+export { ensureUv2Attribute };

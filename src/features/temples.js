@@ -1,105 +1,107 @@
 import * as THREE from "three";
+import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import {
   makeMarbleMaterialSet,
+  makePlasterMaterial,
+  makeTerracottaMaterial,
   makeColumn,
   makeStylobateSteps,
   makePediment,
   makeRoof,
   makeColonnadeInstanced,
-  makeTerracottaMaterial,
-  makePlasterMaterial,
+  ensureUv2Attribute,
 } from "./buildingKit.js";
-import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 
-function cloneTextureSet(textures = {}) {
-  const cloneSingle = (texture) => {
-    if (!texture) return null;
+function cloneTexture(texture) {
+  if (!texture) return null;
+  if (typeof texture.clone === "function") {
     const cloned = texture.clone();
-    cloned.needsUpdate = true;
+    cloned.needsUpdate = texture.needsUpdate;
+    cloned.repeat.copy?.(texture.repeat ?? new THREE.Vector2(1, 1));
+    cloned.offset.copy?.(texture.offset ?? new THREE.Vector2());
+    cloned.center?.copy?.(texture.center ?? new THREE.Vector2());
+    cloned.rotation = texture.rotation;
+    cloned.wrapS = texture.wrapS;
+    cloned.wrapT = texture.wrapT;
+    cloned.colorSpace = texture.colorSpace;
     return cloned;
-  };
-  return {
-    map: cloneSingle(textures.map),
-    normalMap: cloneSingle(textures.normalMap),
-    roughnessMap: cloneSingle(textures.roughnessMap),
-    aoMap: cloneSingle(textures.aoMap),
-  };
-}
-
-function createMarbleMaterial(baseSet) {
-  return new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    metalness: 0.08,
-    roughness: 0.52,
-    map: baseSet.map || null,
-    normalMap: baseSet.normalMap || null,
-    roughnessMap: baseSet.roughnessMap || null,
-    aoMap: baseSet.aoMap || null,
-  });
-}
-
-function applyShadowAndCollision(target, { cast = true, receive = true } = {}) {
-  if (!target) return;
-  target.traverse?.((child) => {
-    if (!child?.isMesh) return;
-    child.castShadow = cast;
-    child.receiveShadow = receive;
-    child.userData = child.userData || {};
-    child.userData.noCollision = false;
-  });
-}
-
-export function alignToGround(group, terrain, x, z, offset = 0) {
-  if (!group || !terrain || typeof x !== "number" || typeof z !== "number") {
-    return null;
   }
-  const sampler = terrain?.userData?.getHeightAt;
-  if (typeof sampler !== "function") return null;
-  const height = sampler(x, z);
-  if (!Number.isFinite(height)) return null;
-  const targetY = height + offset;
-  group.position.y = targetY;
-  return targetY;
+  return texture;
 }
 
-export function buildTemple(opts = {}) {
+function createMarbleMaterial(overrides = {}) {
+  const marbleSet = makeMarbleMaterialSet();
+  const material = new THREE.MeshPhysicalMaterial({
+    color: 0xffffff,
+    roughness: 0.45,
+    metalness: 0.08,
+    clearcoat: 0.24,
+    clearcoatRoughness: 0.48,
+    envMapIntensity: 0.9,
+    ...overrides,
+  });
+
+  if (!overrides.map) material.map = cloneTexture(marbleSet.map);
+  if (!overrides.normalMap) material.normalMap = cloneTexture(marbleSet.normalMap);
+  if (!overrides.roughnessMap) material.roughnessMap = cloneTexture(marbleSet.roughnessMap);
+  if (!overrides.aoMap) material.aoMap = cloneTexture(marbleSet.aoMap);
+
+  return material;
+}
+
+function setCollisionTag(object, shouldCollide = true) {
+  object.traverse?.((child) => {
+    if (!child?.isMesh) return;
+    child.userData = child.userData || {};
+    child.userData.noCollision = !shouldCollide;
+  });
+}
+
+export function buildTemple(options = {}) {
   const {
-    width = 20,
-    depth = 36,
+    width = 22,
+    depth = 42,
     colX = 6,
     colZ = 13,
     scale = 1,
     order = "doric",
     materialPreset = "marble",
-    stylobateHeight = 1.05,
-  } = opts;
+    columnHeight: columnHeightOverride,
+    entablatureHeight: entablatureHeightOverride,
+    pedimentHeight: pedimentHeightOverride,
+    roofHeight: roofHeightOverride,
+  } = options;
 
   const group = new THREE.Group();
   group.name = `ProceduralTemple_${order}`;
-  group.scale.setScalar(scale);
+  group.userData = {
+    ...(group.userData || {}),
+    proceduralType: "temple",
+    materialPreset,
+  };
+  group.userData.noCollision = false;
 
-  const marbleTextures = cloneTextureSet(makeMarbleMaterialSet());
-  const columnMaterial = createMarbleMaterial(marbleTextures);
-  const stylobateMaterial = columnMaterial.clone();
-  const entablatureMaterial = columnMaterial.clone();
-  const roofMaterial = makeTerracottaMaterial({ color: 0xb25b3c });
-  const cellaMaterial = makePlasterMaterial({ color: 0xf3f0e9, roughness: 0.72 });
-
+  const stylobateStepHeight = 0.38;
+  const stylobateSteps = Math.max(3, Math.floor(options.stepCount ?? 3));
+  const stylobateWidth = width + Math.max(2, (colX - 1) * 0.2);
+  const stylobateDepth = depth + Math.max(2, (colZ - 1) * 0.2);
   const stylobate = makeStylobateSteps({
-    width,
-    depth,
-    steps: 3,
-    stepHeight: stylobateHeight / 3,
-    stepInset: 0.6,
-    material: stylobateMaterial,
+    width: stylobateWidth,
+    depth: stylobateDepth,
+    stepCount: stylobateSteps,
+    stepHeight: stylobateStepHeight,
   });
   group.add(stylobate);
 
-  const columnHeight = opts.columnHeight ?? 8.5;
-  const columnMesh = makeColumn({ height: columnHeight, material: columnMaterial });
-  const columnGeometry = columnMesh.geometry;
-  const columnMat = columnMesh.material;
+  const stylobateHeight = stylobateSteps * stylobateStepHeight;
+  const columnHeight = columnHeightOverride ?? Math.max(6, width * 0.7);
+  const entablatureHeight = entablatureHeightOverride ?? columnHeight * 0.16;
+  const pedimentHeight = pedimentHeightOverride ?? columnHeight * 0.22;
+  const roofHeight = roofHeightOverride ?? columnHeight * 0.3;
 
+  const columnSample = makeColumn({
+    height: columnHeight,
+  });
   const spacingX = colX > 1 ? width / (colX - 1) : width;
   const spacingZ = colZ > 1 ? depth / (colZ - 1) : depth;
   const colonnade = makeColonnadeInstanced({
@@ -107,67 +109,108 @@ export function buildTemple(opts = {}) {
     countZ: colZ,
     spacingX,
     spacingZ,
-    columnGeom: columnGeometry,
-    columnMat,
-    name: "TempleColonnade",
+    columnGeom: columnSample.geometry,
+    columnMat: columnSample.material,
   });
-  const colonnadeYOffset = stylobateHeight + columnHeight / 2;
-  const dummy = new THREE.Object3D();
-  for (let i = 0; i < colonnade.count; i += 1) {
-    colonnade.getMatrixAt(i, dummy.matrix);
-    dummy.position.setFromMatrixPosition(dummy.matrix);
-    dummy.position.y = colonnadeYOffset;
-    dummy.updateMatrix();
-    colonnade.setMatrixAt(i, dummy.matrix);
-  }
-  colonnade.instanceMatrix.needsUpdate = true;
-  colonnade.userData.noCollision = false;
-  colonnade.castShadow = true;
-  colonnade.receiveShadow = true;
+  colonnade.position.y = stylobateHeight;
   group.add(colonnade);
 
-  const entablatureHeight = opts.entablatureHeight ?? 1.1;
-  const entablature = new THREE.Mesh(
-    new THREE.BoxGeometry(width + 0.6, entablatureHeight, depth + 0.6),
-    entablatureMaterial
+  const entablatureWidth = width + spacingX * 0.6;
+  const entablatureDepth = depth + spacingZ * 0.6;
+  const entablatureGeometry = new THREE.BoxGeometry(
+    entablatureWidth,
+    entablatureHeight,
+    entablatureDepth
   );
+  ensureUv2Attribute(entablatureGeometry);
+  const entablature = new THREE.Mesh(entablatureGeometry, createMarbleMaterial());
+  entablature.castShadow = true;
+  entablature.receiveShadow = true;
   entablature.position.y = stylobateHeight + columnHeight + entablatureHeight / 2;
-  entablature.name = "Entablature";
+  entablature.userData = entablature.userData || {};
+  entablature.userData.noCollision = false;
   group.add(entablature);
 
-  const pedimentHeight = opts.pedimentHeight ?? 3.2;
-  const pedimentDepth = opts.pedimentDepth ?? 1.2;
-  const frontPediment = makePediment({ width: width + 0.8, depth: pedimentDepth, height: pedimentHeight, material: entablatureMaterial });
-  frontPediment.position.set(0, entablature.position.y + entablatureHeight / 2, -depth / 2 - pedimentDepth / 2 + 0.3);
-  const rearPediment = frontPediment.clone();
-  rearPediment.position.z = depth / 2 + pedimentDepth / 2 - 0.3;
-  rearPediment.rotation.y = Math.PI;
+  const pedimentMaterial = createMarbleMaterial({
+    roughness: 0.42,
+    clearcoat: 0.25,
+  });
+  const pedimentDepth = Math.max(1.2, spacingZ * 0.4);
+  const frontPediment = makePediment({
+    width: entablatureWidth,
+    depth: pedimentDepth,
+    height: pedimentHeight,
+    material: pedimentMaterial.clone(),
+  });
+  frontPediment.position.y = stylobateHeight + columnHeight + entablatureHeight;
+  frontPediment.position.z = depth / 2 + pedimentDepth * 0.5;
   group.add(frontPediment);
+
+  const rearPediment = makePediment({
+    width: entablatureWidth,
+    depth: pedimentDepth,
+    height: pedimentHeight,
+    material: pedimentMaterial.clone(),
+  });
+  rearPediment.rotation.y = Math.PI;
+  rearPediment.position.y = stylobateHeight + columnHeight + entablatureHeight;
+  rearPediment.position.z = -depth / 2 - pedimentDepth * 0.5;
   group.add(rearPediment);
 
-  const roof = makeRoof({ width: width + 1.2, depth: depth + 1.8, height: opts.roofHeight ?? 4.4, material: roofMaterial });
-  roof.position.y = entablature.position.y + entablatureHeight / 2 + pedimentHeight * 0.85;
+  const roofMaterial = makeTerracottaMaterial({
+    color: 0xcc7750,
+  });
+  const roof = makeRoof({
+    width: entablatureWidth,
+    depth: entablatureDepth,
+    height: roofHeight,
+    overhang: spacingX * 0.35,
+    material: roofMaterial,
+  });
+  roof.position.y = stylobateHeight + columnHeight + entablatureHeight;
   group.add(roof);
 
-  const cellaWidth = width * 0.6;
-  const cellaDepth = depth * 0.55;
-  const cellaHeight = columnHeight * 0.75;
-  const cella = new THREE.Mesh(
-    new THREE.BoxGeometry(cellaWidth, cellaHeight, cellaDepth),
-    cellaMaterial
-  );
+  const cellaInsetX = Math.max(spacingX * 0.8, 3);
+  const cellaInsetZ = Math.max(spacingZ * 0.8, 3);
+  const cellaWidth = Math.max(4, width - cellaInsetX);
+  const cellaDepth = Math.max(6, depth - cellaInsetZ);
+  const cellaHeight = columnHeight * 0.72;
+  const cellaGeometry = new THREE.BoxGeometry(cellaWidth, cellaHeight, cellaDepth);
+  ensureUv2Attribute(cellaGeometry);
+  const cellaMaterial = makePlasterMaterial();
+  const cella = new THREE.Mesh(cellaGeometry, cellaMaterial);
   cella.position.y = stylobateHeight + cellaHeight / 2;
-  cella.name = "Cella";
+  cella.castShadow = true;
+  cella.receiveShadow = true;
+  cella.userData = cella.userData || {};
+  cella.userData.noCollision = false;
   group.add(cella);
 
-  applyShadowAndCollision(group, { cast: true, receive: true });
-  applyTextureBudgetToObject(group, { safeMode: true });
+  setCollisionTag(group, true);
 
-  group.userData = group.userData || {};
-  group.userData.materialPreset = materialPreset;
-  group.userData.isProceduralTemple = true;
+  if (Number.isFinite(scale)) {
+    group.scale.setScalar(scale);
+  } else if (scale?.isVector3) {
+    group.scale.copy(scale);
+  } else if (Array.isArray(scale) && scale.length >= 3) {
+    group.scale.set(scale[0], scale[1], scale[2]);
+  }
+
+  applyTextureBudgetToObject(group, { safeMode: true });
 
   return group;
 }
 
-export default { buildTemple, alignToGround };
+export function alignToGround(object, terrain, x, z, surfaceOffset = 0) {
+  if (!object) return;
+  const sampler =
+    terrain?.userData?.getHeightAt?.bind(terrain.userData) || terrain?.getHeightAt || null;
+  if (typeof sampler !== "function") return;
+  const px = Number.isFinite(x) ? x : object.position?.x;
+  const pz = Number.isFinite(z) ? z : object.position?.z;
+  if (!Number.isFinite(px) || !Number.isFinite(pz)) return;
+  const height = sampler(px, pz);
+  if (!Number.isFinite(height)) return;
+  const offset = Number.isFinite(surfaceOffset) ? surfaceOffset : 0;
+  object.position.y = height + offset;
+}

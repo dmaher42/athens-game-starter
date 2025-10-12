@@ -1,13 +1,12 @@
 import * as THREE from "three";
-import { makeTerracottaMaterial, makePlasterMaterial } from "./buildingKit.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
+import { ensureUv2Attribute, makeRoof } from "./buildingKit.js";
 
-function ensureUv2(geometry) {
-  if (!geometry || geometry.getAttribute("uv2")) return geometry;
-  const uv = geometry.getAttribute("uv");
-  if (!uv) return geometry;
-  geometry.setAttribute("uv2", uv.clone());
-  return geometry;
+function toThreeColor(value) {
+  if (value instanceof THREE.Color) {
+    return value.clone();
+  }
+  return new THREE.Color(value);
 }
 
 export function buildHouseBlock({
@@ -19,50 +18,53 @@ export function buildHouseBlock({
 } = {}) {
   const group = new THREE.Group();
   group.name = "ProceduralHouseBlock";
+  group.userData = {
+    ...(group.userData || {}),
+    proceduralType: "houseBlock",
+    noCollision: false,
+  };
 
-  const wallMaterial = makePlasterMaterial({ color });
-  const roofMaterial = makeTerracottaMaterial({ color: 0xb35b37, roughness: 0.58 });
-  roofMaterial.side = THREE.DoubleSide;
+  const wallColor = toThreeColor(color);
+  const baseGeometry = new THREE.BoxGeometry(w, h, d);
+  ensureUv2Attribute(baseGeometry);
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: wallColor,
+    roughness: 0.6,
+    metalness: 0.05,
+  });
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.y = h / 2;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  base.userData = base.userData || {};
+  base.userData.noCollision = false;
+  group.add(base);
 
-  const wallGeometry = new THREE.BoxGeometry(w, h, d);
-  ensureUv2(wallGeometry);
-  const walls = new THREE.Mesh(wallGeometry, wallMaterial);
-  walls.position.y = h / 2;
-  walls.castShadow = true;
-  walls.receiveShadow = true;
-  walls.userData = { ...walls.userData, noCollision: false };
-  group.add(walls);
-
-  const slopeHeight = Math.max(h * roofPitch, 0.5);
-  const slopeLength = Math.sqrt((d / 2) * (d / 2) + slopeHeight * slopeHeight);
-  const roofGeometry = new THREE.PlaneGeometry(w * 1.04, slopeLength, 2, 1);
-  ensureUv2(roofGeometry);
-  roofGeometry.rotateX(-Math.atan2(slopeHeight, d / 2));
-
-  const roofLeft = new THREE.Mesh(roofGeometry, roofMaterial);
-  roofLeft.position.set(0, h + slopeHeight / 2, 0);
-  roofLeft.rotation.z = Math.PI;
-  roofLeft.castShadow = true;
-  roofLeft.receiveShadow = false;
-  roofLeft.userData = { ...roofLeft.userData, noCollision: false };
-
-  const roofRight = roofLeft.clone();
-  roofRight.scale.z = -1;
-  roofRight.rotation.z = 0;
-
-  group.add(roofLeft);
-  group.add(roofRight);
-
-  applyTextureBudgetToObject(group, { safeMode: true });
-  group.traverse?.((child) => {
+  const roofHeight = Math.max(0.6, Math.abs(h) * roofPitch);
+  const roofColor = wallColor.clone();
+  roofColor.offsetHSL(0, 0, -0.25);
+  const roof = makeRoof({
+    width: w,
+    depth: d,
+    height: roofHeight,
+    overhang: Math.min(w, d) * 0.08,
+    material: new THREE.MeshStandardMaterial({
+      color: roofColor,
+      roughness: 0.55,
+      metalness: 0.08,
+    }),
+  });
+  roof.position.y = h;
+  roof.traverse?.((child) => {
     if (!child?.isMesh) return;
     child.castShadow = true;
-    if (child.receiveShadow == null) child.receiveShadow = true;
+    child.receiveShadow = false;
     child.userData = child.userData || {};
     child.userData.noCollision = false;
   });
+  group.add(roof);
+
+  applyTextureBudgetToObject(group, { safeMode: true });
 
   return group;
 }
-
-export default { buildHouseBlock };

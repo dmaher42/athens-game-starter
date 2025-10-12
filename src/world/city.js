@@ -673,7 +673,7 @@ export async function createCity(scene, terrain, options = {}) {
         wallHeight,
         roofHeight,
         rotation,
-        nearWater: inQuayBand,
+        waterfront: inQuayBand,
         wallColor: new THREE.Color().setHSL(THREE.MathUtils.lerp(0.08, 0.13, rng()), 0.45, THREE.MathUtils.lerp(0.62, 0.74, rng())),
         roofColor: new THREE.Color().setHSL(THREE.MathUtils.lerp(0.02, 0.04, rng()), 0.55, THREE.MathUtils.lerp(0.23, 0.32, rng())),
       });
@@ -1771,42 +1771,12 @@ export async function createCity(scene, terrain, options = {}) {
   // Spawn simple buildings on top of the lot pads (safe + fast)
   spawnBuildingsFromPads(city, { seed: options.seed ?? 12345, leavePadsVisible: false });
 
-  const proceduralPlacements = useProceduralBlocks
-    ? placements.filter((placement) => placement.nearWater)
-    : [];
   const instancedPlacements = useProceduralBlocks
-    ? placements.filter((placement) => !placement.nearWater)
+    ? placements.filter((placement) => !placement.waterfront)
     : placements;
-
-  if (proceduralPlacements.length > 0) {
-    for (const placement of proceduralPlacements) {
-      const roofRatio = placement.wallHeight > 0
-        ? THREE.MathUtils.clamp(placement.roofHeight / placement.wallHeight, 0.18, 0.75)
-        : 0.35;
-      const block = buildHouseBlock({
-        w: placement.width,
-        d: placement.depth,
-        h: placement.wallHeight,
-        roofPitch: roofRatio,
-        color: placement.wallColor?.getHex?.() ?? 0xd9d3c9,
-      });
-      block.position.set(placement.x, placement.y, placement.z);
-      block.rotation.y = placement.rotation;
-      block.userData = block.userData || {};
-      block.userData.noCollision = false;
-      block.userData.isProceduralBlock = true;
-      block.traverse?.((child) => {
-        if (!child?.isMesh) return;
-        child.userData = child.userData || {};
-        child.userData.noCollision = false;
-        child.castShadow = true;
-        if (child.receiveShadow == null) {
-          child.receiveShadow = true;
-        }
-      });
-      city.add(block);
-    }
-  }
+  const waterfrontPlacements = useProceduralBlocks
+    ? placements.filter((placement) => placement.waterfront)
+    : [];
 
   const instanceCount = instancedPlacements.length;
   if (instanceCount === 0) {
@@ -1844,8 +1814,9 @@ export async function createCity(scene, terrain, options = {}) {
     envMapIntensity: 0.5,
   });
 
-  const walls = new THREE.InstancedMesh(wallGeometry, wallsMaterial, instanceCount);
-  const roofs = new THREE.InstancedMesh(roofGeometry, roofsMaterial, instanceCount);
+  const instancedCapacity = Math.max(1, instanceCount);
+  const walls = new THREE.InstancedMesh(wallGeometry, wallsMaterial, instancedCapacity);
+  const roofs = new THREE.InstancedMesh(roofGeometry, roofsMaterial, instancedCapacity);
   walls.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   roofs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   walls.castShadow = true;
@@ -1880,6 +1851,26 @@ export async function createCity(scene, terrain, options = {}) {
 
   city.add(walls);
   city.add(roofs);
+
+  if (useProceduralBlocks && waterfrontPlacements.length > 0) {
+    for (const placement of waterfrontPlacements) {
+      const pitch = THREE.MathUtils.clamp(
+        placement.roofHeight / Math.max(0.001, placement.wallHeight),
+        0.2,
+        0.6
+      );
+      const block = buildHouseBlock({
+        w: placement.width,
+        d: placement.depth,
+        h: placement.wallHeight,
+        roofPitch: pitch,
+        color: placement.wallColor,
+      });
+      block.position.set(placement.x, placement.y, placement.z);
+      block.rotation.y = placement.rotation;
+      city.add(block);
+    }
+  }
 
   city.userData.walls = walls;
   city.userData.roofs = roofs;
@@ -2068,7 +2059,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     i++;
   }
 
-  walls.count = roofs.count = i;
+  walls.count = roofs.count = instancedPlacements.length;
   walls.instanceMatrix.needsUpdate = true;
   roofs.instanceMatrix.needsUpdate = true;
 
