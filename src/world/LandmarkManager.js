@@ -638,10 +638,6 @@ function sanitizeRelativePath(value) {
     .replace(/^\.\//, "")
     .replace(/^\/+/, "");
 }
-const PROCEDURAL_BUILDERS = {
-  temple: (params = {}) => buildTemple(params),
-};
-
 function applyTransformToObject(object, options = {}) {
   if (!object) return;
   const { position, rotation, scale } = options;
