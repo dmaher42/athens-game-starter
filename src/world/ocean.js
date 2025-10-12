@@ -292,7 +292,7 @@ export async function createOcean(scene, options = {}) {
   const cz = (north + south) * 0.5;
 
   water.rotation.x = -Math.PI / 2;
-  water.position.set(cx, HARBOR_WATER_CENTER.y, cz);
+  water.position.set(cx, SEA_LEVEL_Y, cz);
 
   const halfX = (east - west) * 0.5;
   const clipZFront = Math.max(north, FRONT_Z_HARD);
@@ -331,13 +331,15 @@ export async function createOcean(scene, options = {}) {
 
   scene.add(water);
   if (import.meta.env?.DEV) {
-    console.log("[ocean bounds]", {
-      west,
-      east,
-      north: clipZFront,
-      south: clipZBack,
-    });
-    const debugCenter = new THREE.Vector3(cx, HARBOR_WATER_CENTER.y, cz);
+    console.log(
+      `[ocean] y=${SEA_LEVEL_Y}, bounds=${JSON.stringify({
+        west,
+        east,
+        north: clipZFront,
+        south: clipZBack,
+      })}`,
+    );
+    const debugCenter = new THREE.Vector3(cx, SEA_LEVEL_Y, cz);
     const debugSize = new THREE.Vector2(width, depth);
     const existingBoundsHelper = scene.getObjectByName?.("WaterBoundsDebug");
     if (existingBoundsHelper) {
