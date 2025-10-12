@@ -51,7 +51,7 @@ import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
 import { mountDevHUD } from "./ui/devHud.js";
 import { mount as mountHUDCameraSettings } from "./ui/HUDCameraSettings.js";
 import { createPin } from "./world/pins.js";
-import { attachHeightSampler } from "./world/terrainHeight.js";
+import { attachHeightSampler, probeAt } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
 import { createGLTFLoader, loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
@@ -1841,6 +1841,16 @@ async function mainApp() {
       setThirdPersonEnabled(!thirdPersonEnabled);
     } else if (event.code === "KeyE") {
       interactor.useObject();
+    } else if (event.code === "F8" && !event.repeat) {
+      const position = player?.object?.position;
+      const x = position?.x;
+      const z = position?.z;
+      if (Number.isFinite(x) && Number.isFinite(z)) {
+        const result = probeAt(x, z);
+        console.table({ x, z, ...result });
+      } else {
+        console.warn("[probe] Player position unavailable", position);
+      }
     }
   });
 
