@@ -127,7 +127,7 @@ export class MainCharacter {
 
       // ---------------------------------------------------------------
       // Rotation: smoothly turn the character towards the desired direction.
-      const targetYaw = Math.atan2(moveDirection.x, moveDirection.z);
+      const targetYaw = Math.atan2(moveDirection.x, -moveDirection.z);
       const angleDifference = MathUtils.euclideanModulo(
         targetYaw - this.yaw + Math.PI,
         Math.PI * 2
