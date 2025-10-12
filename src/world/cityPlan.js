@@ -1,13 +1,61 @@
 import * as THREE from 'three';
 import { AGORA_CENTER_3D } from './locations.js';
 
+function toColor(value) {
+  return value instanceof THREE.Color ? value.clone() : new THREE.Color(value);
+}
+
+function makeGravelTexture(width, depth, baseColor, speckColors = [], density = 0.045) {
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const context = canvas.getContext('2d');
+
+  const base = toColor(baseColor);
+  context.fillStyle = base.getStyle();
+  context.fillRect(0, 0, size, size);
+
+  const palette = speckColors.length
+    ? speckColors.map((entry) => toColor(entry))
+    : [
+        base.clone().lerp(new THREE.Color(0xffffff), 0.2),
+        base.clone().lerp(new THREE.Color(0x000000), 0.25),
+      ];
+
+  const speckCount = Math.floor(size * size * density);
+  for (let i = 0; i < speckCount; i++) {
+    const tint = palette[i % palette.length];
+    context.fillStyle = tint.getStyle();
+    context.globalAlpha = 0.35 + Math.random() * 0.4;
+    const radius = 0.3 + Math.random() * 2.2;
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    context.beginPath();
+    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  context.globalAlpha = 1;
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  const repeatX = Math.max(1, Math.round(width / 6));
+  const repeatZ = Math.max(1, Math.round(depth / 6));
+  texture.repeat.set(repeatX, repeatZ);
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function createPavedStrip(width, depth, color) {
   const geometry = new THREE.PlaneGeometry(width, depth);
   geometry.rotateX(-Math.PI / 2);
+  const texture = makeGravelTexture(width, depth, color);
   const material = new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.85,
-    metalness: 0.05,
+    color: 0xffffff,
+    roughness: 0.92,
+    metalness: 0.03,
+    map: texture,
   });
   // Keep the civic paving from z-fighting with the terrain.
   material.polygonOffset = true;
@@ -22,10 +70,21 @@ function createPavedStrip(width, depth, color) {
 function createGreenStrip(width, depth, color) {
   const geometry = new THREE.PlaneGeometry(width, depth);
   geometry.rotateX(-Math.PI / 2);
-  const material = new THREE.MeshStandardMaterial({
+  const texture = makeGravelTexture(
+    width,
+    depth,
     color,
-    roughness: 1,
-    metalness: 0,
+    [
+      toColor(color).clone().lerp(new THREE.Color(0xffffff), 0.15),
+      toColor(color).clone().lerp(new THREE.Color(0x3d2b1f), 0.45),
+    ],
+    0.06
+  );
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.98,
+    metalness: 0.02,
+    map: texture,
   });
   // Nudge greenswards above the ground so they do not flicker.
   material.polygonOffset = true;
@@ -223,12 +282,12 @@ export function createCivicDistrict(scene, options = {}) {
     return fallback + surfaceOffset;
   };
 
-  const promenade = createPavedStrip(promenadeWidth, plazaLength, 0xc3c2bb);
+  const promenade = createPavedStrip(promenadeWidth, plazaLength, 0xc6b293);
   promenade.receiveShadow = true;
   promenade.position.y = sampleLocalHeight(0, 0, promenade.position.y ?? 0);
   group.add(promenade);
 
-  const greenLeft = createGreenStrip(greensWidth, plazaLength, 0x6b8a6f);
+  const greenLeft = createGreenStrip(greensWidth, plazaLength, 0xb39a78);
   greenLeft.position.x = -(promenadeWidth + greensWidth) / 2;
   greenLeft.position.y = sampleLocalHeight(greenLeft.position.x, 0, greenLeft.position.y ?? 0);
   group.add(greenLeft);
@@ -238,7 +297,11 @@ export function createCivicDistrict(scene, options = {}) {
   greenRight.position.y = sampleLocalHeight(greenRight.position.x, 0, 0);
   group.add(greenRight);
 
-  const plazaNorth = createPavedStrip(promenadeWidth + greensWidth * 2, 18, 0xbdb8ac);
+  const plazaNorth = createPavedStrip(
+    promenadeWidth + greensWidth * 2,
+    18,
+    0xd3c6ad
+  );
   plazaNorth.position.z = plazaLength / 2 + 9;
   plazaNorth.position.y = sampleLocalHeight(0, plazaNorth.position.z, plazaNorth.position.y ?? 0);
   group.add(plazaNorth);
