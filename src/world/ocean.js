@@ -32,6 +32,7 @@ export function getDefaultWaterNormalCandidates() {
   return [
     joinPath(base, "textures/ground/water_normals.png"),
     joinPath(base, "textures/ground/water_normals.jpg"),
+    joinPath(base, "textures/ground/waternormals.jpg"),
     joinPath(base, "textures/ground/shader.png"),
     joinPath(base, "textures/ground/step_sea.gif"),
   ];
@@ -172,6 +173,7 @@ async function resolveWaterNormalsTexture(options) {
   }
 
   if (!cachedWaterNormalsTexture || cachedWaterNormalsKey !== "procedural") {
+    console.warn("[ocean] Water normal not found; using flat normal.");
     cachedWaterNormalsTexture = createProceduralWaterNormals();
     cachedWaterNormalsKey = "procedural";
   }
