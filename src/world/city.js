@@ -22,6 +22,7 @@ import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./distr
 import { spawnBuildingsFromPads } from "./buildingSpawner.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { queueSceneInteractable } from "./interactions.js";
+import { buildHouseBlock } from "../features/blocks.js";
 
 function cullByMinSeparation(pads, minDist) {
   if (!Array.isArray(pads) || pads.length === 0) return [];
@@ -436,6 +437,7 @@ export async function createCity(scene, terrain, options = {}) {
   // Toggle to show/hide plaza “foundation pads” (the visible discs).
   // Default false so the two large discs disappear on the live build.
   const showFoundationPads = options.showFoundationPads === true;
+  const useProceduralBlocks = options.useProceduralBlocks === true;
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const renderer = scene?.userData?.renderer ?? null;
   const rng = mulberry32(options.seed ?? CITY_SEED);
@@ -671,6 +673,7 @@ export async function createCity(scene, terrain, options = {}) {
         wallHeight,
         roofHeight,
         rotation,
+        nearWater: inQuayBand,
         wallColor: new THREE.Color().setHSL(THREE.MathUtils.lerp(0.08, 0.13, rng()), 0.45, THREE.MathUtils.lerp(0.62, 0.74, rng())),
         roofColor: new THREE.Color().setHSL(THREE.MathUtils.lerp(0.02, 0.04, rng()), 0.55, THREE.MathUtils.lerp(0.23, 0.32, rng())),
       });
@@ -1768,7 +1771,44 @@ export async function createCity(scene, terrain, options = {}) {
   // Spawn simple buildings on top of the lot pads (safe + fast)
   spawnBuildingsFromPads(city, { seed: options.seed ?? 12345, leavePadsVisible: false });
 
-  const instanceCount = placements.length;
+  const proceduralPlacements = useProceduralBlocks
+    ? placements.filter((placement) => placement.nearWater)
+    : [];
+  const instancedPlacements = useProceduralBlocks
+    ? placements.filter((placement) => !placement.nearWater)
+    : placements;
+
+  if (proceduralPlacements.length > 0) {
+    for (const placement of proceduralPlacements) {
+      const roofRatio = placement.wallHeight > 0
+        ? THREE.MathUtils.clamp(placement.roofHeight / placement.wallHeight, 0.18, 0.75)
+        : 0.35;
+      const block = buildHouseBlock({
+        w: placement.width,
+        d: placement.depth,
+        h: placement.wallHeight,
+        roofPitch: roofRatio,
+        color: placement.wallColor?.getHex?.() ?? 0xd9d3c9,
+      });
+      block.position.set(placement.x, placement.y, placement.z);
+      block.rotation.y = placement.rotation;
+      block.userData = block.userData || {};
+      block.userData.noCollision = false;
+      block.userData.isProceduralBlock = true;
+      block.traverse?.((child) => {
+        if (!child?.isMesh) return;
+        child.userData = child.userData || {};
+        child.userData.noCollision = false;
+        child.castShadow = true;
+        if (child.receiveShadow == null) {
+          child.receiveShadow = true;
+        }
+      });
+      city.add(block);
+    }
+  }
+
+  const instanceCount = instancedPlacements.length;
   if (instanceCount === 0) {
     applyCityTextureBudget(city, renderer);
     scene.add(city);
@@ -1813,8 +1853,8 @@ export async function createCity(scene, terrain, options = {}) {
   roofs.castShadow = true;
   roofs.receiveShadow = false;
 
-  for (let i = 0; i < placements.length; i++) {
-    const placement = placements[i];
+  for (let i = 0; i < instancedPlacements.length; i++) {
+    const placement = instancedPlacements[i];
     _position.set(placement.x, placement.y, placement.z);
     _quaternion.setFromAxisAngle(_rotationAxis, placement.rotation);
     _scale.set(placement.width, placement.wallHeight, placement.depth);

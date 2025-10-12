@@ -105,6 +105,8 @@ export function mountDevHUD({
     updateStatusVisibility();
   };
 
+  setStatusLine("proc", "Procedural: off");
+
   const setOceanStatus = (options = {}) => {
     const { seaLevel, bounds } = options;
     const levelIsFinite = Number.isFinite(seaLevel);

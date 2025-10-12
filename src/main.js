@@ -461,6 +461,16 @@ function parseToggleValue(value, defaultValue = true) {
   return defaultValue;
 }
 
+function offsetPosition(base, delta = {}) {
+  const bx = base?.x ?? 0;
+  const by = base?.y ?? 0;
+  const bz = base?.z ?? 0;
+  const dx = delta.x ?? delta[0] ?? 0;
+  const dy = delta.y ?? delta[1] ?? 0;
+  const dz = delta.z ?? delta[2] ?? 0;
+  return { x: bx + dx, y: by + dy, z: bz + dz };
+}
+
 function shouldShowOverlay({
   queryKey,
   windowFlagKey,
@@ -553,6 +563,26 @@ async function mainApp() {
 
   let devHud = null;
   let pendingOceanStatus = null;
+  const proceduralQueryEnabled = (() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("proc")) {
+        return false;
+      }
+      return parseToggleValue(params.get("proc"), false);
+    } catch (error) {
+      console.warn("[proc] Failed to parse procedural flag", error);
+      return false;
+    }
+  })();
+  if (proceduralQueryEnabled) {
+    console.info("[proc] Forcing procedural landmarks.");
+  }
+  let proceduralLandmarkCount = 0;
+  let proceduralStatusMessage = proceduralQueryEnabled ? "Procedural: on" : "Procedural: off";
   const updateOceanHudStatus = () => {
     if (!pendingOceanStatus || !devHud) {
       return;
@@ -830,78 +860,83 @@ async function mainApp() {
     }
   }
 
-  // --- Aristotle's Tomb (local GLB) -----------------------------------------
-  // We prefer a local asset the repo expects at:
-  //   public/models/landmarks/aristotle_tomb.glb
-  // At runtime we try both the site base (for GitHub Pages) and root (for dev).
-  // If found, we stream it via loadLandmark(); the loader will auto-raise it
-  // ~5cm above ground and handle KTX2 texture support transparently.
-  try {
-    const aristotleUrl = await resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
-    if (aristotleUrl) {
-      const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
-        // Use a named location that already exists in the scene constants.
-        // The landmark loader will call the scene/terrain height sampler and
-        // lift the model slightly so it rests on the ground.
-        position: ACROPOLIS_PEAK_3D,
-        scale: 3.0,
-        materialPreset: "marble",
-      });
-      // Safe no-op if textures not uploaded yet
-      try {
-        await attachAristotleMarblePBR({
-          obj: aristotle ?? null,
-          scene,
-          renderer,
-          BASE_URL,
+  if (!proceduralQueryEnabled) {
+    // --- Aristotle's Tomb (local GLB) ---------------------------------------
+    // We prefer a local asset the repo expects at:
+    //   public/models/landmarks/aristotle_tomb.glb
+    // At runtime we try both the site base (for GitHub Pages) and root (for dev).
+    // If found, we stream it via loadLandmark(); the loader will auto-raise it
+    // ~5cm above ground and handle KTX2 texture support transparently.
+    try {
+      const aristotleUrl = await resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
+      if (aristotleUrl) {
+        const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
+          // Use a named location that already exists in the scene constants.
+          // The landmark loader will call the scene/terrain height sampler and
+          // lift the model slightly so it rests on the ground.
+          position: ACROPOLIS_PEAK_3D,
+          scale: 3.0,
+          materialPreset: "marble",
         });
-      } catch (e) {
-        // never fail the scene due to the texture hook
-        console.warn("Aristotle PBR hook skipped:", e);
+        // Safe no-op if textures not uploaded yet
+        try {
+          await attachAristotleMarblePBR({
+            obj: aristotle ?? null,
+            scene,
+            renderer,
+            BASE_URL,
+          });
+        } catch (e) {
+          // never fail the scene due to the texture hook
+          console.warn("Aristotle PBR hook skipped:", e);
+        }
+      } else {
+        console.warn(
+          "Aristotle's Tomb not found. Expected at:",
+          ARISTOTLE_CANDIDATES
+        );
       }
-    } else {
-      console.warn(
-        "Aristotle's Tomb not found. Expected at:",
-        ARISTOTLE_CANDIDATES
-      );
+    } catch (err) {
+      console.error("Failed to load Aristotle's Tomb:", err);
     }
-  } catch (err) {
-    console.error("Failed to load Aristotle's Tomb:", err);
-  }
-  // --------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
 
-  // Poseidon Temple (Sounion)
-  try {
-    const url = await resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
-    if (url)
-      await loadLandmark(worldRoot, url, {
-        position: new THREE.Vector3(90, 0, -60),
-        scale: 2.6,
-        materialPreset: "marble",
-      });
-  } catch (e) {
-    console.warn("Poseidon Temple not loaded:", e);
-  }
+    // Poseidon Temple (Sounion)
+    try {
+      const url = await resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
+      if (url)
+        await loadLandmark(worldRoot, url, {
+          position: new THREE.Vector3(90, 0, -60),
+          scale: 2.6,
+          materialPreset: "marble",
+        });
+    } catch (e) {
+      console.warn("Poseidon Temple not loaded:", e);
+    }
 
-  // Akropol (Acropolis complex placeholder)
-  try {
-    const url = await resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
-    if (url)
-      await loadLandmark(worldRoot, url, {
-        position: new THREE.Vector3(130, 0, 40),
-        scale: 2.2,
-        materialPreset: "marble",
-      });
-  } catch (e) {
-    console.warn("Akropol not loaded:", e);
+    // Akropol (Acropolis complex placeholder)
+    try {
+      const url = await resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
+      if (url)
+        await loadLandmark(worldRoot, url, {
+          position: new THREE.Vector3(130, 0, 40),
+          scale: 2.2,
+          materialPreset: "marble",
+        });
+    } catch (e) {
+      console.warn("Akropol not loaded:", e);
+    }
+    // ------------------------------------------------------------------------
+  } else {
+    console.info("[proc] Skipping GLB landmark imports in procedural mode.");
   }
-  // --------------------------------------------------------------------------
 
   // Plazas (agora + acropolis terraces) — disabled per request to remove large discs
   // createPlazas(worldRoot);
 
   const harborCity = await createCity(worldRoot, terrain, {
     roadsVisible,
+    useProceduralBlocks: proceduralQueryEnabled,
   });
 
   // Hill-city buildings (uses terrain sampler + road curve)
@@ -1671,10 +1706,74 @@ async function mainApp() {
     quietMissing: true,
   });
 
-  try {
-    await landmarkManager.loadConfig(athensLayoutConfig);
-  } catch (error) {
-    console.error("[LandmarkManager] Failed to load Athens layout", error);
+  if (proceduralQueryEnabled) {
+    const proceduralEntries = [
+      {
+        id: "proc-parthenon",
+        name: "Procedural Parthenon",
+        type: "procedural",
+        proc: "temple",
+        collision: true,
+        materialPreset: "marble",
+        params: { width: 22, depth: 42, colX: 6, colZ: 13 },
+        placement: {
+          position: offsetPosition(ACROPOLIS_PEAK_3D, { x: 6, z: -6 }),
+          rotation: { y: Math.PI * 0.22 },
+          scale: 0.45,
+          surfaceOffset: 0.18,
+        },
+      },
+      {
+        id: "proc-agora-temple",
+        name: "Agora Temple",
+        type: "procedural",
+        proc: "temple",
+        collision: true,
+        materialPreset: "marble",
+        params: { width: 18, depth: 32, colX: 4, colZ: 9, order: "ionic" },
+        placement: {
+          position: offsetPosition(AGORA_CENTER_3D, { x: 18, z: -12 }),
+          rotation: { y: Math.PI * 0.35 },
+          scale: 0.32,
+          surfaceOffset: 0.12,
+        },
+      },
+      {
+        id: "proc-harbor-temple",
+        name: "Harbor Temple",
+        type: "procedural",
+        proc: "temple",
+        collision: true,
+        materialPreset: "marble",
+        params: { width: 20, depth: 36, colX: 5, colZ: 11, order: "ionic" },
+        placement: {
+          position: offsetPosition(HARBOR_CENTER_3D, { x: 22, z: -28 }),
+          rotation: { y: -Math.PI * 0.15 },
+          scale: 0.38,
+          surfaceOffset: 0.16,
+        },
+      },
+    ];
+
+    for (const entry of proceduralEntries) {
+      try {
+        const placed = await landmarkManager.placeLandmark(entry);
+        if (placed) {
+          proceduralLandmarkCount += 1;
+        }
+      } catch (error) {
+        console.warn(`[proc] Failed to place ${entry.id}`, error);
+      }
+    }
+
+    console.info(`[proc] Placed ${proceduralLandmarkCount} procedural landmarks.`);
+    proceduralStatusMessage = `Procedural: on (${proceduralLandmarkCount})`;
+  } else {
+    try {
+      await landmarkManager.loadConfig(athensLayoutConfig);
+    } catch (error) {
+      console.error("[LandmarkManager] Failed to load Athens layout", error);
+    }
   }
 
   interactor = createInteractor(renderer, camera, scene);
@@ -1842,6 +1941,9 @@ async function mainApp() {
   updateOceanHudStatus();
   if (audioManifestMissing) {
     devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
+  }
+  if (devHud?.setStatusLine) {
+    devHud.setStatusLine("proc", proceduralStatusMessage);
   }
 
   // Simple controls: clicking the canvas or pressing E will run the onUse
