@@ -1932,7 +1932,7 @@ async function mainApp() {
     onSetLightingPreset: applyLightingPreset,
     lightingPresets: LIGHTING_PRESETS,
   });
-  const proceduralStatusMessage = FORCE_PROCEDURAL_LANDMARKS
+  proceduralStatusMessage = FORCE_PROCEDURAL_LANDMARKS
     ? `Procedural: on (${proceduralLandmarkCount})`
     : "Procedural: off";
   devHud?.setStatusLine?.("proc", proceduralStatusMessage);
