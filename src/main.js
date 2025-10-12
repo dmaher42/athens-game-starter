@@ -540,6 +540,38 @@ async function mainApp() {
   attachCrosshair();
   mountHotkeyOverlay({ toggleKey: "KeyH" });
 
+  let devHud = null;
+  let pendingOceanStatus = null;
+  const updateOceanHudStatus = () => {
+    if (!pendingOceanStatus || !devHud) {
+      return;
+    }
+    if (typeof devHud.setOceanStatus === "function") {
+      devHud.setOceanStatus(pendingOceanStatus);
+      return;
+    }
+    if (typeof devHud.setStatusLine === "function") {
+      const { seaLevel, bounds } = pendingOceanStatus;
+      const levelIsFinite = Number.isFinite(seaLevel);
+      const boundsAreValid =
+        bounds &&
+        ["west", "east", "north", "south"].every((key) =>
+          Number.isFinite(bounds?.[key])
+        );
+      if (!levelIsFinite || !boundsAreValid) {
+        return;
+      }
+      const formatBound = (value) => Number(value).toFixed(1);
+      const message = [
+        `Sea level: ${Number(seaLevel).toFixed(2)}`,
+        `Ocean bounds: W ${formatBound(bounds.west)} / E ${formatBound(
+          bounds.east
+        )} / N ${formatBound(bounds.north)} / S ${formatBound(bounds.south)}`,
+      ].join("\n");
+      devHud.setStatusLine("sea", message);
+    }
+  };
+
   const interactPrompt = document.createElement("div");
   interactPrompt.textContent = "Press E to interact";
   Object.assign(interactPrompt.style, {
@@ -741,6 +773,11 @@ async function mainApp() {
   })();
 
   const ocean = await createOcean(scene, { bounds: HARBOR_WATER_BOUNDS });
+  pendingOceanStatus = {
+    seaLevel: SEA_LEVEL_Y,
+    bounds: HARBOR_WATER_BOUNDS,
+  };
+  updateOceanHudStatus();
   const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
   const envCollider = new EnvironmentCollider();
   scene.add(envCollider.mesh);
@@ -1775,7 +1812,7 @@ async function mainApp() {
     window.SHOW_HUD = true;
   }
   console.log("[HUD] mounting…");
-  const devHud = mountDevHUD({
+  devHud = mountDevHUD({
     getPosition,
     getDirection,
     onPin,
@@ -1783,6 +1820,7 @@ async function mainApp() {
     lightingPresets: LIGHTING_PRESETS,
   });
   mountHUDCameraSettings(devHud?.rootElement ?? null);
+  updateOceanHudStatus();
   if (audioManifestMissing) {
     devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
   }
