@@ -8,49 +8,28 @@
   </head>
   <body>
     <div id="app"></div>
-    <script type="module">
-      const FALLBACK_IMPORT_MAP = {
-        imports: {
-          three: "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-          "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-          "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.1/build/index.module.js",
-        },
-      };
-
-      async function tryImportBareModule(specifier) {
-        try {
-          await import(specifier);
-          return true;
-        } catch (error) {
-          console.warn(
-            `[importmap-fallback] Failed to import "${specifier}" using bare specifier.`,
-            error,
-          );
-          return false;
+    <script>
+      (function installFallbackImportMapWhenNeeded() {
+        if (window.location.protocol !== "file:") {
+          return;
         }
-      }
 
-      function installFallbackImportMap() {
-        const script = document.createElement("script");
-        script.type = "importmap";
-        script.textContent = JSON.stringify(FALLBACK_IMPORT_MAP, null, 2);
-        document.head.appendChild(script);
-      }
+        const FALLBACK_IMPORT_MAP = {
+          imports: {
+            three: "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+            "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+            "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.1/build/index.module.js",
+          },
+        };
 
-      let bareImportReady = await tryImportBareModule("three");
+        const importMapScript = document.createElement("script");
+        importMapScript.type = "importmap";
+        importMapScript.textContent = JSON.stringify(FALLBACK_IMPORT_MAP, null, 2);
 
-      if (!bareImportReady) {
-        installFallbackImportMap();
-        bareImportReady = await tryImportBareModule("three");
-      }
-
-      if (!bareImportReady) {
-        throw new Error(
-          "Failed to resolve the \"three\" module even after installing a fallback import map.",
-        );
-      }
-
-      await import("./src/main.js");
+        const currentScript = document.currentScript;
+        currentScript?.parentNode?.insertBefore(importMapScript, currentScript);
+      })();
     </script>
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>
