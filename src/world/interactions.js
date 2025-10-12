@@ -1,5 +1,26 @@
 import * as THREE from "three";
 
+const PENDING_INTERACTABLES_KEY = "__interactorPending";
+
+export function queueSceneInteractable(scene, object, options = {}) {
+  if (!scene || !object) return;
+  scene.userData = scene.userData || {};
+  const { includeChildren = true } = options;
+
+  const interactor = scene.userData.interactor;
+  if (interactor && typeof interactor.registerInteractable === "function") {
+    interactor.registerInteractable(object, { includeChildren });
+    return;
+  }
+
+  let pending = scene.userData[PENDING_INTERACTABLES_KEY];
+  if (!(pending instanceof Map)) {
+    pending = new Map();
+    scene.userData[PENDING_INTERACTABLES_KEY] = pending;
+  }
+  pending.set(object, { includeChildren });
+}
+
 /**
  * Create a simple helper that lets us cast rays from the camera into the scene.
  * Raycasters are how we "pick" objects in three.js – we shoot an invisible ray
@@ -28,6 +49,100 @@ export function createInteractor(renderer, camera, scene) {
   const storedMaterialState = new Map();
   let currentHover = null;
   let hoverTimer = HOVER_UPDATE_INTERVAL; // ensure the first call performs a hit test
+
+  const trackedInteractables = new Map();
+  const intersectTargets = [];
+  let targetsDirty = true;
+
+  function isInScene(object) {
+    let node = object;
+    while (node) {
+      if (node === scene) return true;
+      node = node.parent;
+    }
+    return false;
+  }
+
+  function rebuildTargets() {
+    intersectTargets.length = 0;
+    for (const object of trackedInteractables.keys()) {
+      if (!object) continue;
+      if (!isInScene(object)) continue;
+      intersectTargets.push(object);
+    }
+    targetsDirty = false;
+  }
+
+  function getRaycastTargets() {
+    if (targetsDirty) {
+      rebuildTargets();
+    }
+    return intersectTargets.length > 0 ? intersectTargets : scene.children;
+  }
+
+  function addTrackedObject(object) {
+    if (!object || trackedInteractables.has(object)) return;
+    const onAdded = () => {
+      targetsDirty = true;
+    };
+    const onRemoved = () => {
+      const entry = trackedInteractables.get(object);
+      if (!entry) return;
+      object.removeEventListener("added", onAdded);
+      object.removeEventListener("removed", onRemoved);
+      trackedInteractables.delete(object);
+      targetsDirty = true;
+      if (currentHover === object || currentHover === getHighlightTarget(object)) {
+        clearHover();
+      }
+    };
+
+    object.addEventListener("added", onAdded);
+    object.addEventListener("removed", onRemoved);
+    trackedInteractables.set(object, { onAdded, onRemoved });
+    targetsDirty = true;
+  }
+
+  function registerInteractable(object, options = {}) {
+    if (!object) return;
+    const { includeChildren = true } = options;
+    const visit = (node) => {
+      if (!node?.userData?.interactable) return;
+      addTrackedObject(node);
+    };
+    if (includeChildren && typeof object.traverse === "function") {
+      object.traverse(visit);
+    } else {
+      visit(object);
+    }
+  }
+
+  function unregisterInteractable(object, options = {}) {
+    if (!object) return;
+    const { includeChildren = true } = options;
+    const removeNode = (node) => {
+      const entry = trackedInteractables.get(node);
+      if (!entry) return;
+      node.removeEventListener("added", entry.onAdded);
+      node.removeEventListener("removed", entry.onRemoved);
+      trackedInteractables.delete(node);
+      targetsDirty = true;
+    };
+    if (includeChildren && typeof object.traverse === "function") {
+      object.traverse(removeNode);
+    } else {
+      removeNode(object);
+    }
+  }
+
+  function scanSceneForInteractables(root) {
+    if (!root || typeof root.traverse !== "function") return;
+    root.traverse((node) => {
+      if (node?.userData?.interactable) {
+        addTrackedObject(node);
+      }
+    });
+  }
 
   /**
    * Because `userData` is just a plain JavaScript object, we can attach custom
@@ -134,7 +249,7 @@ export function createInteractor(renderer, camera, scene) {
 
     mouse.set(xNdc, yNdc);
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(scene.children, true);
+    const intersects = raycaster.intersectObjects(getRaycastTargets(), true);
     return intersects.length > 0 ? intersects[0] : null;
   }
 
@@ -147,7 +262,7 @@ export function createInteractor(renderer, camera, scene) {
   function pickCenter() {
     mouse.set(0, 0);
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(scene.children, true);
+    const intersects = raycaster.intersectObjects(getRaycastTargets(), true);
     return intersects.length > 0 ? intersects[0] : null;
   }
 
@@ -197,7 +312,7 @@ export function createInteractor(renderer, camera, scene) {
     }
   }
 
-  return {
+  const api = {
     raycaster,
     mouse,
     pickObject,
@@ -206,5 +321,26 @@ export function createInteractor(renderer, camera, scene) {
     clearHover,
     getCurrentHover,
     useObject,
+    registerInteractable,
+    unregisterInteractable,
+    rescanInteractables: () => {
+      targetsDirty = true;
+      scanSceneForInteractables(scene);
+    },
   };
+
+  scene.userData = scene.userData || {};
+  scene.userData.interactor = api;
+
+  const pending = scene.userData[PENDING_INTERACTABLES_KEY];
+  if (pending instanceof Map) {
+    for (const [object, options] of pending.entries()) {
+      registerInteractable(object, options);
+    }
+    pending.clear();
+  }
+
+  scanSceneForInteractables(scene);
+
+  return api;
 }

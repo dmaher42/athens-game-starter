@@ -10,6 +10,7 @@ import {
 import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
+import { queueSceneInteractable } from "./interactions.js";
 
 /**
  * Example usage:
@@ -532,6 +533,8 @@ export async function loadLandmark(scene, url, options = {}) {
         }
       };
     });
+
+    queueSceneInteractable(scene, finalObject);
 
     if (materialPreset) {
       const factory = MATERIAL_PRESETS[materialPreset];
