@@ -71,7 +71,7 @@ export class MainCharacter {
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleKeyUp = this.handleKeyUp.bind(this);
 
-    // Listen for WASD or arrow keys to move our placeholder character.
+    // Listen for WASD keys to move our placeholder character.
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("keyup", this.handleKeyUp);
   }
@@ -88,19 +88,15 @@ export class MainCharacter {
   toggleMovement(code, isPressed) {
     switch (code) {
       case "KeyW":
-      case "ArrowUp":
         this.moveForward = isPressed;
         break;
       case "KeyS":
-      case "ArrowDown":
         this.moveBackward = isPressed;
         break;
       case "KeyA":
-      case "ArrowLeft":
         this.moveLeft = isPressed;
         break;
       case "KeyD":
-      case "ArrowRight":
         this.moveRight = isPressed;
         break;
       case "Space":
