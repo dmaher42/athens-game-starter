@@ -2059,7 +2059,8 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     i++;
   }
 
-  walls.count = roofs.count = instancedPlacements.length;
+  const placedCount = i;
+  walls.count = roofs.count = placedCount;
   walls.instanceMatrix.needsUpdate = true;
   roofs.instanceMatrix.needsUpdate = true;
 
