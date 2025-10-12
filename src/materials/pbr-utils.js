@@ -53,7 +53,8 @@ async function loadAny(loader, stem, { isSRGB = false } = {}) {
       ].filter(Boolean)
     )
   );
-  const exts = ["webp", "jpg", "png"];
+  // Prefer formats we actually ship (currently JPEG), but still allow WebP/PNG fallbacks.
+  const exts = ["jpg", "webp", "png"];
   const baseUrl = resolveBaseUrl();
   for (const variant of variants) {
     const variantStem = typeof variant === "string" ? variant.trim() : "";
