@@ -11,7 +11,7 @@ import {
   setTimeOfDayPhase,
 } from "./world/sky.js";
 import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
-import { createInteractor } from "./world/interactions.js";
+import { createInteractor, queueSceneInteractable } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { createOcean, updateOcean } from "./world/ocean.js";
@@ -1155,6 +1155,7 @@ async function mainApp() {
   };
 
   worldRoot.add(doorPivot);
+  queueSceneInteractable(scene, doorPivot);
 
   const lamp = new THREE.Group();
   lamp.name = "DemoLamp";
@@ -1195,6 +1196,7 @@ async function mainApp() {
   };
 
   worldRoot.add(lamp);
+  queueSceneInteractable(scene, lamp);
 
   const createFallbackAvatar = () => {
     const group = new THREE.Group();

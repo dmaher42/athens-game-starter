@@ -21,6 +21,7 @@ import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
 import { spawnBuildingsFromPads } from "./buildingSpawner.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
+import { queueSceneInteractable } from "./interactions.js";
 
 function cullByMinSeparation(pads, minDist) {
   if (!Array.isArray(pads) || pads.length === 0) return [];
@@ -1638,6 +1639,7 @@ export async function createCity(scene, terrain, options = {}) {
     };
 
     city.add(lampGroup);
+    queueSceneInteractable(scene, lampGroup);
 
     const streetlightsRegistry = ensureStreetlightRegistry();
     streetlightsRegistry.individuals.push(lampState);
