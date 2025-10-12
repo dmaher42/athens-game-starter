@@ -72,6 +72,11 @@ function fbm(x, z, octaves, persistence, lacunarity) {
 const _scratchVec = new THREE.Vector3();
 const HARBOR_INNER_RADIUS = 18;
 const HARBOR_OUTER_RADIUS = 70;
+const HARBOR_FLOOR_DEPTH = 2.5;
+// Start the harbor floor depression near the docks and blend it back to
+// sea-level before the outer seawall so players still get a dry shoreline.
+const HARBOR_FLOOR_TAPER_START = HARBOR_INNER_RADIUS * 0.4;
+const HARBOR_FLOOR_TAPER_END = HARBOR_INNER_RADIUS * 0.95;
 
 export function createTerrain(scene) {
   // A large subdivided plane gives us enough vertices to push around and create
@@ -125,7 +130,17 @@ export function createTerrain(scene) {
         HARBOR_OUTER_RADIUS
       );
       if (flatten > 0) {
-        height = THREE.MathUtils.lerp(height, HARBOR_SEA_LEVEL, flatten);
+        const depthBlend = THREE.MathUtils.smoothstep(
+          distance,
+          HARBOR_FLOOR_TAPER_START,
+          HARBOR_FLOOR_TAPER_END,
+        );
+        const harborTargetHeight = THREE.MathUtils.lerp(
+          HARBOR_SEA_LEVEL - HARBOR_FLOOR_DEPTH,
+          HARBOR_SEA_LEVEL,
+          THREE.MathUtils.clamp(depthBlend, 0, 1),
+        );
+        height = THREE.MathUtils.lerp(height, harborTargetHeight, flatten);
       }
     }
 
