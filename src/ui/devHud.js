@@ -105,6 +105,31 @@ export function mountDevHUD({
     updateStatusVisibility();
   };
 
+  const setOceanStatus = (options = {}) => {
+    const { seaLevel, bounds } = options;
+    const levelIsFinite = Number.isFinite(seaLevel);
+    const boundsAreValid =
+      bounds &&
+      ["west", "east", "north", "south"].every((key) =>
+        Number.isFinite(bounds?.[key])
+      );
+
+    if (!levelIsFinite || !boundsAreValid) {
+      setStatusLine("sea", "");
+      return;
+    }
+
+    const formatBound = (value) => Number(value).toFixed(1);
+    const message = [
+      `Sea level: ${Number(seaLevel).toFixed(2)}`,
+      `Ocean bounds: W ${formatBound(bounds.west)} / E ${formatBound(
+        bounds.east
+      )} / N ${formatBound(bounds.north)} / S ${formatBound(bounds.south)}`,
+    ].join("\n");
+
+    setStatusLine("sea", message);
+  };
+
   const defaultPresetOrder = [
     { name: "dawn", label: "Dawn" },
     { name: "noon", label: "High Noon" },
@@ -290,6 +315,7 @@ export function mountDevHUD({
       wrap.remove();
     },
     setStatusLine,
+    setOceanStatus,
     rootElement: read,
   };
 }
