@@ -26,6 +26,8 @@ async function headOk(url) {
 
 const glbAvailability = new Map();
 const onceFlags = new Set();
+const scratchBox = new THREE.Box3();
+const scratchSize = new THREE.Vector3();
 
 function once(key, fn) {
   if (onceFlags.has(key)) return;
@@ -107,82 +109,362 @@ async function tryLoadGLB(urls) {
   return null;
 }
 
-// Minimal, safe materials (no maps) to avoid texture-unit overflow on Chromebook
-const MAT = {
-  stone: new THREE.MeshStandardMaterial({ color: 0xded6c0, roughness: 0.9, metalness: 0.02 }),
-  marble: new THREE.MeshStandardMaterial({ color: 0xe7d7c1, roughness: 0.7, metalness: 0.05 }),
-  clay: new THREE.MeshStandardMaterial({ color: 0xc9a77c, roughness: 0.95, metalness: 0.0 }),
-  wood: new THREE.MeshStandardMaterial({ color: 0x8f6a4a, roughness: 0.85, metalness: 0.0 }),
-  roof: new THREE.MeshStandardMaterial({ color: 0x9a4631, roughness: 0.75, metalness: 0.0 }),
+const MATERIAL_BASE = {
+  stone: { color: 0xded6c0, roughness: 0.9, metalness: 0.02 },
+  marble: { color: 0xe7d7c1, roughness: 0.7, metalness: 0.05 },
+  clay: { color: 0xc9a77c, roughness: 0.95, metalness: 0.0 },
+  wood: { color: 0x8f6a4a, roughness: 0.85, metalness: 0.0 },
+  roof: { color: 0x9a4631, roughness: 0.75, metalness: 0.0 },
+  plaster: { color: 0xf3efe4, roughness: 0.9, metalness: 0.01 },
+  paving: { color: 0xbdb6a2, roughness: 0.92, metalness: 0.02 },
+  accent: { color: 0xb27c44, roughness: 0.8, metalness: 0.03 },
+  trim: { color: 0xe2dac3, roughness: 0.8, metalness: 0.02 },
 };
+
+const MATERIAL_VARIANTS = {
+  stone: [0xded6c0, 0xd2c2ab, 0xe2d9c6],
+  marble: [0xe7d7c1, 0xf2e4cf, 0xdacad0],
+  clay: [0xc9a77c, 0xc49a6d, 0xd0b18e],
+  wood: [0x8f6a4a, 0x7a5a3f, 0x9e7650],
+  roof: [0x9a4631, 0x8b3728, 0xaf4d2f],
+  plaster: [0xf3efe4, 0xe9e2d4, 0xf8f2e7],
+  paving: [0xbdb6a2, 0xa19886, 0xc8c1af],
+  accent: [0xb27c44, 0xa66d38, 0xbd864d],
+  trim: [0xe2dac3, 0xd7cdb5, 0xeae1cd],
+};
+
+function createMaterial(key, rng, overrides = {}) {
+  const base = MATERIAL_BASE[key] || MATERIAL_BASE.stone;
+  const variant = MATERIAL_VARIANTS[key];
+  const color = Array.isArray(variant) && variant.length > 0 && typeof rng === "function"
+    ? pick(variant, rng)
+    : base.color;
+  return new THREE.MeshStandardMaterial({ ...base, ...overrides, color });
+}
 
 // Simple kit pieces
 function makeBox(w, h, d, material) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  m.castShadow = m.receiveShadow = true;
-  return m;
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+  mesh.castShadow = mesh.receiveShadow = true;
+  return mesh;
 }
-function makeGableRoof(w, d, h = 1.2) {
+function makeGableRoof(w, d, h = 1.2, rng) {
   const geom = new THREE.ConeGeometry(Math.max(w, d) * 0.62, h, 4);
   geom.rotateY(Math.PI / 4); // align to X/Z
-  const mesh = new THREE.Mesh(geom, MAT.roof);
+  const mesh = new THREE.Mesh(geom, createMaterial("roof", rng));
   mesh.castShadow = mesh.receiveShadow = true;
   return mesh;
 }
 
+function makeWindow(width, height, depth, rng) {
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(width, height, depth),
+    createMaterial("trim", rng, { metalness: 0.04, roughness: 0.85 })
+  );
+  frame.castShadow = true;
+  const pane = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 0.7, height * 0.7, depth * 0.6),
+    new THREE.MeshStandardMaterial({
+      color: 0x6e8ca5,
+      roughness: 0.05,
+      metalness: 0.4,
+      transparent: true,
+      opacity: 0.6,
+    })
+  );
+  pane.position.z = depth * 0.25;
+  frame.add(pane);
+  return frame;
+}
+
+function addWindowBand(group, opts) {
+  const {
+    count = 3,
+    spacing = 2.2,
+    height = 2.4,
+    offsetY = 2.2,
+    depth = 0.12,
+    distance = 3,
+    direction = "front",
+    rng,
+  } = opts;
+
+  const windows = new THREE.Group();
+  windows.position.y = offsetY;
+
+  switch (direction) {
+    case "back":
+      windows.position.z = -distance;
+      break;
+    case "left":
+      windows.position.x = -distance;
+      windows.rotation.y = Math.PI / 2;
+      break;
+    case "right":
+      windows.position.x = distance;
+      windows.rotation.y = -Math.PI / 2;
+      break;
+    default:
+      windows.position.z = distance;
+      break;
+  }
+
+  for (let i = 0; i < count; i++) {
+    const window = makeWindow(0.6, height * 0.35, depth, rng);
+    window.position.x = (i - (count - 1) / 2) * spacing;
+    windows.add(window);
+  }
+
+  windows.traverse((child) => {
+    if (child.isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+
+  group.add(windows);
+}
+
+function addEntrySteps(group, width, rng) {
+  const steps = new THREE.Group();
+  steps.position.y = 0.15;
+  const riserCount = 3 + Math.floor(rng() * 2);
+  for (let i = 0; i < riserCount; i++) {
+    const depth = 0.45;
+    const height = 0.12;
+    const tread = makeBox(width - i * 0.4, height, depth, createMaterial("stone", rng));
+    tread.position.set(0, height * 0.5 + i * height, depth * (0.5 + i));
+    steps.add(tread);
+  }
+  group.add(steps);
+  return steps;
+}
+
 // Parametric “prefabs” (fast + zero textures). All return a Group.
 const Prefabs = {
-  house({ w = 5, d = 7, h = 3.8 } = {}) {
+  house({ w = 5, d = 7, h = 3.8, rng = Math.random } = {}) {
     const g = new THREE.Group();
-    const base = makeBox(w, h, d, MAT.clay);
-    base.position.y = h * 0.5;
+    g.name = "ProceduralHouse";
+
+    const baseHeight = h * (0.65 + rng() * 0.2);
+    const facadeMaterial = createMaterial(rng() < 0.35 ? "plaster" : "clay", rng);
+    const base = makeBox(w, baseHeight, d, facadeMaterial);
+    base.position.y = baseHeight * 0.5;
     g.add(base);
-    const roof = makeGableRoof(w * 1.02, d * 1.02, 1.0 + 0.3 * Math.random());
-    roof.position.y = h + roof.geometry.parameters.height * 0.5;
+
+    if (rng() < 0.55) {
+      const trim = makeBox(w * 1.04, 0.25, d * 1.04, createMaterial("trim", rng));
+      trim.position.y = baseHeight + 0.12;
+      g.add(trim);
+    }
+
+    const roofHeight = 0.9 + rng() * 0.6;
+    const roof = makeGableRoof(w * (1.05 + rng() * 0.04), d * (1.05 + rng() * 0.04), roofHeight, rng);
+    roof.position.y = baseHeight + roofHeight * 0.5 + 0.1;
     g.add(roof);
+
+    if (rng() < 0.45) {
+      const annexW = w * (0.45 + rng() * 0.2);
+      const annexD = d * (0.4 + rng() * 0.25);
+      const annexH = baseHeight * (0.65 + rng() * 0.2);
+      const annex = makeBox(annexW, annexH, annexD, createMaterial("clay", rng));
+      annex.position.set((w * 0.5 - annexW * 0.5) * (rng() < 0.5 ? 1 : -1), annexH * 0.5, (d * 0.5 - annexD * 0.5) * (rng() < 0.5 ? 1 : -1));
+      g.add(annex);
+    }
+
+    if (rng() < 0.6) {
+      addWindowBand(g, {
+        count: 3 + Math.floor(rng() * 2),
+        spacing: w / (2.2 + rng()),
+        distance: d * 0.5 + 0.35,
+        rng,
+      });
+      addWindowBand(g, {
+        count: 2 + Math.floor(rng() * 2),
+        spacing: w / (2.5 + rng()),
+        distance: d * 0.5 + 0.35,
+        direction: "back",
+        rng,
+      });
+      if (rng() < 0.5) {
+        addWindowBand(g, {
+          count: 2 + Math.floor(rng() * 2),
+          spacing: d / (2.4 + rng()),
+          distance: w * 0.5 + 0.35,
+          direction: "left",
+          rng,
+        });
+      }
+    }
+
+    if (rng() < 0.4) {
+      const chimney = makeBox(0.6, roofHeight * 1.2, 0.6, createMaterial("stone", rng));
+      chimney.position.set((w * 0.25) * (rng() < 0.5 ? -1 : 1), baseHeight + roofHeight, (d * 0.25) * (rng() < 0.5 ? -1 : 1));
+      g.add(chimney);
+    }
+
+    const forecourt = new THREE.Mesh(
+      new THREE.PlaneGeometry(w * 1.6, d * 1.8),
+      createMaterial("paving", rng, { side: THREE.DoubleSide })
+    );
+    forecourt.rotation.x = -Math.PI / 2;
+    forecourt.position.y = 0.01;
+    forecourt.receiveShadow = true;
+    g.add(forecourt);
+
+    if (rng() < 0.7) {
+      addEntrySteps(g, Math.min(w, d) * 0.8, rng);
+    }
+
+    return g;
+  },
+  courtyard({ rng = Math.random } = {}) {
+    const g = new THREE.Group();
+    g.name = "ProceduralCourtyard";
+    const scale = 0.8 + rng() * 0.3;
+    const main = Prefabs.house({ w: 6 * scale, d: 7.5 * scale, h: 4.4 * scale, rng });
+    g.add(main);
+
+    const side = Prefabs.house({ w: 4.5 * scale, d: 5.2 * scale, h: 3.6 * scale, rng });
+    side.position.set(0, 0, -6 * scale);
+    side.rotation.y = Math.PI / 2;
+    g.add(side);
+
+    const courtyardPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(9 * scale, 9 * scale),
+      createMaterial("paving", rng, { side: THREE.DoubleSide })
+    );
+    courtyardPlane.rotation.x = -Math.PI / 2;
+    courtyardPlane.position.set(0, 0.02, -3.4 * scale);
+    courtyardPlane.receiveShadow = true;
+    g.add(courtyardPlane);
+
+    const planter = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.1 * scale, 1.1 * scale, 0.6 * scale, 12),
+      createMaterial("stone", rng)
+    );
+    planter.position.set(0, 0.3 * scale, -3.4 * scale);
+    g.add(planter);
+
+    const greenery = new THREE.Mesh(
+      new THREE.SphereGeometry(1.2 * scale, 12, 10),
+      new THREE.MeshStandardMaterial({ color: 0x507a3a, roughness: 0.85 })
+    );
+    greenery.position.y = 1.2 * scale;
+    planter.add(greenery);
+
     return g;
   },
   shop(opts) { return Prefabs.house({ ...opts, w: 6, d: 6, h: 3.4 }); },
   workshop(opts) { return Prefabs.house({ ...opts, w: 6, d: 8, h: 4.0 }); },
-  warehouse({ w = 9, d = 12, h = 5.2 } = {}) {
+  warehouse({ w = 9, d = 12, h = 5.2, rng = Math.random } = {}) {
     const g = new THREE.Group();
-    const base = makeBox(w, h, d, MAT.wood);
+    g.name = "ProceduralWarehouse";
+    const base = makeBox(w, h, d, createMaterial("wood", rng));
     base.position.y = h * 0.5; g.add(base);
-    const roof = makeGableRoof(w * 1.05, d * 1.05, 1.4);
+    const roof = makeGableRoof(w * 1.05, d * 1.05, 1.4, rng);
     roof.position.y = h + 0.7; g.add(roof);
+
+    if (rng() < 0.5) {
+      const loading = makeBox(w * 0.6, h * 0.5, 0.6, createMaterial("stone", rng));
+      loading.position.set(0, h * 0.25, d * 0.5 + 0.3);
+      g.add(loading);
+    }
+
+    const deck = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.2, d * 1.4), createMaterial("paving", rng));
+    deck.rotation.x = -Math.PI / 2;
+    deck.position.y = 0.01;
+    deck.receiveShadow = true;
+    g.add(deck);
+
     return g;
   },
-  stoa({ w = 10, d = 6, h = 4.5 } = {}) {
+  stoa({ w = 10, d = 6, h = 4.5, rng = Math.random } = {}) {
     const g = new THREE.Group();
-    const plinth = makeBox(w, 0.6, d, MAT.stone); plinth.position.y = 0.3; g.add(plinth);
-    const hall = makeBox(w * 0.96, h, d * 0.9, MAT.stone); hall.position.y = h * 0.5 + 0.6; g.add(hall);
-    const roof = makeGableRoof(w * 1.02, d * 1.02, 1.4); roof.position.y = 0.6 + h + 0.7; g.add(roof);
+    g.name = "ProceduralStoa";
+    const plinth = makeBox(w, 0.6, d, createMaterial("marble", rng));
+    plinth.position.y = 0.3; g.add(plinth);
+    const hall = makeBox(w * 0.96, h, d * 0.9, createMaterial("stone", rng));
+    hall.position.y = h * 0.5 + 0.6; g.add(hall);
+    const roof = makeGableRoof(w * 1.02, d * 1.02, 1.4, rng);
+    roof.position.y = 0.6 + h + 0.7; g.add(roof);
+
+    const colCount = 6;
+    const colGeom = new THREE.CylinderGeometry(0.35, 0.35, h, 20);
+    const colMat = createMaterial("marble", rng, { metalness: 0.04 });
+    for (let i = 0; i < colCount; i++) {
+      const t = i / (colCount - 1);
+      const x = THREE.MathUtils.lerp(-w * 0.45, w * 0.45, t);
+      const columnFront = new THREE.Mesh(colGeom, colMat);
+      columnFront.position.set(x, 0.6 + h * 0.5, d * 0.48);
+      columnFront.castShadow = columnFront.receiveShadow = true;
+      g.add(columnFront);
+
+      const columnBack = columnFront.clone();
+      columnBack.position.z = -d * 0.48;
+      g.add(columnBack);
+    }
+
     return g;
   },
   fountain() {
     const g = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.4, 20), MAT.marble);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.4, 20), createMaterial("marble", Math.random));
     base.position.y = 0.2; g.add(base);
-    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.5, 16), MAT.marble);
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.5, 16), createMaterial("marble", Math.random));
     bowl.position.y = 0.7; g.add(bowl);
     return g;
   },
   plaza() {
     const g = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.0, 0.2, 24), MAT.stone);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.0, 0.2, 24), createMaterial("paving", Math.random));
     base.position.y = 0.1; g.add(base);
     return g;
   },
-  temple({ w = 12, d = 18, h = 6 } = {}) {
+  temple({ w = 12, d = 18, h = 6, rng = Math.random } = {}) {
     const g = new THREE.Group();
-    const stylobate = makeBox(w, 1.0, d, MAT.marble); stylobate.position.y = 0.5; g.add(stylobate);
-    const cella = makeBox(w * 0.7, h, d * 0.6, MAT.marble); cella.position.y = 1.0 + h * 0.5; g.add(cella);
-    const roof = makeGableRoof(w * 0.9, d * 0.9, 1.8); roof.position.y = 1.0 + h + 0.9; g.add(roof);
+    g.name = "ProceduralTemple";
+    const stylobate = makeBox(w, 1.0, d, createMaterial("marble", rng));
+    stylobate.position.y = 0.5; g.add(stylobate);
+    const cella = makeBox(w * 0.7, h, d * 0.6, createMaterial("stone", rng));
+    cella.position.y = 1.0 + h * 0.5; g.add(cella);
+    const roof = makeGableRoof(w * 0.9, d * 0.9, 1.8, rng);
+    roof.position.y = 1.0 + h + 0.9; g.add(roof);
+
+    const colGeom = new THREE.CylinderGeometry(0.45, 0.45, h * 0.9, 24);
+    const colMat = createMaterial("marble", rng, { metalness: 0.03 });
+    const perSide = 6;
+    for (let i = 0; i < perSide; i++) {
+      const t = i / (perSide - 1);
+      const offsetX = THREE.MathUtils.lerp(-w * 0.45, w * 0.45, t);
+      const columnFront = new THREE.Mesh(colGeom, colMat);
+      columnFront.position.set(offsetX, 1.0 + (h * 0.45), d * 0.48);
+      columnFront.castShadow = columnFront.receiveShadow = true;
+      g.add(columnFront);
+
+      const columnBack = columnFront.clone();
+      columnBack.position.z = -d * 0.48;
+      g.add(columnBack);
+    }
+
     return g;
   },
-  pier({ w = 3, d = 12 } = {}) {
+  pier({ w = 3, d = 12, rng = Math.random } = {}) {
     const g = new THREE.Group();
-    const deck = makeBox(w, 0.4, d, MAT.wood); deck.position.y = 0.2; g.add(deck);
+    g.name = "ProceduralPier";
+    const deck = makeBox(w, 0.4, d, createMaterial("wood", rng));
+    deck.position.y = 0.2; g.add(deck);
+    const pilingGeom = new THREE.CylinderGeometry(0.3, 0.3, 1.6, 10);
+    const pilingMat = createMaterial("wood", rng, { color: 0x6d4c41 });
+    const spacing = d / 4;
+    for (let i = -1; i <= 1; i++) {
+      for (let j = 0; j < 5; j++) {
+        const pile = new THREE.Mesh(pilingGeom, pilingMat);
+        pile.position.set(i * (w * 0.4), -0.6, -d * 0.5 + j * spacing);
+        pile.castShadow = pile.receiveShadow = true;
+        g.add(pile);
+      }
+    }
     return g;
   },
   market() { return Prefabs.shop({}); },
@@ -202,6 +484,7 @@ const TYPE_MAP = {
   pier:      { prefab: "pier",      glb: "models/harbor/pier.glb" },
   market:    { prefab: "market",    glb: "models/props/market_stall.glb" },
   monument:  { prefab: "monument",  glb: "models/landmarks/monument.glb" },
+  garden:    { prefab: "courtyard", glb: "" },
 };
 
 function pick(arr, rnd) { return arr[Math.floor(rnd() * arr.length)]; }
@@ -276,11 +559,12 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
           if (glb) {
             built = glb;
             // Normalize scale so GLBs feel consistent
-            const box = new THREE.Box3().setFromObject(glb);
-            const size = new THREE.Vector3(); box.getSize(size);
-            const targetY = clamp(size.y, 3.5, 8.0);
-            const scale = targetY > 0 ? (targetY / size.y) : 1.0;
+            scratchBox.setFromObject(glb);
+            scratchBox.getSize(scratchSize);
+            const targetY = clamp(scratchSize.y, 3.5, 8.0);
+            const scale = scratchSize.y > 0 ? targetY / scratchSize.y : 1.0;
             glb.scale.setScalar(scale);
+            tintGlbMaterials(glb, rng);
           }
         }
       }
@@ -288,13 +572,27 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
 
     // 2) Fallback to a parametric prefab (always works)
     if (!built) {
-      const prefab = Prefabs[map.prefab] || Prefabs.house;
-      built = prefab({});
+      let prefabKey = map.prefab;
+      if (prefabKey === "house" && rng() < 0.35) {
+        prefabKey = "courtyard";
+      }
+      const prefab = Prefabs[prefabKey] || Prefabs.house;
+      built = prefab({ rng, district: districtId });
     }
 
+    scratchBox.setFromObject(pad);
+    scratchBox.getSize(scratchSize);
+    const jitterScaleX = Number.isFinite(scratchSize.x) ? scratchSize.x * 0.35 : 1.0;
+    const jitterScaleZ = Number.isFinite(scratchSize.z) ? scratchSize.z * 0.35 : 1.0;
+    const jitterX = clamp((rng() - 0.5) * jitterScaleX, -2.4, 2.4);
+    const jitterZ = clamp((rng() - 0.5) * jitterScaleZ, -2.4, 2.4);
+
     built.position.copy(pad.position);
+    built.position.x += Number.isFinite(jitterX) ? jitterX : 0;
+    built.position.z += Number.isFinite(jitterZ) ? jitterZ : 0;
     built.position.y = Math.max(built.position.y, 0) + 0.01; // float slightly above ground to avoid z-fight
-    built.rotation.y = pad.rotation.y + (rng() - 0.5) * 0.5;
+
+    built.rotation.y = pad.rotation.y + (rng() - 0.5) * 0.9;
     built.userData = { ...built.userData, district: districtId, type: typeKey };
     buildingsGroup.add(built);
     count += 1;
@@ -306,6 +604,41 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
 }
 
 function clamp(v, a, b) { return Math.min(Math.max(v, a), b); }
+
+function tintGlbMaterials(glb, rng) {
+  const random = typeof rng === "function" ? rng : Math.random;
+  const palette = [
+    ...(MATERIAL_VARIANTS.stone || []),
+    ...(MATERIAL_VARIANTS.trim || []),
+    ...(MATERIAL_VARIANTS.marble || []),
+  ].filter((color) => typeof color === "number");
+
+  glb.traverse((child) => {
+    if (!child.isMesh) return;
+    child.castShadow = true;
+    child.receiveShadow = true;
+
+    const material = child.material;
+    if (!material) return;
+
+    const color = material.color;
+    const current = color?.getHex?.();
+    const isNeutral = current === 0xffffff || current === 0xfefefe || current === 0xe5e5e5;
+    const noMap = !material.map && !material.emissiveMap && !material.roughnessMap;
+
+    if ((isNeutral || noMap) && palette.length > 0) {
+      const tint = pick(palette, random);
+      const clone = typeof material.clone === "function" ? material.clone() : material;
+      if (!clone.color) {
+        clone.color = new THREE.Color(tint);
+      } else {
+        clone.color.setHex(tint);
+      }
+      clone.needsUpdate = true;
+      child.material = clone;
+    }
+  });
+}
 
 function guessAllowedTypes(districtId) {
   switch (districtId) {
