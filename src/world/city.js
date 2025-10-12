@@ -20,6 +20,7 @@ import { addFoundationPad } from "./foundations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
 import { spawnBuildingsFromPads } from "./buildingSpawner.js";
+import { makeTiledPBR } from "../materials/pbr-utils.js";
 
 function cullByMinSeparation(pads, minDist) {
   if (!Array.isArray(pads) || pads.length === 0) return [];
@@ -965,7 +966,17 @@ export async function createCity(scene, terrain, options = {}) {
   city.add(lotPads);
 
   const lotPadGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.08, 10);
-  const lotPadMaterial = new THREE.MeshStandardMaterial({ color: 0xb7b3a7, roughness: 1, metalness: 0 });
+  const lotPadMaterial =
+    (await makeTiledPBR("textures/plaza/lot-pads", [2.4, 2.4])) ??
+    new THREE.MeshStandardMaterial({ color: 0xb7b3a7, roughness: 1, metalness: 0 });
+  lotPadMaterial.depthWrite = true;
+  lotPadMaterial.transparent = false;
+  const foundationPadMaterial =
+    (await makeTiledPBR("textures/plaza/foundation-pads", [2.4, 2.4])) ??
+    new THREE.MeshStandardMaterial({ color: 0xbdb8ac, roughness: 0.95, metalness: 0 });
+  foundationPadMaterial.depthWrite = true;
+  foundationPadMaterial.transparent = false;
+  city.userData.foundationPadMaterial = foundationPadMaterial;
   const maxLotSlope = Number.isFinite(districtRules.maxSlopeDeltaPerLot)
     ? districtRules.maxSlopeDeltaPerLot
     : 2.0;
@@ -1168,7 +1179,7 @@ export async function createCity(scene, terrain, options = {}) {
   // Pocket Plazas
   if (showFoundationPads && pocketPlazas.length > 0) {
     for (const plaza of pocketPlazas) {
-      addFoundationPad(city, plaza.x, plaza.y, plaza.z, 2.2);
+      addFoundationPad(city, plaza.x, plaza.y, plaza.z, 2.2, foundationPadMaterial);
     }
   }
 
@@ -1196,7 +1207,14 @@ export async function createCity(scene, terrain, options = {}) {
       SEA_LEVEL_Y
     );
     const plazaBaseHeight = clampSurfaceHeight(plazaHeightSample);
-    addFoundationPad(city, pierPlazaCenter.x, plazaBaseHeight, pierPlazaCenter.z, 3.2);
+    addFoundationPad(
+      city,
+      pierPlazaCenter.x,
+      plazaBaseHeight,
+      pierPlazaCenter.z,
+      3.2,
+      foundationPadMaterial
+    );
   }
 
   const stallFootprints = [];
@@ -1807,6 +1825,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 18,
   } = opts;
   const showHillFoundationPads = opts.showFoundationPads === true;
+  const hillFoundationMaterial = opts.foundationPadMaterial || null;
 
   const rng = makeRng(seed);
   const lots = [];
@@ -1890,7 +1909,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     const buildingScale = 0.9 + rng() * 0.3;
     const padRadius = Math.max(2.0, 1.8 * buildingScale);
     if (showHillFoundationPads) {
-      addFoundationPad(scene, p.x, baseY, p.z, padRadius);
+      addFoundationPad(scene, p.x, baseY, p.z, padRadius, hillFoundationMaterial);
     }
 
     // walls

@@ -896,6 +896,7 @@ async function mainApp() {
   const hillCity = createHillCity(worldRoot, terrain, mainRoad, {
     seed: 42,
     buildingCount: 140,
+    foundationPadMaterial: harborCity?.userData?.foundationPadMaterial ?? null,
   });
 
   try {
