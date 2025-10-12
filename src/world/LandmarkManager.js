@@ -108,6 +108,7 @@ export class LandmarkManager {
     spawnPlaceholder = null,
     logger = console,
     quietMissing = false,
+    forceProcedural = false,
   } = {}) {
     this.scene = scene;
     this.parent = parent || scene;
@@ -124,6 +125,9 @@ export class LandmarkManager {
     this.baseUrl = resolveBaseUrl();
     this.globalDefaults = {};
     this.results = [];
+    this.options = {
+      forceProcedural: Boolean(forceProcedural),
+    };
   }
 
   setTerrain(terrain) {
@@ -380,6 +384,9 @@ export class LandmarkManager {
     const shouldCollide = overrides.collision ?? spec.collision ?? true;
     this.applyCollisionSettings(builtObject, shouldCollide);
     builtObject.updateMatrixWorld?.(true);
+    if (shouldCollide && typeof this.envCollider?.refresh === "function") {
+      this.envCollider.refresh();
+    }
     return builtObject;
   }
 
@@ -509,6 +516,7 @@ export class LandmarkManager {
       const loadOptions = cloneTransformOptions(transformInfo.options);
       loadOptions.proceduralFallback = (context = {}) =>
         this.spawnProceduralFallback(spec, transformInfo, context);
+      loadOptions.forceProcedural = this.options?.forceProcedural === true;
       try {
         const object = await loadLandmark(this.scene, url, loadOptions);
         if (!object) continue;
@@ -541,9 +549,21 @@ export class LandmarkManager {
     const name = spec.name || spec.id || "Landmark";
     const transformInfo = this.prepareTransform(spec);
     const type = typeof spec.type === "string" ? spec.type.trim().toLowerCase() : "";
+    const forceProcedural = this.options?.forceProcedural === true;
+    const wantsProcedural = type === "procedural" || Boolean(spec.proc);
+    const shouldProcedural = forceProcedural || wantsProcedural;
 
-    if (type === "procedural" || spec.proc) {
-      const object = await this.spawnProcedural(spec, transformInfo);
+    if (shouldProcedural) {
+      const forcedProcName = spec.proc || spec.kind || "temple";
+      const procSpec = {
+        ...spec,
+        type: "procedural",
+        proc: forcedProcName,
+      };
+      const object = await this.spawnProcedural(procSpec, transformInfo, {
+        proc: forcedProcName,
+        collision: spec.collision,
+      });
       if (!object) {
         if (!this.quietMissing) {
           this.logMessage(
@@ -554,6 +574,10 @@ export class LandmarkManager {
         this.spawnFallbackPlaceholder(spec, transformInfo);
       }
       return object ?? null;
+    }
+
+    if (forceProcedural) {
+      return null;
     }
 
     const primaryUrls = this.resolveUrls(spec.assetFiles || []);

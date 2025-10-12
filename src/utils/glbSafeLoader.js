@@ -65,7 +65,16 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
     throw new Error("loadGLBWithFallbacks requires at least one URL");
   }
 
-  const { targetHeight = null, renderer = null, onLoaded = null } = options;
+  const {
+    targetHeight = null,
+    renderer = null,
+    onLoaded = null,
+    forceProcedural = false,
+  } = options;
+
+  if (forceProcedural) {
+    return null;
+  }
 
   const baseUrl = resolveBaseUrl();
   const seen = new Set();
