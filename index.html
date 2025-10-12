@@ -8,6 +8,26 @@
   </head>
   <body>
     <div id="app"></div>
+    <script>
+      // Provide bare module fallbacks when running directly from the filesystem
+      if (window.location.protocol === "file:") {
+        const importMap = {
+          imports: {
+            three: "./node_modules/three/build/three.module.js",
+            "three/examples/jsm/": "./node_modules/three/examples/jsm/",
+            "three-mesh-bvh": "./node_modules/three-mesh-bvh/build/index.module.js",
+          },
+        };
+
+        const script = document.createElement("script");
+        script.type = "importmap";
+        script.textContent = JSON.stringify(importMap, null, 2);
+        document.currentScript?.parentNode?.insertBefore(
+          script,
+          document.currentScript.nextSibling,
+        );
+      }
+    </script>
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>
