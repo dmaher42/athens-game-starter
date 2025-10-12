@@ -461,6 +461,18 @@ function parseToggleValue(value, defaultValue = true) {
   return defaultValue;
 }
 
+function shouldUseProceduralLandmarks() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("proc")) {
+    return false;
+  }
+  return parseToggleValue(params.get("proc"), true);
+}
+
+const FORCE_PROCEDURAL_LANDMARKS = shouldUseProceduralLandmarks();
+let proceduralLandmarkCount = 0;
+
 function shouldShowOverlay({
   queryKey,
   windowFlagKey,
@@ -830,78 +842,78 @@ async function mainApp() {
     }
   }
 
-  // --- Aristotle's Tomb (local GLB) -----------------------------------------
-  // We prefer a local asset the repo expects at:
-  //   public/models/landmarks/aristotle_tomb.glb
-  // At runtime we try both the site base (for GitHub Pages) and root (for dev).
-  // If found, we stream it via loadLandmark(); the loader will auto-raise it
-  // ~5cm above ground and handle KTX2 texture support transparently.
-  try {
-    const aristotleUrl = await resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
-    if (aristotleUrl) {
-      const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
-        // Use a named location that already exists in the scene constants.
-        // The landmark loader will call the scene/terrain height sampler and
-        // lift the model slightly so it rests on the ground.
-        position: ACROPOLIS_PEAK_3D,
-        scale: 3.0,
-        materialPreset: "marble",
-      });
-      // Safe no-op if textures not uploaded yet
-      try {
-        await attachAristotleMarblePBR({
-          obj: aristotle ?? null,
-          scene,
-          renderer,
-          BASE_URL,
+  if (!FORCE_PROCEDURAL_LANDMARKS) {
+    // --- Aristotle's Tomb (local GLB) ---------------------------------------
+    // We prefer a local asset the repo expects at:
+    //   public/models/landmarks/aristotle_tomb.glb
+    // At runtime we try both the site base (for GitHub Pages) and root (for dev).
+    // If found, we stream it via loadLandmark(); the loader will auto-raise it
+    // ~5cm above ground and handle KTX2 texture support transparently.
+    try {
+      const aristotleUrl = await resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
+      if (aristotleUrl) {
+        const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
+          position: ACROPOLIS_PEAK_3D,
+          scale: 3.0,
+          materialPreset: "marble",
         });
-      } catch (e) {
-        // never fail the scene due to the texture hook
-        console.warn("Aristotle PBR hook skipped:", e);
+        try {
+          await attachAristotleMarblePBR({
+            obj: aristotle ?? null,
+            scene,
+            renderer,
+            BASE_URL,
+          });
+        } catch (e) {
+          console.warn("Aristotle PBR hook skipped:", e);
+        }
+      } else {
+        console.warn(
+          "Aristotle's Tomb not found. Expected at:",
+          ARISTOTLE_CANDIDATES
+        );
       }
-    } else {
-      console.warn(
-        "Aristotle's Tomb not found. Expected at:",
-        ARISTOTLE_CANDIDATES
-      );
+    } catch (err) {
+      console.error("Failed to load Aristotle's Tomb:", err);
     }
-  } catch (err) {
-    console.error("Failed to load Aristotle's Tomb:", err);
-  }
-  // --------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
 
-  // Poseidon Temple (Sounion)
-  try {
-    const url = await resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
-    if (url)
-      await loadLandmark(worldRoot, url, {
-        position: new THREE.Vector3(90, 0, -60),
-        scale: 2.6,
-        materialPreset: "marble",
-      });
-  } catch (e) {
-    console.warn("Poseidon Temple not loaded:", e);
-  }
+    // Poseidon Temple (Sounion)
+    try {
+      const url = await resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
+      if (url)
+        await loadLandmark(worldRoot, url, {
+          position: new THREE.Vector3(90, 0, -60),
+          scale: 2.6,
+          materialPreset: "marble",
+        });
+    } catch (e) {
+      console.warn("Poseidon Temple not loaded:", e);
+    }
 
-  // Akropol (Acropolis complex placeholder)
-  try {
-    const url = await resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
-    if (url)
-      await loadLandmark(worldRoot, url, {
-        position: new THREE.Vector3(130, 0, 40),
-        scale: 2.2,
-        materialPreset: "marble",
-      });
-  } catch (e) {
-    console.warn("Akropol not loaded:", e);
+    // Akropol (Acropolis complex placeholder)
+    try {
+      const url = await resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
+      if (url)
+        await loadLandmark(worldRoot, url, {
+          position: new THREE.Vector3(130, 0, 40),
+          scale: 2.2,
+          materialPreset: "marble",
+        });
+    } catch (e) {
+      console.warn("Akropol not loaded:", e);
+    }
+    // ------------------------------------------------------------------------
+  } else {
+    console.log("[proc] Skipping landmark GLB imports in procedural mode.");
   }
-  // --------------------------------------------------------------------------
 
   // Plazas (agora + acropolis terraces) — disabled per request to remove large discs
   // createPlazas(worldRoot);
 
   const harborCity = await createCity(worldRoot, terrain, {
     roadsVisible,
+    useProceduralBlocks: FORCE_PROCEDURAL_LANDMARKS,
   });
 
   // Hill-city buildings (uses terrain sampler + road curve)
@@ -1604,57 +1616,57 @@ async function mainApp() {
     return new THREE.Vector3(x, y, z);
   };
 
-  const sampleBuildingSpecs = [
-    {
-      url: joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
-      position: createTerrainAlignedPosition(-34, -12),
-      rotateY: -Math.PI * 0.12,
-      // Preserve the authored dimensions (≈13.8m span, 4.5m tall) so the
-      // landmark reads close to its real-world size.
-      scale: 1,
-      collision: true,
-      name: "SamplePoseidonTemple",
-    },
-    {
-      url: joinPath(BASE_URL, "models/landmarks/akropol.glb"),
-      position: createTerrainAlignedPosition(6, -42),
-      rotateY: Math.PI * 0.08,
-      // Match the mesh's original scale to avoid shrinking the Acropolis model
-      // below a believable footprint.
-      scale: 1,
-      collision: false,
-      name: "SampleAkropol",
-    },
-  ];
+  if (!FORCE_PROCEDURAL_LANDMARKS) {
+    const sampleBuildingSpecs = [
+      {
+        url: joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
+        position: createTerrainAlignedPosition(-34, -12),
+        rotateY: -Math.PI * 0.12,
+        scale: 1,
+        collision: true,
+        name: "SamplePoseidonTemple",
+      },
+      {
+        url: joinPath(BASE_URL, "models/landmarks/akropol.glb"),
+        position: createTerrainAlignedPosition(6, -42),
+        rotateY: Math.PI * 0.08,
+        scale: 1,
+        collision: false,
+        name: "SampleAkropol",
+      },
+    ];
 
-  const sampleBuildingResults = await Promise.allSettled(
-    sampleBuildingSpecs.map((spec) =>
-      buildingMgr
-        .loadBuilding(spec.url, {
-          position: spec.position,
-          rotateY: spec.rotateY,
-          scale: spec.scale,
-          collision: spec.collision,
-          parent: buildingsRoot,
-          heightSampler: terrainHeightSampler,
-        })
-        .then((object) => {
-          if (object && spec.name) {
-            object.name = spec.name;
-          }
-          return object;
-        })
-    )
-  );
+    const sampleBuildingResults = await Promise.allSettled(
+      sampleBuildingSpecs.map((spec) =>
+        buildingMgr
+          .loadBuilding(spec.url, {
+            position: spec.position,
+            rotateY: spec.rotateY,
+            scale: spec.scale,
+            collision: spec.collision,
+            parent: buildingsRoot,
+            heightSampler: terrainHeightSampler,
+          })
+          .then((object) => {
+            if (object && spec.name) {
+              object.name = spec.name;
+            }
+            return object;
+          })
+      )
+    );
 
-  sampleBuildingResults.forEach((result, index) => {
-    if (result.status === "rejected") {
-      console.error(
-        `Sample building failed to load: ${sampleBuildingSpecs[index].url}`,
-        result.reason
-      );
-    }
-  });
+    sampleBuildingResults.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(
+          `Sample building failed to load: ${sampleBuildingSpecs[index].url}`,
+          result.reason
+        );
+      }
+    });
+  } else {
+    console.log("[proc] Skipping sample building GLBs.");
+  }
 
   const landmarkManager = new LandmarkManager({
     scene: worldRoot,
@@ -1671,10 +1683,72 @@ async function mainApp() {
     quietMissing: true,
   });
 
+  let configToLoad = athensLayoutConfig;
+  if (FORCE_PROCEDURAL_LANDMARKS) {
+    console.log("[proc] Forcing procedural landmarks.");
+    configToLoad = {
+      metadata: { description: "Procedural development layout" },
+      groups: [
+        {
+          id: "procedural-dev",
+          label: "Procedural Dev",
+          landmarks: [
+            {
+              id: "proc-temple-alpha",
+              name: "Procedural Temple Alpha",
+              type: "procedural",
+              proc: "temple",
+              params: {
+                width: 22,
+                depth: 42,
+                colX: 6,
+                colZ: 13,
+                materialPreset: "marble",
+              },
+              placement: {
+                position: createTerrainAlignedPosition(-34, -12),
+                rotateY: -Math.PI * 0.12,
+              },
+              collision: true,
+            },
+            {
+              id: "proc-temple-beta",
+              name: "Procedural Temple Beta",
+              type: "procedural",
+              proc: "temple",
+              scale: 0.92,
+              params: {
+                width: 18,
+                depth: 32,
+                colX: 5,
+                colZ: 11,
+                materialPreset: "marble",
+              },
+              placement: {
+                position: createTerrainAlignedPosition(6, -42),
+                rotateY: Math.PI * 0.08,
+              },
+              collision: true,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  let landmarkResults = [];
   try {
-    await landmarkManager.loadConfig(athensLayoutConfig);
+    landmarkResults = await landmarkManager.loadConfig(configToLoad);
   } catch (error) {
     console.error("[LandmarkManager] Failed to load Athens layout", error);
+  }
+
+  proceduralLandmarkCount = landmarkResults.filter(
+    (entry) => entry?.object?.userData?.proceduralType
+  ).length;
+
+  if (FORCE_PROCEDURAL_LANDMARKS) {
+    console.log(`[proc] Placed ${proceduralLandmarkCount} procedural landmarks.`);
   }
 
   interactor = createInteractor(renderer, camera, scene);
@@ -1838,6 +1912,10 @@ async function mainApp() {
     onSetLightingPreset: applyLightingPreset,
     lightingPresets: LIGHTING_PRESETS,
   });
+  const proceduralStatusMessage = FORCE_PROCEDURAL_LANDMARKS
+    ? `Procedural: on (${proceduralLandmarkCount})`
+    : "Procedural: off";
+  devHud?.setStatusLine?.("proc", proceduralStatusMessage);
   mountHUDCameraSettings(devHud?.rootElement ?? null);
   updateOceanHudStatus();
   if (audioManifestMissing) {
