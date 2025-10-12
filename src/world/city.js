@@ -478,7 +478,7 @@ export async function createCity(scene, terrain, options = {}) {
   // can still override any of these via `options`.
   const spacingX = options.spacingX ?? 18; // was 14
   const spacingZ = options.spacingZ ?? 18; // was 14
-  const jitter = options.jitter ?? 1.0; // was 1.2
+  const jitter = options.jitter ?? 1.6; // was 1.2
   const maxSlope = options.maxSlope ?? 0.18; // was 0.2
   const roadsVisible = options.roadsVisible == null ? true : Boolean(options.roadsVisible);
 
@@ -486,6 +486,98 @@ export async function createCity(scene, terrain, options = {}) {
   const countZ = Math.max(3, Math.floor(gridSize.y / spacingZ));
   const halfX = (countX - 1) * spacingX * 0.5;
   const halfZ = (countZ - 1) * spacingZ * 0.5;
+
+  const gridWarpAmplitude =
+    options.gridWarpAmplitude ?? Math.min(Math.abs(spacingX), Math.abs(spacingZ)) * 0.32;
+  const gridWarpFrequency = options.gridWarpFrequency ?? 0.75;
+  const gridWarpNoise = options.gridWarpNoise ?? 0.28;
+  const warpPhaseX = rng() * Math.PI * 2;
+  const warpPhaseZ = rng() * Math.PI * 2;
+  const warpPhaseDiagonal = rng() * Math.PI * 2;
+  const warpStrengthX = THREE.MathUtils.lerp(0.45, 1.1, rng());
+  const warpStrengthZ = THREE.MathUtils.lerp(0.45, 1.1, rng());
+  const warpStrengthDiagonal = THREE.MathUtils.lerp(0.3, 0.85, rng());
+  const warpNoiseSeed = rng() * 997;
+
+  const cellWarpCache = Array.from({ length: countX }, () => Array(countZ));
+
+  const fract = (value) => value - Math.floor(value);
+
+  function pseudoRandom2D(ix, iz, salt = 0) {
+    return fract(Math.sin(ix * 127.1 + iz * 311.7 + salt + warpNoiseSeed) * 43758.5453);
+  }
+
+  function getCellWarp(ix, iz) {
+    if (ix < 0 || iz < 0 || ix >= countX || iz >= countZ) {
+      return { x: 0, z: 0 };
+    }
+    const column = cellWarpCache[ix];
+    if (!column) return { x: 0, z: 0 };
+    let cached = column[iz];
+    if (cached) return cached;
+
+    if (gridWarpAmplitude <= 0) {
+      cached = { x: 0, z: 0 };
+    } else {
+      const maxXi = Math.max(1, countX - 1);
+      const maxZi = Math.max(1, countZ - 1);
+      const normalizedX = maxXi === 0 ? 0 : ix / maxXi;
+      const normalizedZ = maxZi === 0 ? 0 : iz / maxZi;
+
+      const curveX =
+        Math.sin(normalizedZ * Math.PI * 2 * gridWarpFrequency + warpPhaseX) * warpStrengthX;
+      const curveZ =
+        Math.sin(normalizedX * Math.PI * 2 * gridWarpFrequency + warpPhaseZ) * warpStrengthZ;
+      const diagonal =
+        Math.sin(
+          (normalizedX + normalizedZ) * Math.PI * 2 * gridWarpFrequency * 0.5 + warpPhaseDiagonal
+        ) * warpStrengthDiagonal;
+
+      const noiseX = (pseudoRandom2D(ix, iz, 17.3) - 0.5) * 2;
+      const noiseZ = (pseudoRandom2D(ix + 2.7, iz + 9.1, 91.7) - 0.5) * 2;
+
+      cached = {
+        x: gridWarpAmplitude * (curveX + diagonal * 0.6 + noiseX * gridWarpNoise),
+        z: gridWarpAmplitude * (curveZ - diagonal * 0.4 + noiseZ * gridWarpNoise),
+      };
+    }
+
+    column[iz] = cached;
+    return cached;
+  }
+
+  function getWarpForIntersection(ix, iz) {
+    if (gridWarpAmplitude <= 0) return { x: 0, z: 0 };
+    let sumX = 0;
+    let sumZ = 0;
+    let total = 0;
+    const add = (cx, cz) => {
+      if (cx < 0 || cz < 0 || cx >= countX || cz >= countZ) return;
+      const warp = getCellWarp(cx, cz);
+      if (!warp) return;
+      sumX += warp.x;
+      sumZ += warp.z;
+      total++;
+    };
+
+    add(ix, iz);
+    add(ix - 1, iz);
+    add(ix, iz - 1);
+    add(ix - 1, iz - 1);
+
+    if (total === 0) {
+      return { x: 0, z: 0 };
+    }
+
+    const jitterX = (pseudoRandom2D(ix * 1.3, iz * 2.1, 23.7) - 0.5) * 2;
+    const jitterZ = (pseudoRandom2D(ix * -0.9, iz * 0.77, 71.4) - 0.5) * 2;
+    const jitterScale = gridWarpAmplitude * gridWarpNoise * 0.35;
+
+    return {
+      x: sumX / total + jitterScale * jitterX,
+      z: sumZ / total + jitterScale * jitterZ,
+    };
+  }
 
   const placements = [];
   const pocketPlazas = [];
@@ -495,8 +587,11 @@ export async function createCity(scene, terrain, options = {}) {
     for (let iz = 0; iz < countZ; iz++) {
       intersectionCounter++;
 
-      const centerX = origin.x + (ix * spacingX - halfX) + THREE.MathUtils.lerp(-jitter, jitter, rng());
-      const centerZ = origin.z + (iz * spacingZ - halfZ) + THREE.MathUtils.lerp(-jitter, jitter, rng());
+      const warp = getCellWarp(ix, iz);
+      const centerX =
+        origin.x + (ix * spacingX - halfX) + warp.x + THREE.MathUtils.lerp(-jitter, jitter, rng());
+      const centerZ =
+        origin.z + (iz * spacingZ - halfZ) + warp.z + THREE.MathUtils.lerp(-jitter, jitter, rng());
 
       if (inRect(centerX, centerZ, pierRect)) {
         continue;
@@ -528,6 +623,7 @@ export async function createCity(scene, terrain, options = {}) {
       const roofHeight = wallHeight * THREE.MathUtils.lerp(0.38, 0.55, rng());
       const rotationSteps = Math.max(1, options.rotationSteps ?? 2); // was 4 → align facades
       let rotation = Math.floor(rng() * rotationSteps) * ((Math.PI * 2) / rotationSteps);
+      rotation += THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-10, 10, rng()));
       if (inQuayBand) {
         rotation = 0;
       }
@@ -590,9 +686,11 @@ export async function createCity(scene, terrain, options = {}) {
 
   for (let iz = 0; iz <= countZ; iz++) {
     const row = [];
-    const z = roadStartZ + iz * spacingZ;
+    const zBase = roadStartZ + iz * spacingZ;
     for (let ix = 0; ix <= countX; ix++) {
-      const x = roadStartX + ix * spacingX;
+      const nodeWarp = getWarpForIntersection(ix, iz);
+      const x = roadStartX + ix * spacingX + nodeWarp.x;
+      const z = zBase + nodeWarp.z;
       const height = sampleHeight(terrain, x, z, null);
       if (!Number.isFinite(height) || height < MIN_CITY_GRADE) {
         // below-sea cells
