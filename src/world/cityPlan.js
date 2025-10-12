@@ -9,8 +9,13 @@ function createPavedStrip(width, depth, color) {
     roughness: 0.85,
     metalness: 0.05,
   });
+  // Keep the civic paving from z-fighting with the terrain.
+  material.polygonOffset = true;
+  material.polygonOffsetFactor = -1;
+  material.polygonOffsetUnits = -1;
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true;
+  mesh.renderOrder = 2;
   return mesh;
 }
 
@@ -22,8 +27,13 @@ function createGreenStrip(width, depth, color) {
     roughness: 1,
     metalness: 0,
   });
+  // Nudge greenswards above the ground so they do not flicker.
+  material.polygonOffset = true;
+  material.polygonOffsetFactor = -1;
+  material.polygonOffsetUnits = -1;
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true;
+  mesh.renderOrder = 2;
   return mesh;
 }
 
