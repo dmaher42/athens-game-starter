@@ -199,7 +199,7 @@ export const athensLayoutConfig = {
           description:
             "Colossal bronze of Athena guarding the sanctuary, visible from the sea.",
           assetFiles: ["models/landmarks/athena_promachos.glb"],
-          fallbackFiles: ["models/landmarks/erechtheion.glb", "models/buildings/Akropol.glb"],
+          fallbackFiles: ["models/landmarks/akropol.glb"],
           placement: {
             position: anchorPosition(ACROPOLIS_PEAK_3D, { x: 2, z: 2 }),
             rotation: { y: Math.PI * 0.5 },
