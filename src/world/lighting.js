@@ -36,6 +36,9 @@ export function createLighting(scene) {
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(1024, 1024);
   sunLight.shadow.bias = -0.0005;
+  sunLight.position.set(0.707, 0.5, 0.5).normalize().multiplyScalar(150);
+  sunLight.target.position.set(0, 0, 0);
+  sunLight.target.updateMatrixWorld();
   const cam = sunLight.shadow.camera;
   cam.near = 1;
   cam.far = 300;
