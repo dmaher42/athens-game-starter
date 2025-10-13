@@ -327,6 +327,16 @@ export async function createOcean(scene, options = {}) {
     water.material.depthWrite = false;
     water.material.transparent = true;
     water.material.needsUpdate = true;
+    if (water.material.uniforms) {
+      // mild waves and readable highlights.
+      const { distortionScale, size } = water.material.uniforms;
+      if (distortionScale?.value !== undefined) {
+        distortionScale.value = 3.5;
+      }
+      if (size?.value !== undefined) {
+        size.value = 2.0;
+      }
+    }
 
     if (typeof window !== "undefined" && window.location?.search?.includes("waterdbg=1")) {
       const existing = scene.getObjectByName("WaterClipDebug");
