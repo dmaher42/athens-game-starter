@@ -8,7 +8,7 @@
   </head>
   <body>
     <div id="app"></div>
-    <script type="module">
+    <script type="module" id="app-entry-script">
       const existingImportMap = document.querySelector('script[type="importmap"]');
 
       if (!existingImportMap) {
@@ -24,7 +24,7 @@
         importMapScript.type = "importmap";
         importMapScript.textContent = JSON.stringify(FALLBACK_IMPORT_MAP, null, 2);
 
-        document.currentScript?.before(importMapScript);
+        document.getElementById("app-entry-script")?.before(importMapScript);
       }
 
       import("./src/main.js");
