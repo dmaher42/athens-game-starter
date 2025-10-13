@@ -1651,26 +1651,26 @@ async function mainApp() {
     return new THREE.Vector3(x, y, z);
   };
 
-  if (!FORCE_PROC) {
-    const sampleBuildingSpecs = [
-      {
-        url: joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
-        position: createTerrainAlignedPosition(-34, -12),
-        rotateY: -Math.PI * 0.12,
-        scale: 1,
-        collision: true,
-        name: "SamplePoseidonTemple",
-      },
-      {
-        url: joinPath(BASE_URL, "models/landmarks/akropol.glb"),
-        position: createTerrainAlignedPosition(6, -42),
-        rotateY: Math.PI * 0.08,
-        scale: 1,
-        collision: false,
-        name: "SampleAkropol",
-      },
-    ];
+  const sampleBuildingSpecs = [
+    {
+      url: joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
+      position: createTerrainAlignedPosition(-34, -12),
+      rotateY: -Math.PI * 0.12,
+      scale: 1,
+      collision: true,
+      name: "SamplePoseidonTemple",
+    },
+    {
+      url: joinPath(BASE_URL, "models/landmarks/akropol.glb"),
+      position: createTerrainAlignedPosition(6, -42),
+      rotateY: Math.PI * 0.08,
+      scale: 1,
+      collision: false,
+      name: "SampleAkropol",
+    },
+  ];
 
+  if (!FORCE_PROC) {
     const sampleBuildingResults = await Promise.allSettled(
       sampleBuildingSpecs.map((spec) =>
         buildingMgr
