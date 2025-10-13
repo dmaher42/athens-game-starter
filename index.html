@@ -2,46 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232a2a2a'/%3E%3Cpath d='M28 70h12l5-14h10l5 14h12L59 30H41z' fill='%23f4b700'/%3E%3C/svg%3E"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="favicon.ico" />
     <title>Athens Game Starter</title>
   </head>
   <body>
     <div id="app"></div>
-    <script>
-      (function installFallbackImportMapWhenNeeded() {
-        const isFileProtocol = window.location.protocol === "file:";
-        const hasImportMap = Boolean(
-          document.querySelector("script[type=\"importmap\"]")
-        );
-        const isViteDevServer = Boolean(
-          document.querySelector('script[type="module"][src^="/@vite/"]')
-        );
-
-        if (!isFileProtocol && (hasImportMap || isViteDevServer)) {
-          return;
-        }
-
-        const FALLBACK_IMPORT_MAP = {
-          imports: {
-            three: "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-            "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-            "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.1/build/index.module.js",
-          },
-        };
-
-        const importMapScript = document.createElement("script");
-        importMapScript.type = "importmap";
-        importMapScript.textContent = JSON.stringify(FALLBACK_IMPORT_MAP, null, 2);
-
-        const currentScript = document.currentScript;
-        currentScript?.parentNode?.insertBefore(importMapScript, currentScript);
-      })();
-    </script>
-    <script type="module" src="./src/main.js"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
