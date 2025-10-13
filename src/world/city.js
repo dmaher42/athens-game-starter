@@ -12,6 +12,7 @@ import {
   HARBOR_CENTER_3D,
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_EAST_LIMIT,
+  HARBOR_SETBACKS,
   AGORA_CENTER_3D,
   ACROPOLIS_PEAK_3D,
 } from "./locations.js";
@@ -329,6 +330,39 @@ const _position = new THREE.Vector3();
 const _rotationAxis = new THREE.Vector3(0, 1, 0);
 const _color = new THREE.Color();
 const _hsl = { h: 0, s: 0, l: 0 };
+const _lotPosition = { x: 0, z: 0 };
+
+function toPointXZ(point) {
+  if (!point) return [undefined, undefined];
+  if (Array.isArray(point)) {
+    return [point[0], point[1]];
+  }
+  if (typeof point.x === "number" || typeof point.z === "number") {
+    return [point.x, point.z];
+  }
+  return [undefined, undefined];
+}
+
+function isInsideRect(point, rect) {
+  if (!rect) return false;
+  const [px, pz] = toPointXZ(point);
+  if (!Number.isFinite(px) || !Number.isFinite(pz)) return false;
+  const { west, east, north, south } = rect;
+  if (!Number.isFinite(west) || !Number.isFinite(east) || !Number.isFinite(north) || !Number.isFinite(south)) {
+    return false;
+  }
+  return px >= west && px <= east && pz >= north && pz <= south;
+}
+
+function isInsideAnyRect(point, rectangles) {
+  if (!Array.isArray(rectangles) || rectangles.length === 0) return false;
+  for (const rect of rectangles) {
+    if (isInsideRect(point, rect)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 function mulberry32(seed) {
   return function () {
@@ -630,6 +664,12 @@ export async function createCity(scene, terrain, options = {}) {
         rotation = 0;
       }
 
+      _lotPosition.x = centerX;
+      _lotPosition.z = centerZ;
+      if (isInsideAnyRect(_lotPosition, HARBOR_SETBACKS)) {
+        continue;
+      }
+
       const lot = evaluateLot({
         terrain,
         centerX,
@@ -641,6 +681,11 @@ export async function createCity(scene, terrain, options = {}) {
       });
 
       if (!lot) {
+        continue;
+      }
+
+      const sampledY = Number.isFinite(lot.height) ? lot.height : NaN;
+      if (!Number.isFinite(sampledY) || sampledY <= SEA_LEVEL_Y + 0.01) {
         continue;
       }
 
@@ -663,11 +708,7 @@ export async function createCity(scene, terrain, options = {}) {
         continue;
       }
 
-      if (!Number.isFinite(lot.height) || lot.height <= SEA_LEVEL_Y + 0.01) {
-        continue;
-      }
-
-      const groundHeight = clampSurfaceHeight(lot.height);
+      const groundHeight = clampSurfaceHeight(sampledY);
       placements.push({
         x: centerX,
         y: groundHeight,
