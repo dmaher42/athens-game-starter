@@ -8,21 +8,10 @@
   </head>
   <body>
     <div id="app"></div>
-    <script>
-      (function installFallbackImportMapWhenNeeded() {
-        const sourceModule = document.querySelector(
-          'script[type="module"][src="./src/main.js"]',
-        );
+    <script type="module">
+      const existingImportMap = document.querySelector('script[type="importmap"]');
 
-        if (!sourceModule) {
-          return;
-        }
-
-        const existingImportMap = document.querySelector('script[type="importmap"]');
-        if (existingImportMap) {
-          return;
-        }
-
+      if (!existingImportMap) {
         const FALLBACK_IMPORT_MAP = {
           imports: {
             three: "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
@@ -35,10 +24,10 @@
         importMapScript.type = "importmap";
         importMapScript.textContent = JSON.stringify(FALLBACK_IMPORT_MAP, null, 2);
 
-        const insertionTarget = document.currentScript ?? sourceModule;
-        insertionTarget.parentNode?.insertBefore(importMapScript, insertionTarget);
-      })();
+        document.currentScript?.before(importMapScript);
+      }
+
+      import("./src/main.js");
     </script>
-    <script type="module" src="./src/main.js"></script>
   </body>
 </html>
