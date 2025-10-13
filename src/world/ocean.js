@@ -307,9 +307,11 @@ export async function createOcean(scene, options = {}) {
     new THREE.Plane(new THREE.Vector3(0, 0, 1), -clipZFront),
   ];
 
+  water.renderOrder = 1;
   if (water.material) {
     water.material.clippingPlanes = planes;
     water.material.clipIntersection = true;
+    // ensure water draws cleanly against shoreline.
     water.material.depthWrite = false;
     water.material.transparent = true;
     water.material.needsUpdate = true;
