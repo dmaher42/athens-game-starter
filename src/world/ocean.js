@@ -275,8 +275,20 @@ export async function createOcean(scene, options = {}) {
     [north, south] = [south, north];
   }
 
-  const width = Math.max(0.1, east - west);
-  const depth = Math.max(0.1, south - north);
+  let width = Math.max(0.1, east - west);
+  let depth = Math.max(0.1, south - north);
+
+  const expansionFactor = 1.5; // extend ocean so horizon is always water.
+  if (expansionFactor !== 1) {
+    const centerX = (west + east) * 0.5;
+    const centerZ = (north + south) * 0.5;
+    width = Math.max(0.1, width * expansionFactor);
+    depth = Math.max(0.1, depth * expansionFactor);
+    west = centerX - width * 0.5;
+    east = centerX + width * 0.5;
+    north = centerZ - depth * 0.5;
+    south = centerZ + depth * 0.5;
+  }
 
   const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
   const water = new Water(geometry, {
