@@ -25,6 +25,18 @@ import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildHouseBlock } from "../features/blocks.js";
 
+const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
+const ROOF_COLOR_PRESETS = ["#b4472c", "#c05621", "#d66f2c"];
+const ACCENT_COLOR_PRESETS = ["#1e6fa3", "#2b8a4d", "#3a5fb0", "#784421"];
+
+const _tmpHsl = { h: 0, s: 0, l: 0 };
+
+function pickRandom(array, rng) {
+  if (!Array.isArray(array) || array.length === 0) return null;
+  const index = Math.floor(rng() * array.length) % array.length;
+  return array[index];
+}
+
 function cullByMinSeparation(pads, minDist) {
   if (!Array.isArray(pads) || pads.length === 0) return [];
   if (!(minDist > 0)) return pads.slice();
@@ -709,6 +721,30 @@ export async function createCity(scene, terrain, options = {}) {
       }
 
       const groundHeight = clampSurfaceHeight(sampledY);
+
+      const wallPreset = pickRandom(WALL_COLOR_PRESETS, rng) ?? WALL_COLOR_PRESETS[0];
+      const wallColor = new THREE.Color(wallPreset);
+      wallColor.getHSL(_tmpHsl);
+      const targetHue = THREE.MathUtils.lerp(0.05, 0.18, rng());
+      const hue = THREE.MathUtils.clamp(THREE.MathUtils.lerp(_tmpHsl.h, targetHue, 0.65), 0.05, 0.18);
+      const saturationBoost = THREE.MathUtils.lerp(0.05, 0.15, rng());
+      const saturation = THREE.MathUtils.clamp(_tmpHsl.s + saturationBoost, 0.48, 0.72);
+      const lightness = THREE.MathUtils.clamp(_tmpHsl.l + THREE.MathUtils.lerp(-0.03, 0.06, rng()), 0.6, 0.82);
+      wallColor.setHSL(hue, saturation, lightness);
+
+      const roofPreset = pickRandom(ROOF_COLOR_PRESETS, rng) ?? ROOF_COLOR_PRESETS[0];
+      const roofColor = new THREE.Color(roofPreset);
+      roofColor.getHSL(_tmpHsl);
+      const roofLightness = THREE.MathUtils.clamp(
+        _tmpHsl.l + THREE.MathUtils.lerp(-0.05, 0.05, rng()),
+        0,
+        1
+      );
+      roofColor.setHSL(_tmpHsl.h, _tmpHsl.s, roofLightness);
+
+      const accentPreset = pickRandom(ACCENT_COLOR_PRESETS, rng) ?? ACCENT_COLOR_PRESETS[0];
+      const accentColor = new THREE.Color(accentPreset);
+
       placements.push({
         x: centerX,
         y: groundHeight,
@@ -719,8 +755,9 @@ export async function createCity(scene, terrain, options = {}) {
         roofHeight,
         rotation,
         waterfront: inQuayBand,
-        wallColor: new THREE.Color().setHSL(THREE.MathUtils.lerp(0.08, 0.13, rng()), 0.45, THREE.MathUtils.lerp(0.62, 0.74, rng())),
-        roofColor: new THREE.Color().setHSL(THREE.MathUtils.lerp(0.02, 0.04, rng()), 0.55, THREE.MathUtils.lerp(0.23, 0.32, rng())),
+        wallColor,
+        roofColor,
+        accentColor,
       });
     }
   }
@@ -1910,6 +1947,7 @@ export async function createCity(scene, terrain, options = {}) {
         h: placement.wallHeight,
         roofPitch: pitch,
         color: placement.wallColor,
+        accentColor: placement.accentColor,
       });
       block.position.set(placement.x, placement.y, placement.z);
       block.rotation.y = placement.rotation;
