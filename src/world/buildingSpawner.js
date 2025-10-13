@@ -1,5 +1,6 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
+import { SEA_LEVEL_Y } from "./locations.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 function sanitizeRelativePath(value) {
@@ -590,7 +591,14 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     built.position.copy(pad.position);
     built.position.x += Number.isFinite(jitterX) ? jitterX : 0;
     built.position.z += Number.isFinite(jitterZ) ? jitterZ : 0;
-    built.position.y = Math.max(built.position.y, 0) + 0.01; // float slightly above ground to avoid z-fight
+
+    if (typeKey === "pier") {
+      const pier = built;
+      const deckHeight = 1.4; // or whatever the project uses
+      pier.position.y = SEA_LEVEL_Y + deckHeight; // pier deck sits above current sea level.
+    } else {
+      built.position.y = Math.max(built.position.y, 0) + 0.01; // float slightly above ground to avoid z-fight
+    }
 
     built.rotation.y = pad.rotation.y + (rng() - 0.5) * 0.9;
     built.userData = { ...built.userData, district: districtId, type: typeKey };
