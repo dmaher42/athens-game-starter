@@ -44,7 +44,7 @@ const EXISTING_SEA_LEVEL_Y = (() => {
 })();
 
 export const SEA_LEVEL_Y =
-  typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 1.0; // keep existing if defined
+  typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 2.0; // keep existing if defined
 // export const SEA_LEVEL_Y = -0.3; // uncomment to lower globally if shoreline splashes
 
 // Key anchors (coastal → uphill)
