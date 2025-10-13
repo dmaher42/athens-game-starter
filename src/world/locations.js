@@ -94,6 +94,25 @@ export const HARBOR_WATER_BOUNDS = {
   south: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH,
 };
 
+// Keep procedural buildings off the pier deck and pedestrian walkway.
+const HARBOR_WALKWAY_EAST = HARBOR_CENTER_3D.x + 42;
+const HARBOR_WALKWAY_HALF_WIDTH = 9;
+
+export const HARBOR_SETBACKS = [
+  {
+    west: HARBOR_WATER_BOUNDS.west,
+    east: HARBOR_WATER_EAST_LIMIT + 3,
+    north: HARBOR_WATER_BOUNDS.north,
+    south: HARBOR_WATER_BOUNDS.south,
+  },
+  {
+    west: HARBOR_WATER_EAST_LIMIT + 3,
+    east: HARBOR_WALKWAY_EAST,
+    north: HARBOR_CENTER_3D.z - HARBOR_WALKWAY_HALF_WIDTH,
+    south: HARBOR_CENTER_3D.z + HARBOR_WALKWAY_HALF_WIDTH,
+  },
+];
+
 // Convenience centers
 export const HARBOR_WATER_CENTER = new THREE.Vector3(
   HARBOR_CENTER_3D.x + HARBOR_WATER_OFFSET.x,
