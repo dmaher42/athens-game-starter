@@ -749,12 +749,18 @@ async function mainApp() {
   // Light atmospheric fog increases depth perception so the far mountains blend
   // into the horizon. Adjust near/far distances to taste.
   scene.fog = new THREE.Fog(0xa0a0a0, 50, 400);
+  if (scene.fog instanceof THREE.FogExp2) {
+    scene.fog.density *= 0.9; // keep ocean horizon in view
+  }
   const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
     0.1,
     2000
   );
+  camera.near = 0.1;
+  camera.far = 5000;
+  camera.updateProjectionMatrix();
   camera.position.set(0, 5, 10);
 
   // Sky, stars & lighting
