@@ -10,7 +10,16 @@
     <div id="app"></div>
     <script>
       (function installFallbackImportMapWhenNeeded() {
-        if (window.location.protocol !== "file:") {
+        const sourceModule = document.querySelector(
+          'script[type="module"][src="./src/main.js"]',
+        );
+
+        if (!sourceModule) {
+          return;
+        }
+
+        const existingImportMap = document.querySelector('script[type="importmap"]');
+        if (existingImportMap) {
           return;
         }
 
@@ -26,8 +35,8 @@
         importMapScript.type = "importmap";
         importMapScript.textContent = JSON.stringify(FALLBACK_IMPORT_MAP, null, 2);
 
-        const currentScript = document.currentScript;
-        currentScript?.parentNode?.insertBefore(importMapScript, currentScript);
+        const insertionTarget = document.currentScript ?? sourceModule;
+        insertionTarget.parentNode?.insertBefore(importMapScript, insertionTarget);
       })();
     </script>
     <script type="module" src="./src/main.js"></script>
