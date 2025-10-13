@@ -310,7 +310,7 @@ export async function createOcean(scene, options = {}) {
   if (water.material) {
     water.material.clippingPlanes = planes;
     water.material.clipIntersection = true;
-    water.material.depthWrite = true;
+    water.material.depthWrite = false;
     water.material.transparent = true;
     water.material.needsUpdate = true;
 
@@ -328,8 +328,8 @@ export async function createOcean(scene, options = {}) {
   water.userData.noCollision = true;
   water.userData.isWater = true;
 
-  // Draw behind world but still write depth
-  water.renderOrder = -1;
+  // ensure water draws cleanly against shoreline.
+  water.renderOrder = 1;
 
   scene.add(water);
   if (import.meta.env?.DEV) {
