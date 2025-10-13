@@ -198,8 +198,18 @@ const isHtml = (res) => (res.headers.get("content-type") || "").includes("text/h
 
 /** Lightweight existence check (avoids double-downloading GLBs) */
 async function headOk(url) {
+  const target = typeof url === "string" ? url : String(url ?? "");
+  const isJsonProbe = /audio\/manifest\.json|config\/districts\.json/i.test(target);
+  const isGlbProbe = /\.glb(?:$|[?#])/i.test(target);
+
+  if (FORCE_PROC && isGlbProbe) {
+    return false;
+  }
+
+  const options = isJsonProbe ? { method: "GET", cache: "no-cache" } : { method: "HEAD" };
+
   try {
-    const res = await fetch(url, { method: "HEAD" });
+    const res = await fetch(url, options);
     return res.ok && !isHtml(res);
   } catch {
     return false;
@@ -260,6 +270,10 @@ async function runAssetQuickChecks() {
 
   const results = [];
   for (const { label, path } of checks) {
+    if (FORCE_PROC && /\.glb(?:$|[?#])/i.test(path)) {
+      results.push({ label, path, status: "skipped" });
+      continue;
+    }
     const exists = await headOk(path);
     results.push({ label, path, status: exists ? "ok" : "missing" });
   }
