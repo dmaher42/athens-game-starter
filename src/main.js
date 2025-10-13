@@ -76,6 +76,28 @@ const BUILD_TIME = typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : "";
 const BUILD_SHA = typeof __BUILD_SHA__ !== "undefined" ? __BUILD_SHA__ : "";
 console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
 
+const BASE_URL = resolveBaseUrl();
+
+const QUERY_PARAMS = (() => {
+  if (typeof window === "undefined" || typeof window.location === "undefined") {
+    return new URLSearchParams("");
+  }
+  try {
+    return new URLSearchParams(window.location.search ?? "");
+  } catch {
+    return new URLSearchParams("");
+  }
+})();
+
+const FORCE_GLB = QUERY_PARAMS.has("glb") && QUERY_PARAMS.get("glb") !== "0";
+const FORCE_PROC = !FORCE_GLB;
+
+console.info(
+  FORCE_PROC
+    ? "[proc] GLB loading disabled (procedural default)"
+    : "[glb] GLB mode enabled"
+);
+
 (async () => {
   const BASE = resolveBaseUrl();
   console.log("[base:resolved]", BASE);
@@ -137,21 +159,6 @@ const LIGHTING_PRESETS = {
 window.addEventListener("unhandledrejection", (ev) => {
   console.error("Unhandled promise rejection:", ev.reason);
 });
-
-const BASE_URL = resolveBaseUrl();
-
-const QUERY_PARAMS = (() => {
-  if (typeof window === "undefined" || typeof window.location === "undefined") {
-    return new URLSearchParams("");
-  }
-  try {
-    return new URLSearchParams(window.location.search ?? "");
-  } catch {
-    return new URLSearchParams("");
-  }
-})();
-
-const FORCE_GLB = QUERY_PARAMS.has("glb") && QUERY_PARAMS.get("glb") !== "0";
 
 function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
@@ -484,16 +491,8 @@ function parseToggleValue(value, defaultValue = true) {
   if (FALSE_VALUES.has(normalized)) return false;
   return defaultValue;
 }
-const FORCE_PROC = (() => {
-  const defaultValue = !FORCE_GLB; // default to procedural
-  if (!QUERY_PARAMS.has("proc")) {
-    return defaultValue;
-  }
-  return parseToggleValue(QUERY_PARAMS.get("proc"), defaultValue);
-})();
 
 const FORCE_PROCEDURAL_LANDMARKS = FORCE_PROC;
-console.info("[proc] mode =", FORCE_PROC ? "procedural" : "glb");
 let proceduralLandmarkCount = 0;
 
 function shouldShowOverlay({
@@ -588,10 +587,6 @@ async function mainApp() {
 
   let devHud = null;
   let pendingOceanStatus = null;
-  const proceduralQueryEnabled = QUERY_PARAMS.has("proc");
-  if (proceduralQueryEnabled) {
-    console.info("[proc] Query override:", QUERY_PARAMS.get("proc"));
-  }
   let proceduralLandmarkCount = 0;
   let proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
   const updateOceanHudStatus = () => {
@@ -1953,9 +1948,7 @@ async function mainApp() {
     onSetLightingPreset: applyLightingPreset,
     lightingPresets: LIGHTING_PRESETS,
   });
-  proceduralStatusMessage = FORCE_PROC
-    ? `Procedural: ON (${proceduralLandmarkCount})`
-    : "Procedural: OFF";
+  proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
   devHud?.setStatusLine?.("proc", FORCE_PROC ? "Procedural: ON" : "Procedural: OFF");
   mountHUDCameraSettings(devHud?.rootElement ?? null);
   updateOceanHudStatus();
