@@ -27,6 +27,7 @@ import {
 } from "./world/grass.js";
 import {
   AGORA_CENTER_3D,
+  AGORA_RADIUS,
   HARBOR_CENTER_3D,
   CITY_AREA_RADIUS,
   ACROPOLIS_PEAK_3D,
@@ -61,6 +62,7 @@ import { createPin } from "./world/pins.js";
 import { attachHeightSampler, probeAt } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
+import { findSafePlayerSpawn } from "./world/spawn.js";
 import { createGLTFLoader, loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
 import { resolveBaseUrl, joinPath } from "./utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
@@ -1002,15 +1004,42 @@ async function mainApp() {
   const player = new PlayerController(input, envCollider, { camera });
   worldRoot.add(player.object);
 
-  const spawnPosition = new THREE.Vector3(0, 0, 10);
-  player.object.position.copy(spawnPosition);
-  const spawnClearance = 0.1;
-  const spawnOffset = player.height * 0.5 + spawnClearance;
-  snapAboveGround(player.object, terrain, spawnPosition.x, spawnPosition.z, spawnOffset, {
-    clampToSea: true,
+  const spawnClearance = 0.2;
+  const spawnPosition = findSafePlayerSpawn({
+    envCollider,
+    terrain,
+    searchCenter: AGORA_CENTER_3D,
+    fallback: {
+      x: AGORA_CENTER_3D.x - (AGORA_RADIUS + 6),
+      y: 0,
+      z: AGORA_CENTER_3D.z - 6,
+    },
+    playerHeight: player.height,
+    playerRadius: player.radius,
+    verticalClearance: spawnClearance,
+    horizontalClearance: 0.4,
+    innerRadius: AGORA_RADIUS + 6,
+    searchRadius: AGORA_RADIUS + 60,
+    radialStep: 4,
+    arcLength: 6,
     seaLevel: SEA_LEVEL_Y,
     minAboveSea: 0.25,
   });
+  player.object.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+  const spawnOffset = player.height * 0.5 + spawnClearance;
+  snapAboveGround(
+    player.object,
+    terrain,
+    player.object.position.x,
+    player.object.position.z,
+    spawnOffset,
+    {
+      clampToSea: true,
+      seaLevel: SEA_LEVEL_Y,
+      minAboveSea: 0.25,
+    }
+  );
+  spawnPosition.copy(player.object.position);
   player.syncCapsuleToObject();
 
   let interactor = null;
