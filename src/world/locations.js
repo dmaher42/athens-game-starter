@@ -81,7 +81,9 @@ export const HARBOR_WATER_SIZE = new THREE.Vector2(140, 120); // confine water f
 export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, 0); // center the water plane on the harbor location
 // Keep the harbor water strictly on the seaward (western) side of the pier
 export const PIER_EDGE_OFFSET = 4.5; // distance from harbor center to pier edge
-export const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x - PIER_EDGE_OFFSET; // align with western (seaward) edge of pier
+export const HARBOR_WATER_EAST_LIMIT =
+  HARBOR_CENTER_3D.x - PIER_EDGE_OFFSET + 3; // align with western (seaward) edge of pier
+// extend water slightly under pier for visual continuity
 export const HARBOR_WATER_BACK = 0; // max inland distance allowed (in Z half-extent)
 
 const HARBOR_WATER_HALF_WIDTH = 70; // meters west of the pier (keeps water inside the harbor)
