@@ -125,9 +125,7 @@ export class LandmarkManager {
     this.baseUrl = resolveBaseUrl();
     this.globalDefaults = {};
     this.results = [];
-    this.options = {
-      forceProcedural: Boolean(forceProcedural),
-    };
+    this.forceProcedural = Boolean(forceProcedural);
   }
 
   setTerrain(terrain) {
@@ -516,7 +514,7 @@ export class LandmarkManager {
       const loadOptions = cloneTransformOptions(transformInfo.options);
       loadOptions.proceduralFallback = (context = {}) =>
         this.spawnProceduralFallback(spec, transformInfo, context);
-      loadOptions.forceProcedural = this.options?.forceProcedural === true;
+      loadOptions.forceProcedural = this.forceProcedural === true;
       try {
         const object = await loadLandmark(this.scene, url, loadOptions);
         if (!object) continue;
@@ -549,7 +547,7 @@ export class LandmarkManager {
     const name = spec.name || spec.id || "Landmark";
     const transformInfo = this.prepareTransform(spec);
     const type = typeof spec.type === "string" ? spec.type.trim().toLowerCase() : "";
-    const forceProcedural = this.options?.forceProcedural === true;
+    const forceProcedural = this.forceProcedural === true;
     const wantsProcedural = type === "procedural" || Boolean(spec.proc);
     const shouldProcedural = forceProcedural || wantsProcedural;
 
@@ -631,7 +629,12 @@ export class LandmarkManager {
         if (entry?.enabled === false) {
           continue;
         }
+        const entryType = typeof entry?.type === "string" ? entry.type.trim().toLowerCase() : "";
+        const treatAsProcedural = entryType === "procedural" || this.forceProcedural === true;
         const spec = mergeSettings(groupDefaults, entry);
+        if (treatAsProcedural) {
+          spec.type = "procedural";
+        }
         spec.groupId = group?.id;
         spec.groupLabel = group?.label;
         const object = await this.placeLandmark(spec);
