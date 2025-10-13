@@ -39,6 +39,7 @@ import {
   disposeLandmarks,
 } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
+import { createCityPlanImplementation } from "./world/cityPlanImplementation.js";
 import { InputMap } from "./input/InputMap.js";
 import { EnvironmentCollider } from "./env/EnvironmentCollider.js";
 import { BuildingManager } from "./buildings/BuildingManager.js";
@@ -972,6 +973,16 @@ async function mainApp() {
     greensWidth: 9,
     center: AGORA_CENTER_3D,
     terrain,
+  });
+
+  // Overlay the modern planning strategy as a holographic layer so players can
+  // understand how each district connects to the wider mobility, housing, and
+  // resilience goals described in the documentation.
+  createCityPlanImplementation(worldRoot, {
+    center: AGORA_CENTER_3D,
+    terrain,
+    transitLength: 160,
+    innovationOffsetX: 60,
   });
 
   // Rebuild the collider again now that the civic district geometry exists so the
