@@ -3,10 +3,10 @@ import {
   subscribe,
   defaultCameraSettings,
 } from "../state/settingsStore.js";
-import { MOVEMENT_KEYS, LOOK_KEYS, flattenKeyGroups } from "./keyBindings.js";
+import { MOVEMENT_ONLY_KEYS, LOOK_KEYS, flattenKeyGroups } from "./keyBindings.js";
 
-const MOVEMENT_KEY_LIST = flattenKeyGroups(MOVEMENT_KEYS);
 const LOOK_KEY_LIST = flattenKeyGroups(LOOK_KEYS);
+const MOVEMENT_KEY_LIST = flattenKeyGroups(MOVEMENT_ONLY_KEYS);
 
 const CONTROL_KEYS = new Set([
   ...MOVEMENT_KEY_LIST,
@@ -181,19 +181,19 @@ export class InputMap {
   }
 
   get forward() {
-    return this.isAnyDown(MOVEMENT_KEYS.forward);
+    return this.isAnyDown(MOVEMENT_ONLY_KEYS.forward);
   }
 
   get back() {
-    return this.isAnyDown(MOVEMENT_KEYS.back);
+    return this.isAnyDown(MOVEMENT_ONLY_KEYS.back);
   }
 
   get left() {
-    return this.isAnyDown(MOVEMENT_KEYS.left);
+    return this.isAnyDown(MOVEMENT_ONLY_KEYS.left);
   }
 
   get right() {
-    return this.isAnyDown(MOVEMENT_KEYS.right);
+    return this.isAnyDown(MOVEMENT_ONLY_KEYS.right);
   }
 
   get sprint() {
