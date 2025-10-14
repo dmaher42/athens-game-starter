@@ -457,18 +457,23 @@ function evaluateLot({ terrain, centerX, centerZ, width, depth, rotation, maxSlo
   const halfWidth = width / 2;
   const halfDepth = depth / 2;
 
-  const cornerOffsets = [
+  const sampleOffsets = [
     { x: -halfWidth, z: -halfDepth },
     { x: halfWidth, z: -halfDepth },
     { x: -halfWidth, z: halfDepth },
     { x: halfWidth, z: halfDepth },
+    { x: 0, z: 0 },
+    { x: 0, z: -halfDepth },
+    { x: 0, z: halfDepth },
+    { x: -halfWidth, z: 0 },
+    { x: halfWidth, z: 0 },
   ];
 
   const heights = [];
   let minHeight = Infinity;
   let maxHeight = -Infinity;
 
-  for (const offset of cornerOffsets) {
+  for (const offset of sampleOffsets) {
     const rotatedX = offset.x * cos - offset.z * sin;
     const rotatedZ = offset.x * sin + offset.z * cos;
     const sampleX = centerX + rotatedX;
@@ -610,6 +615,112 @@ export async function createCity(scene, terrain, options = {}) {
   const jitter = options.jitter ?? 1.6; // was 1.2
   const maxSlope = options.maxSlope ?? 0.18; // was 0.2
   const roadsVisible = options.roadsVisible == null ? true : Boolean(options.roadsVisible);
+  const followPromenade = options.followPromenade !== false;
+
+  const rotationStepMinFallback = Number.isFinite(options.rotationStepMin)
+    ? Math.floor(options.rotationStepMin)
+    : 4;
+  const rotationStepMaxFallback = Number.isFinite(options.rotationStepMax)
+    ? Math.floor(options.rotationStepMax)
+    : 6;
+
+  function parseRotationStepRange(source, fallbackMin, fallbackMax) {
+    let min = Number.isFinite(fallbackMin) ? Math.floor(fallbackMin) : 1;
+    let max = Number.isFinite(fallbackMax) ? Math.floor(fallbackMax) : min;
+    if (Array.isArray(source) && source.length >= 2) {
+      if (Number.isFinite(source[0])) {
+        min = Math.floor(source[0]);
+      }
+      if (Number.isFinite(source[1])) {
+        max = Math.floor(source[1]);
+      }
+    } else if (source && typeof source === "object") {
+      if (Number.isFinite(source.min)) {
+        min = Math.floor(source.min);
+      }
+      if (Number.isFinite(source.max)) {
+        max = Math.floor(source.max);
+      }
+    }
+    min = Math.max(1, min);
+    max = Math.max(min, max);
+    return { min, max };
+  }
+
+  const rotationStepRangeInput =
+    options.rotationStepsRange ??
+    (typeof options.rotationSteps === "object" && options.rotationSteps !== null
+      ? options.rotationSteps
+      : null);
+
+  const { min: rotationStepsMin, max: rotationStepsMax } = parseRotationStepRange(
+    rotationStepRangeInput,
+    rotationStepMinFallback,
+    rotationStepMaxFallback
+  );
+
+  const rotationSteps =
+    typeof options.rotationSteps === "number" && Number.isFinite(options.rotationSteps)
+      ? Math.max(1, Math.floor(options.rotationSteps))
+      : rotationStepsMin + Math.floor(rng() * (rotationStepsMax - rotationStepsMin + 1));
+
+  const defaultRotationOffsetRange = [-10, 10];
+  const defaultPadRotationOffsetRange = [-8, 8];
+  const defaultPromenadeOffsetRange = [-6, 6];
+  const rotationOffsetRange = options.rotationOffsetRange;
+  const padRotationOffsetRange =
+    options.padRotationOffsetRange !== undefined ? options.padRotationOffsetRange : rotationOffsetRange;
+  const promenadeRotationOffsetRange = options.promenadeRotationOffsetRange;
+  const padRotationJitterDeg = Number.isFinite(options.padRotationJitterDeg)
+    ? options.padRotationJitterDeg
+    : 4;
+  const padRotationJitterRad = THREE.MathUtils.degToRad(Math.max(0, padRotationJitterDeg));
+
+  function sampleRotationOffset(range, fallbackRange = defaultRotationOffsetRange) {
+    if (range === false || range === null) {
+      return 0;
+    }
+
+    let minDeg = Array.isArray(fallbackRange) ? fallbackRange[0] : 0;
+    let maxDeg = Array.isArray(fallbackRange) ? fallbackRange[1] : 0;
+    const source = range === undefined ? fallbackRange : range;
+
+    if (Array.isArray(source) && source.length >= 2) {
+      if (Number.isFinite(source[0])) {
+        minDeg = source[0];
+      }
+      if (Number.isFinite(source[1])) {
+        maxDeg = source[1];
+      }
+    } else if (source && typeof source === "object") {
+      if (Number.isFinite(source.min)) {
+        minDeg = source.min;
+      }
+      if (Number.isFinite(source.max)) {
+        maxDeg = source.max;
+      }
+    } else if (typeof source === "number") {
+      const value = Math.abs(source);
+      minDeg = -value;
+      maxDeg = value;
+    }
+
+    if (!Number.isFinite(minDeg) || !Number.isFinite(maxDeg)) {
+      return 0;
+    }
+
+    if (minDeg === 0 && maxDeg === 0) {
+      return 0;
+    }
+
+    const deg = THREE.MathUtils.lerp(minDeg, maxDeg, rng());
+    return THREE.MathUtils.degToRad(deg);
+  }
+
+  function sampleQuantizedRotation(range, fallbackRange) {
+    const base = Math.floor(rng() * rotationSteps) * ((Math.PI * 2) / rotationSteps);
+    return base + sampleRotationOffset(range, fallbackRange);
+  }
 
   const countX = Math.max(3, Math.floor(gridSize.x / spacingX));
   const countZ = Math.max(3, Math.floor(gridSize.y / spacingZ));
@@ -865,13 +976,19 @@ export async function createCity(scene, terrain, options = {}) {
         : THREE.MathUtils.lerp(4.2, 7.8, rng());
       const wallHeight = THREE.MathUtils.lerp(2.6, 3.8, rng());
       const roofHeight = wallHeight * THREE.MathUtils.lerp(0.38, 0.55, rng());
-      const rotationSteps = Math.max(1, options.rotationSteps ?? 2); // was 4 → align facades
-      let rotation = Math.floor(rng() * rotationSteps) * ((Math.PI * 2) / rotationSteps);
-      rotation += THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-10, 10, rng()));
+      let rotation = sampleQuantizedRotation(rotationOffsetRange, defaultRotationOffsetRange);
       if (promenadeAlignment) {
-        const normal = promenadeAlignment.normal;
-        rotation = Math.atan2(normal.x, normal.z);
-        rotation += THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-6, 6, rng()));
+        const promenadeOffset = sampleRotationOffset(
+          promenadeRotationOffsetRange,
+          defaultPromenadeOffsetRange
+        );
+        if (followPromenade && inHarborCore) {
+          const tangent = promenadeAlignment.tangent;
+          rotation = Math.atan2(tangent.x, tangent.z) + promenadeOffset;
+        } else {
+          const normal = promenadeAlignment.normal;
+          rotation = Math.atan2(normal.x, normal.z) + promenadeOffset;
+        }
       }
 
       _lotPosition.x = centerX;
@@ -1391,6 +1508,7 @@ export async function createCity(scene, terrain, options = {}) {
       y: lotInfo.height + SURFACE_OFFSET,
       z: cz,
       rotation: rotationRad,
+      rotationJitterRad: padRotationJitterRad,
       districtId: district?.id || "unknown",
       district,
       slopeDeg,
@@ -1417,7 +1535,10 @@ export async function createCity(scene, terrain, options = {}) {
         { x: node.x + jitterX, z: node.z - halfSpacing + jitterZ },
       ];
       for (const { x: cx, z: cz } of candidates) {
-        const rotation = rng() * Math.PI * 2;
+        const rotation = sampleQuantizedRotation(
+          padRotationOffsetRange,
+          defaultPadRotationOffsetRange
+        );
         queuePadCandidate(cx, cz, rotation, district);
       }
     }
@@ -1557,6 +1678,10 @@ export async function createCity(scene, terrain, options = {}) {
     pad.castShadow = false;
     pad.receiveShadow = true;
     pad.userData = pad.userData || {};
+    pad.userData.baseRotation = padData.rotation;
+    if (Number.isFinite(padData.rotationJitterRad)) {
+      pad.userData.rotationJitter = padData.rotationJitterRad;
+    }
     pad.userData.district = padData.districtId || "unknown";
     pad.userData.noCollision = true;
     lotPads.add(pad);

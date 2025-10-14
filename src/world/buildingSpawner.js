@@ -651,7 +651,14 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
       built.position.y = Math.max(built.position.y, 0) + 0.01; // float slightly above ground to avoid z-fight
     }
 
-    built.rotation.y = pad.rotation.y + (rng() - 0.5) * 0.9;
+    const baseRotation = Number.isFinite(pad.userData?.baseRotation)
+      ? pad.userData.baseRotation
+      : pad.rotation?.y ?? 0;
+    const rotationJitter = Number.isFinite(pad.userData?.rotationJitter)
+      ? Math.max(0, pad.userData.rotationJitter)
+      : THREE.MathUtils.degToRad(2);
+    const jitter = rotationJitter > 0 ? THREE.MathUtils.lerp(-rotationJitter, rotationJitter, rng()) : 0;
+    built.rotation.y = baseRotation + jitter;
     built.userData = { ...built.userData, district: districtId, type: typeKey };
     buildingsGroup.add(built);
     count += 1;
