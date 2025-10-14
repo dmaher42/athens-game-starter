@@ -1,6 +1,9 @@
 // main.js
 
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { Soundscape } from "./audio/soundscape.js";
 import { mountAudioMixer } from "./ui/audioMixer.js";
 import {
@@ -134,19 +137,19 @@ const USE_THIRD_PERSON = true;
 const LIGHTING_PRESETS = {
   dawn: {
     phase: 0.25,
-    exposure: 0.9,
+    exposure: 0.95,
     label: "Dawn",
     hotkey: "1",
   },
   noon: {
     phase: 0.5,
-    exposure: 1.5,
+    exposure: 1.1,
     label: "High Noon",
     hotkey: "2",
   },
   dusk: {
     phase: 0.75,
-    exposure: 0.95,
+    exposure: 1.0,
     label: "Dusk",
     hotkey: "3",
   },
@@ -572,7 +575,7 @@ async function mainApp() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 1.1;
   // Lock modern physically-based lighting behaviour explicitly so appearance
   // stays stable across Three.js releases (r155+ defaults, but we set it here
   // for clarity and forward-compat).
@@ -758,6 +761,26 @@ async function mainApp() {
     0.1,
     2000
   );
+  const composer = new EffectComposer(renderer);
+  composer.setPixelRatio(window.devicePixelRatio ?? 1);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.3,
+    0.6,
+    0.85
+  );
+  bloomPass.enabled = true;
+  composer.addPass(bloomPass);
+  const renderFrame = () => {
+    if (composer) {
+      composer.render();
+    } else {
+      renderer.render(scene, camera);
+    }
+  };
   camera.near = 0.1;
   camera.far = 5000;
   camera.updateProjectionMatrix();
@@ -1879,7 +1902,7 @@ async function mainApp() {
       lastDisplayedTime = formattedTime;
     }
 
-    renderer.render(scene, camera);
+    renderFrame();
   };
 
   function animate() {
@@ -1948,7 +1971,7 @@ async function mainApp() {
       lastDisplayedTime = formattedTime;
     }
 
-    renderer.render(scene, camera);
+    renderFrame();
   }
 
   animate();
@@ -2041,6 +2064,8 @@ async function mainApp() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    bloomPass.setSize(window.innerWidth, window.innerHeight);
   });
 }
 
