@@ -37,6 +37,7 @@ import {
   CITY_AREA_RADIUS,
   ACROPOLIS_PEAK_3D,
   HARBOR_WATER_BOUNDS,
+  HARBOR_WATER_NORMAL_CANDIDATES,
   SEA_LEVEL_Y,
 } from "./world/locations.js";
 import {
@@ -880,7 +881,10 @@ async function mainApp() {
     }
   })();
 
-  const ocean = await createOcean(scene, { bounds: HARBOR_WATER_BOUNDS });
+  const ocean = await createOcean(scene, {
+    bounds: HARBOR_WATER_BOUNDS,
+    waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
+  });
   pendingOceanStatus = {
     seaLevel: SEA_LEVEL_Y,
     bounds: HARBOR_WATER_BOUNDS,
