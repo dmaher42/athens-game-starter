@@ -21,10 +21,12 @@ import { addFoundationPad } from "./foundations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
 import { spawnBuildingsFromPads } from "./buildingSpawner.js";
+import { placeHarborLandmarks } from "./landmarks.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildHouseBlock } from "../features/blocks.js";
-import { DEBUG_FLAGS } from "../debug/flags.js";
+import { HARBOR_ZONE, inHarborBand } from "./cityPlan.js";
+import { buildPromenadePath } from "./harbor.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
 const ROOF_COLOR_PRESETS = ["#b4472c", "#c05621", "#d66f2c"];
@@ -588,7 +590,9 @@ export async function createCity(scene, terrain, options = {}) {
     minX: HARBOR_WATER_EAST_LIMIT + 3,
     maxX: HARBOR_WATER_EAST_LIMIT + 24,
   };
-  const harborCoreDepth = 26;
+  const harborCoreDepth = Number.isFinite(HARBOR_ZONE?.bandWidth)
+    ? HARBOR_ZONE.bandWidth
+    : 26;
   const harborCore = {
     minX: quayBand.minX,
     maxX: quayBand.maxX + 3,
@@ -600,6 +604,15 @@ export async function createCity(scene, terrain, options = {}) {
     jitter: 2.8,
     skipProbability: 0.01,
   };
+  const harborSpacingScale = Number.isFinite(HARBOR_ZONE?.spacingScale)
+    ? HARBOR_ZONE.spacingScale
+    : 1;
+  const harborDensityBoost = Number.isFinite(HARBOR_ZONE?.densityBoost)
+    ? HARBOR_ZONE.densityBoost
+    : 0;
+  harborCore.spacingX *= harborSpacingScale;
+  harborCore.spacingZ *= harborSpacingScale;
+  harborCore.skipProbability = Math.max(0, harborCore.skipProbability - harborDensityBoost);
   // Pier Plaza
   const pierPlazaCenter = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(10, 0, 0));
   const pierPlazaTarget = pierPlazaCenter.clone();
@@ -607,6 +620,12 @@ export async function createCity(scene, terrain, options = {}) {
     center: pierPlazaCenter.clone().add(new THREE.Vector3(-4, 0, 0)),
     radiusX: 11,
     radiusZ: 14,
+  };
+  const harborPlazaBounds = {
+    minX: -12,
+    maxX: 16,
+    minZ: -18,
+    maxZ: -4,
   };
   // --- Updated defaults for a more "city-like" layout -----------------------
   // Goal: straighter blocks, clearer grid, fewer awkward placements. Callers
@@ -891,9 +910,20 @@ export async function createCity(scene, terrain, options = {}) {
     }
   }
 
+  const promenadePath = buildPromenadePath({
+    shorelinePoints:
+      promenadeControlPoints.length > 0
+        ? promenadeControlPoints.map((p) => ({ x: p.x, z: p.z }))
+        : undefined,
+  });
+  if (typeof globalThis !== "undefined") {
+    globalThis.__promenadePath = promenadePath;
+  }
+
   const placements = [];
   const pocketPlazas = [];
   const waterfrontPlazaSpots = [];
+  let harborPlazaReserved = false;
   let intersectionCounter = 0;
 
   for (let ix = 0; ix < countX; ix++) {
@@ -969,21 +999,49 @@ export async function createCity(scene, terrain, options = {}) {
         }
       }
 
-      const width = inQuayBand
+      const lotPos = new THREE.Vector3(centerX, 0, centerZ);
+      const shorelineCenter = { x: HARBOR_CENTER_3D.x, z: HARBOR_CENTER_3D.z };
+      const harborBandHit =
+        typeof inHarborBand === "function" ? inHarborBand(lotPos, shorelineCenter) : false;
+      const inHarbor = inHarborCore || harborBandHit;
+      let promenadeNearest = null;
+      if (inHarbor && promenadePath?.nearest) {
+        promenadeNearest = promenadePath.nearest(lotPos);
+        if (promenadeNearest?.normal) {
+          const jitterRange = 2.0;
+          centerX += promenadeNearest.normal.x * THREE.MathUtils.lerp(-jitterRange, jitterRange, rng());
+          centerZ += promenadeNearest.normal.z * THREE.MathUtils.lerp(-jitterRange, jitterRange, rng());
+          lotPos.set(centerX, 0, centerZ);
+        }
+      }
+
+      const width = (inQuayBand || inHarbor)
         ? THREE.MathUtils.lerp(6.8, 8.2, rng())
         : THREE.MathUtils.lerp(4.4, 7.2, rng());
-      const depth = inQuayBand
+      const depth = (inQuayBand || inHarbor)
         ? THREE.MathUtils.lerp(5.2, 6.8, rng())
         : THREE.MathUtils.lerp(4.2, 7.8, rng());
       const wallHeight = THREE.MathUtils.lerp(2.6, 3.8, rng());
       const roofHeight = wallHeight * THREE.MathUtils.lerp(0.38, 0.55, rng());
-      let rotation = sampleQuantizedRotation(rotationOffsetRange, defaultRotationOffsetRange);
-      if (promenadeAlignment) {
+      const rotationSample = sampleQuantizedRotation(
+        rotationOffsetRange,
+        defaultRotationOffsetRange
+      );
+      const defaultSteps = 4;
+      const stepSize = Math.PI / defaultSteps;
+      const baseRotation = Math.round(rotationSample / stepSize) * stepSize;
+      let rotation =
+        baseRotation + THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-8, 8, rng()));
+      if (promenadeNearest?.tangent) {
+        rotation =
+          Math.atan2(promenadeNearest.tangent.x, promenadeNearest.tangent.z) +
+          THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-12, 12, rng()));
+      } else if (promenadeAlignment) {
         const promenadeOffset = sampleRotationOffset(
           promenadeRotationOffsetRange,
           defaultPromenadeOffsetRange
         );
-        if (followPromenade && inHarborCore) {
+        if (followPromenade && inHarbor) {
           const tangent = promenadeAlignment.tangent;
           rotation = Math.atan2(tangent.x, tangent.z) + promenadeOffset;
         } else {
@@ -1031,17 +1089,25 @@ export async function createCity(scene, terrain, options = {}) {
         skipProbability = THREE.MathUtils.clamp(0.1 + far * 0.0025, 0.1, 0.32);
       }
 
-      if (DEBUG_FLAGS.harbor && inQuayBand) {
-        console.log("[HARBOR LOT]", {
-          pos: { x: lotPos.x.toFixed(2), z: lotPos.z.toFixed(2) },
-          spacingX,
-          spacingZ,
-          yawDeg: ((rotation * 180) / Math.PI).toFixed(1),
-          skipProbability,
-        });
+      if (inHarbor) {
+        skipProbability = Math.max(0, skipProbability - harborDensityBoost);
       }
 
-      const isPocketPlaza = intersectionCounter % 5 === 0;
+      const inHarborPlaza =
+        !harborPlazaReserved &&
+        inHarbor &&
+        centerX > harborPlazaBounds.minX &&
+        centerX < harborPlazaBounds.maxX &&
+        centerZ > harborPlazaBounds.minZ &&
+        centerZ < harborPlazaBounds.maxZ;
+      if (inHarborPlaza) {
+        const plazaHeight = clampSurfaceHeight(lot.height);
+        pocketPlazas.push({ x: centerX, y: plazaHeight, z: centerZ });
+        harborPlazaReserved = true;
+        continue;
+      }
+
+      const isPocketPlaza = !inHarbor && intersectionCounter % 5 === 0;
       if (isPocketPlaza) {
         const plazaHeight = clampSurfaceHeight(lot.height);
         pocketPlazas.push({ x: centerX, y: plazaHeight, z: centerZ });
@@ -1086,7 +1152,7 @@ export async function createCity(scene, terrain, options = {}) {
         wallHeight,
         roofHeight,
         rotation,
-        waterfront: inQuayBand || inHarborCore,
+        waterfront: inQuayBand || inHarbor,
         wallColor,
         roofColor,
         accentColor,
@@ -1686,20 +1752,61 @@ export async function createCity(scene, terrain, options = {}) {
     finalPadCandidates.push(...districtKept);
   }
 
+  if (harborPlazaReserved) {
+    for (const padData of finalPadCandidates) {
+      if (
+        padData.x > harborPlazaBounds.minX &&
+        padData.x < harborPlazaBounds.maxX &&
+        padData.z > harborPlazaBounds.minZ &&
+        padData.z < harborPlazaBounds.maxZ
+      ) {
+        padData.blocked = true;
+      }
+    }
+  }
+
   for (const padData of finalPadCandidates) {
+    if (!padData.pos) {
+      padData.pos = new THREE.Vector3(padData.x, padData.y, padData.z);
+    }
+    if (!Number.isFinite(padData.yaw)) {
+      padData.yaw = padData.rotation;
+    }
     const pad = new THREE.Mesh(lotPadGeometry, lotPadMaterial);
     pad.position.set(padData.x, padData.y, padData.z);
     pad.rotation.y = padData.rotation;
+    pad.yaw = padData.yaw;
     pad.castShadow = false;
     pad.receiveShadow = true;
     pad.userData = pad.userData || {};
     pad.userData.baseRotation = padData.rotation;
+    pad.userData.yaw = padData.yaw;
     if (Number.isFinite(padData.rotationJitterRad)) {
       pad.userData.rotationJitter = padData.rotationJitterRad;
     }
     pad.userData.district = padData.districtId || "unknown";
     pad.userData.noCollision = true;
+    pad.userData.sourcePad = padData;
+    pad.userData.blocked = Boolean(padData.blocked);
+    padData.mesh = pad;
     lotPads.add(pad);
+  }
+
+  if (finalPadCandidates.length > 0) {
+    placeHarborLandmarks({
+      THREE,
+      scene,
+      lots: finalPadCandidates,
+      getHeightAt: (x, z) => sampleHeight(terrain, x, z, SEA_LEVEL_Y),
+      seaLevel: SEA_LEVEL_Y,
+      loadModel: () => null,
+    });
+    for (const padData of finalPadCandidates) {
+      if (padData.blocked && padData.mesh) {
+        padData.mesh.blocked = true;
+        padData.mesh.userData.blocked = true;
+      }
+    }
   }
 
   // Pocket Plazas

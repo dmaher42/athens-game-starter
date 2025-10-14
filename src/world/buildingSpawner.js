@@ -560,6 +560,10 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   let count = 0;
 
   for (const pad of padsGroup.children.slice()) {
+    if (pad.blocked || pad.userData?.blocked) {
+      // reserved by landmarks/plaza — skip building creation on this pad
+      continue;
+    }
     const districtId = pad.userData?.district || "default";
     // Decide a type — ideally you stashed allowedTypes on the pad; if not, pick by districtId heuristic
     const allowedGuess = guessAllowedTypes(districtId);
@@ -651,9 +655,16 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
       built.position.y = Math.max(built.position.y, 0) + 0.01; // float slightly above ground to avoid z-fight
     }
 
-    const baseRotation = Number.isFinite(pad.userData?.baseRotation)
-      ? pad.userData.baseRotation
-      : pad.rotation?.y ?? 0;
+    const explicitYaw = Number.isFinite(pad.userData?.yaw)
+      ? pad.userData.yaw
+      : Number.isFinite(pad.yaw)
+        ? pad.yaw
+        : null;
+    const baseRotation = Number.isFinite(explicitYaw)
+      ? explicitYaw
+      : Number.isFinite(pad.userData?.baseRotation)
+        ? pad.userData.baseRotation
+        : pad.rotation?.y ?? 0;
     const rotationJitter = Number.isFinite(pad.userData?.rotationJitter)
       ? Math.max(0, pad.userData.rotationJitter)
       : THREE.MathUtils.degToRad(2);
