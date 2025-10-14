@@ -25,3 +25,22 @@ export function flattenKeyGroups(groups) {
     return acc;
   }, []);
 }
+
+const LOOK_KEY_SET = new Set(flattenKeyGroups(LOOK_KEYS));
+
+function filterMovementCodes(codes = []) {
+  if (!Array.isArray(codes)) {
+    return Object.freeze([]);
+  }
+  const filtered = codes.filter(
+    (code) => typeof code === "string" && code.length > 0 && !LOOK_KEY_SET.has(code)
+  );
+  return Object.freeze(filtered);
+}
+
+export const MOVEMENT_ONLY_KEYS = Object.freeze({
+  forward: filterMovementCodes(MOVEMENT_KEYS.forward),
+  back: filterMovementCodes(MOVEMENT_KEYS.back),
+  left: filterMovementCodes(MOVEMENT_KEYS.left),
+  right: filterMovementCodes(MOVEMENT_KEYS.right),
+});

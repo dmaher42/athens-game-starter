@@ -11,7 +11,7 @@ import {
   Vector3,
   MathUtils,
 } from "three";
-import { MOVEMENT_KEYS, LOOK_KEYS } from "../input/keyBindings.js";
+import { LOOK_KEYS, MOVEMENT_ONLY_KEYS } from "../input/keyBindings.js";
 
 // Reuse the same vectors every frame so we avoid creating garbage objects.
 const moveDirection = new Vector3();
@@ -42,7 +42,7 @@ const MOVEMENT_FLAGS = Object.freeze({
 
 const MOVEMENT_FLAG_BY_CODE = (() => {
   const map = new Map();
-  for (const [direction, codes] of Object.entries(MOVEMENT_KEYS)) {
+  for (const [direction, codes] of Object.entries(MOVEMENT_ONLY_KEYS)) {
     const flag = MOVEMENT_FLAGS[direction];
     if (!flag || !Array.isArray(codes)) continue;
     for (const code of codes) {
