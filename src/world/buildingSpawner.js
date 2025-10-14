@@ -29,6 +29,8 @@ const glbAvailability = new Map();
 const onceFlags = new Set();
 const scratchBox = new THREE.Box3();
 const scratchSize = new THREE.Vector3();
+const ROUGHNESS_BASE_KEY = Symbol("buildingBaseRoughness");
+const BUILDING_ROUGHNESS_VARIATION = 0.1;
 
 function once(key, fn) {
   if (onceFlags.has(key)) return;
@@ -141,6 +143,39 @@ function createMaterial(key, rng, overrides = {}) {
     ? pick(variant, rng)
     : base.color;
   return new THREE.MeshStandardMaterial({ ...base, ...overrides, color });
+}
+
+function applyBuildingRoughnessVariance(root, rng) {
+  if (!root) return;
+  const random = typeof rng === "function" ? rng : Math.random;
+  const delta = (random() - 0.5) * 2 * BUILDING_ROUGHNESS_VARIATION;
+  if (Math.abs(delta) < 1e-4) return;
+
+  const clamp = THREE.MathUtils.clamp;
+  const updateMaterial = (material) => {
+    if (!material || typeof material.roughness !== "number") return;
+    if (!material.userData) material.userData = {};
+    const base =
+      typeof material.userData[ROUGHNESS_BASE_KEY] === "number"
+        ? material.userData[ROUGHNESS_BASE_KEY]
+        : material.roughness;
+    material.userData[ROUGHNESS_BASE_KEY] = base;
+    const next = clamp(base + delta, 0, 1);
+    if (Math.abs(next - material.roughness) > 1e-4) {
+      material.roughness = next;
+      material.needsUpdate = true;
+    }
+  };
+
+  root.traverse?.((child) => {
+    if (!child?.isMesh) return;
+    const { material } = child;
+    if (Array.isArray(material)) {
+      material.forEach(updateMaterial);
+    } else {
+      updateMaterial(material);
+    }
+  });
 }
 
 // Simple kit pieces
@@ -580,6 +615,8 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
       const prefab = Prefabs[prefabKey] || Prefabs.house;
       built = prefab({ rng, district: districtId });
     }
+
+    applyBuildingRoughnessVariance(built, rng);
 
     scratchBox.setFromObject(pad);
     scratchBox.getSize(scratchSize);
