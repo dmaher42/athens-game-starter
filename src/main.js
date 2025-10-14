@@ -622,6 +622,7 @@ async function mainApp() {
   updateLoadingStatus("Listening for the bustle of ancient Athens...");
 
   let devHud = null;
+  let ocean = null;
   let pendingOceanStatus = null;
   let proceduralLandmarkCount = 0;
   let proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
@@ -708,6 +709,43 @@ async function mainApp() {
   scene.userData.renderer = renderer;
   scene.userData.baseUrl = BASE_URL;
 
+  const createSceneFog = () => {
+    const fog = new THREE.Fog(0xa0a0a0, 50, 400);
+    if (fog instanceof THREE.FogExp2) {
+      fog.density *= 0.9; // keep ocean horizon in view
+    }
+    return fog;
+  };
+
+  let fogEnabled = false;
+  const syncFogState = () => {
+    const fogUniform =
+      ocean?.uniforms?.fog ?? ocean?.mesh?.material?.uniforms?.fog;
+    if (fogUniform && Object.prototype.hasOwnProperty.call(fogUniform, "value")) {
+      fogUniform.value = fogEnabled;
+    }
+    if (ocean?.mesh?.material) {
+      ocean.mesh.material.fog = fogEnabled;
+      ocean.mesh.material.needsUpdate = true;
+    }
+    const statusText = fogEnabled ? "Fog: ON" : "Fog: OFF";
+    devHud?.setStatusLine?.("fog", statusText);
+    devHud?.updateFogState?.(fogEnabled);
+  };
+  const setFogEnabled = (enabled = true) => {
+    const next = Boolean(enabled);
+    if (fogEnabled === next && (!!scene.fog) === next) {
+      syncFogState();
+      return;
+    }
+    fogEnabled = next;
+    scene.fog = fogEnabled ? createSceneFog() : null;
+    syncFogState();
+  };
+  const toggleFog = () => {
+    setFogEnabled(!fogEnabled);
+  };
+
   const disposeMaterial = (material) => {
     if (!material) return;
     const materials = Array.isArray(material) ? material : [material];
@@ -768,10 +806,7 @@ async function mainApp() {
 
   // Light atmospheric fog increases depth perception so the far mountains blend
   // into the horizon. Adjust near/far distances to taste.
-  scene.fog = new THREE.Fog(0xa0a0a0, 50, 400);
-  if (scene.fog instanceof THREE.FogExp2) {
-    scene.fog.density *= 0.9; // keep ocean horizon in view
-  }
+  setFogEnabled(true);
   const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
@@ -882,10 +917,11 @@ async function mainApp() {
     }
   })();
 
-  const ocean = await createOcean(scene, {
+  ocean = await createOcean(scene, {
     bounds: HARBOR_WATER_BOUNDS,
     waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
   });
+  syncFogState();
   pendingOceanStatus = {
     seaLevel: SEA_LEVEL_Y,
     bounds: HARBOR_WATER_BOUNDS,
@@ -2045,9 +2081,12 @@ async function mainApp() {
     onPin,
     onSetLightingPreset: applyLightingPreset,
     lightingPresets: LIGHTING_PRESETS,
+    getFogEnabled: () => fogEnabled,
+    onToggleFog: toggleFog,
   });
   proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
   devHud?.setStatusLine?.("proc", FORCE_PROC ? "Procedural: ON" : "Procedural: OFF");
+  syncFogState();
   mountHUDCameraSettings(devHud?.rootElement ?? null);
   updateOceanHudStatus();
   if (audioManifestMissing) {
@@ -2073,6 +2112,8 @@ async function mainApp() {
       setThirdPersonEnabled(!thirdPersonEnabled);
     } else if (event.code === "KeyE") {
       interactor.useObject();
+    } else if (event.code === "KeyF" && !event.repeat) {
+      toggleFog();
     } else if (event.code === "F8" && !event.repeat) {
       const position = player?.object?.position;
       const x = position?.x;
