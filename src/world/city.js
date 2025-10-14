@@ -1052,9 +1052,8 @@ export async function createCity(scene, terrain, options = {}) {
 
       _lotPosition.x = centerX;
       _lotPosition.z = centerZ;
-      const lotPos = _lotPosition;
       if (DEBUG_FLAGS.harbor && inQuayBand && Math.abs(rotation) < 1e-3) {
-        console.log("[QUAY CLAMP?] forcing yaw=0 at", lotPos);
+        console.log("[QUAY CLAMP?] forcing yaw=0 at", _lotPosition);
       }
       if (isInsideAnyRect(_lotPosition, HARBOR_SETBACKS)) {
         continue;
