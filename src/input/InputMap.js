@@ -3,16 +3,14 @@ import {
   subscribe,
   defaultCameraSettings,
 } from "../state/settingsStore.js";
+import { MOVEMENT_KEYS, LOOK_KEYS, flattenKeyGroups } from "./keyBindings.js";
+
+const MOVEMENT_KEY_LIST = flattenKeyGroups(MOVEMENT_KEYS);
+const LOOK_KEY_LIST = flattenKeyGroups(LOOK_KEYS);
 
 const CONTROL_KEYS = new Set([
-  "KeyW",
-  "KeyA",
-  "KeyS",
-  "KeyD",
-  "ArrowUp",
-  "ArrowDown",
-  "ArrowLeft",
-  "ArrowRight",
+  ...MOVEMENT_KEY_LIST,
+  ...LOOK_KEY_LIST,
   "ShiftLeft",
   "ShiftRight",
   "Space",
@@ -167,20 +165,35 @@ export class InputMap {
     return this.keys.has(code);
   }
 
+  /**
+   * @param {string[]} codes
+   */
+  isAnyDown(codes = []) {
+    if (!Array.isArray(codes) || codes.length === 0) {
+      return false;
+    }
+    for (const code of codes) {
+      if (this.keys.has(code)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   get forward() {
-    return this.isDown("KeyW");
+    return this.isAnyDown(MOVEMENT_KEYS.forward);
   }
 
   get back() {
-    return this.isDown("KeyS");
+    return this.isAnyDown(MOVEMENT_KEYS.back);
   }
 
   get left() {
-    return this.isDown("KeyA");
+    return this.isAnyDown(MOVEMENT_KEYS.left);
   }
 
   get right() {
-    return this.isDown("KeyD");
+    return this.isAnyDown(MOVEMENT_KEYS.right);
   }
 
   get sprint() {
@@ -200,19 +213,19 @@ export class InputMap {
   }
 
   get lookLeft() {
-    return this.isDown("ArrowLeft");
+    return this.isAnyDown(LOOK_KEYS.left);
   }
 
   get lookRight() {
-    return this.isDown("ArrowRight");
+    return this.isAnyDown(LOOK_KEYS.right);
   }
 
   get lookUp() {
-    return this.isDown("ArrowUp");
+    return this.isAnyDown(LOOK_KEYS.up);
   }
 
   get lookDown() {
-    return this.isDown("ArrowDown");
+    return this.isAnyDown(LOOK_KEYS.down);
   }
 
   consumeFlyToggle() {
