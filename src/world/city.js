@@ -24,6 +24,7 @@ import { spawnBuildingsFromPads } from "./buildingSpawner.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildHouseBlock } from "../features/blocks.js";
+import { DEBUG_FLAGS } from "../debug/flags.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
 const ROOF_COLOR_PRESETS = ["#b4472c", "#c05621", "#d66f2c"];
@@ -993,6 +994,10 @@ export async function createCity(scene, terrain, options = {}) {
 
       _lotPosition.x = centerX;
       _lotPosition.z = centerZ;
+      const lotPos = _lotPosition;
+      if (DEBUG_FLAGS.harbor && inQuayBand && Math.abs(rotation) < 1e-3) {
+        console.log("[QUAY CLAMP?] forcing yaw=0 at", lotPos);
+      }
       if (isInsideAnyRect(_lotPosition, HARBOR_SETBACKS)) {
         continue;
       }
@@ -1024,6 +1029,16 @@ export async function createCity(scene, terrain, options = {}) {
       } else {
         const far = Math.hypot(centerX - origin.x, centerZ - origin.z);
         skipProbability = THREE.MathUtils.clamp(0.1 + far * 0.0025, 0.1, 0.32);
+      }
+
+      if (DEBUG_FLAGS.harbor && inQuayBand) {
+        console.log("[HARBOR LOT]", {
+          pos: { x: lotPos.x.toFixed(2), z: lotPos.z.toFixed(2) },
+          spacingX,
+          spacingZ,
+          yawDeg: ((rotation * 180) / Math.PI).toFixed(1),
+          skipProbability,
+        });
       }
 
       const isPocketPlaza = intersectionCounter % 5 === 0;

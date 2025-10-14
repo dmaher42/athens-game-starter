@@ -18,6 +18,7 @@ import { SEA_LEVEL_Y } from "./locations.js";
 import { snapAboveGround } from "./ground.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { buildTemple } from "../features/temples.js";
+import { DEBUG_FLAGS } from "../debug/flags.js";
 
 function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
@@ -102,6 +103,14 @@ function cloneTransformOptions(options = {}) {
 const PROCEDURAL_BUILDERS = {
   temple: buildTemple,
 };
+
+function logHarborLandmark(name, obj) {
+  if (!DEBUG_FLAGS.harbor) return;
+  const label = typeof name === "string" ? name : "";
+  if (!label.toLowerCase().includes("harbor")) return;
+  if (!obj) return;
+  console.log("[LANDMARK]", name, "at", obj.position);
+}
 
 export class LandmarkManager {
   constructor({
@@ -616,6 +625,9 @@ export class LandmarkManager {
         }
         this.spawnFallbackPlaceholder(spec, transformInfo);
       }
+      if (object) {
+        logHarborLandmark(name, object);
+      }
       return object ?? null;
     }
 
@@ -655,7 +667,11 @@ export class LandmarkManager {
       this.spawnFallbackPlaceholder(spec, transformInfo);
     }
 
-    return result?.object ?? null;
+    const placedObject = result?.object ?? null;
+    if (placedObject) {
+      logHarborLandmark(name, placedObject);
+    }
+    return placedObject;
   }
 
   async loadConfig(config) {
