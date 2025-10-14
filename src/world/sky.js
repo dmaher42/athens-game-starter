@@ -191,9 +191,9 @@ export function setTimeOfDayPhase(state, phase01) {
 
 export function getSunDirectionFromPhase(phase01, target = scratchSunDirection) {
   const phase = clamp01(phase01);
-  const theta = phase * Math.PI * 2;
+  const theta = (phase - 0.25) * Math.PI * 2;
   target.set(Math.cos(theta), Math.sin(theta), 0);
-  return target;
+  return target.normalize();
 }
 
 export function updateSky(skyObj, state) {
