@@ -1,5 +1,5 @@
 // src/utils/baseUrl.js
-const REPO_SEGMENT = "athens-game-starter";
+export const REPO_SEGMENT = "athens-game-starter";
 
 function hasRepoSegment(path) {
   return typeof path === "string" && path.includes(`/${REPO_SEGMENT}/`);
