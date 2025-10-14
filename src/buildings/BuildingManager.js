@@ -4,18 +4,35 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 const BUILDINGS_ROOT_NAME = 'BuildingsRoot';
 
 /**
- * Check if a URL returns a valid response (not HTML).
- * Prevents loading HTML fallback pages as GLB files.
+ * Attempt to validate an asset URL with a HEAD request.
+ *
+ * Some hosting setups (e.g. GitHub Pages, static file servers behind CDNs, or
+ * local `file://` previews) either reject HEAD requests or omit CORS headers,
+ * which previously caused the guard to incorrectly flag the asset as missing
+ * and skip loading altogether. We therefore treat network errors and
+ * unsupported methods as "inconclusive" rather than failures.
  */
 async function headOk(url) {
-  if (!url) return false;
+  if (!url) return { ok: false, reason: 'missing-url' };
   try {
     const res = await fetch(url, { method: 'HEAD' });
-    if (!res.ok) return false;
-    const contentType = res.headers.get('content-type') || '';
-    return !contentType.toLowerCase().includes('text/html');
-  } catch {
-    return false;
+    if (res.ok) {
+      const contentType = (res.headers.get('content-type') || '').toLowerCase();
+      if (contentType.includes('text/html')) {
+        return { ok: false, reason: 'html-response' };
+      }
+      return { ok: true };
+    }
+
+    // Some servers do not support HEAD but still serve the asset via GET.
+    if (res.status === 405 || res.status === 501) {
+      return { ok: true, skipped: true };
+    }
+
+    return { ok: false, reason: `status-${res.status}` };
+  } catch (error) {
+    console.warn('[BuildingManager] HEAD request failed; falling back to GET', url, error);
+    return { ok: true, skipped: true };
   }
 }
 
@@ -66,8 +83,11 @@ export class BuildingManager {
   async loadBuilding(url, options) {
     // Check if the file exists before attempting to load it
     // This prevents trying to parse HTML 404 pages as GLB files
-    if (!(await headOk(url))) {
-      throw new Error(`Building file not found or not accessible: ${url}`);
+    const headResult = await headOk(url);
+    if (!headResult.ok) {
+      throw new Error(
+        `Building file not found or not accessible: ${url} (${headResult.reason ?? 'unknown'})`
+      );
     }
     
     const gltf = await this.loader.loadAsync(url);
