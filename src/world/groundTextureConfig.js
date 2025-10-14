@@ -9,10 +9,28 @@ export const GROUND_TEXTURE_CONFIG = {
    * keep the existing vertex colors.
   */
   base: {
+    /**
+     * Keep the procedural generator available as a fallback if the JPGs are
+     * ever missing in development builds.
+     */
     generator: "lush-grass",
-    url: "/textures/ground/grass-preview.jpg",
-    normalUrl: "/textures/ground/grass-normal-dx.jpg"
-    /** Brighten the procedural grass so the terrain reads lighter overall. */
+    /** Color/albedo texture authored in sRGB space. */
+    url: "/textures/ground/grass-albedo.jpg",
+    colorSpace: "srgb",
+    /** Tangent-space normal map captured from the scanned grass material. */
+    normalUrl: "/textures/ground/grass-normal-dx.jpg",
+    normalScale: [0.85, 0.85],
+    /** Height map repurposed as a subtle bump map for extra micro detail. */
+    bumpUrl: "/textures/ground/grass-height.jpg",
+    bumpScale: 0.15,
+    /** Linear-space masks that drive the PBR shading. */
+    roughnessUrl: "/textures/ground/grass-roughness.jpg",
+    roughness: 0.95,
+    metalnessUrl: "/textures/ground/grass-metallic.jpg",
+    metalness: 0.02,
+    aoUrl: "/textures/ground/grass-ao.jpg",
+    aoIntensity: 1.2,
+    /** Brighten the procedural fallback grass so the terrain reads lighter overall. */
     baseColor: [121, 182, 112], // Grass weight/tint bump
     shadowColor: [67, 117, 70], // Grass weight/tint bump
     highlightColor: [198, 246, 154], // Grass weight/tint bump
@@ -22,13 +40,9 @@ export const GROUND_TEXTURE_CONFIG = {
     /** Repeat count for the base texture across the terrain. */
     // de-tiling: lower repeats + anisotropy + slight rotation
     repeat: [18, 18],
+    anisotropy: 8,
     /** Rotate the texture in radians if you need to align features. */
     rotation: 0,
-    /**
-     * Set to "srgb" if the texture was exported in SRGB color space (typical
-     * for photos/JPGs). Use "linear" for data maps such as roughness.
-     */
-    colorSpace: "srgb",
     /** Optional seed to tweak the procedural noise. */
     seed: 2024,
   },

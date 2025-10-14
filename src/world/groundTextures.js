@@ -76,6 +76,15 @@ const PROCEDURAL_GENERATORS = {
     }),
 };
 
+function loadAdditionalTexture(url, baseConfig, overrides = {}) {
+  if (!url) return null;
+  const options = {
+    ...baseConfig,
+    ...overrides,
+  };
+  return loadTexture(url, options);
+}
+
 function createProceduralTexture(config) {
   const generatorName = config?.generator ?? config?.procedural;
   if (!generatorName) return null;
@@ -198,6 +207,13 @@ export function createGroundTextureState(
   };
 
   const baseConfig = config?.base;
+  if (typeof baseConfig?.roughness === "number") {
+    material.roughness = THREE.MathUtils.clamp(baseConfig.roughness, 0, 1);
+  }
+  if (typeof baseConfig?.metalness === "number") {
+    material.metalness = THREE.MathUtils.clamp(baseConfig.metalness, 0, 1);
+  }
+
   if (baseConfig?.url || baseConfig?.generator || baseConfig?.procedural) {
     const baseTexture = baseConfig.url
       ? loadTexture(baseConfig.url, baseConfig)
@@ -205,6 +221,64 @@ export function createGroundTextureState(
     if (baseTexture) {
       configureTexture(baseTexture, baseConfig);
       material.map = baseTexture;
+      material.needsUpdate = true;
+    }
+
+    const normalTexture = loadAdditionalTexture(baseConfig.normalUrl, baseConfig, {
+      colorSpace: "linear",
+    });
+    if (normalTexture) {
+      material.normalMap = normalTexture;
+      const scale = baseConfig.normalScale;
+      if (Array.isArray(scale)) {
+        const x = Number.isFinite(scale[0]) ? scale[0] : 1;
+        const y = Number.isFinite(scale[1]) ? scale[1] : x;
+        material.normalScale = new THREE.Vector2(x, y);
+      } else if (Number.isFinite(scale)) {
+        material.normalScale = new THREE.Vector2(scale, scale);
+      }
+      material.needsUpdate = true;
+    }
+
+    const bumpTexture = loadAdditionalTexture(baseConfig.bumpUrl, baseConfig, {
+      colorSpace: "linear",
+    });
+    if (bumpTexture) {
+      material.bumpMap = bumpTexture;
+      if (Number.isFinite(baseConfig.bumpScale)) {
+        material.bumpScale = baseConfig.bumpScale;
+      }
+      material.needsUpdate = true;
+    }
+
+    const roughnessTexture = loadAdditionalTexture(
+      baseConfig.roughnessUrl,
+      baseConfig,
+      { colorSpace: "linear" },
+    );
+    if (roughnessTexture) {
+      material.roughnessMap = roughnessTexture;
+      material.needsUpdate = true;
+    }
+
+    const metalnessTexture = loadAdditionalTexture(
+      baseConfig.metalnessUrl,
+      baseConfig,
+      { colorSpace: "linear" },
+    );
+    if (metalnessTexture) {
+      material.metalnessMap = metalnessTexture;
+      material.needsUpdate = true;
+    }
+
+    const aoTexture = loadAdditionalTexture(baseConfig.aoUrl, baseConfig, {
+      colorSpace: "linear",
+    });
+    if (aoTexture) {
+      material.aoMap = aoTexture;
+      if (Number.isFinite(baseConfig.aoIntensity)) {
+        material.aoMapIntensity = baseConfig.aoIntensity;
+      }
       material.needsUpdate = true;
     }
   }

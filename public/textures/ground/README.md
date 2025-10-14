@@ -4,13 +4,32 @@ Place your JPG (or PNG) files in this directory to have them picked up by the
 custom terrain texturing system. When you run `npm run build`, Vite copies the
 same folder to `docs/textures/ground/` so GitHub Pages (or any static host)
 serves the textures alongside the compiled site. Reference the filenames from
-`src/world/groundTextureConfig.js` – for example:
+`src/world/groundTextureConfig.js` – for example, the bundled grass material
+expects the following files:
+
+```
+grass-albedo.jpg
+grass-normal-dx.jpg
+grass-roughness.jpg
+grass-metallic.jpg
+grass-ao.jpg
+grass-height.jpg // used as a bump map
+```
+
+Three.js treats color textures as sRGB, while data maps (roughness, metalness,
+height, AO) should remain in linear space. The config already applies the
+correct color space when you follow the naming above.
 
 ```js
 export const GROUND_TEXTURE_CONFIG = {
   base: {
-    url: "textures/ground/grass.jpg",
-    repeat: [48, 48],
+    url: "textures/ground/grass-albedo.jpg",
+    normalUrl: "textures/ground/grass-normal-dx.jpg",
+    roughnessUrl: "textures/ground/grass-roughness.jpg",
+    metalnessUrl: "textures/ground/grass-metallic.jpg",
+    aoUrl: "textures/ground/grass-ao.jpg",
+    bumpUrl: "textures/ground/grass-height.jpg",
+    repeat: [18, 18],
   },
   details: [
     {
