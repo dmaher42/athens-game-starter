@@ -366,6 +366,21 @@ function isInsideRect(point, rect) {
   return px >= west && px <= east && pz >= north && pz <= south;
 }
 
+function isInsideEllipse(point, ellipse) {
+  if (!ellipse) return false;
+  const [px, pz] = toPointXZ(point);
+  if (!Number.isFinite(px) || !Number.isFinite(pz)) return false;
+  const center = ellipse.center || ellipse.c;
+  const cx = Array.isArray(center) ? center[0] : center?.x;
+  const cz = Array.isArray(center) ? center[1] : center?.z;
+  if (!Number.isFinite(cx) || !Number.isFinite(cz)) return false;
+  const rx = Math.max(0.001, ellipse.radiusX ?? ellipse.rx ?? 1);
+  const rz = Math.max(0.001, ellipse.radiusZ ?? ellipse.rz ?? 1);
+  const nx = (px - cx) / rx;
+  const nz = (pz - cz) / rz;
+  return nx * nx + nz * nz <= 1;
+}
+
 function isInsideAnyRect(point, rectangles) {
   if (!Array.isArray(rectangles) || rectangles.length === 0) return false;
   for (const rect of rectangles) {
@@ -479,6 +494,55 @@ function evaluateLot({ terrain, centerX, centerZ, width, depth, rotation, maxSlo
   };
 }
 
+function getCurveProjection2D(curve, samples, targetX, targetZ) {
+  if (!curve || !Array.isArray(samples) || samples.length === 0) {
+    return null;
+  }
+
+  let closest = null;
+  let minDistSq = Infinity;
+
+  for (const sample of samples) {
+    const dx = targetX - sample.point.x;
+    const dz = targetZ - sample.point.z;
+    const distSq = dx * dx + dz * dz;
+    if (distSq < minDistSq) {
+      minDistSq = distSq;
+      closest = sample;
+    }
+  }
+
+  if (!closest) {
+    return null;
+  }
+
+  const tangent = curve.getTangent(Math.max(0, Math.min(1, closest.t))).clone();
+  tangent.y = 0;
+  if (tangent.lengthSq() === 0) {
+    tangent.set(0, 0, 1);
+  } else {
+    tangent.normalize();
+  }
+
+  const normal3 = new THREE.Vector3(-tangent.z, 0, tangent.x);
+  if (normal3.lengthSq() === 0) {
+    normal3.set(1, 0, 0);
+  } else {
+    normal3.normalize();
+  }
+  if (normal3.x < 0) {
+    normal3.multiplyScalar(-1);
+  }
+
+  return {
+    point: closest.point.clone(),
+    tangent,
+    normal: normal3,
+    distanceSq: minDistSq,
+    t: closest.t,
+  };
+}
+
 export async function createCity(scene, terrain, options = {}) {
   // Toggle to show/hide plaza “foundation pads” (the visible discs).
   // Default false so the two large discs disappear on the live build.
@@ -518,9 +582,26 @@ export async function createCity(scene, terrain, options = {}) {
     minX: HARBOR_WATER_EAST_LIMIT + 3,
     maxX: HARBOR_WATER_EAST_LIMIT + 24,
   };
+  const harborCoreDepth = 26;
+  const harborCore = {
+    minX: quayBand.minX,
+    maxX: quayBand.maxX + 3,
+    centerZ: HARBOR_CENTER_3D.z,
+    north: HARBOR_CENTER_3D.z - harborCoreDepth,
+    south: HARBOR_CENTER_3D.z + harborCoreDepth,
+    spacingX: 10,
+    spacingZ: 10,
+    jitter: 2.8,
+    skipProbability: 0.01,
+  };
   // Pier Plaza
   const pierPlazaCenter = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(10, 0, 0));
   const pierPlazaTarget = pierPlazaCenter.clone();
+  const waterfrontPlazaMask = {
+    center: pierPlazaCenter.clone().add(new THREE.Vector3(-4, 0, 0)),
+    radiusX: 11,
+    radiusZ: 14,
+  };
   // --- Updated defaults for a more "city-like" layout -----------------------
   // Goal: straighter blocks, clearer grid, fewer awkward placements. Callers
   // can still override any of these via `options`.
@@ -534,6 +615,37 @@ export async function createCity(scene, terrain, options = {}) {
   const countZ = Math.max(3, Math.floor(gridSize.y / spacingZ));
   const halfX = (countX - 1) * spacingX * 0.5;
   const halfZ = (countZ - 1) * spacingZ * 0.5;
+  const gridOriginX = origin.x - halfX;
+  const gridOriginZ = origin.z - halfZ;
+
+  const harborCoreMinIndexX = Math.max(
+    0,
+    Math.floor((harborCore.minX - gridOriginX) / spacingX)
+  );
+  const harborCoreMaxIndexX = Math.min(
+    countX - 1,
+    Math.ceil((harborCore.maxX - gridOriginX) / spacingX)
+  );
+  const harborCoreMinIndexZ = Math.max(
+    0,
+    Math.floor((harborCore.north - gridOriginZ) / spacingZ)
+  );
+  const harborCoreMaxIndexZ = Math.min(
+    countZ - 1,
+    Math.ceil((harborCore.south - gridOriginZ) / spacingZ)
+  );
+  const harborCoreCountX = Math.max(0, harborCoreMaxIndexX - harborCoreMinIndexX + 1);
+  const harborCoreCountZ = Math.max(0, harborCoreMaxIndexZ - harborCoreMinIndexZ + 1);
+  const harborCoreCenterX = (harborCore.minX + harborCore.maxX) * 0.5;
+  const harborCoreCenterZ = (harborCore.north + harborCore.south) * 0.5;
+  const harborCoreOriginX =
+    harborCoreCountX > 0
+      ? harborCoreCenterX - ((harborCoreCountX - 1) * harborCore.spacingX) / 2
+      : gridOriginX;
+  const harborCoreOriginZ =
+    harborCoreCountZ > 0
+      ? harborCoreCenterZ - ((harborCoreCountZ - 1) * harborCore.spacingZ) / 2
+      : gridOriginZ;
 
   const gridWarpAmplitude =
     options.gridWarpAmplitude ?? Math.min(Math.abs(spacingX), Math.abs(spacingZ)) * 0.32;
@@ -627,8 +739,49 @@ export async function createCity(scene, terrain, options = {}) {
     };
   }
 
+  const promenadeControlPoints = [];
+  const promenadeNorth = HARBOR_WATER_BOUNDS.north + 6;
+  const promenadeSouth = HARBOR_WATER_BOUNDS.south - 6;
+  const promenadeSamplesCount = 7;
+  const promenadeOffset = HARBOR_WATER_EAST_LIMIT + 7.5;
+  const promenadeBulge = 5.5;
+  for (let i = 0; i < promenadeSamplesCount; i++) {
+    const alpha = promenadeSamplesCount === 1 ? 0 : i / (promenadeSamplesCount - 1);
+    const z = THREE.MathUtils.lerp(promenadeNorth, promenadeSouth, alpha);
+    const sway = Math.sin(alpha * Math.PI) * promenadeBulge;
+    const x = promenadeOffset + sway;
+    const h = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
+    const y = clampSurfaceHeight(h);
+    promenadeControlPoints.push(new THREE.Vector3(x, y, z));
+  }
+  promenadeControlPoints.splice(
+    Math.floor(promenadeControlPoints.length / 2),
+    0,
+    new THREE.Vector3(
+      promenadeOffset + promenadeBulge * 0.65,
+      clampSurfaceHeight(sampleHeight(terrain, promenadeOffset + promenadeBulge * 0.65, HARBOR_CENTER_3D.z, SEA_LEVEL_Y)),
+      HARBOR_CENTER_3D.z
+    )
+  );
+  const promenadeCurve =
+    promenadeControlPoints.length >= 2
+      ? new THREE.CatmullRomCurve3(promenadeControlPoints, false, "catmullrom", 0.3)
+      : null;
+  const promenadeLookup = [];
+  if (promenadeCurve) {
+    const lookupCount = 80;
+    for (let i = 0; i <= lookupCount; i++) {
+      const t = i / lookupCount;
+      const pt = promenadeCurve.getPoint(t).clone();
+      const terrainHeight = sampleHeight(terrain, pt.x, pt.z, SEA_LEVEL_Y);
+      pt.y = clampSurfaceHeight(terrainHeight);
+      promenadeLookup.push({ t, point: pt });
+    }
+  }
+
   const placements = [];
   const pocketPlazas = [];
+  const waterfrontPlazaSpots = [];
   let intersectionCounter = 0;
 
   for (let ix = 0; ix < countX; ix++) {
@@ -636,12 +789,42 @@ export async function createCity(scene, terrain, options = {}) {
       intersectionCounter++;
 
       const warp = getCellWarp(ix, iz);
-      const centerX =
-        origin.x + (ix * spacingX - halfX) + warp.x + THREE.MathUtils.lerp(-jitter, jitter, rng());
-      const centerZ =
-        origin.z + (iz * spacingZ - halfZ) + warp.z + THREE.MathUtils.lerp(-jitter, jitter, rng());
+      const inHarborCoreIndexX = ix >= harborCoreMinIndexX && ix <= harborCoreMaxIndexX;
+      const inHarborCoreIndexZ = iz >= harborCoreMinIndexZ && iz <= harborCoreMaxIndexZ;
+      const inHarborCore = inHarborCoreIndexX && inHarborCoreIndexZ;
+
+      const localSpacingX = inHarborCore ? harborCore.spacingX : spacingX;
+      const localSpacingZ = inHarborCore ? harborCore.spacingZ : spacingZ;
+      const localJitter = inHarborCore ? harborCore.jitter : jitter;
+      const localOriginX = inHarborCore ? harborCoreOriginX : gridOriginX;
+      const localOriginZ = inHarborCore ? harborCoreOriginZ : gridOriginZ;
+      const offsetIx = inHarborCore ? ix - harborCoreMinIndexX : ix;
+      const offsetIz = inHarborCore ? iz - harborCoreMinIndexZ : iz;
+
+      let centerX =
+        localOriginX +
+        offsetIx * localSpacingX +
+        warp.x +
+        THREE.MathUtils.lerp(-localJitter, localJitter, rng());
+      let centerZ =
+        localOriginZ +
+        offsetIz * localSpacingZ +
+        warp.z +
+        THREE.MathUtils.lerp(-localJitter, localJitter, rng());
 
       if (inRect(centerX, centerZ, pierRect)) {
+        continue;
+      }
+
+      if (isInsideEllipse({ x: centerX, z: centerZ }, waterfrontPlazaMask)) {
+        const plazaHeight = sampleHeight(terrain, centerX, centerZ, SEA_LEVEL_Y);
+        if (Number.isFinite(plazaHeight)) {
+          waterfrontPlazaSpots.push({
+            x: centerX,
+            z: centerZ,
+            y: clampSurfaceHeight(plazaHeight),
+          });
+        }
         continue;
       }
 
@@ -660,6 +843,19 @@ export async function createCity(scene, terrain, options = {}) {
       }
 
       const inQuayBand = centerX > quayBand.minX && centerX < quayBand.maxX;
+      let promenadeAlignment = null;
+      if ((inHarborCore || inQuayBand) && promenadeCurve) {
+        promenadeAlignment = getCurveProjection2D(promenadeCurve, promenadeLookup, centerX, centerZ);
+        if (promenadeAlignment) {
+          const offsetDistance = inHarborCore ? 6 : 4.5;
+          centerX = promenadeAlignment.point.x + promenadeAlignment.normal.x * offsetDistance;
+          centerZ = promenadeAlignment.point.z + promenadeAlignment.normal.z * offsetDistance;
+          const adjustedHeight = sampleHeight(terrain, centerX, centerZ, null);
+          if (!Number.isFinite(adjustedHeight) || adjustedHeight < MIN_CITY_GRADE) {
+            continue;
+          }
+        }
+      }
 
       const width = inQuayBand
         ? THREE.MathUtils.lerp(6.8, 8.2, rng())
@@ -672,8 +868,10 @@ export async function createCity(scene, terrain, options = {}) {
       const rotationSteps = Math.max(1, options.rotationSteps ?? 2); // was 4 → align facades
       let rotation = Math.floor(rng() * rotationSteps) * ((Math.PI * 2) / rotationSteps);
       rotation += THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-10, 10, rng()));
-      if (inQuayBand) {
-        rotation = 0;
+      if (promenadeAlignment) {
+        const normal = promenadeAlignment.normal;
+        rotation = Math.atan2(normal.x, normal.z);
+        rotation += THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-6, 6, rng()));
       }
 
       _lotPosition.x = centerX;
@@ -702,7 +900,9 @@ export async function createCity(scene, terrain, options = {}) {
       }
 
       let skipProbability;
-      if (inQuayBand) {
+      if (inHarborCore) {
+        skipProbability = harborCore.skipProbability;
+      } else if (inQuayBand) {
         skipProbability = 0.02;
       } else {
         const far = Math.hypot(centerX - origin.x, centerZ - origin.z);
@@ -754,7 +954,7 @@ export async function createCity(scene, terrain, options = {}) {
         wallHeight,
         roofHeight,
         rotation,
-        waterfront: inQuayBand,
+        waterfront: inQuayBand || inHarborCore,
         wallColor,
         roofColor,
         accentColor,
@@ -1369,6 +1569,91 @@ export async function createCity(scene, terrain, options = {}) {
     }
   }
 
+  if (waterfrontPlazaSpots.length > 0) {
+    const plazaAnchor = waterfrontPlazaMask.center;
+    const plazaHeightSample = sampleHeight(terrain, plazaAnchor.x, plazaAnchor.z, SEA_LEVEL_Y);
+    const plazaBaseHeight = clampSurfaceHeight(plazaHeightSample);
+    const plazaRadius = Math.max(waterfrontPlazaMask.radiusX, waterfrontPlazaMask.radiusZ) * 0.65;
+    const plazaMainPad = addFoundationPad(
+      city,
+      plazaAnchor.x,
+      plazaBaseHeight,
+      plazaAnchor.z,
+      plazaRadius,
+      foundationPadMaterial
+    );
+    if (plazaMainPad) {
+      plazaMainPad.userData.noCollision = true;
+      plazaMainPad.name = "WaterfrontPlazaCore";
+    }
+
+    const ringCount = 4;
+    for (let i = 0; i < ringCount; i++) {
+      const angle = (i / ringCount) * Math.PI * 2;
+      const offset = new THREE.Vector3(
+        Math.cos(angle) * plazaRadius * 0.65,
+        0,
+        Math.sin(angle) * plazaRadius * 0.55
+      );
+      const padX = plazaAnchor.x + offset.x;
+      const padZ = plazaAnchor.z + offset.z;
+      const padHeight = sampleHeight(terrain, padX, padZ, SEA_LEVEL_Y);
+      const padY = clampSurfaceHeight(padHeight);
+      const pad = addFoundationPad(city, padX, padY, padZ, plazaRadius * 0.22, foundationPadMaterial);
+      if (pad) {
+        pad.userData.noCollision = true;
+      }
+    }
+
+    const planterPositions = [
+      new THREE.Vector3(plazaAnchor.x + plazaRadius * 0.55, plazaBaseHeight, plazaAnchor.z + 1.2),
+      new THREE.Vector3(plazaAnchor.x + plazaRadius * 0.55, plazaBaseHeight, plazaAnchor.z - 1.2),
+      new THREE.Vector3(plazaAnchor.x - plazaRadius * 0.25, plazaBaseHeight, plazaAnchor.z + plazaRadius * 0.4),
+      new THREE.Vector3(plazaAnchor.x - plazaRadius * 0.25, plazaBaseHeight, plazaAnchor.z - plazaRadius * 0.4),
+    ];
+    const planterGeometry = new THREE.CylinderGeometry(0.55, 0.6, 0.55, 14);
+    planterGeometry.translate(0, 0.275, 0);
+    const planterMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8d7b63,
+      roughness: 0.68,
+      metalness: 0.08,
+    });
+    const planters = new THREE.InstancedMesh(planterGeometry, planterMaterial, planterPositions.length);
+    planters.name = "HarborWaterfrontPlanters";
+    planters.castShadow = true;
+    planters.receiveShadow = true;
+    planters.userData.noCollision = true;
+
+    const greeneryGeometry = new THREE.ConeGeometry(0.65, 1.1, 7);
+    greeneryGeometry.translate(0, 0.55, 0);
+    const greeneryMaterial = new THREE.MeshStandardMaterial({
+      color: 0x3d6f3a,
+      roughness: 0.75,
+      metalness: 0.02,
+    });
+    const greenery = new THREE.InstancedMesh(greeneryGeometry, greeneryMaterial, planterPositions.length);
+    greenery.name = "HarborWaterfrontPlanterGreenery";
+    greenery.castShadow = true;
+    greenery.receiveShadow = true;
+    greenery.userData.noCollision = true;
+
+    for (let i = 0; i < planterPositions.length; i++) {
+      const pos = planterPositions[i];
+      const heightSample = sampleHeight(terrain, pos.x, pos.z, SEA_LEVEL_Y);
+      const y = clampSurfaceHeight(heightSample);
+      _position.set(pos.x, y, pos.z);
+      _quaternion.identity();
+      _scale.set(1, 1, 1);
+      _matrix.compose(_position, _quaternion, _scale);
+      planters.setMatrixAt(i, _matrix);
+      greenery.setMatrixAt(i, _matrix);
+    }
+    planters.instanceMatrix.needsUpdate = true;
+    greenery.instanceMatrix.needsUpdate = true;
+    city.add(planters);
+    city.add(greenery);
+  }
+
   // Main-Avenue Streetlights
   if (mainAvenueLightPositions.length > 0) {
     instantiateStreetlights(mainAvenueLightPositions, {
@@ -1830,20 +2115,19 @@ export async function createCity(scene, terrain, options = {}) {
     streetlightsRegistry.individuals.push(lampState);
   }
 
-  const walkwayPoints = [];
-  const walkwaySpan = Math.max(gridSize.x, gridSize.y) * 0.6;
-  for (let i = 0; i < 5; i++) {
-    const alpha = i / 4;
-    const x = origin.x - walkwaySpan * 0.5 + walkwaySpan * alpha;
-    const z = origin.z + Math.sin(alpha * Math.PI * 1.2 - Math.PI * 0.3) * (gridSize.y * 0.45);
-    const terrainHeight = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
-    walkwayPoints.push(new THREE.Vector3(x, clampSurfaceHeight(terrainHeight), z));
+  let walkwayPoints = [];
+  if (promenadeCurve) {
+    const sampled = promenadeCurve.getSpacedPoints(48);
+    walkwayPoints = sampled.map((pt) => {
+      const terrainHeight = sampleHeight(terrain, pt.x, pt.z, SEA_LEVEL_Y);
+      return new THREE.Vector3(pt.x, clampSurfaceHeight(terrainHeight), pt.z);
+    });
   }
   if (walkwayPoints.length >= 2) {
     const walkway = createRoad(city, walkwayPoints, {
-      width: 3.2,
-      segments: 64,
-      name: "CityWalkway",
+      width: 3.6,
+      segments: Math.max(16, walkwayPoints.length * 2),
+      name: "HarborPromenade",
       noCollision: true,
       color: 0x4b3f35,
     });
