@@ -44,7 +44,7 @@ export const GROUND_TEXTURE_CONFIG = {
     /** Rotate the texture in radians if you need to align features. */
     rotation: 0,
     /** Optional seed to tweak the procedural noise. */
-    seed: 2024,
+    seed: 2024
   },
   /**
    * Additional detail layers can be stacked on top of the base color. Each

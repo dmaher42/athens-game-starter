@@ -5,6 +5,7 @@ import {
   HARBOR_WATER_CENTER,
   HARBOR_WATER_SIZE,
   HARBOR_WATER_EAST_LIMIT,
+  HARBOR_WATER_NORMAL_CANDIDATES,
   SEA_LEVEL_Y,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
@@ -27,15 +28,14 @@ function sanitizeRelativePath(value) {
     .replace(/^\/+/, "");
 }
 
-export function getDefaultWaterNormalCandidates() {
-  const base = resolveBaseUrl();
-  return [
-    joinPath(base, "textures/ground/water_normals.png"),
-    joinPath(base, "textures/ground/water_normals.jpg"),
-    joinPath(base, "textures/ground/waternormals.jpg"),
-    joinPath(base, "textures/ground/shader.png"),
-    joinPath(base, "textures/ground/step_sea.gif"),
-  ];
+export function getDefaultWaterNormalCandidates(base = resolveBaseUrl()) {
+  return HARBOR_WATER_NORMAL_CANDIDATES.map((relative) => {
+    const sanitized = sanitizeRelativePath(relative);
+    if (!sanitized) {
+      return null;
+    }
+    return joinPath(base, sanitized);
+  }).filter(Boolean);
 }
 
 function configureWaterNormalsTexture(texture) {
@@ -134,7 +134,7 @@ async function resolveWaterNormalsTexture(options) {
   }
 
   const base = resolveBaseUrl();
-  const defaultCandidates = getDefaultWaterNormalCandidates();
+  const defaultCandidates = getDefaultWaterNormalCandidates(base);
   candidates.push(...defaultCandidates.map((candidate) => {
     if (typeof candidate === "string") {
       return candidate;
