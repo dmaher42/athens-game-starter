@@ -9,14 +9,28 @@
   <body>
     <div id="app"></div>
     <script>
-      // Provide bare module fallbacks when running directly from the filesystem
-      if (window.location.protocol === "file:") {
+      // Provide bare module fallbacks when running without a bundler.
+      const isFileProtocol = window.location.protocol === "file:";
+      const isViteDevServer = Boolean(
+        document.querySelector('script[type="module"][src="/@vite/client"]'),
+      );
+
+      if (isFileProtocol || !isViteDevServer) {
         const importMap = {
-          imports: {
-            three: "./node_modules/three/build/three.module.js",
-            "three/examples/jsm/": "./node_modules/three/examples/jsm/",
-            "three-mesh-bvh": "./node_modules/three-mesh-bvh/build/index.module.js",
-          },
+          imports: isFileProtocol
+            ? {
+                three: "./node_modules/three/build/three.module.js",
+                "three/examples/jsm/": "./node_modules/three/examples/jsm/",
+                "three-mesh-bvh": "./node_modules/three-mesh-bvh/build/index.module.js",
+              }
+            : {
+                three:
+                  "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+                "three/examples/jsm/":
+                  "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+                "three-mesh-bvh":
+                  "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.1/build/index.module.js",
+              },
         };
 
         const script = document.createElement("script");
