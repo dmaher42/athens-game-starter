@@ -21,19 +21,22 @@ height, AO) should remain in linear space. The config already applies the
 correct color space when you follow the naming above.
 
 ```js
+const textureUrl = (filename) =>
+  `${import.meta.env.BASE_URL}textures/ground/${filename}`;
+
 export const GROUND_TEXTURE_CONFIG = {
   base: {
-    url: "textures/ground/grass-albedo.jpg",
-    normalUrl: "textures/ground/grass-normal-dx.jpg",
-    roughnessUrl: "textures/ground/grass-roughness.jpg",
-    metalnessUrl: "textures/ground/grass-metallic.jpg",
-    aoUrl: "textures/ground/grass-ao.jpg",
-    bumpUrl: "textures/ground/grass-height.jpg",
+    url: textureUrl("grass-albedo.jpg"),
+    normalUrl: textureUrl("grass-normal-dx.jpg"),
+    roughnessUrl: textureUrl("grass-roughness.jpg"),
+    metalnessUrl: textureUrl("grass-metallic.jpg"),
+    aoUrl: textureUrl("grass-ao.jpg"),
+    bumpUrl: textureUrl("grass-height.jpg"),
     repeat: [18, 18],
   },
   details: [
     {
-      url: "textures/ground/rocky-strips.jpg",
+      url: textureUrl("rocky-strips.jpg"),
       repeat: [96, 96],
       strength: 0.5,
       minHeight: 5,

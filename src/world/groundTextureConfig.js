@@ -2,6 +2,9 @@
 // existing vertex-colored ground. The JPG files referenced here should live in
 // the public/textures/ground directory. Values are safe defaults that won't try
 // to load textures until you provide URLs.
+const textureUrl = (filename) =>
+  `${import.meta.env.BASE_URL}textures/ground/${filename}`;
+
 export const GROUND_TEXTURE_CONFIG = {
   /**
    * Optional base map that replaces the flat color tint of the material. This
@@ -15,20 +18,20 @@ export const GROUND_TEXTURE_CONFIG = {
      */
     generator: "lush-grass",
     /** Color/albedo texture authored in sRGB space. */
-    url: "/textures/ground/grass-albedo.jpg",
+    url: textureUrl("grass-albedo.jpg"),
     colorSpace: "srgb",
     /** Tangent-space normal map captured from the scanned grass material. */
-    normalUrl: "/textures/ground/grass-normal-dx.jpg",
+    normalUrl: textureUrl("grass-normal-dx.jpg"),
     normalScale: [0.85, 0.85],
     /** Height map repurposed as a subtle bump map for extra micro detail. */
-    bumpUrl: "/textures/ground/grass-height.jpg",
+    bumpUrl: textureUrl("grass-height.jpg"),
     bumpScale: 0.15,
     /** Linear-space masks that drive the PBR shading. */
-    roughnessUrl: "/textures/ground/grass-roughness.jpg",
+    roughnessUrl: textureUrl("grass-roughness.jpg"),
     roughness: 0.95,
-    metalnessUrl: "/textures/ground/grass-metallic.jpg",
+    metalnessUrl: textureUrl("grass-metallic.jpg"),
     metalness: 0.02,
-    aoUrl: "/textures/ground/grass-ao.jpg",
+    aoUrl: textureUrl("grass-ao.jpg"),
     aoIntensity: 1.2,
     /** Brighten the procedural fallback grass so the terrain reads lighter overall. */
     baseColor: [121, 182, 112], // Grass weight/tint bump
