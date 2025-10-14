@@ -109,8 +109,9 @@ function createCloudMaterial() {
 
       float density = fbm(uv);
       float shape = smoothstep(coverage, coverage - softness, density);
+      shape = pow(shape, 1.1);
 
-      float alpha = shape * (0.25 + 0.65 * dayFactor);
+      float alpha = shape * mix(0.08, 0.45, dayFactor);
       if (alpha <= 0.001) discard;
 
       vec3 color = mix(skyTint, cloudColor, shape);
@@ -228,6 +229,24 @@ export function updateSky(skyObj, state) {
         1
       );
       uniforms.dayFactor.value = dayFactor;
+
+      if (uniforms.coverage) {
+        const targetCoverage = THREE.MathUtils.lerp(0.52, 0.37, dayFactor);
+        uniforms.coverage.value = THREE.MathUtils.lerp(
+          uniforms.coverage.value,
+          targetCoverage,
+          0.05
+        );
+      }
+
+      if (uniforms.softness) {
+        const targetSoftness = THREE.MathUtils.lerp(0.18, 0.28, dayFactor);
+        uniforms.softness.value = THREE.MathUtils.lerp(
+          uniforms.softness.value,
+          targetSoftness,
+          0.05
+        );
+      }
     }
   }
 
