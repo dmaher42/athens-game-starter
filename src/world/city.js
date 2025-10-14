@@ -1976,10 +1976,14 @@ export async function createCity(scene, terrain, options = {}) {
   return city;
 }
 
-export function updateCityLighting(city, nightFactor = 0) {
+export function updateCityLighting(city, nightFactor = 0, opts = {}) {
   if (!city) return;
   const factor = THREE.MathUtils.clamp(nightFactor, 0, 1);
   const now = (typeof performance !== "undefined" ? performance.now() : Date.now()) * 0.001;
+  const timeOfDayPhase =
+    typeof opts?.timeOfDayPhase === "number" && Number.isFinite(opts.timeOfDayPhase)
+      ? THREE.MathUtils.clamp(opts.timeOfDayPhase, 0, 1)
+      : null;
 
   const lighting = city.userData?.lighting;
   if (lighting?.material) {
@@ -2032,6 +2036,56 @@ export function updateCityLighting(city, nightFactor = 0) {
           lampState.glassMaterial.emissiveIntensity = intensity > 0 ? intensity : 0;
         }
       }
+    }
+  }
+
+  const buildingsGroup = city.userData?.buildingsGroup;
+  const windowGlow = buildingsGroup?.userData?.windowGlow;
+  if (!windowGlow || !Array.isArray(windowGlow.candidates) || windowGlow.candidates.length === 0) {
+    return;
+  }
+
+  const glowThreshold = 18.5 / 24;
+  const glowActive = timeOfDayPhase !== null && timeOfDayPhase >= glowThreshold;
+  if (windowGlow.active === glowActive) {
+    return;
+  }
+
+  windowGlow.active = glowActive;
+  if (!windowGlow.colorInstance) {
+    windowGlow.colorInstance = new THREE.Color(windowGlow.color ?? 0xffbb66);
+  }
+
+  for (const candidate of windowGlow.candidates) {
+    if (!candidate || !Array.isArray(candidate.panes)) continue;
+    const shouldEmit = glowActive && candidate.shouldGlow;
+    if (candidate.isActive === shouldEmit) continue;
+    candidate.isActive = shouldEmit;
+
+    for (const pane of candidate.panes) {
+      const material = pane?.material;
+      if (!material) continue;
+      if (!pane.baseColor && material.emissive) {
+        pane.baseColor = material.emissive.clone();
+      }
+      if (!Number.isFinite(pane.baseIntensity)) {
+        pane.baseIntensity =
+          typeof material.emissiveIntensity === "number" ? material.emissiveIntensity : 1;
+      }
+
+      if (shouldEmit) {
+        material.emissive?.copy(windowGlow.colorInstance);
+        material.emissiveIntensity = windowGlow.intensity ?? 0.6;
+      } else {
+        if (pane.baseColor && material.emissive) {
+          material.emissive.copy(pane.baseColor);
+        }
+        if (Number.isFinite(pane.baseIntensity)) {
+          material.emissiveIntensity = pane.baseIntensity;
+        }
+      }
+
+      material.needsUpdate = true;
     }
   }
 }

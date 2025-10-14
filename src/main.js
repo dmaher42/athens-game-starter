@@ -1892,8 +1892,8 @@ async function mainApp() {
     const sunDir = updateSky(skyObj, timeOfDayState);
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
-    updateCityLighting(harborCity, lights.nightFactor);
-    updateCityLighting(hillCity, lights.nightFactor);
+    updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: phase });
+    updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: phase });
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
@@ -1933,8 +1933,8 @@ async function mainApp() {
     // Update sky dome, atmospheric lighting, and celestial bodies each frame.
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
-    updateCityLighting(harborCity, lights.nightFactor);
-    updateCityLighting(hillCity, lights.nightFactor);
+    updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: phase });
+    updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: phase });
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);

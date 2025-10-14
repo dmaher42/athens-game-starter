@@ -209,6 +209,7 @@ function makeWindow(width, height, depth, rng) {
     })
   );
   pane.position.z = depth * 0.25;
+  pane.userData = { ...pane.userData, isWindowPane: true };
   frame.add(pane);
   return frame;
 }
@@ -534,6 +535,7 @@ function mulberry32(a) { return function() { let t=(a+=0x6D2B79F5); t=Math.imul(
 export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   const seed = Number.isFinite(options.seed) ? options.seed : 12345;
   const rng = mulberry32(seed);
+  const glowRng = mulberry32(seed ^ 0x9e3779b9);
 
   // Find the group named "LotPads" that city.js created
   const padsGroup = worldRoot.getObjectByName("LotPads");
@@ -542,6 +544,18 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   const buildingsGroup = new THREE.Group();
   buildingsGroup.name = "Buildings";
   worldRoot.add(buildingsGroup);
+
+  const windowGlowRegistry = {
+    candidates: [],
+    ratio: THREE.MathUtils.clamp(0.1 + glowRng() * 0.1, 0.1, 0.2),
+    color: 0xffbb66,
+    intensity: 0.6,
+    active: false,
+  };
+  buildingsGroup.userData = {
+    ...buildingsGroup.userData,
+    windowGlow: windowGlowRegistry,
+  };
 
   let count = 0;
 
@@ -642,7 +656,39 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     buildingsGroup.add(built);
     count += 1;
 
+    const candidatePanes = [];
+    built.traverse((child) => {
+      if (!child?.isMesh) return;
+      const material = child.material;
+      if (!child.userData?.isWindowPane || !material) return;
+      const baseColor = material.emissive?.clone?.();
+      candidatePanes.push({
+        material,
+        baseColor: baseColor || new THREE.Color(0x000000),
+        baseIntensity:
+          typeof material.emissiveIntensity === "number" ? material.emissiveIntensity : 1,
+      });
+    });
+
+    if (candidatePanes.length > 0) {
+      const shouldGlow = glowRng() <= windowGlowRegistry.ratio;
+      windowGlowRegistry.candidates.push({
+        panes: candidatePanes,
+        shouldGlow,
+        isActive: false,
+      });
+    }
+
     if (!options.leavePadsVisible) pad.visible = false;
+  }
+
+  if (
+    windowGlowRegistry.candidates.length > 0 &&
+    !windowGlowRegistry.candidates.some((candidate) => candidate.shouldGlow)
+  ) {
+    const index = Math.floor(glowRng() * windowGlowRegistry.candidates.length);
+    const chosen = windowGlowRegistry.candidates[index] || windowGlowRegistry.candidates[0];
+    if (chosen) chosen.shouldGlow = true;
   }
 
   return { count, group: buildingsGroup };
