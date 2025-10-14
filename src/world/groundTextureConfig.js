@@ -30,7 +30,7 @@ export const GROUND_TEXTURE_CONFIG = {
      */
     colorSpace: "srgb",
     /** Optional seed to tweak the procedural noise. */
-    seed: 2024,
+    seed: 2024
   },
   /**
    * Additional detail layers can be stacked on top of the base color. Each
