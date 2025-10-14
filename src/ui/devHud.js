@@ -7,6 +7,8 @@ export function mountDevHUD({
   onPin,
   onSetLightingPreset,
   lightingPresets,
+  getFogEnabled,
+  onToggleFog,
 } = {}) {
   const allowHud =
     import.meta.env?.DEV ||
@@ -143,6 +145,23 @@ export function mountDevHUD({
     return lightingPresets[name] != null;
   });
 
+  let fogButton = null;
+  const updateFogControls = (state) => {
+    if (!fogButton) return;
+    let enabled;
+    if (typeof state === "boolean") {
+      enabled = state;
+    } else if (typeof getFogEnabled === "function") {
+      enabled = !!getFogEnabled();
+    } else {
+      enabled = false;
+    }
+    fogButton.textContent = enabled ? "Disable Fog" : "Enable Fog";
+    fogButton.title = enabled
+      ? "Disable atmospheric fog (Hotkey F)"
+      : "Enable atmospheric fog (Hotkey F)";
+  };
+
   if (availablePresets.length && !read.querySelector(".hud-lighting-presets")) {
     const section = document.createElement("div");
     section.className = "hud-lighting-presets";
@@ -241,6 +260,68 @@ export function mountDevHUD({
     read._presetKeyBindings = presetKeyBindings;
   }
 
+  if (typeof onToggleFog === "function") {
+    const section = document.createElement("div");
+    section.className = "hud-environment-controls";
+    Object.assign(section.style, {
+      marginTop: "8px",
+      paddingTop: "6px",
+      borderTop: "1px solid rgba(255,255,255,0.15)",
+      pointerEvents: "auto",
+    });
+
+    const heading = document.createElement("div");
+    heading.textContent = "Environment";
+    Object.assign(heading.style, {
+      fontWeight: 600,
+      letterSpacing: "0.08em",
+      fontSize: "11px",
+      opacity: "0.85",
+      textTransform: "uppercase",
+    });
+    section.appendChild(heading);
+
+    const buttonRow = document.createElement("div");
+    Object.assign(buttonRow.style, {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "6px",
+      marginTop: "6px",
+    });
+
+    fogButton = document.createElement("button");
+    fogButton.type = "button";
+    Object.assign(fogButton.style, {
+      padding: "4px 8px",
+      borderRadius: "4px",
+      border: "1px solid rgba(255,255,255,0.35)",
+      background: "rgba(0,0,0,0.35)",
+      color: "inherit",
+      font: "inherit",
+      cursor: "pointer",
+      pointerEvents: "auto",
+      transition: "background 0.2s ease, border-color 0.2s ease",
+    });
+    fogButton.addEventListener("mouseenter", () => {
+      fogButton.style.background = "rgba(255,255,255,0.18)";
+      fogButton.style.borderColor = "rgba(255,255,255,0.55)";
+    });
+    fogButton.addEventListener("mouseleave", () => {
+      fogButton.style.background = "rgba(0,0,0,0.35)";
+      fogButton.style.borderColor = "rgba(255,255,255,0.35)";
+    });
+    fogButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      onToggleFog();
+      updateFogControls();
+    });
+
+    buttonRow.appendChild(fogButton);
+    section.appendChild(buttonRow);
+    read.appendChild(section);
+    updateFogControls();
+  }
+
   wrap.appendChild(comp);
   wrap.appendChild(read);
   const slot = getUISlot("topRight");
@@ -319,5 +400,6 @@ export function mountDevHUD({
     setStatusLine,
     setOceanStatus,
     rootElement: read,
+    updateFogState: updateFogControls,
   };
 }
