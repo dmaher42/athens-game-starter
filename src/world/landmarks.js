@@ -9,7 +9,11 @@ import {
 } from "../utils/ktx2.js";
 import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
-import { makeMarbleMaterial, makeBronzeMaterial } from "./materials.js";
+import {
+  makeMarbleMaterial,
+  makeBronzeMaterial,
+  makeMediterraneanPlasterMaterial,
+} from "./materials.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildTemple } from "../features/temples.js";
 
@@ -438,6 +442,7 @@ export async function spawnProceduralFallback({
 const MATERIAL_PRESETS = {
   marble: makeMarbleMaterial,
   bronze: makeBronzeMaterial,
+  "mediterranean-plaster": makeMediterraneanPlasterMaterial,
 };
 
 const MATERIAL_FLAG_PROPERTIES = [

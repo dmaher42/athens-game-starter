@@ -20,6 +20,7 @@
 import {
   ACROPOLIS_PEAK_3D,
   AGORA_CENTER_3D,
+  HARBOR_CENTER_3D,
 } from "../world/locations.js";
 
 function anchorPosition(anchor, delta = {}) {
@@ -425,6 +426,150 @@ export const athensLayoutConfig = {
           messages: {
             missingPrimary:
               "Royal Stoa model missing – add royal_stoa.glb to depict the archon basileus' court.",
+          },
+        },
+      ],
+    },
+    {
+      id: "med-harbor-landmarks",
+      label: "Mediterranean Harbor Landmarks",
+      description:
+        "Seaside markers guiding sailors toward the piers and animating the waterfront plaza.",
+      scenes: ["harbor"],
+      defaults: {
+        collision: true,
+        loadOptions: {
+          materialPreset: "mediterranean-plaster",
+        },
+        placeholder: {
+          accentColor: 0xd2b48c,
+          baseRadius: 1.8,
+          columnHeight: 3.2,
+        },
+      },
+      landmarks: [
+        {
+          id: "harbor-lighthouse",
+          name: "Harbor Lighthouse",
+          description:
+            "Tiered lighthouse marking the harbor mouth and keeping night traffic off the breakwater.",
+          assetFiles: [
+            "models/landmarks/harbor_lighthouse.glb",
+            "models/landmarks/pharos_lighthouse.glb",
+          ],
+          fallbackFiles: ["models/landmarks/monument.glb"],
+          placement: {
+            position: anchorPosition(HARBOR_CENTER_3D, { x: -46, z: -10 }),
+            rotation: { y: Math.PI * 0.28 },
+            scale: 0.34,
+            surfaceOffset: 0.16,
+            snapOptions: {
+              clampToSea: true,
+              minAboveSea: 0.12,
+            },
+          },
+          placeholder: {
+            baseRadius: 2.4,
+            columnHeight: 6.8,
+            capHeight: 1.4,
+            accentColor: 0xf5e6c8,
+          },
+          messages: {
+            missingPrimary:
+              "Harbor lighthouse GLB missing – add harbor_lighthouse.glb (or pharos_lighthouse.glb) under public/models/landmarks/.",
+            fallbackUsed:
+              "Harbor lighthouse temporarily using the generic monument column as a stand-in.",
+          },
+        },
+        {
+          id: "harbor-chapel-clocktower",
+          name: "Harbor Chapel & Clocktower",
+          description:
+            "Compact chapel with a bell/clock tower keeping watch over merchant departures and arrivals.",
+          assetFiles: [
+            "models/landmarks/harbor_clocktower.glb",
+            "models/landmarks/harbor_chapel.glb",
+          ],
+          fallbackFiles: [
+            "models/buildings/workshop.glb",
+            "models/buildings/warehouse.glb",
+          ],
+          placement: {
+            position: anchorPosition(HARBOR_CENTER_3D, { x: -26, z: 18 }),
+            rotation: { y: -Math.PI * 0.12 },
+            scale: 0.22,
+            surfaceOffset: 0.12,
+          },
+          placeholder: {
+            baseRadius: 1.6,
+            columnHeight: 4.2,
+            capHeight: 1.1,
+            accentColor: 0xe9d6bd,
+          },
+          messages: {
+            missingPrimary:
+              "Harbor chapel/clocktower model missing – place harbor_clocktower.glb (or harbor_chapel.glb) under public/models/landmarks/.",
+            fallbackUsed:
+              "Harbor chapel currently substitutes a workshop/warehouse prefab until a bespoke GLB is provided.",
+          },
+        },
+        {
+          id: "harbor-plaza-statue",
+          name: "Harbor Plaza Statue",
+          description:
+            "Bronze votive statue anchoring the harbor plaza where sailors gather before voyages.",
+          assetFiles: [
+            "models/landmarks/harbor_plaza_statue.glb",
+            "models/landmarks/plaza_hero_statue.glb",
+          ],
+          fallbackFiles: ["models/landmarks/monument.glb"],
+          placement: {
+            position: anchorPosition(HARBOR_CENTER_3D, { x: -14, z: 6 }),
+            rotation: { y: Math.PI * 0.5 },
+            scale: 0.18,
+            surfaceOffset: 0.08,
+          },
+          loadOptions: {
+            materialPreset: "bronze",
+          },
+          placeholder: {
+            baseRadius: 1.2,
+            columnHeight: 3.6,
+            accentColor: 0xc98c48,
+          },
+          messages: {
+            missingPrimary:
+              "Harbor plaza statue GLB missing – add harbor_plaza_statue.glb (or plaza_hero_statue.glb) under public/models/landmarks/.",
+            fallbackUsed:
+              "Harbor plaza statue currently falls back to the generic monument column.",
+          },
+        },
+        {
+          id: "pier-warehouse-row",
+          name: "Pier Warehouse Row",
+          description:
+            "Row of pier-side warehouses staging amphorae, olive oil, and dyed cloth for export.",
+          assetFiles: [
+            "models/landmarks/pier_warehouse_row.glb",
+            "models/landmarks/harbor_warehouse_row.glb",
+          ],
+          fallbackFiles: ["models/buildings/warehouse.glb"],
+          placement: {
+            position: anchorPosition(HARBOR_CENTER_3D, { x: 8, z: 2 }),
+            rotation: { y: -Math.PI * 0.32 },
+            scale: 0.38,
+            surfaceOffset: 0.1,
+          },
+          placeholder: {
+            baseRadius: 2.2,
+            columnHeight: 3.4,
+            accentColor: 0xd5b38a,
+          },
+          messages: {
+            missingPrimary:
+              "Pier warehouse row GLB missing – place pier_warehouse_row.glb (or harbor_warehouse_row.glb) under public/models/landmarks/.",
+            fallbackUsed:
+              "Pier warehouses default to the single warehouse prefab when the custom row is unavailable.",
           },
         },
       ],

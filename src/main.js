@@ -1790,6 +1790,7 @@ async function mainApp() {
     envCollider,
     renderer,
     forceProcedural: FORCE_PROC,
+    activeScenes: ["harbor"],
     spawnPlaceholder: (options = {}) =>
       spawnPlaceholderMonument({
         ...options,

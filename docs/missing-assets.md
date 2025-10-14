@@ -21,6 +21,14 @@ The runtime references several 3D models and texture sets that are not currently
 | `public/models/landmarks/tholos.glb` | Tholos headquarters of the prytaneis. |
 | `public/models/landmarks/eponymous_heroes.glb` | Monument of the Eponymous Heroes. |
 | `public/models/landmarks/royal_stoa.glb` | Royal Stoa law court. |
+| `public/models/landmarks/harbor_lighthouse.glb` | Harbor lighthouse guiding ships past the breakwater. |
+| `public/models/landmarks/pharos_lighthouse.glb` | Alternate lighthouse mesh compatible with the harbor beacon placement. |
+| `public/models/landmarks/harbor_clocktower.glb` | Harbor chapel & clocktower overlooking departures. |
+| `public/models/landmarks/harbor_chapel.glb` | Alternate chapel mesh for the waterfront bell tower placement. |
+| `public/models/landmarks/harbor_plaza_statue.glb` | Harbor plaza statue celebrating sailors and merchants. |
+| `public/models/landmarks/plaza_hero_statue.glb` | Alternate hero statue usable at the harbor plaza placement. |
+| `public/models/landmarks/pier_warehouse_row.glb` | Row of warehouses lining the harbor pier. |
+| `public/models/landmarks/harbor_warehouse_row.glb` | Alternate warehouse row mesh compatible with the pier placement. |
 | `public/models/landmarks/temple_olympian_zeus.glb` | Temple of Olympian Zeus southeast of the Acropolis. |
 | `public/models/landmarks/panathenaic_stadium.glb` | Panathenaic Stadium athletics venue. |
 | `public/models/landmarks/academy_plato.glb` | Academy of Plato grove. |

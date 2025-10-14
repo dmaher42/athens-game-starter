@@ -40,6 +40,12 @@ function mergeSettings(...sources) {
   return output;
 }
 
+function normalizeSceneName(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed.length ? trimmed : null;
+}
+
 function cloneVector3Like(value) {
   if (!value) return null;
   if (value.isVector3) return value.clone();
@@ -109,6 +115,7 @@ export class LandmarkManager {
     logger = console,
     quietMissing = false,
     forceProcedural = false,
+    activeScenes = null,
   } = {}) {
     this.scene = scene;
     this.parent = parent || scene;
@@ -126,6 +133,8 @@ export class LandmarkManager {
     this.globalDefaults = {};
     this.results = [];
     this.forceProcedural = Boolean(forceProcedural);
+    this.activeScenes = null;
+    this.setActiveScenes(activeScenes);
   }
 
   setTerrain(terrain) {
@@ -144,6 +153,42 @@ export class LandmarkManager {
 
   setSpawnPlaceholder(spawnPlaceholder) {
     this.spawnPlaceholder = typeof spawnPlaceholder === "function" ? spawnPlaceholder : null;
+  }
+
+  setActiveScenes(scenes) {
+    if (scenes == null) {
+      this.activeScenes = null;
+      return;
+    }
+    const list = Array.isArray(scenes) ? scenes : [scenes];
+    const normalized = list
+      .map((value) => normalizeSceneName(value))
+      .filter((value) => value);
+    this.activeScenes = normalized.length ? new Set(normalized) : null;
+  }
+
+  addActiveScene(scene) {
+    const normalized = normalizeSceneName(scene);
+    if (!normalized) return;
+    if (!this.activeScenes) {
+      this.activeScenes = new Set([normalized]);
+      return;
+    }
+    this.activeScenes.add(normalized);
+  }
+
+  isGroupActive(group) {
+    if (!group) return false;
+    if (!this.activeScenes || this.activeScenes.size === 0) {
+      return true;
+    }
+    const groupScenes = Array.isArray(group.scenes) ? group.scenes : [];
+    if (groupScenes.length === 0) {
+      return true;
+    }
+    return groupScenes
+      .map((value) => normalizeSceneName(value))
+      .some((value) => value && this.activeScenes.has(value));
   }
 
   resolveSurfaceOffset(spec = {}) {
@@ -621,6 +666,9 @@ export class LandmarkManager {
     const groups = Array.isArray(config.groups) ? config.groups : [];
     for (const group of groups) {
       if (group?.enabled === false) {
+        continue;
+      }
+      if (!this.isGroupActive(group)) {
         continue;
       }
       const groupDefaults = mergeSettings(this.globalDefaults, group?.defaults);
