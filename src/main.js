@@ -57,6 +57,7 @@ import { spawnCitizenCrowd, spawnGLBNPCs } from "./world/npcs.js";
 import { mountExposureSlider } from "./ui/exposureSlider.js";
 import { mountHotkeyOverlay } from "./ui/hotkeyOverlay.js";
 import { mountDevHUD } from "./ui/devHud.js";
+import { mountMiniMap } from "./ui/miniMap.js";
 import { mount as mountHUDCameraSettings } from "./ui/HUDCameraSettings.js";
 import {
   showLoadingScreen,
@@ -2084,6 +2085,7 @@ async function mainApp() {
     getFogEnabled: () => fogEnabled,
     onToggleFog: toggleFog,
   });
+  mountMiniMap({ getPosition, getDirection });
   proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
   devHud?.setStatusLine?.("proc", FORCE_PROC ? "Procedural: ON" : "Procedural: OFF");
   syncFogState();
