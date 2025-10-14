@@ -1,6 +1,6 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
-import { SEA_LEVEL_Y } from "./locations.js";
+import { SEA_LEVEL_Y, HARBOR_WATER_EAST_LIMIT } from "./locations.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 function sanitizeRelativePath(value) {
@@ -646,6 +646,13 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     built.position.copy(pad.position);
     built.position.x += Number.isFinite(jitterX) ? jitterX : 0;
     built.position.z += Number.isFinite(jitterZ) ? jitterZ : 0;
+
+    if (districtId === "harbor") {
+      const pierClearanceX = HARBOR_WATER_EAST_LIMIT + 3.25; // keep procedural lots off the physical pier deck
+      if (Number.isFinite(pierClearanceX) && built.position.x < pierClearanceX) {
+        built.position.x = pierClearanceX;
+      }
+    }
 
     if (typeKey === "pier") {
       const pier = built;
