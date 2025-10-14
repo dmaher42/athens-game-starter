@@ -10,6 +10,8 @@ export const GROUND_TEXTURE_CONFIG = {
   */
   base: {
     generator: "lush-grass",
+    url: "/textures/ground/grass-preview.jpg",
+    normalUrl: "/textures/ground/grass-normal-dx.jpg"
     /** Brighten the procedural grass so the terrain reads lighter overall. */
     baseColor: [121, 182, 112], // Grass weight/tint bump
     shadowColor: [67, 117, 70], // Grass weight/tint bump
