@@ -7,14 +7,8 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { Soundscape } from "./audio/soundscape.js";
 import { mountAudioMixer } from "./ui/audioMixer.js";
-import {
-  createSky,
-  updateSky,
-  createStars,
-  updateStars,
-  setTimeOfDayPhase,
-} from "./world/sky.js";
-import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
+import { createSky, updateSky, setTimeOfDayPhase } from "./world/sky.js";
+import { createLighting, updateLighting } from "./world/lighting.js";
 import { createInteractor, queueSceneInteractable } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
@@ -802,7 +796,7 @@ async function mainApp() {
   camera.updateProjectionMatrix();
   camera.position.set(0, 5, 10);
 
-  // Sky, stars & lighting
+  // Sky & lighting
   const skyObj = createSky(scene);
   const lights = createLighting(scene);
   // ---- Living City Soundscape ----
@@ -833,10 +827,6 @@ async function mainApp() {
   if (SHOW_AUDIO_MIXER) {
     mountAudioMixer(soundscape);
   }
-
-  // Create a star field with 1000 tiny points so nights feel alive.
-  const stars = createStars(scene, 1000);
-  const moon = createMoon(scene);
 
   // Generate a dynamic terrain mesh so the world has rolling hills instead of
   // a perfectly flat plane. We'll pass the mesh to the character so it can
@@ -1913,8 +1903,6 @@ async function mainApp() {
     updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: phase });
     updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: phase });
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
-    updateStars(stars, phase);
-    updateMoon(moon, sunDir);
     updateOcean(ocean, 0, sunDir, lights.nightFactor);
     if (grassRoot) {
       setGrassNightFactor(lights.nightFactor);
@@ -1948,15 +1936,12 @@ async function mainApp() {
     timeOfDayState.elapsedSeconds = elapsed;
     const sunDir = updateSky(skyObj, timeOfDayState);
 
-    // Update sky dome, atmospheric lighting, and celestial bodies each frame.
+    // Update sky dome and atmospheric lighting each frame.
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
     updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: phase });
     updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: phase });
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
-    // Fade the stars in and out depending on the time of day.
-    updateStars(stars, phase);
-    updateMoon(moon, sunDir);
     if (grassRoot) {
       setGrassNightFactor(lights.nightFactor);
       updateGrass(deltaTime, player?.position ?? null);
