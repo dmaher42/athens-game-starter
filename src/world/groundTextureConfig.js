@@ -2,8 +2,10 @@
 // existing vertex-colored ground. The JPG files referenced here should live in
 // the public/textures/ground directory. Values are safe defaults that won't try
 // to load textures until you provide URLs.
-const textureUrl = (filename) =>
-  `${import.meta.env.BASE_URL}textures/ground/${filename}`;
+const textureUrl = (filename) => {
+  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
+  return `${baseUrl}textures/ground/${filename}`;
+};
 
 export const GROUND_TEXTURE_CONFIG = {
   /**
