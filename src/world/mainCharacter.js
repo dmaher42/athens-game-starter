@@ -11,6 +11,7 @@ import {
   Vector3,
   MathUtils,
 } from "three";
+import { MOVEMENT_KEYS } from "../input/keyBindings.js";
 
 // Reuse the same vectors every frame so we avoid creating garbage objects.
 const moveDirection = new Vector3();
@@ -24,6 +25,27 @@ const UP_AXIS = new Vector3(0, 1, 0);
 const DOWN_AXIS = new Vector3(0, -1, 0);
 const rayOrigin = new Vector3();
 const groundRaycaster = new Raycaster();
+
+const MOVEMENT_FLAGS = Object.freeze({
+  forward: "moveForward",
+  back: "moveBackward",
+  left: "moveLeft",
+  right: "moveRight",
+});
+
+const MOVEMENT_FLAG_BY_CODE = (() => {
+  const map = new Map();
+  for (const [direction, codes] of Object.entries(MOVEMENT_KEYS)) {
+    const flag = MOVEMENT_FLAGS[direction];
+    if (!flag || !Array.isArray(codes)) continue;
+    for (const code of codes) {
+      if (typeof code === "string" && code.length > 0) {
+        map.set(code, flag);
+      }
+    }
+  }
+  return map;
+})();
 
 export class MainCharacter {
   constructor(scene, camera, options = {}) {
@@ -86,19 +108,13 @@ export class MainCharacter {
   }
 
   toggleMovement(code, isPressed) {
+    const flag = MOVEMENT_FLAG_BY_CODE.get(code);
+    if (flag) {
+      this[flag] = isPressed;
+      return;
+    }
+
     switch (code) {
-      case "KeyW":
-        this.moveForward = isPressed;
-        break;
-      case "KeyS":
-        this.moveBackward = isPressed;
-        break;
-      case "KeyA":
-        this.moveLeft = isPressed;
-        break;
-      case "KeyD":
-        this.moveRight = isPressed;
-        break;
       case "Space":
       case "Numpad0":
         if (isPressed) {
