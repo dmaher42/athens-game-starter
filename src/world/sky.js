@@ -1,43 +1,7 @@
 // src/world/sky.js
 
 import { Sky } from "three/examples/jsm/objects/Sky.js";
-import * as THREE from "three";
-
-// Constants describing the star field radius to wrap the camera.
-const STAR_FIELD_RADIUS = 1000;
-
-const SUN_DISTANCE = 400000;
-
-function createSunTexture() {
-  if (typeof document === "undefined") {
-    return null;
-  }
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const context = canvas.getContext("2d");
-  if (!context) return null;
-
-  const gradient = context.createRadialGradient(
-    size / 2,
-    size / 2,
-    size * 0.1,
-    size / 2,
-    size / 2,
-    size / 2
-  );
-  gradient.addColorStop(0, "#fff6cc");
-  gradient.addColorStop(0.4, "#ffe7a3");
-  gradient.addColorStop(1, "rgba(255, 231, 163, 0)");
-
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, size, size);
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.needsUpdate = true;
-  return texture;
-}
+import { Vector3 } from "three";
 
 export function createSky(scene) {
   // Build and configure the sky dome shader.
@@ -60,23 +24,10 @@ export function createSky(scene) {
 
   scene.add(sky);
 
-  const sunTexture = createSunTexture();
-  const sunMaterial = new THREE.SpriteMaterial({
-    map: sunTexture ?? undefined,
-    color: 0xffffff,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-  const sunSprite = new THREE.Sprite(sunMaterial);
-  sunSprite.scale.setScalar(70000);
-  sunSprite.userData.noCollision = true;
-  scene.add(sunSprite);
-
-  return { sky, sunSprite };
+  return { sky };
 }
 
-const scratchSunDirection = new THREE.Vector3(0, 1, 0);
+const scratchSunDirection = new Vector3(0, 1, 0);
 
 function clamp01(value) {
   if (!Number.isFinite(value)) return 0;
@@ -101,7 +52,7 @@ export function getSunDirectionFromPhase(phase01, target = scratchSunDirection) 
 
 export function updateSky(skyObj, state) {
   // Guard against missing uniforms or objects so runtime stays safe.
-  const { sky, sunSprite } = skyObj || {};
+  const { sky } = skyObj || {};
   if (
     !sky ||
     !sky.material ||
@@ -115,83 +66,5 @@ export function updateSky(skyObj, state) {
   const sunDir = getSunDirectionFromPhase(phase, scratchSunDirection);
   sky.material.uniforms.sunPosition.value.copy(sunDir).normalize();
 
-  if (sunSprite) {
-    const sunHeight = sunDir.y;
-    const dayFactor = THREE.MathUtils.clamp(
-      THREE.MathUtils.smoothstep(sunHeight, -0.2, 0.05),
-      0,
-      1
-    );
-    sunSprite.position.copy(sunDir).normalize().multiplyScalar(SUN_DISTANCE);
-    sunSprite.material.opacity = 0.2 + dayFactor * 0.8;
-    sunSprite.visible = dayFactor > 0.01;
-  }
-
   return sunDir;
-}
-
-export function createStars(scene, count) {
-  // Generate a star field using random points on a sphere surface.
-  const starCount = Math.max(0, count ?? 1000);
-  const geometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(starCount * 3);
-
-  for (let i = 0; i < starCount; i++) {
-    // Pick a random direction, normalise it, then place it on a shell so
-    // stars surround the camera at a consistent distance.
-    const direction = new THREE.Vector3(
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1,
-      Math.random() * 2 - 1
-    ).normalize();
-    const distance = STAR_FIELD_RADIUS * (0.8 + Math.random() * 0.2);
-    const index = i * 3;
-    positions[index] = direction.x * distance;
-    positions[index + 1] = direction.y * distance;
-    positions[index + 2] = direction.z * distance;
-  }
-
-  // Write the generated star data into the geometry buffers.
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-
-  // PointsMaterial renders every vertex as a small sprite. We give it a tiny
-  // size, a white colour and enable transparency so we can fade the stars.
-  const material = new THREE.PointsMaterial({
-    size: 1.2,
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0, // Start hidden; updateStars will fade them in at night.
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-  });
-
-  // Combine the geometry and material into a THREE.Points object and add it to
-  // the scene so it renders around the player.
-  const stars = new THREE.Points(geometry, material);
-  stars.matrixAutoUpdate = false; // Stars don't move; freeze their matrix.
-  stars.updateMatrix();
-
-  scene.add(stars);
-  return stars;
-}
-
-export function updateStars(stars, phase) {
-  // Bail out when stars are not ready yet.
-  if (!stars) return;
-
-  const material = stars.material;
-  if (!material) return;
-
-  // Convert the current phase of the day (0 = midnight, 0.5 = midday) into
-  // the sun's height in the sky using a sine wave: -1 (midnight) to +1 (midday).
-  const sunElevation = Math.sin(phase * Math.PI * 2);
-
-  // Fade the stars out shortly before the sun reaches the horizon and keep them
-  // invisible while it is high in the sky for a gentle transition.
-  const fadeStart = -0.2; // sun just below the horizon
-  const fadeEnd = 0.1;    // sun a little way into the sky
-  const nightStrength = 1 - THREE.MathUtils.smoothstep(sunElevation, fadeStart, fadeEnd);
-
-  // Slowly interpolate towards the desired opacity so the change is smooth.
-  material.opacity = THREE.MathUtils.lerp(material.opacity, nightStrength, 0.05);
 }
