@@ -77,7 +77,7 @@ import { athensLayoutConfig } from "./config/athensLayoutConfig.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "./features/aristotle-texture.js";
 import { applyGravelToRoads } from "./features/roads-gravel.js";
-import { DISTRICT_RULE_PATH_CANDIDATES } from "./world/districtRules.js";
+import { buildDistrictRuleUrlCandidates } from "./world/districtRules.js";
 
 // @ts-ignore injected by Vite define()
 const BUILD_TIME = typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : "";
@@ -86,6 +86,7 @@ const BUILD_SHA = typeof __BUILD_SHA__ !== "undefined" ? __BUILD_SHA__ : "";
 console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
 
 const BASE_URL = resolveBaseUrl();
+const DISTRICT_RULE_URL_CANDIDATES = buildDistrictRuleUrlCandidates(BASE_URL);
 
 const QUERY_PARAMS = (() => {
   if (typeof window === "undefined" || typeof window.location === "undefined") {
@@ -113,7 +114,7 @@ console.info(
   const probes = [
     "audio/manifest.json",
     "models/npcs/manifest.json",
-    ...DISTRICT_RULE_PATH_CANDIDATES,
+    ...DISTRICT_RULE_URL_CANDIDATES,
   ];
   if (!FORCE_PROC) {
     probes.push(
@@ -270,7 +271,7 @@ async function resolveFirstAvailableAsset(candidates = []) {
 
 async function runAssetQuickChecks() {
   const baseUrl = resolveBaseUrl();
-  const districtCandidates = DISTRICT_RULE_PATH_CANDIDATES.map((rel) => joinPath(baseUrl, rel));
+  const districtCandidates = DISTRICT_RULE_URL_CANDIDATES.map((rel) => joinPath(baseUrl, rel));
   let resolvedDistrictPath = null;
   for (const candidate of districtCandidates) {
     if (await headOk(candidate)) {

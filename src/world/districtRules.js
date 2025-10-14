@@ -1,10 +1,52 @@
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { resolveBaseUrl, joinPath, REPO_SEGMENT } from "../utils/baseUrl.js";
 
-export const DISTRICT_RULE_PATH_CANDIDATES = [
-  "config/districts.json",
-  "public/config/districts.json",
-  "docs/config/districts.json",
-];
+const REPO_SEGMENT_PATH = `/${REPO_SEGMENT}/`;
+
+export function buildDistrictRuleUrlCandidates(resolvedBase) {
+  const urls = new Set();
+  const push = (value) => {
+    if (!value || urls.has(value)) return;
+    urls.add(value);
+  };
+  const pushJoined = (base, rel) => {
+    if (!base) return;
+    push(joinPath(base, rel));
+  };
+
+  push("config/districts.json");
+  pushJoined(resolvedBase, "config/districts.json");
+  pushJoined("/", "config/districts.json");
+
+  if (!resolvedBase || !resolvedBase.includes(REPO_SEGMENT_PATH)) {
+    pushJoined(REPO_SEGMENT_PATH, "config/districts.json");
+  }
+
+  if (typeof window !== "undefined" && window.location) {
+    const { pathname, hostname } = window.location;
+
+    if (pathname && pathname.includes(REPO_SEGMENT_PATH)) {
+      const idx = pathname.indexOf(REPO_SEGMENT_PATH);
+      const repoBase = pathname.slice(0, idx + REPO_SEGMENT_PATH.length);
+      pushJoined(repoBase, "config/districts.json");
+    }
+
+    const isLocalhost =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "" ||
+      hostname === "[::1]";
+
+    if (isLocalhost) {
+      push("/public/config/districts.json");
+      push("/docs/config/districts.json");
+    }
+  } else {
+    push("/public/config/districts.json");
+    push("/docs/config/districts.json");
+  }
+
+  return Array.from(urls);
+}
 
 /** Load district rules from /config/districts.json with safe fallbacks. */
 export async function loadDistrictRules(baseUrl = "") {
@@ -12,8 +54,7 @@ export async function loadDistrictRules(baseUrl = "") {
     typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : resolveBaseUrl();
 
   const tried = [];
-  for (const relativePath of DISTRICT_RULE_PATH_CANDIDATES) {
-    const url = joinPath(resolvedBase, relativePath);
+  for (const url of buildDistrictRuleUrlCandidates(resolvedBase)) {
     tried.push(url);
     try {
       const res = await fetch(url, { method: "GET", cache: "no-cache" });
