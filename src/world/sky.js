@@ -1,7 +1,7 @@
 // src/world/sky.js
 
 import { Sky } from "three/examples/jsm/objects/Sky.js";
-import { Vector3 } from "three";
+import { MathUtils, Vector3 } from "three";
 
 export function createSky(scene) {
   // Build and configure the sky dome shader.
@@ -14,9 +14,9 @@ export function createSky(scene) {
   sky.userData.noCollision = true;
 
   const uniforms = sky.material.uniforms;
-  uniforms.turbidity.value = 4;
-  uniforms.rayleigh.value = 2.8;
-  uniforms.mieCoefficient.value = 0.0045;
+  uniforms.turbidity.value = 2.2;
+  uniforms.rayleigh.value = 3.2;
+  uniforms.mieCoefficient.value = 0.0025;
   uniforms.mieDirectionalG.value = 0.7;
 
   // initialize sunPosition so shader is defined
@@ -64,7 +64,20 @@ export function updateSky(skyObj, state) {
   // Copy normalized sun direction into the shader uniform
   const phase = state?.timeOfDayPhase ?? 0;
   const sunDir = getSunDirectionFromPhase(phase, scratchSunDirection);
-  sky.material.uniforms.sunPosition.value.copy(sunDir).normalize();
+  const uniforms = sky.material.uniforms;
+  uniforms.sunPosition.value.copy(sunDir).normalize();
+
+  const sunHeight = MathUtils.clamp(sunDir.y, -0.2, 1);
+  const dayFactor = MathUtils.clamp(
+    MathUtils.smoothstep(sunHeight, -0.05, 0.35),
+    0,
+    1
+  );
+
+  uniforms.turbidity.value = MathUtils.lerp(6, 2, dayFactor);
+  uniforms.rayleigh.value = MathUtils.lerp(1.5, 3.4, dayFactor);
+  uniforms.mieCoefficient.value = MathUtils.lerp(0.006, 0.0022, dayFactor);
+  uniforms.mieDirectionalG.value = MathUtils.lerp(0.85, 0.7, dayFactor);
 
   return sunDir;
 }
