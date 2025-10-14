@@ -23,6 +23,7 @@ import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./distr
 import { spawnBuildingsFromPads } from "./buildingSpawner.js";
 import { placeHarborLandmarks } from "./landmarks.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
+import { DEBUG_FLAGS } from "../debug/flags.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildHouseBlock } from "../features/blocks.js";
 import { HARBOR_ZONE, inHarborBand } from "./cityPlan.js";
