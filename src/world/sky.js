@@ -39,96 +39,6 @@ function createSunTexture() {
   return texture;
 }
 
-function createCloudMaterial() {
-  const uniforms = {
-    time: { value: 0 },
-    dayFactor: { value: 1 },
-    cloudColor: { value: new THREE.Color(0xffffff) },
-    skyTint: { value: new THREE.Color(0x6bb5ff) },
-    coverage: { value: 0.45 },
-    softness: { value: 0.25 },
-  };
-
-  const vertexShader = `
-    varying vec3 vWorldPosition;
-
-    void main() {
-      vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-      vWorldPosition = worldPosition.xyz;
-      gl_Position = projectionMatrix * viewMatrix * worldPosition;
-    }
-  `;
-
-  const fragmentShader = `
-    precision highp float;
-
-    varying vec3 vWorldPosition;
-    uniform float time;
-    uniform float dayFactor;
-    uniform vec3 cloudColor;
-    uniform vec3 skyTint;
-    uniform float coverage;
-    uniform float softness;
-
-    float hash(vec2 p) {
-      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-    }
-
-    float noise(vec2 p) {
-      vec2 i = floor(p);
-      vec2 f = fract(p);
-
-      vec2 u = f * f * (3.0 - 2.0 * f);
-
-      float a = hash(i + vec2(0.0, 0.0));
-      float b = hash(i + vec2(1.0, 0.0));
-      float c = hash(i + vec2(0.0, 1.0));
-      float d = hash(i + vec2(1.0, 1.0));
-
-      return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-    }
-
-    float fbm(vec2 p) {
-      float value = 0.0;
-      float amplitude = 0.5;
-      float frequency = 1.0;
-
-      for (int i = 0; i < 5; i++) {
-        value += amplitude * noise(p * frequency);
-        frequency *= 2.0;
-        amplitude *= 0.5;
-      }
-
-      return value;
-    }
-
-    void main() {
-      vec2 uv = vWorldPosition.xz * 0.00045;
-      float t = time * 0.015;
-      uv += vec2(t, t * 0.37);
-
-      float density = fbm(uv);
-      float shape = smoothstep(coverage, coverage - softness, density);
-      shape = pow(shape, 1.1);
-
-      float alpha = shape * mix(0.08, 0.45, dayFactor);
-      if (alpha <= 0.001) discard;
-
-      vec3 color = mix(skyTint, cloudColor, shape);
-      gl_FragColor = vec4(color, alpha);
-    }
-  `;
-
-  return new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader,
-    fragmentShader,
-    transparent: true,
-    depthWrite: false,
-    side: THREE.BackSide,
-  });
-}
-
 export function createSky(scene) {
   // Build and configure the sky dome shader.
   const sky = new Sky();
@@ -150,14 +60,6 @@ export function createSky(scene) {
 
   scene.add(sky);
 
-  const cloudMaterial = createCloudMaterial();
-  const cloudGeometry = new THREE.SphereGeometry(440000, 60, 32);
-  const clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
-  clouds.scale.set(1, 0.6, 1);
-  clouds.userData.noCollision = true;
-  clouds.renderOrder = sky.renderOrder + 1;
-  scene.add(clouds);
-
   const sunTexture = createSunTexture();
   const sunMaterial = new THREE.SpriteMaterial({
     map: sunTexture ?? undefined,
@@ -171,7 +73,7 @@ export function createSky(scene) {
   sunSprite.userData.noCollision = true;
   scene.add(sunSprite);
 
-  return { sky, clouds, cloudMaterial, sunSprite };
+  return { sky, sunSprite };
 }
 
 const scratchSunDirection = new THREE.Vector3(0, 1, 0);
@@ -199,7 +101,7 @@ export function getSunDirectionFromPhase(phase01, target = scratchSunDirection) 
 
 export function updateSky(skyObj, state) {
   // Guard against missing uniforms or objects so runtime stays safe.
-  const { sky, clouds, cloudMaterial, sunSprite } = skyObj || {};
+  const { sky, sunSprite } = skyObj || {};
   if (
     !sky ||
     !sky.material ||
@@ -212,43 +114,6 @@ export function updateSky(skyObj, state) {
   const phase = state?.timeOfDayPhase ?? 0;
   const sunDir = getSunDirectionFromPhase(phase, scratchSunDirection);
   sky.material.uniforms.sunPosition.value.copy(sunDir).normalize();
-
-  const elapsed = state?.elapsedSeconds ?? 0;
-
-  if (clouds) {
-    clouds.rotation.y = elapsed * 0.01;
-  }
-
-  if (cloudMaterial) {
-    const uniforms = cloudMaterial.uniforms;
-    if (uniforms.time) uniforms.time.value = elapsed;
-    if (uniforms.dayFactor) {
-      const dayFactor = THREE.MathUtils.clamp(
-        THREE.MathUtils.smoothstep(sunDir.y, -0.1, 0.2),
-        0,
-        1
-      );
-      uniforms.dayFactor.value = dayFactor;
-
-      if (uniforms.coverage) {
-        const targetCoverage = THREE.MathUtils.lerp(0.52, 0.37, dayFactor);
-        uniforms.coverage.value = THREE.MathUtils.lerp(
-          uniforms.coverage.value,
-          targetCoverage,
-          0.05
-        );
-      }
-
-      if (uniforms.softness) {
-        const targetSoftness = THREE.MathUtils.lerp(0.18, 0.28, dayFactor);
-        uniforms.softness.value = THREE.MathUtils.lerp(
-          uniforms.softness.value,
-          targetSoftness,
-          0.05
-        );
-      }
-    }
-  }
 
   if (sunSprite) {
     const sunHeight = sunDir.y;
