@@ -85,6 +85,18 @@ export function createTerrain(scene) {
   const segments = 256;
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
+  // MeshStandardMaterial's AO map expects a second UV set. Reuse the existing
+  // layout so ambient occlusion textures line up with the base color map.
+  if (geometry.attributes.uv && !geometry.attributes.uv2) {
+    geometry.setAttribute(
+      "uv2",
+      new THREE.BufferAttribute(
+        new Float32Array(geometry.attributes.uv.array),
+        2,
+      ),
+    );
+  }
+
   const positionAttribute = geometry.attributes.position;
   const vertexCount = positionAttribute.count;
 

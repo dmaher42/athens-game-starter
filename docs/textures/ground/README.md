@@ -3,35 +3,33 @@
 Place your JPG (or PNG) files in this directory to have them picked up by the
 custom terrain texturing system. When you run `npm run build`, Vite copies the
 same folder to `docs/textures/ground/` so GitHub Pages (or any static host)
-serves the textures alongside the compiled site.
+serves the textures alongside the compiled site. Reference the filenames from
+`src/world/groundTextureConfig.js` – for example, the bundled grass material
+expects the following files:
 
-## Step-by-step: add a custom grass texture
+```
+grass-albedo.jpg
+grass-normal-dx.jpg
+grass-roughness.jpg
+grass-metallic.jpg
+grass-ao.jpg
+grass-height.jpg // used as a bump map
+```
 
-1. **Prepare the texture file.** Export your grass artwork as a JPG (or PNG)
-   file. Keep the resolution a power of two (e.g. 1024×1024 or 2048×2048) for
-   best mip-mapping results.
-2. **Copy it into this folder.** Drop the file in `public/textures/ground/`
-   (the directory you are reading now inside the repo). Commit it if you want
-   the texture to be bundled with the project.
-3. **Reference it from the config.** Edit
-   `src/world/groundTextureConfig.js` and point the base layer (or a detail
-   layer) at your new filename, for example `textures/ground/your-grass.jpg`.
-4. **Adjust coverage as needed.** Tweak the `repeat`, `strength`, `minHeight`,
-   `maxHeight`, `fade`, and optional slope settings in the config to control
-   how much of the mesh the layer covers.
-5. **Restart or refresh the dev server.** The shader recompiles the next time
-   the config changes; restarting `npm run dev` guarantees the new texture is
-   loaded.
-6. **Build for deployment.** Run `npm run build` when you are ready to publish;
-   Vite copies everything to `docs/textures/ground/` for static hosting.
-
-Reference the filenames from `src/world/groundTextureConfig.js` – for example:
+Three.js treats color textures as sRGB, while data maps (roughness, metalness,
+height, AO) should remain in linear space. The config already applies the
+correct color space when you follow the naming above.
 
 ```js
 export const GROUND_TEXTURE_CONFIG = {
   base: {
-    url: "textures/ground/grass.jpg",
-    repeat: [48, 48],
+    url: "textures/ground/grass-albedo.jpg",
+    normalUrl: "textures/ground/grass-normal-dx.jpg",
+    roughnessUrl: "textures/ground/grass-roughness.jpg",
+    metalnessUrl: "textures/ground/grass-metallic.jpg",
+    aoUrl: "textures/ground/grass-ao.jpg",
+    bumpUrl: "textures/ground/grass-height.jpg",
+    repeat: [18, 18],
   },
   details: [
     {
