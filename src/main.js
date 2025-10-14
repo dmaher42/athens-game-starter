@@ -19,6 +19,7 @@ import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { createOcean, updateOcean } from "./world/ocean.js";
 import { createHarbor, updateHarborLighting } from "./world/harbor.js";
+import { createHarborDecorations } from "./world/decoration.js";
 import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hillcity.js";
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
@@ -1012,6 +1013,11 @@ async function mainApp() {
     promenadeWidth: 16,
     greensWidth: 9,
     center: AGORA_CENTER_3D,
+    terrain,
+  });
+
+  createHarborDecorations(worldRoot, {
+    harborCity,
     terrain,
   });
 
