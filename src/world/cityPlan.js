@@ -1,5 +1,21 @@
 import * as THREE from 'three';
-import { AGORA_CENTER_3D } from './locations.js';
+import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from './locations.js';
+
+/* PATCH: Harbor zone params */
+export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.25 };
+
+export function inHarborBand(
+  pos,
+  shorelineCenter = { x: HARBOR_CENTER_3D.x, z: HARBOR_CENTER_3D.z }
+) {
+  if (!pos) return false;
+  // distance in XZ from harbor center or from shoreline reference
+  const dx = pos.x - shorelineCenter.x;
+  const dz = pos.z - shorelineCenter.z;
+  const d = Math.sqrt(dx * dx + dz * dz);
+  const band = Number.isFinite(HARBOR_ZONE?.bandWidth) ? HARBOR_ZONE.bandWidth : 35;
+  return d <= band + 12;
+}
 
 function toColor(value) {
   return value instanceof THREE.Color ? value.clone() : new THREE.Color(value);

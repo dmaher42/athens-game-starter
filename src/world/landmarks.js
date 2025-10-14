@@ -182,6 +182,60 @@ export function initializeAssetTranscoders(renderer) {
   }
 }
 
+/* PATCH: Harbor landmark group (lighthouse, clocktower, sculpture) + simple placer */
+export const HARBOR_LANDMARKS = [
+  { name: "HarborLighthouse", type: "lighthouse", pos: [24, 0, -60], yawDeg: 135, radius: 8 },
+  { name: "ClockTower",      type: "clocktower",  pos: [-10, 6, -24], yawDeg: 0,   radius: 6 },
+  { name: "HarborSculpture", type: "sculpture",   pos: [  6, 0, -10], yawDeg: 40,  radius: 4 }
+];
+
+// Minimal fallbacks if GLB assets are missing
+export function createHarborLandmarkFallback(type, THREE) {
+  if (type === "lighthouse") {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.0, 9.5, 16), new THREE.MeshStandardMaterial({ color:"#e7e0d6", roughness:0.7 })));
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.9, 1.4, 16), new THREE.MeshStandardMaterial({ color:"#b4472c", roughness:0.6 }));
+    cap.position.y = 5.5; g.add(cap);
+    const lamp = new THREE.PointLight("#ffd26a", 2.1, 40, 2.0); lamp.position.y = 6.2; g.add(lamp);
+    return g;
+  }
+  if (type === "clocktower") {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(3.2, 10.5, 3.2), new THREE.MeshStandardMaterial({ color:"#f5efe3", roughness:0.75 })));
+    const face = new THREE.Mesh(new THREE.CircleGeometry(0.8, 24), new THREE.MeshStandardMaterial({ color:"#ffffff", emissive:"#ffe6bf", emissiveIntensity:0.15 }));
+    face.position.set(0, 2.5, 1.65); g.add(face);
+    return g;
+  }
+  // sculpture
+  const g = new THREE.Group();
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 2.2), new THREE.MeshStandardMaterial({ color:"#d9d3c7", roughness:0.8 }));
+  plinth.position.y = 0.4; g.add(plinth);
+  const form = new THREE.Mesh(new THREE.TorusKnotGeometry(0.9, 0.25, 80, 10), new THREE.MeshStandardMaterial({ color:"#b5a689", roughness:0.55, metalness:0.15 }));
+  form.position.y = 1.6; g.add(form);
+  return g;
+}
+
+/** Place harbor landmarks and reserve nearby pads so buildings won’t overlap */
+export function placeHarborLandmarks({ THREE, scene, lots, getHeightAt, seaLevel=0, loadModel }) {
+  const reserve = (center, r) => {
+    const r2 = r*r;
+    for (const lot of lots) {
+      const dx = lot.pos.x - center.x, dz = lot.pos.z - center.z;
+      if (dx*dx + dz*dz <= r2) lot.blocked = true;
+    }
+  };
+  for (const lm of HARBOR_LANDMARKS) {
+    const yaw = THREE.MathUtils.degToRad(lm.yawDeg || 0);
+    const y = typeof getHeightAt === "function" ? getHeightAt(lm.pos[0], lm.pos[2]) : (lm.pos[1] ?? seaLevel);
+    const at = new THREE.Vector3(lm.pos[0], y, lm.pos[2]);
+    let obj = null;
+    if (typeof loadModel === "function") obj = loadModel(lm.type) || null;
+    if (!obj) obj = createHarborLandmarkFallback(lm.type, THREE);
+    obj.position.copy(at); obj.rotation.y = yaw; scene.add(obj);
+    reserve(at, lm.radius ?? 6);
+  }
+}
+
 // Backwards compatible helper that aligns with older tutorials calling
 // `initLandmarks(scene, renderer)`. We simply set up the compression pipeline
 // and return the scene reference untouched so existing code keeps working.

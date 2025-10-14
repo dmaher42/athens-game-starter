@@ -311,3 +311,44 @@ export function updateHarborLighting(harbor, nightFactor = 0) {
     lampState.material.emissiveIntensity = normalized > 0 ? 1.6 * normalized : 0;
   }
 }
+
+/* PATCH: Curved waterfront promenade and nearest tangent utility */
+export function buildPromenadePath({ shorelinePoints }) {
+  // Expect shorelinePoints as array of {x,z}; if absent, synthesize a gentle curve
+  const pts =
+    shorelinePoints && shorelinePoints.length >= 4
+      ? shorelinePoints
+      : [
+          { x: -60, z: -8 },
+          { x: -20, z: -10 },
+          { x: 20, z: -12 },
+          { x: 60, z: -8 },
+        ];
+  const curve = new THREE.CatmullRomCurve3(
+    pts.map((p) => new THREE.Vector3(p.x, 0, p.z))
+  );
+  return {
+    curve,
+    /** Nearest tangent + normal in XZ */
+    nearest(point) {
+      // coarse sample; good enough for alignment
+      let bestT = 0,
+        bestD = Infinity,
+        bestP = null;
+      for (let t = 0; t <= 1.0; t += 0.02) {
+        const p = curve.getPoint(t);
+        const dx = p.x - point.x,
+          dz = p.z - point.z;
+        const d2 = dx * dx + dz * dz;
+        if (d2 < bestD) {
+          bestD = d2;
+          bestT = t;
+          bestP = p;
+        }
+      }
+      const tan = curve.getTangent(bestT).normalize();
+      const normal = new THREE.Vector3(-tan.z, 0, tan.x);
+      return { point: bestP, tangent: tan, normal };
+    },
+  };
+}
