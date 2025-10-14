@@ -1,17 +1,36 @@
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
+export const DISTRICT_RULE_PATH_CANDIDATES = [
+  "config/districts.json",
+  "public/config/districts.json",
+  "docs/config/districts.json",
+];
+
 /** Load district rules from /config/districts.json with safe fallbacks. */
 export async function loadDistrictRules(baseUrl = "") {
-  const resolvedBase = typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : resolveBaseUrl();
-  const url = joinPath(resolvedBase, "config/districts.json");
+  const resolvedBase =
+    typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : resolveBaseUrl();
 
-  try {
-    const res = await fetch(url, { method: "GET", cache: "no-cache" });
-    if (res.ok) {
-      const json = await res.json();
-      return normalizeRules(json);
+  const tried = [];
+  for (const relativePath of DISTRICT_RULE_PATH_CANDIDATES) {
+    const url = joinPath(resolvedBase, relativePath);
+    tried.push(url);
+    try {
+      const res = await fetch(url, { method: "GET", cache: "no-cache" });
+      if (res.ok) {
+        const json = await res.json();
+        return normalizeRules(json);
+      }
+    } catch (err) {
+      // Ignore individual fetch failures and continue trying other fallbacks.
+      if (typeof console !== "undefined" && typeof console.debug === "function") {
+        console.debug("[district-rules] fetch failed", { url, err });
+      }
     }
-  } catch {}
+  }
+  if (typeof console !== "undefined" && typeof console.warn === "function") {
+    console.warn("[district-rules] failed to load", tried);
+  }
   // Minimal fallback (keeps city rendering even if file missing)
   return normalizeRules({
     seed: 1337,
