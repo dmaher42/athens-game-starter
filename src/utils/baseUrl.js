@@ -1,8 +1,57 @@
 // src/utils/baseUrl.js
-export const REPO_SEGMENT = "athens-game-starter";
+
+const DEFAULT_REPO_SEGMENT = "athens-game-starter";
+
+function sanitizeSegment(segment) {
+  if (typeof segment !== "string") return "";
+  return segment.replace(/^\/+|\/+$/g, "");
+}
+
+function segmentFromBase(base) {
+  const sanitized = sanitizeSegment(base);
+  return sanitized.length ? sanitized : "";
+}
+
+function segmentFromImportMeta() {
+  try {
+    if (
+      typeof import.meta !== "undefined" &&
+      import.meta.env &&
+      typeof import.meta.env.BASE_URL === "string"
+    ) {
+      return segmentFromBase(import.meta.env.BASE_URL);
+    }
+  } catch (err) {
+    // Ignore environments that do not expose import.meta.
+  }
+  return "";
+}
+
+function segmentFromLocation() {
+  if (typeof window === "undefined" || !window.location) return "";
+  const path = sanitizeSegment(window.location.pathname || "");
+  if (!path.length) return "";
+  const [first] = path.split("/");
+  return first || "";
+}
+
+const globalRepoSegment =
+  typeof globalThis !== "undefined" ? globalThis.__REPO_SEGMENT__ : undefined;
+
+const derivedRepoSegment =
+  segmentFromBase(globalRepoSegment) ||
+  segmentFromImportMeta() ||
+  segmentFromLocation() ||
+  DEFAULT_REPO_SEGMENT;
+
+export const REPO_SEGMENT = derivedRepoSegment;
+export const REPO_SEGMENT_PATH = REPO_SEGMENT
+  ? `/${sanitizeSegment(REPO_SEGMENT)}/`
+  : null;
 
 function hasRepoSegment(path) {
-  return typeof path === "string" && path.includes(`/${REPO_SEGMENT}/`);
+  if (!REPO_SEGMENT_PATH) return false;
+  return typeof path === "string" && path.includes(REPO_SEGMENT_PATH);
 }
 
 function normalizeBase(path) {
@@ -12,9 +61,11 @@ function normalizeBase(path) {
 
 function deriveBaseFromPath(path) {
   if (typeof path !== "string" || !path.length) return null;
-  const idx = path.indexOf(`/${REPO_SEGMENT}/`);
-  if (idx !== -1) {
-    return path.slice(0, idx + REPO_SEGMENT.length + 2);
+  if (REPO_SEGMENT_PATH) {
+    const idx = path.indexOf(REPO_SEGMENT_PATH);
+    if (idx !== -1) {
+      return path.slice(0, idx + REPO_SEGMENT_PATH.length);
+    }
   }
   return path.endsWith("/") ? path : path.replace(/[^/]*$/, "/");
 }
@@ -85,10 +136,10 @@ export function resolveBaseUrl() {
 
   if (typeof window !== "undefined" && window.location) {
     const onGithubPages = /github\.io$/i.test(window.location.hostname);
-    if (onGithubPages) {
+    if (onGithubPages && REPO_SEGMENT_PATH) {
       console.assert(
         hasRepoSegment(normalizedBase),
-        `Expected base URL to include "/${REPO_SEGMENT}/" when hosted on GitHub Pages, but received "${normalizedBase}".`
+        `Expected base URL to include "${REPO_SEGMENT_PATH}" when hosted on GitHub Pages, but received "${normalizedBase}".`
       );
     }
   }

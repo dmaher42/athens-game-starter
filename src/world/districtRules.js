@@ -1,6 +1,8 @@
-import { resolveBaseUrl, joinPath, REPO_SEGMENT } from "../utils/baseUrl.js";
-
-const REPO_SEGMENT_PATH = `/${REPO_SEGMENT}/`;
+import {
+  resolveBaseUrl,
+  joinPath,
+  REPO_SEGMENT_PATH as REPO_BASE_PATH,
+} from "../utils/baseUrl.js";
 
 export function buildDistrictRuleUrlCandidates(resolvedBase) {
   const urls = new Set();
@@ -17,16 +19,16 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
   pushJoined(resolvedBase, "config/districts.json");
   pushJoined("/", "config/districts.json");
 
-  if (!resolvedBase || !resolvedBase.includes(REPO_SEGMENT_PATH)) {
-    pushJoined(REPO_SEGMENT_PATH, "config/districts.json");
+  if (REPO_BASE_PATH && (!resolvedBase || !resolvedBase.includes(REPO_BASE_PATH))) {
+    pushJoined(REPO_BASE_PATH, "config/districts.json");
   }
 
   if (typeof window !== "undefined" && window.location) {
     const { pathname, hostname } = window.location;
 
-    if (pathname && pathname.includes(REPO_SEGMENT_PATH)) {
-      const idx = pathname.indexOf(REPO_SEGMENT_PATH);
-      const repoBase = pathname.slice(0, idx + REPO_SEGMENT_PATH.length);
+    if (REPO_BASE_PATH && pathname && pathname.includes(REPO_BASE_PATH)) {
+      const idx = pathname.indexOf(REPO_BASE_PATH);
+      const repoBase = pathname.slice(0, idx + REPO_BASE_PATH.length);
       pushJoined(repoBase, "config/districts.json");
     }
 
