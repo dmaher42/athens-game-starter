@@ -28,6 +28,19 @@ export function makeBronzeMaterial(three) {
   });
 }
 
+export function makeMediterraneanPlasterMaterial(three) {
+  return new three.MeshPhysicalMaterial({
+    color: 0xe8dccb,
+    roughness: 0.68,
+    metalness: 0.06,
+    sheen: 0.2,
+    sheenColor: new three.Color(0xf4e8d4),
+    clearcoat: 0.08,
+    clearcoatRoughness: 0.7,
+    envMapIntensity: 0.85,
+  });
+}
+
 export function makeTreeMaterials(three) {
   const leafMaterial = new three.MeshStandardMaterial({
     color: 0x4a7a39,
