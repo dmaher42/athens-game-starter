@@ -8,6 +8,7 @@ const DEFAULT_FALLBACK = 0.8;
 const DEFAULT_EDGE_INNER = 0.08;
 const DEFAULT_EDGE_OUTER = 0.32;
 const AO_CHUNK_SENTINEL = "ENHANCED_AO_CHUNK";
+const AO_UNIFORMS_SENTINEL = "ENHANCED_AO_UNIFORMS";
 
 function clamp01(value) {
   if (!Number.isFinite(value)) return 0;
@@ -103,6 +104,13 @@ function installAmbientOcclusionPatch() {
     shader.uniforms.uFallbackAO = shader.uniforms.uFallbackAO || { value: this.userData.fallbackAO };
     shader.uniforms.uAoEdgeInner = shader.uniforms.uAoEdgeInner || { value: this.userData.aoEdgeInner };
     shader.uniforms.uAoEdgeOuter = shader.uniforms.uAoEdgeOuter || { value: this.userData.aoEdgeOuter };
+
+    if (!shader.fragmentShader.includes(AO_UNIFORMS_SENTINEL)) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <common>",
+        `#include <common>\n#define ${AO_UNIFORMS_SENTINEL}\nuniform float uFallbackAO;\nuniform float uAoEdgeInner;\nuniform float uAoEdgeOuter;\n`
+      );
+    }
 
     if (!shader.fragmentShader.includes(AO_CHUNK_SENTINEL)) {
       shader.fragmentShader = shader.fragmentShader.replace(
