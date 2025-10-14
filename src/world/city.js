@@ -764,6 +764,8 @@ export async function createCity(scene, terrain, options = {}) {
 
   const city = new THREE.Group();
   city.name = "HarborCity";
+  city.userData = city.userData || {};
+  city.userData.pierPlazaCenter = pierPlazaCenter.clone();
 
   const roadGrid = [];
   const roadStartX = origin.x - halfX - spacingX * 0.5;
@@ -1851,7 +1853,13 @@ export async function createCity(scene, terrain, options = {}) {
   }
 
   // Spawn simple buildings on top of the lot pads (safe + fast)
-  spawnBuildingsFromPads(city, { seed: options.seed ?? 12345, leavePadsVisible: false });
+  const buildingSpawn = await spawnBuildingsFromPads(city, {
+    seed: options.seed ?? 12345,
+    leavePadsVisible: false,
+  });
+  if (buildingSpawn?.group) {
+    city.userData.buildingsGroup = buildingSpawn.group;
+  }
 
   const instancedPlacements = useProceduralBlocks
     ? placements.filter((placement) => !placement.waterfront)

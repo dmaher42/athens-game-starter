@@ -28,3 +28,24 @@ export function makeBronzeMaterial(three) {
   });
 }
 
+export function makeTreeMaterials(three) {
+  const leafMaterial = new three.MeshStandardMaterial({
+    color: 0x4a7a39,
+    roughness: 0.75,
+    metalness: 0.08,
+  });
+  leafMaterial.name = "TreeLeaves";
+
+  const barkMaterial = new three.MeshStandardMaterial({
+    color: 0x7b5e42,
+    roughness: 0.9,
+    metalness: 0.12,
+  });
+  barkMaterial.name = "TreeBark";
+
+  return {
+    leaf: leafMaterial,
+    bark: barkMaterial,
+  };
+}
+
