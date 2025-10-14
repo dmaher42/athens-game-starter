@@ -17,6 +17,7 @@ import { loadLandmark } from "./landmarks.js";
 import { SEA_LEVEL_Y } from "./locations.js";
 import { snapAboveGround } from "./ground.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { buildTemple } from "../features/temples.js";
 
 function isPlainObject(value) {
   return Object.prototype.toString.call(value) === "[object Object]";
@@ -92,6 +93,10 @@ function cloneTransformOptions(options = {}) {
   return cloned;
 }
 
+const PROCEDURAL_BUILDERS = {
+  temple: buildTemple,
+};
+
 export class LandmarkManager {
   constructor({
     scene = null,
@@ -103,6 +108,7 @@ export class LandmarkManager {
     spawnPlaceholder = null,
     logger = console,
     quietMissing = false,
+    forceProcedural = false,
   } = {}) {
     this.scene = scene;
     this.parent = parent || scene;
@@ -119,6 +125,7 @@ export class LandmarkManager {
     this.baseUrl = resolveBaseUrl();
     this.globalDefaults = {};
     this.results = [];
+    this.forceProcedural = Boolean(forceProcedural);
   }
 
   setTerrain(terrain) {
@@ -275,6 +282,155 @@ export class LandmarkManager {
     }
   }
 
+  resolveProceduralBuilder(name) {
+    if (!name) return null;
+    const normalized = String(name).trim().toLowerCase();
+    return PROCEDURAL_BUILDERS[normalized] || null;
+  }
+
+  applyTransformToObject(object, transformInfo) {
+    if (!object || !transformInfo) return;
+    const { position, rotation, scale } = transformInfo;
+
+    if (position && object.position) {
+      if (typeof object.position.copy === "function") {
+        object.position.copy(position);
+      } else {
+        object.position.set(position.x ?? position[0] ?? 0, position.y ?? position[1] ?? 0, position.z ?? position[2] ?? 0);
+      }
+    }
+
+    if (rotation && object.rotation) {
+      if (typeof object.rotation.copy === "function") {
+        object.rotation.copy(rotation);
+      } else {
+        object.rotation.set(
+          rotation.x ?? rotation[0] ?? 0,
+          rotation.y ?? rotation[1] ?? 0,
+          rotation.z ?? rotation[2] ?? 0
+        );
+      }
+    }
+
+    if (scale !== undefined && object.scale) {
+      if (typeof scale === "number") {
+        object.scale.setScalar(scale);
+      } else if (scale?.isVector3) {
+        object.scale.copy(scale);
+      } else if (Array.isArray(scale)) {
+        object.scale.set(scale[0] ?? object.scale.x, scale[1] ?? object.scale.y, scale[2] ?? object.scale.z);
+      } else if (isPlainObject(scale)) {
+        object.scale.set(
+          scale.x ?? scale.width ?? object.scale.x,
+          scale.y ?? scale.height ?? object.scale.y,
+          scale.z ?? scale.depth ?? object.scale.z
+        );
+      }
+    }
+  }
+
+  async spawnProcedural(spec = {}, transformInfo = {}, overrides = {}) {
+    const procNameRaw = overrides.proc || spec.proc || spec.kind;
+    if (!procNameRaw) {
+      return null;
+    }
+
+    const builder = this.resolveProceduralBuilder(procNameRaw);
+    if (typeof builder !== "function") {
+      if (!this.quietMissing) {
+        const label = spec.name || spec.id || "landmark";
+        this.logMessage(
+          "warn",
+          `[LandmarkManager] Unknown procedural builder '${procNameRaw}' for ${label}.`
+        );
+      }
+      return null;
+    }
+
+    const params = { ...(spec.params || {}) };
+    if (isPlainObject(overrides.params)) {
+      Object.assign(params, overrides.params);
+    }
+    if (spec.materialPreset && params.materialPreset == null) {
+      params.materialPreset = spec.materialPreset;
+    }
+    if (typeof overrides.materialPreset === "string" && !params.materialPreset) {
+      params.materialPreset = overrides.materialPreset;
+    }
+    if (overrides.scale != null && params.scale == null) {
+      params.scale = overrides.scale;
+    }
+
+    let builtObject = null;
+    try {
+      builtObject = await builder(params);
+    } catch (error) {
+      this.logMessage(
+        "warn",
+        `[LandmarkManager] Procedural builder '${procNameRaw}' failed: ${error?.message || error}`
+      );
+      return null;
+    }
+
+    if (!builtObject) {
+      return null;
+    }
+
+    this.reparent(builtObject);
+    this.applyTransformToObject(builtObject, transformInfo);
+    this.snapObject(builtObject, transformInfo);
+    const shouldCollide = overrides.collision ?? spec.collision ?? true;
+    this.applyCollisionSettings(builtObject, shouldCollide);
+    builtObject.updateMatrixWorld?.(true);
+    if (shouldCollide && typeof this.envCollider?.refresh === "function") {
+      this.envCollider.refresh();
+    }
+    return builtObject;
+  }
+
+  async spawnProceduralFallback(spec = {}, transformInfo = {}, context = {}) {
+    if (spec.type === "procedural" && !context.force) {
+      return null;
+    }
+
+    const fallbackProc = context.proc || context.kind || spec.proc || "temple";
+    const mergedParams = { ...(spec.params || {}) };
+    if (isPlainObject(context.params)) {
+      Object.assign(mergedParams, context.params);
+    }
+    const materialPreset = context.materialPreset || spec.materialPreset;
+    if (materialPreset && mergedParams.materialPreset == null) {
+      mergedParams.materialPreset = materialPreset;
+    }
+    if (context.scale != null) {
+      mergedParams.scale = context.scale;
+    }
+
+    if (!this.quietMissing) {
+      const label = spec.name || spec.id || "landmark";
+      this.logMessage("info", `[LandmarkManager] Using procedural fallback '${fallbackProc}' for ${label}.`);
+    }
+
+    return this.spawnProcedural(
+      {
+        ...spec,
+        type: "procedural",
+        proc: fallbackProc,
+        params: mergedParams,
+        collision: context.collision ?? spec.collision ?? true,
+      },
+      transformInfo,
+      {
+        proc: fallbackProc,
+        params: mergedParams,
+        collision: context.collision ?? spec.collision ?? true,
+        materialPreset,
+        scale: mergedParams.scale,
+        force: true,
+      }
+    );
+  }
+
   snapObject(object, transformInfo) {
     if (!object || !transformInfo?.position) return;
     const { position, surfaceOffset, snapOptions } = transformInfo;
@@ -349,9 +505,16 @@ export class LandmarkManager {
 
   async attemptLoad(urls, spec, transformInfo, label) {
     if (!urls.length) return null;
+    if (spec?.type === "procedural") {
+      return this.placeProcedural(spec);
+    }
+
     const name = spec.name || spec.id || "Landmark";
     for (const url of urls) {
       const loadOptions = cloneTransformOptions(transformInfo.options);
+      loadOptions.proceduralFallback = (context = {}) =>
+        this.spawnProceduralFallback(spec, transformInfo, context);
+      loadOptions.forceProcedural = this.forceProcedural === true;
       try {
         const object = await loadLandmark(this.scene, url, loadOptions);
         if (!object) continue;
@@ -383,6 +546,38 @@ export class LandmarkManager {
   async placeLandmark(spec = {}) {
     const name = spec.name || spec.id || "Landmark";
     const transformInfo = this.prepareTransform(spec);
+    const type = typeof spec.type === "string" ? spec.type.trim().toLowerCase() : "";
+    const forceProcedural = this.forceProcedural === true;
+    const wantsProcedural = type === "procedural" || Boolean(spec.proc);
+    const shouldProcedural = forceProcedural || wantsProcedural;
+
+    if (shouldProcedural) {
+      const forcedProcName = spec.proc || spec.kind || "temple";
+      const procSpec = {
+        ...spec,
+        type: "procedural",
+        proc: forcedProcName,
+      };
+      const object = await this.spawnProcedural(procSpec, transformInfo, {
+        proc: forcedProcName,
+        collision: spec.collision,
+      });
+      if (!object) {
+        if (!this.quietMissing) {
+          this.logMessage(
+            "warn",
+            `[LandmarkManager] Failed to spawn procedural landmark ${name}.`
+          );
+        }
+        this.spawnFallbackPlaceholder(spec, transformInfo);
+      }
+      return object ?? null;
+    }
+
+    if (forceProcedural) {
+      return null;
+    }
+
     const primaryUrls = this.resolveUrls(spec.assetFiles || []);
     const fallbackUrls = this.resolveUrls(spec.fallbackFiles || []);
     const messages = spec.messages || {};
@@ -434,7 +629,12 @@ export class LandmarkManager {
         if (entry?.enabled === false) {
           continue;
         }
+        const entryType = typeof entry?.type === "string" ? entry.type.trim().toLowerCase() : "";
+        const treatAsProcedural = entryType === "procedural" || this.forceProcedural === true;
         const spec = mergeSettings(groupDefaults, entry);
+        if (treatAsProcedural) {
+          spec.type = "procedural";
+        }
         spec.groupId = group?.id;
         spec.groupLabel = group?.label;
         const object = await this.placeLandmark(spec);
@@ -465,3 +665,39 @@ function sanitizeRelativePath(value) {
     .replace(/^\.\//, "")
     .replace(/^\/+/, "");
 }
+function applyTransformToObject(object, options = {}) {
+  if (!object) return;
+  const { position, rotation, scale } = options;
+  if (position) {
+    object.position.set(
+      position.x ?? position[0] ?? 0,
+      position.y ?? position[1] ?? 0,
+      position.z ?? position[2] ?? 0
+    );
+  }
+  if (rotation) {
+    object.rotation.set(
+      rotation.x ?? rotation[0] ?? 0,
+      rotation.y ?? rotation[1] ?? 0,
+      rotation.z ?? rotation[2] ?? 0
+    );
+  }
+  if (scale !== undefined) {
+    if (typeof scale === "number") {
+      object.scale.setScalar(scale);
+    } else if (scale?.isVector3) {
+      object.scale.copy(scale);
+    } else if (Array.isArray(scale)) {
+      const sx = scale[0] ?? 1;
+      const sy = scale[1] ?? sx;
+      const sz = scale[2] ?? sx;
+      object.scale.set(sx, sy, sz);
+    } else if (typeof scale === "object") {
+      const sx = scale.x ?? 1;
+      const sy = scale.y ?? sx;
+      const sz = scale.z ?? sx;
+      object.scale.set(sx, sy, sz);
+    }
+  }
+}
+

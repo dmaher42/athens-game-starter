@@ -135,9 +135,10 @@ export function createTerrain(scene) {
           HARBOR_FLOOR_TAPER_START,
           HARBOR_FLOOR_TAPER_END,
         );
+        const harborShorelineSurface = HARBOR_SEA_LEVEL - 0.02; // tiny offset so shoreline doesn’t occlude water
         const harborTargetHeight = THREE.MathUtils.lerp(
           HARBOR_SEA_LEVEL - HARBOR_FLOOR_DEPTH,
-          HARBOR_SEA_LEVEL,
+          harborShorelineSurface,
           THREE.MathUtils.clamp(depthBlend, 0, 1),
         );
         height = THREE.MathUtils.lerp(height, harborTargetHeight, flatten);

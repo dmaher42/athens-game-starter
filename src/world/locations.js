@@ -44,7 +44,7 @@ const EXISTING_SEA_LEVEL_Y = (() => {
 })();
 
 export const SEA_LEVEL_Y =
-  typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 0; // keep existing if defined
+  typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 2.0; // keep existing if defined
 // export const SEA_LEVEL_Y = -0.3; // uncomment to lower globally if shoreline splashes
 
 // Key anchors (coastal → uphill)
@@ -81,7 +81,9 @@ export const HARBOR_WATER_SIZE = new THREE.Vector2(140, 120); // confine water f
 export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, 0); // center the water plane on the harbor location
 // Keep the harbor water strictly on the seaward (western) side of the pier
 export const PIER_EDGE_OFFSET = 4.5; // distance from harbor center to pier edge
-export const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x - PIER_EDGE_OFFSET; // align with western (seaward) edge of pier
+export const HARBOR_WATER_EAST_LIMIT =
+  HARBOR_CENTER_3D.x - PIER_EDGE_OFFSET + 3; // align with western (seaward) edge of pier
+// extend water slightly under pier for visual continuity
 export const HARBOR_WATER_BACK = 0; // max inland distance allowed (in Z half-extent)
 
 const HARBOR_WATER_HALF_WIDTH = 70; // meters west of the pier (keeps water inside the harbor)
@@ -93,6 +95,25 @@ export const HARBOR_WATER_BOUNDS = {
   north: HARBOR_CENTER_3D.z - HARBOR_WATER_HALF_DEPTH,
   south: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH,
 };
+
+// Keep procedural buildings off the pier deck and pedestrian walkway.
+const HARBOR_WALKWAY_EAST = HARBOR_CENTER_3D.x + 42;
+const HARBOR_WALKWAY_HALF_WIDTH = 9;
+
+export const HARBOR_SETBACKS = [
+  {
+    west: HARBOR_WATER_BOUNDS.west,
+    east: HARBOR_WATER_EAST_LIMIT + 3,
+    north: HARBOR_WATER_BOUNDS.north,
+    south: HARBOR_WATER_BOUNDS.south,
+  },
+  {
+    west: HARBOR_WATER_EAST_LIMIT + 3,
+    east: HARBOR_WALKWAY_EAST,
+    north: HARBOR_CENTER_3D.z - HARBOR_WALKWAY_HALF_WIDTH,
+    south: HARBOR_CENTER_3D.z + HARBOR_WALKWAY_HALF_WIDTH,
+  },
+];
 
 // Convenience centers
 export const HARBOR_WATER_CENTER = new THREE.Vector3(

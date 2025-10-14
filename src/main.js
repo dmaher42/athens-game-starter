@@ -1,6 +1,10 @@
 // main.js
 
+import "./materials/enhanceStandardMaterial.js";
 import * as THREE from "three";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { Soundscape } from "./audio/soundscape.js";
 import { mountAudioMixer } from "./ui/audioMixer.js";
 import {
@@ -11,11 +15,12 @@ import {
   setTimeOfDayPhase,
 } from "./world/sky.js";
 import { createLighting, updateLighting, createMoon, updateMoon } from "./world/lighting.js";
-import { createInteractor } from "./world/interactions.js";
+import { createInteractor, queueSceneInteractable } from "./world/interactions.js";
 import { attachCrosshair } from "./world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "./world/terrain.js";
 import { createOcean, updateOcean } from "./world/ocean.js";
 import { createHarbor, updateHarborLighting } from "./world/harbor.js";
+import { createHarborDecorations } from "./world/decoration.js";
 import { createMainHillRoad, updateMainHillRoadLighting } from "./world/roads_hillcity.js";
 import { mountHillCityDebug } from "./world/debug_hillcity.js";
 import { createPlazas } from "./world/plazas.js";
@@ -27,6 +32,7 @@ import {
 } from "./world/grass.js";
 import {
   AGORA_CENTER_3D,
+  AGORA_RADIUS,
   HARBOR_CENTER_3D,
   CITY_AREA_RADIUS,
   ACROPOLIS_PEAK_3D,
@@ -39,6 +45,7 @@ import {
   disposeLandmarks,
 } from "./world/landmarks.js";
 import { createCivicDistrict } from "./world/cityPlan.js";
+import { createCityPlanImplementation } from "./world/cityPlanImplementation.js";
 import { InputMap } from "./input/InputMap.js";
 import { EnvironmentCollider } from "./env/EnvironmentCollider.js";
 import { BuildingManager } from "./buildings/BuildingManager.js";
@@ -60,6 +67,7 @@ import { createPin } from "./world/pins.js";
 import { attachHeightSampler, probeAt } from "./world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "./world/occluders.js";
 import { snapAboveGround } from "./world/ground.js";
+import { findSafePlayerSpawn } from "./world/spawn.js";
 import { createGLTFLoader, loadGLBWithFallbacks } from "./utils/glbSafeLoader.js";
 import { resolveBaseUrl, joinPath } from "./utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "./utils/textureBudget.js";
@@ -75,6 +83,28 @@ const BUILD_TIME = typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : "";
 const BUILD_SHA = typeof __BUILD_SHA__ !== "undefined" ? __BUILD_SHA__ : "";
 console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
 
+const BASE_URL = resolveBaseUrl();
+
+const QUERY_PARAMS = (() => {
+  if (typeof window === "undefined" || typeof window.location === "undefined") {
+    return new URLSearchParams("");
+  }
+  try {
+    return new URLSearchParams(window.location.search ?? "");
+  } catch {
+    return new URLSearchParams("");
+  }
+})();
+
+const FORCE_GLB = QUERY_PARAMS.has("glb") && QUERY_PARAMS.get("glb") !== "0";
+const FORCE_PROC = !FORCE_GLB;
+
+console.info(
+  FORCE_PROC
+    ? "[proc] GLB loading disabled (procedural default)"
+    : "[glb] GLB mode enabled"
+);
+
 (async () => {
   const BASE = resolveBaseUrl();
   console.log("[base:resolved]", BASE);
@@ -83,6 +113,13 @@ console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
     "models/npcs/manifest.json",
     "config/districts.json",
   ];
+  if (!FORCE_PROC) {
+    probes.push(
+      "models/landmarks/poseidon_temple.glb",
+      "models/landmarks/akropol.glb",
+      "models/landmarks/aristotle_tomb.glb"
+    );
+  }
   for (const p of probes) {
     const u = joinPath(BASE, p);
     try {
@@ -102,19 +139,19 @@ const USE_THIRD_PERSON = true;
 const LIGHTING_PRESETS = {
   dawn: {
     phase: 0.25,
-    exposure: 0.9,
+    exposure: 0.95,
     label: "Dawn",
     hotkey: "1",
   },
   noon: {
     phase: 0.5,
-    exposure: 1.5,
+    exposure: 1.1,
     label: "High Noon",
     hotkey: "2",
   },
   dusk: {
     phase: 0.75,
-    exposure: 0.95,
+    exposure: 1.0,
     label: "Dusk",
     hotkey: "3",
   },
@@ -129,8 +166,6 @@ const LIGHTING_PRESETS = {
 window.addEventListener("unhandledrejection", (ev) => {
   console.error("Unhandled promise rejection:", ev.reason);
 });
-
-const BASE_URL = resolveBaseUrl();
 
 function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
@@ -170,8 +205,18 @@ const isHtml = (res) => (res.headers.get("content-type") || "").includes("text/h
 
 /** Lightweight existence check (avoids double-downloading GLBs) */
 async function headOk(url) {
+  const target = typeof url === "string" ? url : String(url ?? "");
+  const isJsonProbe = /audio\/manifest\.json|config\/districts\.json/i.test(target);
+  const isGlbProbe = /\.glb(?:$|[?#])/i.test(target);
+
+  if (FORCE_PROC && isGlbProbe) {
+    return false;
+  }
+
+  const options = isJsonProbe ? { method: "GET", cache: "no-cache" } : { method: "HEAD" };
+
   try {
-    const res = await fetch(url, { method: "HEAD" });
+    const res = await fetch(url, options);
     return res.ok && !isHtml(res);
   } catch {
     return false;
@@ -180,6 +225,9 @@ async function headOk(url) {
 
 // --- util: resolveFirstAvailableAsset (fetch HEAD, skip HTML) ---
 async function resolveFirstAvailableAsset(candidates = []) {
+  if (FORCE_PROC) {
+    return null;
+  }
   const seen = new Set();
   for (const url of candidates) {
     if (typeof url !== "string") continue;
@@ -229,6 +277,10 @@ async function runAssetQuickChecks() {
 
   const results = [];
   for (const { label, path } of checks) {
+    if (FORCE_PROC && /\.glb(?:$|[?#])/i.test(path)) {
+      results.push({ label, path, status: "skipped" });
+      continue;
+    }
     const exists = await headOk(path);
     results.push({ label, path, status: exists ? "ok" : "missing" });
   }
@@ -461,6 +513,9 @@ function parseToggleValue(value, defaultValue = true) {
   return defaultValue;
 }
 
+const FORCE_PROCEDURAL_LANDMARKS = FORCE_PROC;
+let proceduralLandmarkCount = 0;
+
 function shouldShowOverlay({
   queryKey,
   windowFlagKey,
@@ -522,7 +577,7 @@ async function mainApp() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 1.1;
   // Lock modern physically-based lighting behaviour explicitly so appearance
   // stays stable across Three.js releases (r155+ defaults, but we set it here
   // for clarity and forward-compat).
@@ -553,6 +608,8 @@ async function mainApp() {
 
   let devHud = null;
   let pendingOceanStatus = null;
+  let proceduralLandmarkCount = 0;
+  let proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
   const updateOceanHudStatus = () => {
     if (!pendingOceanStatus || !devHud) {
       return;
@@ -697,12 +754,38 @@ async function mainApp() {
   // Light atmospheric fog increases depth perception so the far mountains blend
   // into the horizon. Adjust near/far distances to taste.
   scene.fog = new THREE.Fog(0xa0a0a0, 50, 400);
+  if (scene.fog instanceof THREE.FogExp2) {
+    scene.fog.density *= 0.9; // keep ocean horizon in view
+  }
   const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
     0.1,
     2000
   );
+  const composer = new EffectComposer(renderer);
+  composer.setPixelRatio(window.devicePixelRatio ?? 1);
+  composer.setSize(window.innerWidth, window.innerHeight);
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.3,
+    0.6,
+    0.85
+  );
+  bloomPass.enabled = true;
+  composer.addPass(bloomPass);
+  const renderFrame = () => {
+    if (composer) {
+      composer.render();
+    } else {
+      renderer.render(scene, camera);
+    }
+  };
+  camera.near = 0.1;
+  camera.far = 5000;
+  camera.updateProjectionMatrix();
   camera.position.set(0, 5, 10);
 
   // Sky, stars & lighting
@@ -830,84 +913,86 @@ async function mainApp() {
     }
   }
 
-  // --- Aristotle's Tomb (local GLB) -----------------------------------------
-  // We prefer a local asset the repo expects at:
-  //   public/models/landmarks/aristotle_tomb.glb
-  // At runtime we try both the site base (for GitHub Pages) and root (for dev).
-  // If found, we stream it via loadLandmark(); the loader will auto-raise it
-  // ~5cm above ground and handle KTX2 texture support transparently.
-  try {
-    const aristotleUrl = await resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
-    if (aristotleUrl) {
-      const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
-        // Use a named location that already exists in the scene constants.
-        // The landmark loader will call the scene/terrain height sampler and
-        // lift the model slightly so it rests on the ground.
-        position: ACROPOLIS_PEAK_3D,
-        scale: 3.0,
-        materialPreset: "marble",
-      });
-      // Safe no-op if textures not uploaded yet
-      try {
-        await attachAristotleMarblePBR({
-          obj: aristotle ?? null,
-          scene,
-          renderer,
-          BASE_URL,
+  if (!FORCE_PROC) {
+    // --- Aristotle's Tomb (local GLB) ---------------------------------------
+    // We prefer a local asset the repo expects at:
+    //   public/models/landmarks/aristotle_tomb.glb
+    // At runtime we try both the site base (for GitHub Pages) and root (for dev).
+    // If found, we stream it via loadLandmark(); the loader will auto-raise it
+    // ~5cm above ground and handle KTX2 texture support transparently.
+    try {
+      const aristotleUrl = await resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
+      if (aristotleUrl) {
+        const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
+          position: ACROPOLIS_PEAK_3D,
+          scale: 3.0,
+          materialPreset: "marble",
         });
-      } catch (e) {
-        // never fail the scene due to the texture hook
-        console.warn("Aristotle PBR hook skipped:", e);
+        try {
+          await attachAristotleMarblePBR({
+            obj: aristotle ?? null,
+            scene,
+            renderer,
+            BASE_URL,
+          });
+        } catch (e) {
+          console.warn("Aristotle PBR hook skipped:", e);
+        }
+      } else {
+        console.warn(
+          "Aristotle's Tomb not found. Expected at:",
+          ARISTOTLE_CANDIDATES
+        );
       }
-    } else {
-      console.warn(
-        "Aristotle's Tomb not found. Expected at:",
-        ARISTOTLE_CANDIDATES
-      );
+    } catch (err) {
+      console.error("Failed to load Aristotle's Tomb:", err);
     }
-  } catch (err) {
-    console.error("Failed to load Aristotle's Tomb:", err);
-  }
-  // --------------------------------------------------------------------------
+    // ------------------------------------------------------------------------
 
-  // Poseidon Temple (Sounion)
-  try {
-    const url = await resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
-    if (url)
-      await loadLandmark(worldRoot, url, {
-        position: new THREE.Vector3(90, 0, -60),
-        scale: 2.6,
-        materialPreset: "marble",
-      });
-  } catch (e) {
-    console.warn("Poseidon Temple not loaded:", e);
-  }
+    // Poseidon Temple (Sounion)
+    try {
+      const url = await resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
+      if (url)
+        await loadLandmark(worldRoot, url, {
+          position: new THREE.Vector3(90, 0, -60),
+          scale: 2.6,
+          materialPreset: "marble",
+        });
+    } catch (e) {
+      console.warn("Poseidon Temple not loaded:", e);
+    }
 
-  // Akropol (Acropolis complex placeholder)
-  try {
-    const url = await resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
-    if (url)
-      await loadLandmark(worldRoot, url, {
-        position: new THREE.Vector3(130, 0, 40),
-        scale: 2.2,
-        materialPreset: "marble",
-      });
-  } catch (e) {
-    console.warn("Akropol not loaded:", e);
+    // Akropol (Acropolis complex placeholder)
+    try {
+      const url = await resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
+      if (url)
+        await loadLandmark(worldRoot, url, {
+          position: new THREE.Vector3(130, 0, 40),
+          scale: 2.2,
+          materialPreset: "marble",
+        });
+    } catch (e) {
+      console.warn("Akropol not loaded:", e);
+    }
+    // ------------------------------------------------------------------------
+  } else {
+    console.info("[proc] GLB loading disabled (procedural default)");
   }
-  // --------------------------------------------------------------------------
 
   // Plazas (agora + acropolis terraces) — disabled per request to remove large discs
   // createPlazas(worldRoot);
 
   const harborCity = await createCity(worldRoot, terrain, {
     roadsVisible,
+    useProceduralBlocks: FORCE_PROCEDURAL_LANDMARKS,
+    forceProcedural: FORCE_PROC,
   });
 
   // Hill-city buildings (uses terrain sampler + road curve)
   const hillCity = createHillCity(worldRoot, terrain, mainRoad, {
     seed: 42,
     buildingCount: 140,
+    foundationPadMaterial: harborCity?.userData?.foundationPadMaterial ?? null,
   });
   updateLoadingStatus("Raising temples, homes, and harbors...");
 
@@ -932,6 +1017,21 @@ async function mainApp() {
     terrain,
   });
 
+  createHarborDecorations(worldRoot, {
+    harborCity,
+    terrain,
+  });
+
+  // Overlay the modern planning strategy as a holographic layer so players can
+  // understand how each district connects to the wider mobility, housing, and
+  // resilience goals described in the documentation.
+  createCityPlanImplementation(worldRoot, {
+    center: AGORA_CENTER_3D,
+    terrain,
+    transitLength: 160,
+    innovationOffsetX: 60,
+  });
+
   // Rebuild the collider again now that the civic district geometry exists so the
   // player can stand on the new plazas instead of falling through them.
   envCollider.refresh();
@@ -940,15 +1040,42 @@ async function mainApp() {
   const player = new PlayerController(input, envCollider, { camera });
   worldRoot.add(player.object);
 
-  const spawnPosition = new THREE.Vector3(0, 0, 10);
-  player.object.position.copy(spawnPosition);
-  const spawnClearance = 0.1;
-  const spawnOffset = player.height * 0.5 + spawnClearance;
-  snapAboveGround(player.object, terrain, spawnPosition.x, spawnPosition.z, spawnOffset, {
-    clampToSea: true,
+  const spawnClearance = 0.2;
+  const spawnPosition = findSafePlayerSpawn({
+    envCollider,
+    terrain,
+    searchCenter: AGORA_CENTER_3D,
+    fallback: {
+      x: AGORA_CENTER_3D.x - (AGORA_RADIUS + 6),
+      y: 0,
+      z: AGORA_CENTER_3D.z - 6,
+    },
+    playerHeight: player.height,
+    playerRadius: player.radius,
+    verticalClearance: spawnClearance,
+    horizontalClearance: 0.4,
+    innerRadius: AGORA_RADIUS + 6,
+    searchRadius: AGORA_RADIUS + 60,
+    radialStep: 4,
+    arcLength: 6,
     seaLevel: SEA_LEVEL_Y,
     minAboveSea: 0.25,
   });
+  player.object.position.set(spawnPosition.x, spawnPosition.y, spawnPosition.z);
+  const spawnOffset = player.height * 0.5 + spawnClearance;
+  snapAboveGround(
+    player.object,
+    terrain,
+    player.object.position.x,
+    player.object.position.z,
+    spawnOffset,
+    {
+      clampToSea: true,
+      seaLevel: SEA_LEVEL_Y,
+      minAboveSea: 0.25,
+    }
+  );
+  spawnPosition.copy(player.object.position);
   player.syncCapsuleToObject();
 
   let interactor = null;
@@ -1154,6 +1281,7 @@ async function mainApp() {
   };
 
   worldRoot.add(doorPivot);
+  queueSceneInteractable(scene, doorPivot);
 
   const lamp = new THREE.Group();
   lamp.name = "DemoLamp";
@@ -1194,6 +1322,7 @@ async function mainApp() {
   };
 
   worldRoot.add(lamp);
+  queueSceneInteractable(scene, lamp);
 
   const createFallbackAvatar = () => {
     const group = new THREE.Group();
@@ -1606,8 +1735,6 @@ async function mainApp() {
       url: joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
       position: createTerrainAlignedPosition(-34, -12),
       rotateY: -Math.PI * 0.12,
-      // Preserve the authored dimensions (≈13.8m span, 4.5m tall) so the
-      // landmark reads close to its real-world size.
       scale: 1,
       collision: true,
       name: "SamplePoseidonTemple",
@@ -1616,42 +1743,44 @@ async function mainApp() {
       url: joinPath(BASE_URL, "models/landmarks/akropol.glb"),
       position: createTerrainAlignedPosition(6, -42),
       rotateY: Math.PI * 0.08,
-      // Match the mesh's original scale to avoid shrinking the Acropolis model
-      // below a believable footprint.
       scale: 1,
       collision: false,
       name: "SampleAkropol",
     },
   ];
 
-  const sampleBuildingResults = await Promise.allSettled(
-    sampleBuildingSpecs.map((spec) =>
-      buildingMgr
-        .loadBuilding(spec.url, {
-          position: spec.position,
-          rotateY: spec.rotateY,
-          scale: spec.scale,
-          collision: spec.collision,
-          parent: buildingsRoot,
-          heightSampler: terrainHeightSampler,
-        })
-        .then((object) => {
-          if (object && spec.name) {
-            object.name = spec.name;
-          }
-          return object;
-        })
-    )
-  );
+  if (!FORCE_PROC) {
+    const sampleBuildingResults = await Promise.allSettled(
+      sampleBuildingSpecs.map((spec) =>
+        buildingMgr
+          .loadBuilding(spec.url, {
+            position: spec.position,
+            rotateY: spec.rotateY,
+            scale: spec.scale,
+            collision: spec.collision,
+            parent: buildingsRoot,
+            heightSampler: terrainHeightSampler,
+          })
+          .then((object) => {
+            if (object && spec.name) {
+              object.name = spec.name;
+            }
+            return object;
+          })
+      )
+    );
 
-  sampleBuildingResults.forEach((result, index) => {
-    if (result.status === "rejected") {
-      console.error(
-        `Sample building failed to load: ${sampleBuildingSpecs[index].url}`,
-        result.reason
-      );
-    }
-  });
+    sampleBuildingResults.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(
+          `Sample building failed to load: ${sampleBuildingSpecs[index].url}`,
+          result.reason
+        );
+      }
+    });
+  } else {
+    console.info("[proc] Skipping GLB sample buildings; using procedural city fill.");
+  }
 
   const landmarkManager = new LandmarkManager({
     scene: worldRoot,
@@ -1660,6 +1789,7 @@ async function mainApp() {
     heightSampler: terrainHeightSampler,
     envCollider,
     renderer,
+    forceProcedural: FORCE_PROC,
     spawnPlaceholder: (options = {}) =>
       spawnPlaceholderMonument({
         ...options,
@@ -1668,10 +1798,72 @@ async function mainApp() {
     quietMissing: true,
   });
 
+  let configToLoad = athensLayoutConfig;
+  if (FORCE_PROCEDURAL_LANDMARKS) {
+    console.log("[proc] Forcing procedural landmarks.");
+    configToLoad = {
+      metadata: { description: "Procedural development layout" },
+      groups: [
+        {
+          id: "procedural-dev",
+          label: "Procedural Dev",
+          landmarks: [
+            {
+              id: "proc-temple-alpha",
+              name: "Procedural Temple Alpha",
+              type: "procedural",
+              proc: "temple",
+              params: {
+                width: 22,
+                depth: 42,
+                colX: 6,
+                colZ: 13,
+                materialPreset: "marble",
+              },
+              placement: {
+                position: createTerrainAlignedPosition(-34, -12),
+                rotateY: -Math.PI * 0.12,
+              },
+              collision: true,
+            },
+            {
+              id: "proc-temple-beta",
+              name: "Procedural Temple Beta",
+              type: "procedural",
+              proc: "temple",
+              scale: 0.92,
+              params: {
+                width: 18,
+                depth: 32,
+                colX: 5,
+                colZ: 11,
+                materialPreset: "marble",
+              },
+              placement: {
+                position: createTerrainAlignedPosition(6, -42),
+                rotateY: Math.PI * 0.08,
+              },
+              collision: true,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  let landmarkResults = [];
   try {
-    await landmarkManager.loadConfig(athensLayoutConfig);
+    landmarkResults = await landmarkManager.loadConfig(configToLoad);
   } catch (error) {
     console.error("[LandmarkManager] Failed to load Athens layout", error);
+  }
+
+  proceduralLandmarkCount = landmarkResults.filter(
+    (entry) => entry?.object?.userData?.proceduralType
+  ).length;
+
+  if (FORCE_PROCEDURAL_LANDMARKS) {
+    console.log(`[proc] Placed ${proceduralLandmarkCount} procedural landmarks.`);
   }
 
   interactor = createInteractor(renderer, camera, scene);
@@ -1700,8 +1892,8 @@ async function mainApp() {
     const sunDir = updateSky(skyObj, timeOfDayState);
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
-    updateCityLighting(harborCity, lights.nightFactor);
-    updateCityLighting(hillCity, lights.nightFactor);
+    updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: phase });
+    updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: phase });
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     updateStars(stars, phase);
     updateMoon(moon, sunDir);
@@ -1717,7 +1909,7 @@ async function mainApp() {
       lastDisplayedTime = formattedTime;
     }
 
-    renderer.render(scene, camera);
+    renderFrame();
   };
 
   function animate() {
@@ -1741,8 +1933,8 @@ async function mainApp() {
     // Update sky dome, atmospheric lighting, and celestial bodies each frame.
     updateLighting(lights, sunDir);
     updateHarborLighting(harbor, lights.nightFactor);
-    updateCityLighting(harborCity, lights.nightFactor);
-    updateCityLighting(hillCity, lights.nightFactor);
+    updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: phase });
+    updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: phase });
     updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     // Fade the stars in and out depending on the time of day.
     updateStars(stars, phase);
@@ -1786,7 +1978,7 @@ async function mainApp() {
       lastDisplayedTime = formattedTime;
     }
 
-    renderer.render(scene, camera);
+    renderFrame();
   }
 
   animate();
@@ -1835,10 +2027,15 @@ async function mainApp() {
     onSetLightingPreset: applyLightingPreset,
     lightingPresets: LIGHTING_PRESETS,
   });
+  proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
+  devHud?.setStatusLine?.("proc", FORCE_PROC ? "Procedural: ON" : "Procedural: OFF");
   mountHUDCameraSettings(devHud?.rootElement ?? null);
   updateOceanHudStatus();
   if (audioManifestMissing) {
     devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
+  }
+  if (devHud?.setStatusLine) {
+    devHud.setStatusLine("proc", FORCE_PROC ? "Procedural: ON" : "Procedural: OFF");
   }
 
   // Simple controls: clicking the canvas or pressing E will run the onUse
@@ -1874,6 +2071,8 @@ async function mainApp() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    bloomPass.setSize(window.innerWidth, window.innerHeight);
   });
 }
 

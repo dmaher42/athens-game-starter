@@ -275,8 +275,20 @@ export async function createOcean(scene, options = {}) {
     [north, south] = [south, north];
   }
 
-  const width = Math.max(0.1, east - west);
-  const depth = Math.max(0.1, south - north);
+  let width = Math.max(0.1, east - west);
+  let depth = Math.max(0.1, south - north);
+
+  const expansionFactor = 1.5; // extend ocean so horizon is always water.
+  if (expansionFactor !== 1) {
+    const centerX = (west + east) * 0.5;
+    const centerZ = (north + south) * 0.5;
+    width = Math.max(0.1, width * expansionFactor);
+    depth = Math.max(0.1, depth * expansionFactor);
+    west = centerX - width * 0.5;
+    east = centerX + width * 0.5;
+    north = centerZ - depth * 0.5;
+    south = centerZ + depth * 0.5;
+  }
 
   const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
   const water = new Water(geometry, {
@@ -307,12 +319,24 @@ export async function createOcean(scene, options = {}) {
     new THREE.Plane(new THREE.Vector3(0, 0, 1), -clipZFront),
   ];
 
+  water.renderOrder = 1;
   if (water.material) {
     water.material.clippingPlanes = planes;
     water.material.clipIntersection = true;
-    water.material.depthWrite = true;
+    // ensure water draws cleanly against shoreline.
+    water.material.depthWrite = false;
     water.material.transparent = true;
     water.material.needsUpdate = true;
+    if (water.material.uniforms) {
+      // mild waves and readable highlights.
+      const { distortionScale, size } = water.material.uniforms;
+      if (distortionScale?.value !== undefined) {
+        distortionScale.value = 3.5;
+      }
+      if (size?.value !== undefined) {
+        size.value = 2.0;
+      }
+    }
 
     if (typeof window !== "undefined" && window.location?.search?.includes("waterdbg=1")) {
       const existing = scene.getObjectByName("WaterClipDebug");
@@ -328,8 +352,8 @@ export async function createOcean(scene, options = {}) {
   water.userData.noCollision = true;
   water.userData.isWater = true;
 
-  // Draw behind world but still write depth
-  water.renderOrder = -1;
+  // ensure water draws cleanly against shoreline.
+  water.renderOrder = 1;
 
   scene.add(water);
   if (import.meta.env?.DEV) {

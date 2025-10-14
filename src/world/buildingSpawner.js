@@ -1,5 +1,6 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
+import { SEA_LEVEL_Y } from "./locations.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 function sanitizeRelativePath(value) {
@@ -28,6 +29,8 @@ const glbAvailability = new Map();
 const onceFlags = new Set();
 const scratchBox = new THREE.Box3();
 const scratchSize = new THREE.Vector3();
+const ROUGHNESS_BASE_KEY = Symbol("buildingBaseRoughness");
+const BUILDING_ROUGHNESS_VARIATION = 0.1;
 
 function once(key, fn) {
   if (onceFlags.has(key)) return;
@@ -142,6 +145,39 @@ function createMaterial(key, rng, overrides = {}) {
   return new THREE.MeshStandardMaterial({ ...base, ...overrides, color });
 }
 
+function applyBuildingRoughnessVariance(root, rng) {
+  if (!root) return;
+  const random = typeof rng === "function" ? rng : Math.random;
+  const delta = (random() - 0.5) * 2 * BUILDING_ROUGHNESS_VARIATION;
+  if (Math.abs(delta) < 1e-4) return;
+
+  const clamp = THREE.MathUtils.clamp;
+  const updateMaterial = (material) => {
+    if (!material || typeof material.roughness !== "number") return;
+    if (!material.userData) material.userData = {};
+    const base =
+      typeof material.userData[ROUGHNESS_BASE_KEY] === "number"
+        ? material.userData[ROUGHNESS_BASE_KEY]
+        : material.roughness;
+    material.userData[ROUGHNESS_BASE_KEY] = base;
+    const next = clamp(base + delta, 0, 1);
+    if (Math.abs(next - material.roughness) > 1e-4) {
+      material.roughness = next;
+      material.needsUpdate = true;
+    }
+  };
+
+  root.traverse?.((child) => {
+    if (!child?.isMesh) return;
+    const { material } = child;
+    if (Array.isArray(material)) {
+      material.forEach(updateMaterial);
+    } else {
+      updateMaterial(material);
+    }
+  });
+}
+
 // Simple kit pieces
 function makeBox(w, h, d, material) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
@@ -173,6 +209,7 @@ function makeWindow(width, height, depth, rng) {
     })
   );
   pane.position.z = depth * 0.25;
+  pane.userData = { ...pane.userData, isWindowPane: true };
   frame.add(pane);
   return frame;
 }
@@ -498,6 +535,7 @@ function mulberry32(a) { return function() { let t=(a+=0x6D2B79F5); t=Math.imul(
 export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   const seed = Number.isFinite(options.seed) ? options.seed : 12345;
   const rng = mulberry32(seed);
+  const glowRng = mulberry32(seed ^ 0x9e3779b9);
 
   // Find the group named "LotPads" that city.js created
   const padsGroup = worldRoot.getObjectByName("LotPads");
@@ -506,6 +544,18 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   const buildingsGroup = new THREE.Group();
   buildingsGroup.name = "Buildings";
   worldRoot.add(buildingsGroup);
+
+  const windowGlowRegistry = {
+    candidates: [],
+    ratio: THREE.MathUtils.clamp(0.1 + glowRng() * 0.1, 0.1, 0.2),
+    color: 0xffbb66,
+    intensity: 0.6,
+    active: false,
+  };
+  buildingsGroup.userData = {
+    ...buildingsGroup.userData,
+    windowGlow: windowGlowRegistry,
+  };
 
   let count = 0;
 
@@ -580,6 +630,8 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
       built = prefab({ rng, district: districtId });
     }
 
+    applyBuildingRoughnessVariance(built, rng);
+
     scratchBox.setFromObject(pad);
     scratchBox.getSize(scratchSize);
     const jitterScaleX = Number.isFinite(scratchSize.x) ? scratchSize.x * 0.35 : 1.0;
@@ -590,14 +642,60 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     built.position.copy(pad.position);
     built.position.x += Number.isFinite(jitterX) ? jitterX : 0;
     built.position.z += Number.isFinite(jitterZ) ? jitterZ : 0;
-    built.position.y = Math.max(built.position.y, 0) + 0.01; // float slightly above ground to avoid z-fight
 
-    built.rotation.y = pad.rotation.y + (rng() - 0.5) * 0.9;
+    if (typeKey === "pier") {
+      const pier = built;
+      const deckHeight = 1.4; // or whatever the project uses
+      pier.position.y = SEA_LEVEL_Y + deckHeight; // pier deck sits above current sea level.
+    } else {
+      built.position.y = Math.max(built.position.y, 0) + 0.01; // float slightly above ground to avoid z-fight
+    }
+
+    const baseRotation = Number.isFinite(pad.userData?.baseRotation)
+      ? pad.userData.baseRotation
+      : pad.rotation?.y ?? 0;
+    const rotationJitter = Number.isFinite(pad.userData?.rotationJitter)
+      ? Math.max(0, pad.userData.rotationJitter)
+      : THREE.MathUtils.degToRad(2);
+    const jitter = rotationJitter > 0 ? THREE.MathUtils.lerp(-rotationJitter, rotationJitter, rng()) : 0;
+    built.rotation.y = baseRotation + jitter;
     built.userData = { ...built.userData, district: districtId, type: typeKey };
     buildingsGroup.add(built);
     count += 1;
 
+    const candidatePanes = [];
+    built.traverse((child) => {
+      if (!child?.isMesh) return;
+      const material = child.material;
+      if (!child.userData?.isWindowPane || !material) return;
+      const baseColor = material.emissive?.clone?.();
+      candidatePanes.push({
+        material,
+        baseColor: baseColor || new THREE.Color(0x000000),
+        baseIntensity:
+          typeof material.emissiveIntensity === "number" ? material.emissiveIntensity : 1,
+      });
+    });
+
+    if (candidatePanes.length > 0) {
+      const shouldGlow = glowRng() <= windowGlowRegistry.ratio;
+      windowGlowRegistry.candidates.push({
+        panes: candidatePanes,
+        shouldGlow,
+        isActive: false,
+      });
+    }
+
     if (!options.leavePadsVisible) pad.visible = false;
+  }
+
+  if (
+    windowGlowRegistry.candidates.length > 0 &&
+    !windowGlowRegistry.candidates.some((candidate) => candidate.shouldGlow)
+  ) {
+    const index = Math.floor(glowRng() * windowGlowRegistry.candidates.length);
+    const chosen = windowGlowRegistry.candidates[index] || windowGlowRegistry.candidates[0];
+    if (chosen) chosen.shouldGlow = true;
   }
 
   return { count, group: buildingsGroup };

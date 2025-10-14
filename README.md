@@ -28,20 +28,72 @@ hosting on GitHub Pages or any static site provider.
 > tracked in this repository; download or supply your own models locally before
 > building or deploying the project.
 
-### Custom ground textures
+### Custom plaza, road, and grass textures
 
-Drop photographic ground tiles in `public/textures/ground/` and reference them
-from `src/world/groundTextureConfig.js`. Use relative URLs such as
-`textures/ground/marble.jpg` (no leading slash) or
-`joinPath(resolveBaseUrl(), 'textures/ground/marble.jpg')` so paths survive
-GitHub Pages subdirectory deployments. When you run `npm run build`, the same
-files are copied to `docs/textures/ground/`, which is the folder published to
-Pages. The runtime keeps the existing vertex colors as a fallback, then layers
-your JPGs using height-aware masks so dirt can fade into rocky cliffs or lush
-grass in lowlands. Update the config to tune repeat counts, tint, blend mode
-(`"multiply"` or `"mix"`), and the height interval where each texture appears.
-Refresh the dev server after editing the config to trigger shader
-recompilation.
+The starter scene ships with procedural fallbacks, but every surface can be
+retargeted to your own image sets. The workflow varies slightly depending on
+which meshes you want to replace:
+
+#### Civic plaza pads and promenades
+
+The agora plazas and promenade strips are generated in
+`src/world/cityPlan.js`. Each pad is a `THREE.MeshStandardMaterial` built by
+`createPavedStrip()`, so you can either change the solid color swatch or swap in
+a full PBR material. To attach a texture set:
+
+1. Drop your tiling maps under `public/textures/plaza/` using the
+   `basecolor/normal/roughness/ao` naming convention (for example,
+   `public/textures/plaza/basecolor.jpg`).
+2. Import the helper at the top of `cityPlan.js`:
+   ```js
+   import { makeTiledPBR } from "../materials/pbr-utils.js";
+   ```
+3. When you build the civic district (inside `createCivicDistrict()`), resolve
+   the material once with the helper and assign it to the strips the helper
+   returns. A simple pattern is:
+   ```js
+   const plazaMat =
+     (await makeTiledPBR("textures/plaza", [4, 4])) ??
+     new THREE.MeshStandardMaterial({ color: 0xc3c2bb });
+   const promenade = createPavedStrip(promenadeWidth, plazaLength, 0xc3c2bb);
+   promenade.material = plazaMat;
+   ```
+   (Keep the solid-color fallback in case the JPGs are missing during
+   development.) The helper already enables polygon offsets so the pads avoid
+   z-fighting with the underlying terrain.
+
+#### Lot pads and foundation discs
+
+The procedural "lot pads" that reserve space for new buildings and the optional
+foundation discs rendered around plazas now attempt to load tiling PBR sets at
+runtime. Drop your images into `public/textures/plaza/lot-pads/` or
+`public/textures/plaza/foundation-pads/` using the same `basecolor`, `normal`,
+`roughness`, and `ao` stem names as the plaza materials. If any maps are
+missing, the engine falls back to the legacy solid colors so development builds
+continue to run without custom assets. Hill-city foundations reuse the same
+material bundle passed back from the harbor city, keeping both districts in
+sync.
+
+#### Roads, paths, and gravel lots
+
+Procedural and imported roads are retargeted through the
+`applyGravelToRoads()` feature in `src/features/roads-gravel.js`. The helper
+looks for textures in `public/textures/gravel/` and applies them to any mesh
+named or tagged like a street. Provide at least a `basecolor` map (normal,
+roughness, and ambient-occlusion maps are optional but recommended) and the
+runtime will tile them across every road segment. Adjust the `repeat` option
+when calling `applyGravelToRoads({ repeat: [u, v] })` if the scale feels off.
+
+#### Terrain grass and dirt
+
+Large-scale hillsides use the layered material configured in
+`src/world/groundTextureConfig.js`. Drop JPGs or PNGs into
+`public/textures/ground/` (mirrored in `docs/textures/ground/` on build) and
+reference them from the config via relative URLs such as
+`textures/ground/lush-grass.jpg`. Each entry lets you tune repeat counts, tint,
+blend mode (`"mix"` or `"multiply"`), height ranges, slopes, and procedural
+noise seeds so grass can fade into rocky ridges automatically. Refresh the dev
+server or rebuild after editing to recompile the custom shader.
 
 ### Controls
 

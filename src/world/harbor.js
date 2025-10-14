@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { queueSceneInteractable } from "./interactions.js";
 import { HARBOR_CENTER_3D } from "./locations.js";
 
 const _postMatrix = new THREE.Matrix4();
@@ -279,6 +280,7 @@ export function createHarbor(scene, options = {}) {
   harbor.userData.lamp = lampState;
 
   harbor.add(lamp);
+  queueSceneInteractable(scene, lamp);
 
   harbor.userData.posts = {
     pier: pierPosts,

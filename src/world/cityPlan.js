@@ -1,13 +1,61 @@
 import * as THREE from 'three';
 import { AGORA_CENTER_3D } from './locations.js';
 
+function toColor(value) {
+  return value instanceof THREE.Color ? value.clone() : new THREE.Color(value);
+}
+
+function makeGravelTexture(width, depth, baseColor, speckColors = [], density = 0.045) {
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const context = canvas.getContext('2d');
+
+  const base = toColor(baseColor);
+  context.fillStyle = base.getStyle();
+  context.fillRect(0, 0, size, size);
+
+  const palette = speckColors.length
+    ? speckColors.map((entry) => toColor(entry))
+    : [
+        base.clone().lerp(new THREE.Color(0xffffff), 0.2),
+        base.clone().lerp(new THREE.Color(0x000000), 0.25),
+      ];
+
+  const speckCount = Math.floor(size * size * density);
+  for (let i = 0; i < speckCount; i++) {
+    const tint = palette[i % palette.length];
+    context.fillStyle = tint.getStyle();
+    context.globalAlpha = 0.35 + Math.random() * 0.4;
+    const radius = 0.3 + Math.random() * 2.2;
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    context.beginPath();
+    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  context.globalAlpha = 1;
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  const repeatX = Math.max(1, Math.round(width / 6));
+  const repeatZ = Math.max(1, Math.round(depth / 6));
+  texture.repeat.set(repeatX, repeatZ);
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function createPavedStrip(width, depth, color) {
   const geometry = new THREE.PlaneGeometry(width, depth);
   geometry.rotateX(-Math.PI / 2);
+  const texture = makeGravelTexture(width, depth, color);
   const material = new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.85,
-    metalness: 0.05,
+    color: 0xffffff,
+    roughness: 0.92,
+    metalness: 0.03,
+    map: texture,
   });
   // Keep the civic paving from z-fighting with the terrain.
   material.polygonOffset = true;
@@ -22,10 +70,21 @@ function createPavedStrip(width, depth, color) {
 function createGreenStrip(width, depth, color) {
   const geometry = new THREE.PlaneGeometry(width, depth);
   geometry.rotateX(-Math.PI / 2);
-  const material = new THREE.MeshStandardMaterial({
+  const texture = makeGravelTexture(
+    width,
+    depth,
     color,
-    roughness: 1,
-    metalness: 0,
+    [
+      toColor(color).clone().lerp(new THREE.Color(0xffffff), 0.15),
+      toColor(color).clone().lerp(new THREE.Color(0x3d2b1f), 0.45),
+    ],
+    0.06
+  );
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.98,
+    metalness: 0.02,
+    map: texture,
   });
   // Nudge greenswards above the ground so they do not flicker.
   material.polygonOffset = true;
@@ -108,72 +167,106 @@ function createCivicBuilding(options) {
   return group;
 }
 
-function createFountain() {
+function createHermaShrine() {
   const group = new THREE.Group();
-  group.name = 'CityFountain';
+  group.name = 'AgoraHermaShrine';
 
-  const basin = new THREE.Mesh(
-    new THREE.CylinderGeometry(5, 5.6, 0.8, 40),
-    new THREE.MeshStandardMaterial({ color: 0xcfd8dc, roughness: 0.5 })
+  const plinth = new THREE.Mesh(
+    new THREE.CylinderGeometry(4.8, 5.4, 1.2, 36),
+    new THREE.MeshStandardMaterial({ color: 0xcbb69a, roughness: 0.7 })
   );
-  basin.receiveShadow = true;
-  basin.castShadow = true;
-  basin.position.y = 0.4;
-  basin.userData.noCollision = false;
-  group.add(basin);
+  plinth.receiveShadow = true;
+  plinth.castShadow = true;
+  plinth.position.y = 0.6;
+  plinth.userData.noCollision = false;
+  group.add(plinth);
 
-  const water = new THREE.Mesh(
-    new THREE.CylinderGeometry(4.2, 4.2, 0.2, 32),
-    new THREE.MeshStandardMaterial({
-      color: 0x4fc3f7,
-      transparent: true,
-      opacity: 0.75,
-      roughness: 0.1,
-      metalness: 0.2,
-    })
+  const altarTop = new THREE.Mesh(
+    new THREE.CylinderGeometry(3.8, 3.9, 0.6, 24),
+    new THREE.MeshStandardMaterial({ color: 0xe2d2b5, roughness: 0.55 })
   );
-  water.position.y = 0.6;
-  water.receiveShadow = true;
-  water.userData.noCollision = true;
-  group.add(water);
+  altarTop.position.y = 1.2;
+  altarTop.receiveShadow = true;
+  altarTop.castShadow = true;
+  altarTop.userData.noCollision = false;
+  group.add(altarTop);
 
-  const obelisk = new THREE.Mesh(
-    new THREE.ConeGeometry(1.1, 5.2, 4),
-    new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.45 })
+  const hermaBase = new THREE.Mesh(
+    new THREE.BoxGeometry(1.4, 2.6, 1.4),
+    new THREE.MeshStandardMaterial({ color: 0xd8c3a5, roughness: 0.6 })
   );
-  obelisk.castShadow = true;
-  obelisk.position.y = 3.6;
-  obelisk.userData.noCollision = false;
-  group.add(obelisk);
+  hermaBase.position.y = 2.9;
+  hermaBase.castShadow = true;
+  hermaBase.userData.noCollision = false;
+  group.add(hermaBase);
+
+  const bust = new THREE.Mesh(
+    new THREE.SphereGeometry(0.8, 24, 16),
+    new THREE.MeshStandardMaterial({ color: 0xf0e6d2, roughness: 0.45 })
+  );
+  bust.position.y = 4.2;
+  bust.castShadow = true;
+  bust.userData.noCollision = false;
+  group.add(bust);
 
   return group;
 }
 
-function createLampPost() {
+function createTorchStand() {
   const group = new THREE.Group();
-  group.name = 'CityLampPost';
+  group.name = 'AgoraTorchStand';
 
-  const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.12, 0.12, 3.4, 12),
-    new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.7 })
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.55, 0.7, 0.6, 10),
+    new THREE.MeshStandardMaterial({ color: 0x9a7d56, roughness: 0.75 })
   );
-  pole.position.y = 1.7;
-  pole.userData.noCollision = false;
-  pole.castShadow = true;
-  group.add(pole);
+  base.position.y = 0.3;
+  base.receiveShadow = true;
+  base.castShadow = true;
+  base.userData.noCollision = false;
+  group.add(base);
 
-  const lampHousing = new THREE.Mesh(
-    new THREE.ConeGeometry(0.45, 0.9, 12),
-    new THREE.MeshStandardMaterial({ color: 0xfbc02d, emissive: new THREE.Color(0xf57f17), emissiveIntensity: 0.6 })
+  const column = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.3, 2.8, 12),
+    new THREE.MeshStandardMaterial({ color: 0xcdb18b, roughness: 0.65 })
   );
-  lampHousing.position.y = 3.5;
-  lampHousing.userData.noCollision = false;
-  lampHousing.castShadow = true;
-  group.add(lampHousing);
+  column.position.y = 1.7;
+  column.receiveShadow = true;
+  column.castShadow = true;
+  column.userData.noCollision = false;
+  group.add(column);
 
-  const bulb = new THREE.PointLight(0xfff5b5, 0.8, 16, 2);
-  bulb.position.y = 3.5;
-  group.add(bulb);
+  const brazier = new THREE.Mesh(
+    new THREE.ConeGeometry(0.7, 0.9, 12),
+    new THREE.MeshStandardMaterial({
+      color: 0x5b4636,
+      roughness: 0.85,
+      metalness: 0.1,
+      emissive: new THREE.Color(0x3b2a1a),
+      emissiveIntensity: 0.25,
+    })
+  );
+  brazier.rotation.x = Math.PI;
+  brazier.position.y = 3.1;
+  brazier.castShadow = true;
+  brazier.userData.noCollision = false;
+  group.add(brazier);
+
+  const flame = new THREE.Mesh(
+    new THREE.SphereGeometry(0.45, 16, 12),
+    new THREE.MeshStandardMaterial({
+      color: 0xffb347,
+      emissive: new THREE.Color(0xffa726),
+      emissiveIntensity: 1.2,
+    })
+  );
+  flame.position.y = 3.3;
+  flame.userData.noCollision = true;
+  group.add(flame);
+
+  const light = new THREE.PointLight(0xffc978, 0.9, 14, 2.4);
+  light.position.y = 3.3;
+  group.add(light);
 
   return group;
 }
@@ -223,12 +316,12 @@ export function createCivicDistrict(scene, options = {}) {
     return fallback + surfaceOffset;
   };
 
-  const promenade = createPavedStrip(promenadeWidth, plazaLength, 0xc3c2bb);
+  const promenade = createPavedStrip(promenadeWidth, plazaLength, 0xc6b293);
   promenade.receiveShadow = true;
   promenade.position.y = sampleLocalHeight(0, 0, promenade.position.y ?? 0);
   group.add(promenade);
 
-  const greenLeft = createGreenStrip(greensWidth, plazaLength, 0x6b8a6f);
+  const greenLeft = createGreenStrip(greensWidth, plazaLength, 0xb39a78);
   greenLeft.position.x = -(promenadeWidth + greensWidth) / 2;
   greenLeft.position.y = sampleLocalHeight(greenLeft.position.x, 0, greenLeft.position.y ?? 0);
   group.add(greenLeft);
@@ -238,7 +331,11 @@ export function createCivicDistrict(scene, options = {}) {
   greenRight.position.y = sampleLocalHeight(greenRight.position.x, 0, 0);
   group.add(greenRight);
 
-  const plazaNorth = createPavedStrip(promenadeWidth + greensWidth * 2, 18, 0xbdb8ac);
+  const plazaNorth = createPavedStrip(
+    promenadeWidth + greensWidth * 2,
+    18,
+    0xd3c6ad
+  );
   plazaNorth.position.z = plazaLength / 2 + 9;
   plazaNorth.position.y = sampleLocalHeight(0, plazaNorth.position.z, plazaNorth.position.y ?? 0);
   group.add(plazaNorth);
@@ -248,9 +345,9 @@ export function createCivicDistrict(scene, options = {}) {
   plazaSouth.position.y = sampleLocalHeight(0, plazaSouth.position.z, 0);
   group.add(plazaSouth);
 
-  const fountain = createFountain();
-  fountain.position.set(0, sampleLocalHeight(0, 0, fountain.position.y ?? 0), 0);
-  group.add(fountain);
+  const shrine = createHermaShrine();
+  shrine.position.set(0, sampleLocalHeight(0, 0, shrine.position.y ?? 0), 0);
+  group.add(shrine);
 
   const buildingConfigs = [
     { position: new THREE.Vector3(-18, 0, -24), rotation: Math.PI / 2 },
@@ -289,20 +386,20 @@ export function createCivicDistrict(scene, options = {}) {
   const lampCount = Math.floor(plazaLength / lampSpacing);
   for (let i = 0; i <= lampCount; i++) {
     const offset = -plazaLength / 2 + i * lampSpacing;
-    const leftLamp = createLampPost();
+    const leftTorch = createTorchStand();
     const leftX = -promenadeWidth / 2 + 1.2;
-    leftLamp.position.set(leftX, sampleLocalHeight(leftX, offset, leftLamp.position.y ?? 0), offset);
-    group.add(leftLamp);
+    leftTorch.position.set(leftX, sampleLocalHeight(leftX, offset, leftTorch.position.y ?? 0), offset);
+    group.add(leftTorch);
 
-    const rightLamp = createLampPost();
+    const rightTorch = createTorchStand();
     const rightX = promenadeWidth / 2 - 1.2;
     const rightZ = offset + lampSpacing / 2;
-    rightLamp.position.set(
+    rightTorch.position.set(
       rightX,
-      sampleLocalHeight(rightX, rightZ, rightLamp.position.y ?? 0),
+      sampleLocalHeight(rightX, rightZ, rightTorch.position.y ?? 0),
       rightZ
     );
-    group.add(rightLamp);
+    group.add(rightTorch);
   }
 
   const curvePoints = [
