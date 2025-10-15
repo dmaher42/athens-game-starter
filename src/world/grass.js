@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 // Lightweight instanced grass that keeps a 3×3 ring of tiles centered on the
 // player. Each tile holds thousands of blades driven entirely on the GPU so we
@@ -55,6 +56,16 @@ function createBladeGeometry(instanceCount) {
     0.04, 0.0, 0.0,
   ]);
   base.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  // UVs for the two-triangle blade (maps a small albedo texture)
+  const uvs = new Float32Array([
+    0.0, 0.0,
+    1.0, 0.0,
+    0.0, 1.0,
+    0.0, 0.0,
+    0.0, 1.0,
+    1.0, 0.0,
+  ]);
+  base.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
   base.computeVertexNormals();
 
   // Promote the blade to an instanced geometry with per-instance attributes for
@@ -101,6 +112,8 @@ function createGrassMaterial() {
     uWindDir: { value: WIND_DIR.clone() },
     uColor: { value: BASE_COLOR.clone() },
     uNightFactor: { value: 0 },
+    uAlbedo: { value: null },
+    uAlbedoScale: { value: new THREE.Vector2(4, 4) },
   };
 
   const vertexShader = /* glsl */ `
@@ -111,8 +124,9 @@ function createGrassMaterial() {
     uniform float uTime;
     uniform vec2 uWindDir;
 
-    varying float vTipFactor;
-    varying float vWorldY;
+  varying float vTipFactor;
+  varying float vWorldY;
+  varying vec2 vUv;
 
     mat2 rotation2D(float angle) {
       float s = sin(angle);
@@ -142,8 +156,9 @@ function createGrassMaterial() {
 
       vec3 worldPosition = transformed + instanceOffset;
 
-      vTipFactor = tip;
-      vWorldY = worldPosition.y;
+  vTipFactor = tip;
+  vWorldY = worldPosition.y;
+  vUv = vec2(position.x*0.5 + 0.5, position.y);
 
       gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPosition, 1.0);
     }
@@ -152,6 +167,8 @@ function createGrassMaterial() {
   const fragmentShader = /* glsl */ `
     uniform vec3 uColor;
     uniform float uNightFactor;
+    uniform sampler2D uAlbedo;
+    uniform vec2 uAlbedoScale;
 
     varying float vTipFactor;
     varying float vWorldY;
@@ -164,7 +181,11 @@ function createGrassMaterial() {
     void main() {
       float heightTint = mix(0.55, 1.08, clamp(vTipFactor, 0.0, 1.0));
       float altitudeTint = clamp((vWorldY + 2.0) * 0.03, 0.85, 1.1);
-      vec3 color = uColor * heightTint * altitudeTint;
+  vec3 baseColor = uColor * heightTint * altitudeTint;
+  vec3 tex = texture2D(uAlbedo, vUv * uAlbedoScale).rgb;
+  // Combine texture with base tint. The texture drives hue; tint
+  // preserves subtle height-based variation.
+  vec3 color = mix(baseColor, tex * heightTint * altitudeTint, 0.92);
 
       float desatAmount = uNightFactor * ${NIGHT_DESAT.toFixed(2)};
       float darkenAmount = uNightFactor * ${NIGHT_DARKEN.toFixed(2)};
@@ -183,6 +204,21 @@ function createGrassMaterial() {
     fragmentShader,
     side: THREE.DoubleSide,
   });
+
+  // Try to load a grass albedo texture from public/textures/ground/grass-albedo.jpg
+  (async () => {
+    try {
+      const base = resolveBaseUrl();
+      const url = joinPath(base, 'textures/ground/grass-albedo.jpg');
+      const loader = new THREE.TextureLoader();
+      const tex = await loader.loadAsync(url);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.copy(material.uniforms.uAlbedoScale.value);
+      material.uniforms.uAlbedo.value = tex;
+    } catch (e) {
+      // ignore, keep color-only grass
+    }
+  })();
 
   return material;
 }
