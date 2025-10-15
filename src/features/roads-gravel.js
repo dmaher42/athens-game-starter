@@ -30,6 +30,7 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {
   };
 
   let count = 0;
+  const matched = [];
   scene.traverse((o) => {
     if (!o?.isMesh) return;
     if (!pickRoad(o)) return;
@@ -38,11 +39,20 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {
     o.material = mat;
     o.material.userData = { ...(o.material.userData || {}), __isGravel: true };
     o.receiveShadow = true;
+    matched.push(o.name || "(unnamed)");
     count++;
   });
-
   if (count === 0) {
     // No matches found: harmless. You can tag road meshes later via userData.type = "road".
     // console.info("Gravel: no road meshes found to retarget");
   }
+
+  // Helpful debugging: return the number of meshes updated and names for verification.
+  try {
+    console.info(`[gravel] applied to ${count} mesh(es)`, matched.slice(0, 20));
+  } catch (e) {
+    /* ignore logging errors */
+  }
+
+  return { count, matched };
 }
