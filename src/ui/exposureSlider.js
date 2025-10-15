@@ -8,6 +8,8 @@ export function mountExposureSlider(renderer, opts = {}) {
   const KEY_TOGGLE = opts.key ?? 'F9';
   const LS_KEY = opts.storageKey ?? 'toneMappingExposure';
 
+  // Avoid mounting twice
+  if (document.getElementById('tmx-wrap')) return null;
   const wrap = document.createElement('div');
   wrap.id = 'tmx-wrap';
   Object.assign(wrap.style, {

@@ -3,8 +3,10 @@ import { getUISlot } from "./uiRoot.js";
 // Minimal UI overlay for audio mixer (F10 toggles)
 export function mountAudioMixer(soundscape, opts = {}) {
   if (!soundscape) return null;
+  if (document.getElementById('audio-mixer-wrap')) return null;
   const KEY = opts.key ?? "F10";
   const wrap = document.createElement("div");
+  wrap.id = 'audio-mixer-wrap';
   Object.assign(wrap.style, {
     // mounted in a shared UI slot; no absolute positioning needed
     padding: "10px 12px", background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
