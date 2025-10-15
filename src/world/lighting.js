@@ -47,8 +47,10 @@ export function createLighting(scene) {
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  // Add a hemisphere light to simulate ambient sky/ground bounce.
-  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.4);
+  // Add a hemisphere light to simulate ambient sky/ground bounce. Increase
+  // the default intensity slightly so large outdoor areas (terrain/roads)
+  // remain readable by default.
+  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.9);
   scene.add(hemiLight);
 
   return { sunLight, hemiLight, nightFactor: 0 };
@@ -58,6 +60,9 @@ export function updateLighting(lights, sunDir) {
   // Validate the light container before attempting to update state.
   if (!lights || !lights.sunLight || !lights.hemiLight) return;
   const { sunLight, hemiLight } = lights;
+  // ambientBoost allows external UI to increase ambient hemisphere intensity
+  // for debugging/visibility; default to 1.0 when not provided.
+  const ambientBoost = typeof lights.ambientBoost === 'number' ? Math.max(0, lights.ambientBoost) : 1.0;
 
   // Normalize the provided sun direction so derived math stays correct.
   const norm = scratchDir.copy(sunDir).normalize();
@@ -81,11 +86,17 @@ export function updateLighting(lights, sunDir) {
   const sunColor = c0.lerp(SUN_COLOR_DUSK, nightFactor * 0.55);
   sunLight.color.copy(sunColor);
 
-  // Hemisphere ambient blending (cooler and dimmer at night).
-  const hemiTarget = MathUtils.lerp(0.08, 0.4, dayFactor);
-  hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
+  // Hemisphere ambient blending (cooler and dimmer at night). Keep a modest
+  // baseline so large outdoor areas remain readable even when the sun is low.
+  // We bias the ground color lerp so the terrain retains some daytime tint.
+  // Bias ambient baseline upward so terrain doesn't fall into very dark tones.
+  const hemiTarget = MathUtils.lerp(0.35, 0.9, dayFactor) * ambientBoost;
+  hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.12);
+
+  // Bias the blend so ground keeps a bit of daylight even at low sun heights.
+  const groundLerp = Math.max(dayFactor, 0.25);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
-  lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
+  lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, groundLerp);
 
   // Expose the night factor for consumers like the moon/stars.
   lights.nightFactor = nightFactor;
