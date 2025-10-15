@@ -1082,7 +1082,10 @@ async function mainApp() {
   envCollider.refresh();
 
   const input = new InputMap(renderer.domElement);
-  const player = new PlayerController(input, envCollider, { camera });
+  const player = new PlayerController(input, envCollider, {
+    camera,
+    terrainHeightSampler: terrain?.userData?.getHeightAt ?? null,
+  });
   worldRoot.add(player.object);
 
   const spawnClearance = 0.2;
