@@ -4,7 +4,14 @@ import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 const UP = new THREE.Vector3(0, 1, 0);
 
 /**
- * @typedef {{ height?: number, radius?: number, camera?: THREE.Camera }} PlayerOptions
+ * @typedef {{
+ *   height?: number,
+ *   radius?: number,
+ *   camera?: THREE.Camera,
+ *   terrainHeightSampler?: ((x: number, z: number) => number) | null,
+ *   terrainSnapMaxDistance?: number,
+ *   terrainSnapThreshold?: number,
+ * }} PlayerOptions
  */
 
 export class PlayerController {
@@ -14,6 +21,7 @@ export class PlayerController {
    * @param {PlayerOptions} [opts]
    */
   constructor(input, env, opts = {}) {
+    opts = opts ?? {};
     this.object = new THREE.Object3D();
     this.object.userData.noCollision = true;
 
@@ -26,6 +34,22 @@ export class PlayerController {
     this.input = input;
     this.env = env;
     this.camera = opts.camera;
+    this.terrainHeightSampler =
+      typeof opts.terrainHeightSampler === "function"
+        ? opts.terrainHeightSampler
+        : null;
+    this.terrainSnapMaxDistance = Math.max(
+      Number.isFinite(opts.terrainSnapMaxDistance)
+        ? opts.terrainSnapMaxDistance
+        : 1.2,
+      0,
+    );
+    this.terrainSnapThreshold = Math.max(
+      Number.isFinite(opts.terrainSnapThreshold)
+        ? opts.terrainSnapThreshold
+        : 0.005,
+      0,
+    );
 
     this.height = opts.height ?? 1.8;
     this.radius = opts.radius ?? 0.35;
@@ -68,6 +92,7 @@ export class PlayerController {
     this.tmpVec2 = new THREE.Vector3();
     this.tmpVec3 = new THREE.Vector3();
     this.tmpVec4 = new THREE.Vector3();
+    this.tmpVecSnap = new THREE.Vector3();
     this.tmpQuat = new THREE.Quaternion();
 
     this.groundDamping = 16;
@@ -181,6 +206,7 @@ export class PlayerController {
     const delta = this.tmpVec.copy(this.velocity).multiplyScalar(dt);
     this.capsule.translate(delta);
     this.resolveCollisions(dt);
+    this.applyTerrainSnap();
 
     const center = this.getCapsuleCenter(this.tmpVec);
     this.object.position.copy(center);
@@ -291,6 +317,42 @@ export class PlayerController {
     }
 
     this.camera.lookAt(this.cameraTarget);
+  }
+
+  applyTerrainSnap() {
+    if (this.flying) return;
+
+    const sampler = this.terrainHeightSampler;
+    if (typeof sampler !== "function") return;
+
+    const center = this.getCapsuleCenter(this.tmpVecSnap);
+    const groundHeight = sampler(center.x, center.z);
+    if (!Number.isFinite(groundHeight)) return;
+
+    const halfHeight = this.height * 0.5;
+    const capsuleBottom = this.capsule.start.y - this.capsule.radius;
+    const penetration = groundHeight - capsuleBottom;
+
+    if (
+      penetration <= this.terrainSnapThreshold ||
+      penetration > this.terrainSnapMaxDistance
+    ) {
+      return;
+    }
+
+    const targetCenterY = groundHeight + halfHeight;
+    const deltaY = targetCenterY - center.y;
+    if (Math.abs(deltaY) <= 1e-5) {
+      return;
+    }
+
+    this.tmpVecSnap.set(0, deltaY, 0);
+    this.capsule.translate(this.tmpVecSnap);
+    if (this.velocity.y < 0) {
+      this.velocity.y = 0;
+    }
+    this.grounded = true;
+    this.groundNormal.set(0, 1, 0);
   }
 
   resolveCollisions(dt) {
