@@ -13,7 +13,8 @@ const BLADE_HEIGHT_MAX = 1.6;
 const WIND_DIR = new THREE.Vector2(0.6, 0.4).normalize();
 // Brighter, more saturated green for a livelier grass appearance
 // Made slightly greener to address user feedback about brown grass.
-const BASE_COLOR = new THREE.Color(0x4cd964);
+// Stronger, more vivid green for immediate visual improvement
+const BASE_COLOR = new THREE.Color(0x7afc5a);
 // Reduce desaturation/darkening at night so grass keeps some green tint
 const NIGHT_DESAT = 0.35;
 const NIGHT_DARKEN = 0.25;
