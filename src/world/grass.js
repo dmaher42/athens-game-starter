@@ -11,9 +11,11 @@ const MAX_TILE_COUNT = (TILE_RADIUS * 2 + 1) ** 2;
 const BLADE_HEIGHT_MIN = 0.75;
 const BLADE_HEIGHT_MAX = 1.6;
 const WIND_DIR = new THREE.Vector2(0.6, 0.4).normalize();
-const BASE_COLOR = new THREE.Color(0x4c8f3a);
-const NIGHT_DESAT = 0.55;
-const NIGHT_DARKEN = 0.45;
+// Brighter, more saturated green for a livelier grass appearance
+const BASE_COLOR = new THREE.Color(0x66bf46);
+// Reduce desaturation/darkening at night so grass keeps some green tint
+const NIGHT_DESAT = 0.35;
+const NIGHT_DARKEN = 0.25;
 const WORLD_BOUNDS = new THREE.Box3(
   new THREE.Vector3(-TILE_SIZE, -10, -TILE_SIZE),
   new THREE.Vector3(TILE_SIZE, 30, TILE_SIZE)
