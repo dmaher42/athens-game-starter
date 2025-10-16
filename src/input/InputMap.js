@@ -2,7 +2,7 @@ import {
   loadSettings,
   subscribe,
   defaultCameraSettings,
-} from "../state/settingsStore.js";
+} from "../state/settingsStore.ts";
 import { MOVEMENT_ONLY_KEYS, LOOK_KEYS, flattenKeyGroups } from "./keyBindings.js";
 
 const LOOK_KEY_LIST = flattenKeyGroups(LOOK_KEYS);

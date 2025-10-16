@@ -4,7 +4,7 @@ import {
   saveSettings,
   subscribe,
   defaultCameraSettings,
-} from "../state/settingsStore.js";
+} from "../state/settingsStore.ts";
 
 const RANGE_CONFIG = {
   yawSpeed: { min: 0.1, max: 2.0, step: 0.05, label: "Yaw Speed", suffix: "rad/s" },
