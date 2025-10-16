@@ -1,37 +1,21 @@
 import * as THREE from "three";
 
 import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
+import {
+  getManifestProbes,
+  getGlbProbeCandidates,
+  getQuickChecks,
+  getAssetCandidates,
+} from "../config/AssetConfig.js";
 
 const HTML_CONTENT_TYPE = /text\/html/i;
 
-const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json/i;
+const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;
 const GLB_EXTENSION = /\.glb(?:$|[?#])/i;
 
-const DEFAULT_PROBES = ["audio/manifest.json", "models/npcs/manifest.json"];
-
-export const ARISTOTLE_CANDIDATES = [
-  "models/buildings/aristotle_tomb.glb",
-  "models/buildings/aristotle_tomb_in_macedonia_greece.glb",
-  "models/landmarks/aristotle_tomb.glb",
-  "models/landmarks/aristotle_tomb_in_macedonia_greece.glb",
-  "aristotle_tomb_in_macedonia_greece.glb",
-];
-
-export const POSEIDON_CANDIDATES = [
-  "models/buildings/poseidon_temple.glb",
-  "models/buildings/poseidon_temple_at_sounion_greece.glb",
-  "models/landmarks/poseidon_temple.glb",
-  "models/landmarks/poseidon_temple_at_sounion_greece.glb",
-  "poseidon_temple_at_sounion_greece.glb",
-];
-
-export const AKROPOL_CANDIDATES = [
-  "models/buildings/akropol.glb",
-  "models/buildings/Akropol.glb",
-  "models/landmarks/akropol.glb",
-  "models/landmarks/Akropol.glb",
-  "Akropol.glb",
-];
+export let ARISTOTLE_CANDIDATES = getAssetCandidates("aristotle");
+export let POSEIDON_CANDIDATES = getAssetCandidates("poseidon");
+export let AKROPOL_CANDIDATES = getAssetCandidates("akropol");
 
 function isHtmlResponse(res) {
   return HTML_CONTENT_TYPE.test(res.headers.get("content-type") || "");
@@ -67,13 +51,18 @@ export class AssetLoader {
     const base = this.baseUrl ?? resolveBaseUrl();
     console.log("[base:resolved]", base);
 
+    const manifestProbes = getManifestProbes();
     const probes = [
-      ...DEFAULT_PROBES,
+      ...manifestProbes,
       ...this.districtRuleCandidates,
       ...additionalProbes,
     ];
     if (includeGlbCandidates) {
-      probes.push(...glbCandidates);
+      const candidatesToUse =
+        glbCandidates && glbCandidates.length > 0
+          ? glbCandidates
+          : getGlbProbeCandidates();
+      probes.push(...candidatesToUse);
     }
 
     for (const relativePath of probes) {
@@ -169,33 +158,56 @@ export class AssetLoader {
       }
     }
 
-    const checks = [
-      {
-        label: "Audio Manifest",
-        path: joinPath(baseUrl, "audio/manifest.json"),
-      },
-      {
-        label: "Aristotle Tomb",
-        path: joinPath(baseUrl, "models/landmarks/aristotle_tomb.glb"),
-      },
-      {
-        label: "District Rules",
-        path: resolvedDistrictPath ?? districtCandidates[0],
-      },
-      {
-        label: "Water Normals",
-        path: joinPath(baseUrl, "textures/ground/water_normals.png"),
-      },
-    ];
+    const quickChecks = getQuickChecks();
 
     const results = [];
-    for (const { label, path } of checks) {
-      if (this.forceProcedural && GLB_EXTENSION.test(path)) {
-        results.push({ label, path, status: "skipped" });
+    for (const entry of quickChecks) {
+      const label = entry.label || "Unnamed Check";
+      const targets = [];
+
+      if (typeof entry.path === "string" && entry.path.trim()) {
+        const pathValue = entry.path.trim();
+        if (/config\/districts\.json$/i.test(pathValue)) {
+          if (resolvedDistrictPath) {
+            targets.push(resolvedDistrictPath);
+          }
+          targets.push(...districtCandidates);
+        } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
+          targets.push(pathValue);
+        } else {
+          targets.push(joinPath(baseUrl, pathValue));
+        }
+      }
+
+      if (typeof entry.candidateKey === "string" && entry.candidateKey.trim()) {
+        const candidateList = getAssetCandidates(entry.candidateKey.trim());
+        for (const rel of candidateList) {
+          targets.push(joinPath(baseUrl, rel));
+        }
+      }
+
+      const uniqueTargets = Array.from(new Set(targets.filter(Boolean)));
+      if (uniqueTargets.length === 0) {
+        results.push({ label, path: "", status: "missing" });
         continue;
       }
-      const exists = await this.headOk(path);
-      results.push({ label, path, status: exists ? "ok" : "missing" });
+
+      let status = "missing";
+      let usedPath = uniqueTargets[0];
+      for (const candidate of uniqueTargets) {
+        usedPath = candidate;
+        if (this.forceProcedural && GLB_EXTENSION.test(candidate)) {
+          status = "skipped";
+          break;
+        }
+        const exists = await this.headOk(candidate);
+        if (exists) {
+          status = "ok";
+          break;
+        }
+      }
+
+      results.push({ label, path: usedPath, status });
     }
 
     if (typeof console?.table === "function") {
@@ -204,6 +216,15 @@ export class AssetLoader {
       console.log("Asset QuickChecks", results);
     }
   }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept("../config/AssetConfig.js", (mod) => {
+    const getter = mod?.getAssetCandidates ?? getAssetCandidates;
+    ARISTOTLE_CANDIDATES = getter("aristotle");
+    POSEIDON_CANDIDATES = getter("poseidon");
+    AKROPOL_CANDIDATES = getter("akropol");
+  });
 }
 
 function hashNoise(x, y, seed = 0) {

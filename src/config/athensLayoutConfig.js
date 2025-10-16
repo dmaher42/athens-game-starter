@@ -17,6 +17,9 @@
 // terrain that already exists inside the scene graph.
 // -----------------------------------------------------------------------------
 
+import districtRulesManifest from "../../config/districts.json";
+import { deepFreeze, mergeDeep, getRuntimeEnvironment, assert } from "./utils.js";
+
 import {
   ACROPOLIS_PEAK_3D,
   AGORA_CENTER_3D,
@@ -35,7 +38,55 @@ function anchorPosition(anchor, delta = {}) {
   };
 }
 
-export const athensLayoutConfig = {
+function normalizeDistrictRules(manifest = {}) {
+  const safe = manifest && typeof manifest === "object" ? manifest : {};
+  const density = safe.densitySpacingMeters || safe.densityToLotSpacing || {};
+  const normalisedDensity = {
+    high: Number.isFinite(density.high) ? density.high : 11,
+    medium: Number.isFinite(density.medium) ? density.medium : 16,
+    low: Number.isFinite(density.low) ? density.low : 22,
+  };
+
+  const districts = Array.isArray(safe.districts)
+    ? safe.districts.map((district, index) => {
+        const id = typeof district.id === "string" && district.id.trim() ? district.id.trim() : `district-${index}`;
+        const label = typeof district.label === "string" ? district.label : id;
+        const allowedTypes = Array.isArray(district.allowedTypes)
+          ? district.allowedTypes.filter((v) => typeof v === "string" && v.trim())
+          : ["house"];
+        const heightRange = Array.isArray(district.heightRange)
+          ? [Number(district.heightRange[0] ?? -999), Number(district.heightRange[1] ?? 999)]
+          : [-999, 999];
+        const road = district.road && typeof district.road === "object" ? { ...district.road } : {};
+        road.width = Number.isFinite(road.width) ? road.width : 3.2;
+        road.color = Number.isFinite(road.color) ? road.color : 0x333333;
+
+        return {
+          ...district,
+          id,
+          label,
+          allowedTypes,
+          heightRange,
+          buildingDensity: district.buildingDensity || "medium",
+          minSeparation: Number.isFinite(district.minSeparation) ? district.minSeparation : 0,
+          road,
+        };
+      })
+    : [];
+
+  return {
+    version: typeof safe.version === "number" ? safe.version : 1,
+    seed: Number.isFinite(safe.seed) ? safe.seed : 0,
+    densitySpacingMeters: normalisedDensity,
+    maxSlopeDeltaPerLot: Number.isFinite(safe.maxSlopeDeltaPerLot)
+      ? safe.maxSlopeDeltaPerLot
+      : 2,
+    roadSetbackMeters: Number.isFinite(safe.roadSetbackMeters) ? safe.roadSetbackMeters : 4,
+    districts,
+  };
+}
+
+const baseAthensLayoutConfig = {
   version: 1,
   metadata: {
     author: "configuration",
@@ -660,5 +711,47 @@ export const athensLayoutConfig = {
     },
   ],
 };
+
+const unifiedDistrictRules = normalizeDistrictRules(districtRulesManifest);
+assert(
+  Array.isArray(unifiedDistrictRules.districts),
+  "District rules manifest must provide a districts array",
+);
+
+const ENVIRONMENT_OVERRIDES = {
+  development: {
+    metadata: {
+      environment: "development",
+    },
+  },
+};
+
+const baseLayoutConfig = mergeDeep({}, baseAthensLayoutConfig, {
+  metadata: mergeDeep({}, baseAthensLayoutConfig.metadata || {}, {
+    districtVersion: unifiedDistrictRules.version ?? 0,
+  }),
+  districts: unifiedDistrictRules.districts,
+  districtRules: unifiedDistrictRules,
+});
+
+const initialEnvironment = getRuntimeEnvironment();
+
+export const athensLayoutConfig = deepFreeze(
+  mergeDeep({}, baseLayoutConfig, ENVIRONMENT_OVERRIDES[initialEnvironment] || {}),
+);
+
+export function createAthensLayoutConfig(
+  environment = getRuntimeEnvironment(),
+  overrides = {},
+) {
+  return deepFreeze(
+    mergeDeep(
+      {},
+      baseLayoutConfig,
+      ENVIRONMENT_OVERRIDES[environment] || {},
+      overrides,
+    ),
+  );
+}
 
 export default athensLayoutConfig;

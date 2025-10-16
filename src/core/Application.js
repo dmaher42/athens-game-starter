@@ -78,15 +78,18 @@ import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { LandmarkManager } from "../world/LandmarkManager.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
+import { getAssetCandidates } from "../config/AssetConfig.js";
+import {
+  engineConfig,
+  resolveFeatureToggle,
+  parseBooleanQuery,
+} from "../config/EngineConfig.js";
+import { lightingConfig } from "../config/LightingConfig.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "../features/aristotle-texture.js";
 import { applyGravelToRoads } from "../features/roads-gravel.js";
-import { buildDistrictRuleUrlCandidates } from "../world/districtRules.js";
 import {
   AssetLoader,
-  ARISTOTLE_CANDIDATES,
-  POSEIDON_CANDIDATES,
-  AKROPOL_CANDIDATES,
   createProceduralMarbleTextures,
 } from "./AssetLoader.js";
 import {
@@ -96,102 +99,33 @@ import {
 } from "./Scene.js";
 import { GameLoop } from "./GameLoop.js";
 
-// @ts-ignore injected by Vite define()
-const BUILD_TIME = typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : "";
-// @ts-ignore injected by Vite define()
-const BUILD_SHA = typeof __BUILD_SHA__ !== "undefined" ? __BUILD_SHA__ : "";
-console.info("[build]", { time: BUILD_TIME, sha: BUILD_SHA });
+console.info("[build]", engineConfig.build || {});
 
-const DEFAULT_BASE_URL = resolveBaseUrl();
+const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
-  buildDistrictRuleUrlCandidates(DEFAULT_BASE_URL);
-
-const QUERY_PARAMS = (() => {
-  if (typeof window === "undefined" || typeof window.location === "undefined") {
-    return new URLSearchParams("");
-  }
-  try {
-    return new URLSearchParams(window.location.search ?? "");
-  } catch {
-    return new URLSearchParams("");
-  }
-})();
-
-const DEFAULT_FORCE_GLB =
-  QUERY_PARAMS.has("glb") && QUERY_PARAMS.get("glb") !== "0";
-const DEFAULT_FORCE_PROC = !DEFAULT_FORCE_GLB;
+  engineConfig.districtRuleCandidates || [];
 
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
-const USE_THIRD_PERSON = true;
 
-const LIGHTING_PRESETS = {
-  dawn: {
-    phase: 0.25,
-    exposure: 0.95,
-    label: "Dawn",
-    hotkey: "1",
-  },
-  noon: {
-    phase: 0.5,
-    exposure: 1.1,
-    label: "High Noon",
-    hotkey: "2",
-  },
-  dusk: {
-    phase: 0.75,
-    exposure: 1.0,
-    label: "Dusk",
-    hotkey: "3",
-  },
-  night: {
-    phase: 0.0,
-    exposure: 0.6,
-    label: "Night",
-    hotkey: "4",
-  },
-};
+const LIGHTING_PRESETS = lightingConfig.presets || {};
+
+const DEFAULT_FORCE_GLB =
+  typeof engineConfig.featureFlags?.forceGlb === "boolean"
+    ? engineConfig.featureFlags.forceGlb
+    : false;
+const DEFAULT_FORCE_PROC =
+  typeof engineConfig.featureFlags?.forceProcedural === "boolean"
+    ? engineConfig.featureFlags.forceProcedural
+    : !DEFAULT_FORCE_GLB;
+const USE_THIRD_PERSON =
+  engineConfig.featureFlags?.useThirdPersonCamera !== false;
 
 window.addEventListener("unhandledrejection", (ev) => {
   console.error("Unhandled promise rejection:", ev.reason);
 });
 
-const TRUE_VALUES = new Set(["", "1", "true", "on", "yes", "y"]);
-const FALSE_VALUES = new Set(["0", "false", "off", "no", "n"]);
-
-function parseToggleValue(value, defaultValue = true) {
-  if (value == null) return defaultValue;
-  const normalized = String(value).trim().toLowerCase();
-  if (TRUE_VALUES.has(normalized)) return true;
-  if (FALSE_VALUES.has(normalized)) return false;
-  return defaultValue;
-}
-
-function shouldShowOverlay({
-  queryKey,
-  windowFlagKey,
-  defaultValue = true,
-  devDefault = true,
-} = {}) {
-  if (typeof window === "undefined") return defaultValue;
-
-  if (queryKey) {
-    const params = new URLSearchParams(window.location.search);
-    if (params.has(queryKey)) {
-      return parseToggleValue(params.get(queryKey), defaultValue);
-    }
-  }
-
-  if (windowFlagKey && typeof window[windowFlagKey] !== "undefined") {
-    const flagValue = window[windowFlagKey];
-    if (typeof flagValue === "boolean") return flagValue;
-    return parseToggleValue(flagValue, defaultValue);
-  }
-
-  if (devDefault && import.meta.env?.DEV) {
-    return true;
-  }
-
-  return defaultValue;
+function shouldShowOverlay(options = {}) {
+  return resolveFeatureToggle(options);
 }
 
 // Creates a helper that converts elapsed seconds into the current time-of-day phase.
@@ -220,14 +154,14 @@ export class Application {
   constructor({
     baseUrl = DEFAULT_BASE_URL,
     districtRuleCandidates = DEFAULT_DISTRICT_RULE_URL_CANDIDATES,
-    queryParams = QUERY_PARAMS,
+    queryParams = engineConfig.queryParams,
     forceGlb = DEFAULT_FORCE_GLB,
     forceProc,
   } = {}) {
     this.baseUrl = baseUrl ?? DEFAULT_BASE_URL;
     this.districtRuleCandidates =
       districtRuleCandidates ?? DEFAULT_DISTRICT_RULE_URL_CANDIDATES;
-    this.queryParams = queryParams ?? QUERY_PARAMS;
+    this.queryParams = queryParams ?? engineConfig.queryParams;
     this.forceGlb =
       typeof forceGlb === "boolean" ? forceGlb : DEFAULT_FORCE_GLB;
     this.forceProc =
@@ -251,6 +185,9 @@ export class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
+    const ARISTOTLE_CANDIDATES = getAssetCandidates("aristotle");
+    const POSEIDON_CANDIDATES = getAssetCandidates("poseidon");
+    const AKROPOL_CANDIDATES = getAssetCandidates("akropol");
 
     console.log("🔧 Athens mainApp start");
     console.info(
@@ -281,27 +218,29 @@ export class Application {
     const renderer = this.renderer;
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    const shouldMountExposureSlider = (() => {
-      if (typeof import.meta !== "undefined" && import.meta?.env) {
-        if (typeof import.meta.env.DEV === "boolean") {
-          return import.meta.env.DEV;
-        }
-      }
-      return true;
-    })();
+    const exposureOverlayConfig =
+      engineConfig.debug?.overlays?.exposureSlider || {};
+    const shouldMountExposureSlider = resolveFeatureToggle(
+      exposureOverlayConfig,
+    );
 
     if (shouldMountExposureSlider) {
+      const exposureSettings = lightingConfig.exposure || {};
       // Mount the exposure control (F9 toggles visibility)
       mountExposureSlider(renderer, {
-        min: 0.2,
-        max: 2.0,
-        step: 0.01,
-        key: "F9",
+        min: Number.isFinite(exposureSettings.min) ? exposureSettings.min : 0.2,
+        max: Number.isFinite(exposureSettings.max) ? exposureSettings.max : 2.0,
+        step: Number.isFinite(exposureSettings.step) ? exposureSettings.step : 0.01,
+        key: exposureOverlayConfig.hotkey || "F9",
       });
     }
     initializeAssetTranscoders(renderer);
     attachCrosshair();
-    mountHotkeyOverlay({ toggleKey: "KeyH" });
+    const hotkeyOverlayConfig =
+      engineConfig.debug?.overlays?.hotkeyReference || { defaultValue: true };
+    if (resolveFeatureToggle(hotkeyOverlayConfig)) {
+      mountHotkeyOverlay({ toggleKey: hotkeyOverlayConfig.toggleKey || "KeyH" });
+    }
     updateLoadingStatus("Listening for the bustle of ancient Athens...");
 
     let devHud = (this.devHud = null);
@@ -526,21 +465,8 @@ export class Application {
       );
     }
 
-    const grassEnabled = (() => {
-      if (typeof window === "undefined") {
-        return false;
-      }
-      try {
-        const params = new URLSearchParams(window.location.search);
-        if (!params.has("grass")) {
-          return false;
-        }
-        return parseToggleValue(params.get("grass"), false);
-      } catch (error) {
-        console.warn("Failed to parse grass flag from query string:", error);
-        return false;
-      }
-    })();
+    const grassEnabled =
+      engineConfig.performance?.enableGrass ?? parseBooleanQuery("grass", false);
 
     ocean = await createOcean(scene, {
       bounds: HARBOR_WATER_BOUNDS,
@@ -562,24 +488,8 @@ export class Application {
 
     let grassRoot = null;
 
-    const roadsVisible = (() => {
-      if (typeof window === "undefined") {
-        return true;
-      }
-      try {
-        const params = new URLSearchParams(window.location.search);
-        if (!params.has("roads")) {
-          return true;
-        }
-        return parseToggleValue(params.get("roads"), true);
-      } catch (error) {
-        console.warn(
-          "Failed to parse roads visibility from query string:",
-          error,
-        );
-        return true;
-      }
-    })();
+    const roadsVisible =
+      engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
 
     // Roads first (needs terrain sampler)
     const { group: roadGroup, curve: mainRoad } = createMainHillRoad(
@@ -1641,7 +1551,7 @@ export class Application {
 
     const loop = this.gameLoop;
     // Slow the sun/moon orbit so each in-game day lasts 20 real minutes by default.
-    const dayCycle = startTimeOfDayCycle();
+    const dayCycle = startTimeOfDayCycle(lightingConfig.cycle || {});
     const timeOfDayState = { timeOfDayPhase: 0 };
     setTimeOfDayPhase(timeOfDayState, 0);
 
