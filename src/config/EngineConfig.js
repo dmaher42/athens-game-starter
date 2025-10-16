@@ -33,9 +33,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl,
     queryParams,
     build: {
-      // @ts-ignore injected at build time
       time: typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : "",
-      // @ts-ignore injected at build time
       sha: typeof __BUILD_SHA__ !== "undefined" ? __BUILD_SHA__ : "",
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl),
