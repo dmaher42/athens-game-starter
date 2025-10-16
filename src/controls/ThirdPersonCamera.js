@@ -3,7 +3,7 @@ import {
   loadSettings,
   subscribe,
   defaultCameraSettings,
-} from "../state/settingsStore.js";
+} from "../state/settingsStore.ts";
 
 const DEFAULT_OFFSET = new THREE.Vector3(0, 2.2, -4.5);
 const DEFAULT_TARGET_OFFSET = new THREE.Vector3(0, 1.2, 0);
@@ -311,7 +311,7 @@ export class ThirdPersonCamera {
   }
 
   /**
-   * @param {import("../state/settingsStore.js").CameraSettings} settings
+   * @param {import("../state/settingsStore.ts").CameraSettings} settings
    */
   applyCameraSettings(settings) {
     const resolved = {
