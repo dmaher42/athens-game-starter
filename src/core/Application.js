@@ -47,7 +47,7 @@ import {
 } from "../world/landmarks.js";
 import { createCivicDistrict } from "../world/cityPlan.js";
 import { createCityPlanImplementation } from "../world/cityPlanImplementation.js";
-import { InputMap } from "../input/InputMap.js";
+import { InputMap } from "../input/InputMap";
 import { EnvironmentCollider } from "../env/EnvironmentCollider.js";
 import { BuildingManager } from "../buildings/BuildingManager.js";
 import { PlayerController } from "../controls/PlayerController.js";

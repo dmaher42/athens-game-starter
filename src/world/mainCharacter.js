@@ -11,7 +11,7 @@ import {
   Vector3,
   MathUtils,
 } from "three";
-import { LOOK_KEYS, MOVEMENT_ONLY_KEYS } from "../input/keyBindings.js";
+import { LOOK_KEYS, MOVEMENT_ONLY_KEYS } from "../input/keyBindings";
 
 // Reuse the same vectors every frame so we avoid creating garbage objects.
 const moveDirection = new Vector3();
