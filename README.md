@@ -21,6 +21,13 @@ To run the project locally:
 The build step outputs self-contained static assets under `docs/`, suitable for
 hosting on GitHub Pages or any static site provider.
 
+### TypeScript migration checklist
+
+Stage 5 of the TypeScript rollout targets the state store, shared input helpers,
+and the UI runtime. Track progress and confirm that any legacy `@ts-ignore`
+directives are removed as modules convert to `.ts` in the
+[TypeScript migration checklist](docs/typescript-migration.md).
+
 > ℹ️ Drop a hero character model at `public/models/character/hero.glb` to see the
 > fully animated avatar. When the file is missing the runtime first tries the
 > bundled `astronaut.glb` sample before falling back to a simple capsule so
