@@ -27,7 +27,16 @@
     }
   },
   "include": [
-    "src/**/*.ts",
+    // Stage 5 migration targets — toggle these globs on or off as their
+    // JavaScript sources convert to TypeScript.
+    "src/state/**/*.ts",
+    "src/input/**/*.ts",
+    "src/ui/**/*.ts",
+    // Existing TypeScript entry points that must remain checked regardless of
+    // the staged migration scope.
+    "src/main.ts",
+    "src/utils/**/*.ts",
+    "src/types/**/*.ts",
     "src/**/*.tsx",
     "src/**/*.d.ts",
     "src/types/**/*.d.ts",
