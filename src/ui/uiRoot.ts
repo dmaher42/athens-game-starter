@@ -1,32 +1,43 @@
-const STYLE_ID = "ui-root-style";
-const ROOT_ID = "ui-root";
+const STYLE_ID = "ui-root-style" as const;
+const ROOT_ID = "ui-root" as const;
 
-export function ensureUIRoot() {
+export function ensureUIRoot(): HTMLElement | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
   let root = document.getElementById(ROOT_ID);
   if (!root) {
-    root = document.createElement("div");
-    root.id = ROOT_ID;
-    document.body.appendChild(root);
+    const createdRoot = document.createElement("div");
+    createdRoot.id = ROOT_ID;
+    document.body.appendChild(createdRoot);
     ensureStyles();
     // create slots
     ["topLeft", "topRight", "bottomLeft", "bottomRight", "center"].forEach(
       (name) => {
         const slot = document.createElement("div");
-        slot.dataset.slot = name;
+        slot.dataset["slot"] = name;
         slot.className = `ui-slot ui-slot--${name}`;
-        root.appendChild(slot);
+        createdRoot.appendChild(slot);
       },
     );
+    root = createdRoot;
   }
   return root;
 }
 
-export function getUISlot(name = "topRight") {
+export function getUISlot(name = "topRight"): HTMLElement | null {
   const root = ensureUIRoot();
-  return root.querySelector(`.ui-slot--${name}`) || root;
+  if (!root) {
+    return null;
+  }
+  return root.querySelector<HTMLElement>(`.ui-slot--${name}`) ?? root;
 }
 
-function ensureStyles() {
+function ensureStyles(): void {
+  if (typeof document === "undefined") {
+    return;
+  }
   if (document.getElementById(STYLE_ID)) return;
   const style = document.createElement("style");
   style.id = STYLE_ID;

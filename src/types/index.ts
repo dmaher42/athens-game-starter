@@ -164,19 +164,19 @@ export type ControllerState =
 
 /** Options accepted when showing the animated loading overlay. */
 export interface LoadingScreenOptions {
-  facts?: string[];
+  facts?: readonly string[];
   initialStatus?: string;
 }
 
 /** Entry describing a control shortcut in the hotkey overlay. */
 export interface HotkeyDescriptor {
-  keys: string[];
+  keys: readonly string[];
   description: string;
 }
 
 /** Props forwarded to {@link mountHotkeyOverlay}. */
 export interface HotkeyOverlayOptions {
-  hotkeys?: HotkeyDescriptor[];
+  hotkeys?: readonly HotkeyDescriptor[];
   toggleKey?: string;
   showButton?: boolean;
 }
@@ -184,6 +184,26 @@ export interface HotkeyOverlayOptions {
 /** Handle returned by HUD widgets that support explicit disposal. */
 export interface HudWidgetHandle {
   dispose(): void;
+}
+
+/** Public contract returned by {@link mountHotkeyOverlay}. */
+export interface HotkeyOverlayHandle extends HudWidgetHandle {
+  element: HTMLElement;
+  toggle(forceOpen?: boolean): void;
+}
+
+/** Configuration accepted by {@link mountAudioMixer}. */
+export interface AudioMixerOptions {
+  key?: string;
+}
+
+/** Configuration accepted by {@link mountExposureSlider}. */
+export interface ExposureSliderOptions {
+  min?: number;
+  max?: number;
+  step?: number;
+  key?: string;
+  storageKey?: string;
 }
 
 /** Civic district layout parameters used by {@link createCivicDistrict}. */
