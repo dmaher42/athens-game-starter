@@ -3,6 +3,7 @@ import {
   joinPath,
   REPO_SEGMENT_PATH as REPO_BASE_PATH,
 } from "../utils/baseUrl.js";
+import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 
 export function buildDistrictRuleUrlCandidates(resolvedBase) {
   const urls = new Set();
@@ -73,6 +74,12 @@ export async function loadDistrictRules(baseUrl = "") {
   }
   if (typeof console !== "undefined" && typeof console.warn === "function") {
     console.warn("[district-rules] failed to load", tried);
+  }
+  const fallbackRules = athensLayoutConfig?.districtRules
+    ? JSON.parse(JSON.stringify(athensLayoutConfig.districtRules))
+    : null;
+  if (fallbackRules) {
+    return normalizeRules(fallbackRules);
   }
   // Minimal fallback (keeps city rendering even if file missing)
   return normalizeRules({
