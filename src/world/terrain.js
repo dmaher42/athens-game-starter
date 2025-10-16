@@ -216,7 +216,7 @@ export function createTerrain(scene) {
   }
 
   let terrainMaterial = new THREE.MeshStandardMaterial({
-    color: 0xa3ae8b,
+    color: 0xffffff,
     roughness: 0.90,
     metalness: 0.0,
     vertexColors: true,
