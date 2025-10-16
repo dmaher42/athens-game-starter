@@ -8,13 +8,14 @@ import type {
   WebGLRenderer,
 } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+export type { UniformMap, TypedMesh, TypedShaderMaterial } from '@app/types/global';
 
 /** Callback signature for querying the terrain height at a world coordinate. */
 export type HeightSampler = (x: number, z: number) => number;
 
 /** Minimal shape used by building and world utilities for terrain references. */
 export interface TerrainLike extends Object3D {
-  userData?: Object3D['userData'] & {
+  userData: Object3D['userData'] & {
     getHeightAt?: HeightSampler;
   };
 }

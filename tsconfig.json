@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "moduleResolution": "bundler",
     "moduleDetection": "force",
     "noEmit": true,
@@ -19,9 +19,10 @@
     "resolvePackageJsonImports": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": false,
-    "types": ["node", "web"],
+    "types": ["node"],
     "baseUrl": ".",
     "paths": {
+      "@app/types": ["src/types/index"],
       "@app/types/*": ["src/types/*"]
     }
   },
