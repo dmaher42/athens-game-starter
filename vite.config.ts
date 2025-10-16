@@ -1,6 +1,14 @@
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
+
 export default defineConfig({
   base: "/athens-game-starter/",
+  resolve: {
+    alias: {
+      "@app/types": fileURLToPath(new URL("./src/types", import.meta.url)),
+    },
+    extensions: [".ts", ".tsx", ".js", ".jsx"],
+  },
   build: {
     outDir: "docs",
     emptyOutDir: true,
@@ -14,6 +22,6 @@ export default defineConfig({
   },
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
-    __BUILD_SHA__: JSON.stringify(process.env.GITHUB_SHA || ""),
+    __BUILD_SHA__: JSON.stringify(process.env["GITHUB_SHA"] || ""),
   },
 });
