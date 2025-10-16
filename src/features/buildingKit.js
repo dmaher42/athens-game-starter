@@ -1,8 +1,11 @@
 import * as THREE from "three";
 import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
-import { createProceduralMarbleTextures } from "../main.js";
+import { createProceduralMarbleTextures } from "../core/AssetLoader.js";
 
-function createSolidDataTexture(color, { colorSpace = THREE.SRGBColorSpace } = {}) {
+function createSolidDataTexture(
+  color,
+  { colorSpace = THREE.SRGBColorSpace } = {},
+) {
   const data = new Uint8Array(4);
   data[0] = (color >> 16) & 0xff;
   data[1] = (color >> 8) & 0xff;
@@ -61,7 +64,8 @@ function resolveTextureUrl(baseUrl, candidate) {
   if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
     return trimmed;
   }
-  const root = typeof baseUrl === "string" && baseUrl ? baseUrl : resolveBaseUrl();
+  const root =
+    typeof baseUrl === "string" && baseUrl ? baseUrl : resolveBaseUrl();
   return joinPath(root, trimmed);
 }
 
@@ -102,29 +106,56 @@ export async function makeMarbleMaterialSet({
 
   const fallback = {
     map: createSolidDataTexture(0xefecea, { colorSpace: THREE.SRGBColorSpace }),
-    normalMap: createSolidDataTexture(0x8080ff, { colorSpace: THREE.LinearSRGBColorSpace }),
-    roughnessMap: createSolidDataTexture(0xb3b3b3, { colorSpace: THREE.LinearSRGBColorSpace }),
-    aoMap: createSolidDataTexture(0xe0e0e0, { colorSpace: THREE.LinearSRGBColorSpace }),
+    normalMap: createSolidDataTexture(0x8080ff, {
+      colorSpace: THREE.LinearSRGBColorSpace,
+    }),
+    roughnessMap: createSolidDataTexture(0xb3b3b3, {
+      colorSpace: THREE.LinearSRGBColorSpace,
+    }),
+    aoMap: createSolidDataTexture(0xe0e0e0, {
+      colorSpace: THREE.LinearSRGBColorSpace,
+    }),
   };
 
-  const [mapTexture, normalTexture, roughTexture, aoTexture] = await Promise.all([
-    loadTextureCandidate({ baseUrl, candidate: map, colorSpace: THREE.SRGBColorSpace }),
-    loadTextureCandidate({ baseUrl, candidate: normal, colorSpace: THREE.LinearSRGBColorSpace }),
-    loadTextureCandidate({ baseUrl, candidate: rough, colorSpace: THREE.LinearSRGBColorSpace }),
-    loadTextureCandidate({ baseUrl, candidate: ao, colorSpace: THREE.LinearSRGBColorSpace }),
-  ]);
+  const [mapTexture, normalTexture, roughTexture, aoTexture] =
+    await Promise.all([
+      loadTextureCandidate({
+        baseUrl,
+        candidate: map,
+        colorSpace: THREE.SRGBColorSpace,
+      }),
+      loadTextureCandidate({
+        baseUrl,
+        candidate: normal,
+        colorSpace: THREE.LinearSRGBColorSpace,
+      }),
+      loadTextureCandidate({
+        baseUrl,
+        candidate: rough,
+        colorSpace: THREE.LinearSRGBColorSpace,
+      }),
+      loadTextureCandidate({
+        baseUrl,
+        candidate: ao,
+        colorSpace: THREE.LinearSRGBColorSpace,
+      }),
+    ]);
 
   const procedural = ensureGenerated();
 
   return {
     map: mapTexture || procedural?.map || fallback.map,
     normalMap: normalTexture || procedural?.normalMap || fallback.normalMap,
-    roughnessMap: roughTexture || procedural?.roughnessMap || fallback.roughnessMap,
+    roughnessMap:
+      roughTexture || procedural?.roughnessMap || fallback.roughnessMap,
     aoMap: aoTexture || procedural?.aoMap || fallback.aoMap,
   };
 }
 
-export function makePlasterMaterial({ color = 0xd8d1c4, roughness = 0.65 } = {}) {
+export function makePlasterMaterial({
+  color = 0xd8d1c4,
+  roughness = 0.65,
+} = {}) {
   return new THREE.MeshStandardMaterial({
     color,
     roughness,
@@ -171,7 +202,7 @@ export async function makeColumn({
     height,
     radialSegments,
     heightSegments,
-    false
+    false,
   );
   geometry.translate(0, height / 2, 0);
   ensureUv2Attribute(geometry);
@@ -307,16 +338,7 @@ function createRoofSide({ width, depth, height, material, flip = false }) {
     -halfDepth,
   ]);
 
-  const uvs = new Float32Array([
-    0,
-    0,
-    0,
-    1,
-    1,
-    1,
-    1,
-    0,
-  ]);
+  const uvs = new Float32Array([0, 0, 0, 1, 1, 1, 1, 0]);
 
   const indices = flip ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3];
 
@@ -386,15 +408,21 @@ export async function makeColonnadeInstanced({
   columnMat = null,
   materialOptions = {},
 } = {}) {
-  const needsSampleColumn = !(columnGeom instanceof THREE.BufferGeometry && columnMat);
-  const baseColumn = needsSampleColumn ? await makeColumn({ materialOptions }) : null;
-  const geometry = columnGeom instanceof THREE.BufferGeometry ? columnGeom : baseColumn.geometry;
+  const needsSampleColumn = !(
+    columnGeom instanceof THREE.BufferGeometry && columnMat
+  );
+  const baseColumn = needsSampleColumn
+    ? await makeColumn({ materialOptions })
+    : null;
+  const geometry =
+    columnGeom instanceof THREE.BufferGeometry
+      ? columnGeom
+      : baseColumn.geometry;
   const material = columnMat || baseColumn.material;
 
   ensureUv2Attribute(geometry);
 
-  const perimeterCount =
-    Math.max(0, countX) * 2 + Math.max(0, countZ - 2) * 2;
+  const perimeterCount = Math.max(0, countX) * 2 + Math.max(0, countZ - 2) * 2;
   const instanceCount = Math.max(1, perimeterCount);
   const instanced = new THREE.InstancedMesh(geometry, material, instanceCount);
   instanced.instanceMatrix.setUsage(THREE.DynamicDrawUsage);

@@ -1,7 +1,8 @@
-import { createProceduralMarbleTextures } from "../main.js";
+import { createProceduralMarbleTextures } from "../core/AssetLoader.js";
 
 export function makeMarbleMaterial(three) {
-  const { map, normalMap, roughnessMap, aoMap } = createProceduralMarbleTextures();
+  const { map, normalMap, roughnessMap, aoMap } =
+    createProceduralMarbleTextures();
 
   return new three.MeshPhysicalMaterial({
     map,
@@ -61,4 +62,3 @@ export function makeTreeMaterials(three) {
     bark: barkMaterial,
   };
 }
-
