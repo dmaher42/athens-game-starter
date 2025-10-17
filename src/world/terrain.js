@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import {
   HARBOR_CENTER,
-  HARBOR_SEA_LEVEL,
   AGORA_CENTER_3D,
   CITY_AREA_RADIUS,
+  getSeaLevelY,
 } from "./locations.js";
 import {
   createGroundTextureState,
@@ -79,6 +79,7 @@ const HARBOR_FLOOR_TAPER_START = HARBOR_INNER_RADIUS * 0.4;
 const HARBOR_FLOOR_TAPER_END = HARBOR_INNER_RADIUS * 0.95;
 
 export function createTerrain(scene) {
+  const harborSeaLevel = getSeaLevelY();
   // A large subdivided plane gives us enough vertices to push around and create
   // rolling hills. More segments = smoother displacement at the cost of perf.
   const size = 500;
@@ -147,9 +148,9 @@ export function createTerrain(scene) {
           HARBOR_FLOOR_TAPER_START,
           HARBOR_FLOOR_TAPER_END,
         );
-        const harborShorelineSurface = HARBOR_SEA_LEVEL - 0.02; // tiny offset so shoreline doesn’t occlude water
+        const harborShorelineSurface = harborSeaLevel - 0.02; // tiny offset so shoreline doesn’t occlude water
         const harborTargetHeight = THREE.MathUtils.lerp(
-          HARBOR_SEA_LEVEL - HARBOR_FLOOR_DEPTH,
+          harborSeaLevel - HARBOR_FLOOR_DEPTH,
           harborShorelineSurface,
           THREE.MathUtils.clamp(depthBlend, 0, 1),
         );

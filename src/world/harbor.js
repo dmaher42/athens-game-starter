@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { queueSceneInteractable } from "./interactions.js";
-import { HARBOR_CENTER_3D } from "./locations.js";
+import { HARBOR_CENTER_3D, getSeaLevelY } from "./locations.js";
 
 const _postMatrix = new THREE.Matrix4();
 const _postPosition = new THREE.Vector3();
@@ -67,7 +67,13 @@ function buildPostMesh(name, positions, { height, radiusTop, radiusBottom, mater
 }
 
 export function createHarbor(scene, options = {}) {
+  const seaLevel = Number.isFinite(options?.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
   const center = options.center ? options.center.clone() : HARBOR_CENTER_3D.clone();
+  if (!Number.isFinite(options?.center?.y)) {
+    center.y = seaLevel;
+  }
   const mainLength = options.mainLength ?? 70;
   const mainWidth = options.mainWidth ?? 9;
   const deckHeight = options.deckHeight ?? 1.4;

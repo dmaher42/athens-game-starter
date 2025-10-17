@@ -43,6 +43,7 @@ export interface OceanOptions {
   baseTextureSize?: number;
   maxTextureSize?: number;
   devicePixelRatio?: number;
+  seaLevel?: number | null;
   waterNormals?: WaterNormalSource | Texture | DataTexture | null;
   waterNormalsUrl?: string | null;
   waterNormalsCandidates?: string[] | null;
@@ -65,7 +66,8 @@ export function mountWaterClipDebug(
   west: number,
   east: number,
   north: number,
-  south: number
+  south: number,
+  seaLevel?: number | null
 ): Line<BufferGeometry, LineBasicMaterial>;
 
 export function updateOcean(

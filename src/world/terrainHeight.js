@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { SEA_LEVEL_Y } from "./locations.js";
+import { getSeaLevelY } from "./locations.js";
 
 /** Ensure terrain.userData.getHeightAt(x,z) exists. */
 let activeHeightSampler = null;
@@ -37,7 +37,7 @@ export function attachHeightSampler(terrain) {
 export function probeAt(x, z) {
   const sampler = activeHeightSampler;
   const yTerrain = typeof sampler === "function" ? sampler(x, z) : NaN;
-  const ySea = SEA_LEVEL_Y;
+  const ySea = getSeaLevelY();
   return {
     yTerrain,
     ySea,
