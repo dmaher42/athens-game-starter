@@ -1,10 +1,14 @@
-import type { LoadingScreenOptions } from "@app/types";
+// @ts-check
 
-const STYLE_ID = "athens-loading-style" as const;
-const ROOT_ID = "athens-loading-screen" as const;
+/**
+ * @typedef {import("@app/types").LoadingScreenOptions} LoadingScreenOptions
+ */
+
+const STYLE_ID = "athens-loading-style";
+const ROOT_ID = "athens-loading-screen";
 const FACT_INTERVAL_MS = 6000;
 
-const DEFAULT_FACTS: readonly string[] = [
+const DEFAULT_FACTS = Object.freeze([
   "The Parthenon crowned the Acropolis as a temple to Athena Parthenos, the city's patron goddess.",
   "Citizens of Athens met in the Agora to debate policy, trade goods, and celebrate civic festivals.",
   "Classical Athenian democracy let eligible citizens vote directly on laws in the Ekklesia assembly.",
@@ -13,21 +17,29 @@ const DEFAULT_FACTS: readonly string[] = [
   "Playwrights like Sophocles and Euripides premiered tragedies for thousands in Athens' Theater of Dionysus.",
   "The philosopher Socrates spent his life in Athens asking probing questions about virtue and wisdom.",
   "Stone-cut terraces of the Acropolis blended natural rock with human craftsmanship to elevate sacred spaces.",
-];
+]);
 
-let rootEl: HTMLElement | null = null;
-let statusEl: HTMLElement | null = null;
-let factEl: HTMLElement | null = null;
-let factLabelEl: HTMLElement | null = null;
-let factTimer: number | null = null;
-let facts: readonly string[] = DEFAULT_FACTS;
+/** @type {HTMLElement | null} */
+let rootEl = null;
+/** @type {HTMLElement | null} */
+let statusEl = null;
+/** @type {HTMLElement | null} */
+let factEl = null;
+/** @type {HTMLElement | null} */
+let factLabelEl = null;
+/** @type {number | null} */
+let factTimer = null;
+/** @type {string[]} */
+let facts = [...DEFAULT_FACTS];
 let factIndex = 0;
 
-function ensureStyles(): void {
+function ensureStyles() {
   if (typeof document === "undefined") {
     return;
   }
+
   if (document.getElementById(STYLE_ID)) return;
+
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
@@ -108,11 +120,13 @@ function ensureStyles(): void {
   document.head.appendChild(style);
 }
 
-function createRoot(): HTMLElement | null {
+function createRoot() {
   if (typeof document === "undefined") {
     return null;
   }
+
   ensureStyles();
+
   const root = document.createElement("div");
   root.id = ROOT_ID;
   root.setAttribute("role", "status");
@@ -127,63 +141,82 @@ function createRoot(): HTMLElement | null {
     </div>
   `;
   document.body.appendChild(root);
+
   rootEl = root;
-  statusEl = root.querySelector<HTMLElement>(".athens-loading__status");
-  factEl = root.querySelector<HTMLElement>(".athens-loading__fact");
-  factLabelEl = root.querySelector<HTMLElement>(".athens-loading__fact-label");
+  statusEl = /** @type {HTMLElement | null} */ (
+    root.querySelector(".athens-loading__status")
+  );
+  factEl = /** @type {HTMLElement | null} */ (
+    root.querySelector(".athens-loading__fact")
+  );
+  factLabelEl = /** @type {HTMLElement | null} */ (
+    root.querySelector(".athens-loading__fact-label")
+  );
+
   return root;
 }
 
-function stopFactRotation(): void {
+function stopFactRotation() {
   if (factTimer !== null && typeof window !== "undefined") {
     window.clearInterval(factTimer);
     factTimer = null;
   }
 }
 
-function setFactText(text: string): void {
+function setFactText(text) {
   if (!factEl) return;
   factEl.textContent = text;
 }
 
-function nextFact(): void {
+function nextFact() {
   if (!facts.length) {
     setFactText("");
     return;
   }
+
   factIndex = (factIndex + 1) % facts.length;
   const next = facts[factIndex] ?? "";
   setFactText(next);
 }
 
-function startFactRotation(): void {
+function startFactRotation() {
   stopFactRotation();
+
   if (typeof window === "undefined") {
     setFactText(facts[0] || "");
     return;
   }
+
   if (!factEl || facts.length <= 1) {
     setFactText(facts[0] || "");
     return;
   }
+
   const current = facts[factIndex] ?? "";
   setFactText(current);
+
   factTimer = window.setInterval(() => {
     nextFact();
   }, FACT_INTERVAL_MS);
 }
 
-function ensureFactList(customFacts: LoadingScreenOptions["facts"]): void {
+/**
+ * @param {LoadingScreenOptions["facts"]} customFacts
+ */
+function ensureFactList(customFacts) {
   if (Array.isArray(customFacts) && customFacts.length) {
     facts = customFacts.filter(
-      (fact): fact is string => typeof fact === "string" && fact.trim().length > 0,
+      /** @param {unknown} fact */
+      (fact) => typeof fact === "string" && fact.trim().length > 0,
     );
   } else {
-    facts = DEFAULT_FACTS;
+    facts = [...DEFAULT_FACTS];
   }
+
   if (!facts.length) {
-    facts = DEFAULT_FACTS;
+    facts = [...DEFAULT_FACTS];
   }
+
   if (typeof Math.random === "function") {
     factIndex = Math.floor(Math.random() * facts.length);
   } else {
@@ -191,61 +224,82 @@ function ensureFactList(customFacts: LoadingScreenOptions["facts"]): void {
   }
 }
 
-export function showLoadingScreen({ facts: customFacts, initialStatus }: LoadingScreenOptions = {}): void {
+/**
+ * @param {LoadingScreenOptions} [options]
+ */
+export function showLoadingScreen({ facts: customFacts, initialStatus } = {}) {
   if (typeof document === "undefined") {
     return;
   }
+
   if (!rootEl) {
     createRoot();
   }
+
   ensureFactList(customFacts);
+
   if (initialStatus) {
     updateLoadingStatus(initialStatus);
   } else {
     updateLoadingStatus("Preparing the experience...");
   }
+
   if (rootEl) {
     rootEl.classList.remove("is-hidden", "is-error");
     rootEl.style.opacity = "1";
   }
+
   startFactRotation();
 }
 
-export function updateLoadingStatus(message: string): void {
+export function updateLoadingStatus(message) {
   if (!rootEl || !statusEl) return;
+
   if (typeof message === "string" && message.trim().length) {
     statusEl.textContent = message;
   }
 }
 
-export function showLoadingError(message?: string): void {
+export function showLoadingError(message) {
   if (typeof document === "undefined") {
     return;
   }
+
   if (!rootEl) {
     showLoadingScreen();
   }
+
   if (!rootEl) return;
+
   stopFactRotation();
+
   rootEl.classList.add("is-error");
-  updateLoadingStatus(message || "We couldn't finish loading Athens. Please refresh to try again.");
+  updateLoadingStatus(
+    message || "We couldn't finish loading Athens. Please refresh to try again.",
+  );
+
   if (factLabelEl) {
     factLabelEl.textContent = "What went wrong?";
   }
+
   if (factEl) {
-    factEl.textContent = "Check your connection and reload the page to continue exploring.";
+    factEl.textContent =
+      "Check your connection and reload the page to continue exploring.";
   }
 }
 
-export function hideLoadingScreen(): void {
+export function hideLoadingScreen() {
   if (!rootEl) return;
+
   rootEl.classList.add("is-hidden");
   stopFactRotation();
+
   const elementToRemove = rootEl;
   rootEl = null;
   statusEl = null;
   factEl = null;
   factLabelEl = null;
+
   if (typeof window !== "undefined") {
     window.setTimeout(() => {
       elementToRemove.remove();
