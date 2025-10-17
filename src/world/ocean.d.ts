@@ -1,12 +1,4 @@
-import type {
-  BufferGeometry,
-  DataTexture,
-  Line,
-  LineBasicMaterial,
-  Scene,
-  Texture,
-  Vector3,
-} from "three";
+import type { BufferGeometry, DataTexture, Group, Scene, Texture, Vector3 } from "three";
 import type {
   Water,
   WaterMaterial,
@@ -39,6 +31,19 @@ export interface OceanBoundsOptions {
   south: number;
 }
 
+export interface OceanClipPaddingOptions {
+  front?: number | null;
+  back?: number | null;
+  north?: number | null;
+  south?: number | null;
+}
+
+export interface OceanTerrainSampler {
+  userData?: {
+    getHeightAt?: ((x: number, z: number) => number | null | undefined) | null;
+  };
+}
+
 export interface OceanOptions {
   baseTextureSize?: number;
   maxTextureSize?: number;
@@ -50,6 +55,10 @@ export interface OceanOptions {
   position?: OceanPositionOptions | null;
   size?: OceanSizeOptions | null;
   bounds?: OceanBoundsOptions | null;
+  shoreBlendWidth?: number | null;
+  clipPadding?: number | OceanClipPaddingOptions | null;
+  heightSampler?: ((x: number, z: number) => number | null | undefined) | null;
+  terrain?: OceanTerrainSampler | null;
 }
 
 export interface OceanHandle {
@@ -63,12 +72,10 @@ export function createOcean(scene: Scene, options?: OceanOptions): Promise<Ocean
 
 export function mountWaterClipDebug(
   scene: Scene,
-  west: number,
-  east: number,
-  north: number,
-  south: number,
-  seaLevel?: number | null
-): Line<BufferGeometry, LineBasicMaterial>;
+  rawBounds?: OceanBoundsOptions | null,
+  clipBounds?: OceanBoundsOptions | null,
+  seaLevel?: number | null,
+): Group | null;
 
 export function updateOcean(
   ocean: OceanHandle | null | undefined,

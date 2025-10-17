@@ -545,6 +545,7 @@ export class Application {
       bounds: HARBOR_WATER_BOUNDS,
       waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
       seaLevel: resolvedSeaLevel,
+      shoreBlendWidth: 4,
     });
     this.ocean = ocean;
     onFogChange(fogEnabled);
