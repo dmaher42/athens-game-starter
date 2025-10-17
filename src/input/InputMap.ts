@@ -4,20 +4,21 @@ import {
   defaultCameraSettings,
   type CameraSettings,
 } from "../state/settingsStore";
-import { MOVEMENT_ONLY_KEYS, LOOK_KEYS, flattenKeyGroups } from "./keyBindings";
+import {
+  MOVEMENT_ONLY_KEYS,
+  ALL_LOOK_KEYS,
+  ACTION_KEYS,
+  flattenKeyGroups,
+} from "./keyBindings";
 
-const LOOK_KEY_LIST = flattenKeyGroups(LOOK_KEYS);
+const LOOK_KEY_LIST = flattenKeyGroups(ALL_LOOK_KEYS);
 const MOVEMENT_KEY_LIST = flattenKeyGroups(MOVEMENT_ONLY_KEYS);
+const ACTION_KEY_LIST = flattenKeyGroups(ACTION_KEYS);
 
 const CONTROL_KEYS = new Set<string>([
   ...MOVEMENT_KEY_LIST,
   ...LOOK_KEY_LIST,
-  "ShiftLeft",
-  "ShiftRight",
-  "Space",
-  "ControlLeft",
-  "ControlRight",
-  "KeyF",
+  ...ACTION_KEY_LIST,
 ]);
 
 const NON_TYPING_INPUT_TYPES = new Set<string>([
@@ -89,7 +90,7 @@ export class InputMap {
         return;
       }
       this.keys.add(event.code);
-      if (event.code === "KeyF" && !event.repeat) {
+      if (event.code === "KeyG" && !event.repeat) {
         this.flyToggleQueued = true;
       }
       if (CONTROL_KEYS.has(event.code)) {
@@ -202,19 +203,23 @@ export class InputMap {
   }
 
   get lookLeft(): boolean {
-    return this.isAnyDown(LOOK_KEYS.left);
+    return this.isAnyDown(ALL_LOOK_KEYS.left);
   }
 
   get lookRight(): boolean {
-    return this.isAnyDown(LOOK_KEYS.right);
+    return this.isAnyDown(ALL_LOOK_KEYS.right);
   }
 
   get lookUp(): boolean {
-    return this.isAnyDown(LOOK_KEYS.up);
+    return this.isAnyDown(ALL_LOOK_KEYS.up);
   }
 
   get lookDown(): boolean {
-    return this.isAnyDown(LOOK_KEYS.down);
+    return this.isAnyDown(ALL_LOOK_KEYS.down);
+  }
+
+  get crouch(): boolean {
+    return this.isAnyDown(ACTION_KEYS.crouch);
   }
 
   consumeFlyToggle(): boolean {
