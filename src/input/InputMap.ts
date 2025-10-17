@@ -2,13 +2,14 @@ import {
   loadSettings,
   subscribe,
   defaultCameraSettings,
-} from "../state/settingsStore.ts";
-import { MOVEMENT_ONLY_KEYS, LOOK_KEYS, flattenKeyGroups } from "./keyBindings.js";
+  type CameraSettings,
+} from "../state/settingsStore";
+import { MOVEMENT_ONLY_KEYS, LOOK_KEYS, flattenKeyGroups } from "./keyBindings";
 
 const LOOK_KEY_LIST = flattenKeyGroups(LOOK_KEYS);
 const MOVEMENT_KEY_LIST = flattenKeyGroups(MOVEMENT_ONLY_KEYS);
 
-const CONTROL_KEYS = new Set([
+const CONTROL_KEYS = new Set<string>([
   ...MOVEMENT_KEY_LIST,
   ...LOOK_KEY_LIST,
   "ShiftLeft",
@@ -19,7 +20,7 @@ const CONTROL_KEYS = new Set([
   "KeyF",
 ]);
 
-const NON_TYPING_INPUT_TYPES = new Set([
+const NON_TYPING_INPUT_TYPES = new Set<string>([
   "button",
   "checkbox",
   "radio",
@@ -31,10 +32,7 @@ const NON_TYPING_INPUT_TYPES = new Set([
   "image",
 ]);
 
-/**
- * @param {EventTarget | null} target
- */
-function isEditableTarget(target) {
+function isEditableTarget(target: EventTarget | null): target is HTMLElement {
   if (!target || typeof target !== "object") {
     return false;
   }
@@ -59,33 +57,34 @@ function isEditableTarget(target) {
   return false;
 }
 
-/**
- * @typedef {{ yaw: number, pitch: number }} LookDelta
- */
+export interface LookDelta {
+  yaw: number;
+  pitch: number;
+}
+
+type KeyHandler = (event: KeyboardEvent) => void;
+type BlurHandler = (event: FocusEvent) => void;
 
 export class InputMap {
-  /**
-   * @param {HTMLCanvasElement | null} [canvas]
-   */
-  constructor(canvas = null) {
-    /** @private */
-    this.keys = new Set();
-    /** @private */
+  private readonly keys: Set<string> = new Set();
+  private readonly canvas: HTMLCanvasElement | null;
+  private flyToggleQueued = false;
+  private cameraSettings: CameraSettings | null;
+  private unsubscribeCameraSettings: (() => void) | null = null;
+  private readonly keyDownHandler: KeyHandler;
+  private readonly keyUpHandler: KeyHandler;
+  private readonly blurHandler: BlurHandler;
+
+  constructor(canvas: HTMLCanvasElement | null = null) {
     this.canvas = canvas;
 
-    /** @private */
-    this.flyToggleQueued = false;
-
     // CameraSettingsStore: sync arrow-key look speeds
-    /** @private */
     this.cameraSettings = loadSettings();
-    /** @private */
     this.unsubscribeCameraSettings = subscribe((settings) => {
       this.cameraSettings = settings;
     });
 
-    /** @private */
-    this.keyDownHandler = (event) => {
+    this.keyDownHandler = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) {
         return;
       }
@@ -97,8 +96,8 @@ export class InputMap {
         event.preventDefault();
       }
     };
-    /** @private */
-    this.keyUpHandler = (event) => {
+
+    this.keyUpHandler = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) {
         return;
       }
@@ -107,19 +106,19 @@ export class InputMap {
         event.preventDefault();
       }
     };
-    /** @private */
+
     this.blurHandler = () => {
       this.resetKeys();
       this.flyToggleQueued = false;
     };
-    /** @private */
+
     window.addEventListener("keydown", this.keyDownHandler);
     window.addEventListener("keyup", this.keyUpHandler);
     window.addEventListener("blur", this.blurHandler);
     window.addEventListener("focus", this.blurHandler);
   }
 
-  dispose() {
+  dispose(): void {
     window.removeEventListener("keydown", this.keyDownHandler);
     window.removeEventListener("keyup", this.keyUpHandler);
     window.removeEventListener("blur", this.blurHandler);
@@ -128,11 +127,7 @@ export class InputMap {
     this.unsubscribeCameraSettings = null;
   }
 
-  /**
-   * @param {number} [dt=0]
-   * @returns {LookDelta}
-   */
-  consumeLookDelta(dt = 0) {
+  consumeLookDelta(dt = 0): LookDelta {
     const settings = this.cameraSettings || defaultCameraSettings;
     if (!settings.enableArrowOrbit) {
       return { yaw: 0, pitch: 0 };
@@ -158,17 +153,11 @@ export class InputMap {
     };
   }
 
-  /**
-   * @param {string} code
-   */
-  isDown(code) {
+  isDown(code: string): boolean {
     return this.keys.has(code);
   }
 
-  /**
-   * @param {string[]} codes
-   */
-  isAnyDown(codes = []) {
+  isAnyDown(codes: readonly string[] = []): boolean {
     if (!Array.isArray(codes) || codes.length === 0) {
       return false;
     }
@@ -180,65 +169,63 @@ export class InputMap {
     return false;
   }
 
-  get forward() {
+  get forward(): boolean {
     return this.isAnyDown(MOVEMENT_ONLY_KEYS.forward);
   }
 
-  get back() {
+  get back(): boolean {
     return this.isAnyDown(MOVEMENT_ONLY_KEYS.back);
   }
 
-  get left() {
+  get left(): boolean {
     return this.isAnyDown(MOVEMENT_ONLY_KEYS.left);
   }
 
-  get right() {
+  get right(): boolean {
     return this.isAnyDown(MOVEMENT_ONLY_KEYS.right);
   }
 
-  get sprint() {
+  get sprint(): boolean {
     return this.isDown("ShiftLeft") || this.isDown("ShiftRight");
   }
 
-  get jump() {
+  get jump(): boolean {
     return this.isDown("Space");
   }
 
-  get flyUp() {
+  get flyUp(): boolean {
     return this.isDown("Space");
   }
 
-  get flyDown() {
+  get flyDown(): boolean {
     return this.isDown("ControlLeft") || this.isDown("ControlRight");
   }
 
-  get lookLeft() {
+  get lookLeft(): boolean {
     return this.isAnyDown(LOOK_KEYS.left);
   }
 
-  get lookRight() {
+  get lookRight(): boolean {
     return this.isAnyDown(LOOK_KEYS.right);
   }
 
-  get lookUp() {
+  get lookUp(): boolean {
     return this.isAnyDown(LOOK_KEYS.up);
   }
 
-  get lookDown() {
+  get lookDown(): boolean {
     return this.isAnyDown(LOOK_KEYS.down);
   }
 
-  consumeFlyToggle() {
+  consumeFlyToggle(): boolean {
     if (!this.flyToggleQueued) return false;
     this.flyToggleQueued = false;
     return true;
   }
 
-  /** @private */
-  resetKeys() {
+  private resetKeys(): void {
     this.keys.clear();
   }
-
 }
 
 export default InputMap;

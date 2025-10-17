@@ -16,7 +16,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 
 export class PlayerController {
   /**
-   * @param {import('../input/InputMap.js').InputMap} input
+   * @param {import('../input/InputMap').InputMap} input
    * @param {import('../env/EnvironmentCollider.js').EnvironmentCollider} env
    * @param {PlayerOptions} [opts]
    */
