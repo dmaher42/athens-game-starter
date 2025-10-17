@@ -2,7 +2,7 @@
 
 import * as THREE from "three";
 import { Soundscape } from "../audio/soundscape.js";
-import { mountAudioMixer } from "../ui/audioMixer.js";
+import { mountAudioMixer } from "../ui/audioMixer.ts";
 import { createSky, updateSky, setTimeOfDayPhase } from "../world/sky.js";
 import { createLighting, updateLighting } from "../world/lighting.js";
 import {
@@ -48,24 +48,24 @@ import {
 } from "../world/landmarks.js";
 import { createCivicDistrict } from "../world/cityPlan.js";
 import { createCityPlanImplementation } from "../world/cityPlanImplementation.js";
-import { InputMap } from "../input/InputMap";
+import { InputMap } from "../input/InputMap.ts";
 import { EnvironmentCollider } from "../env/EnvironmentCollider.js";
 import { BuildingManager } from "../buildings/BuildingManager.js";
 import { PlayerController } from "../controls/PlayerController.js";
 import { ThirdPersonCamera } from "../controls/ThirdPersonCamera.js";
 import { Character } from "../characters/Character.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
-import { mountExposureSlider } from "../ui/exposureSlider.js";
-import { mountHotkeyOverlay } from "../ui/hotkeyOverlay.js";
-import { mountDevHUD } from "../ui/devHud.js";
-import { mountMiniMap } from "../ui/miniMap.js";
-import { mount as mountHUDCameraSettings } from "../ui/HUDCameraSettings.js";
+import { mountExposureSlider } from "../ui/exposureSlider.ts";
+import { mountHotkeyOverlay } from "../ui/hotkeyOverlay.ts";
+import { mountDevHUD } from "../ui/devHud.ts";
+import { mountMiniMap } from "../ui/miniMap.ts";
+import { mount as mountHUDCameraSettings } from "../ui/HUDCameraSettings.ts";
 import {
   showLoadingScreen,
   updateLoadingStatus,
   showLoadingError,
   hideLoadingScreen,
-} from "../ui/loadingScreen.js";
+} from "../ui/loadingScreen.ts";
 import { createPin } from "../world/pins.js";
 import { attachHeightSampler, probeAt } from "../world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "../world/occluders.js";

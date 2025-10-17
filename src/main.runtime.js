@@ -2,7 +2,7 @@ import "./materials/enhanceStandardMaterial.js";
 
 import { Application } from "./core/Application.js";
 import { engineConfig } from "./config/EngineConfig.js";
-import { showLoadingError } from "./ui/loadingScreen.js";
+import { showLoadingError } from "./ui/loadingScreen.ts";
 
 function toUrlSearchParams(value) {
   if (value instanceof URLSearchParams) {
