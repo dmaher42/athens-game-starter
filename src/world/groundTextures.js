@@ -1,5 +1,8 @@
 import * as THREE from "three";
-import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
+import {
+  GROUND_TEXTURE_CONFIG,
+  NEUTRAL_GROUND_FALLBACK_TINT,
+} from "./groundTextureConfig.js";
 import {
   createDryGrassDetailTexture,
   createFreshGrassLowlandsTexture,
@@ -75,6 +78,22 @@ const PROCEDURAL_GENERATORS = {
       contrast: config.contrast,
     }),
 };
+
+function cloneWithNeutralFallbackTint(config) {
+  if (!config) return config;
+  if (config.preserveFallbackTint) {
+    return { ...config };
+  }
+  return {
+    ...config,
+    baseColor: [...NEUTRAL_GROUND_FALLBACK_TINT.baseColor],
+    shadowColor: [...NEUTRAL_GROUND_FALLBACK_TINT.shadowColor],
+    highlightColor: [...NEUTRAL_GROUND_FALLBACK_TINT.highlightColor],
+    shadowStrength: NEUTRAL_GROUND_FALLBACK_TINT.shadowStrength,
+    highlightStrength: NEUTRAL_GROUND_FALLBACK_TINT.highlightStrength,
+    contrast: NEUTRAL_GROUND_FALLBACK_TINT.contrast,
+  };
+}
 
 function loadAdditionalTexture(url, baseConfig, overrides = {}) {
   if (!url) return null;
@@ -215,11 +234,43 @@ export function createGroundTextureState(
   }
 
   if (baseConfig?.url || baseConfig?.generator || baseConfig?.procedural) {
-    const baseTexture = baseConfig.url
-      ? loadTexture(baseConfig.url, baseConfig)
-      : createProceduralTexture(baseConfig);
+    const hasProceduralFallback = baseConfig?.generator || baseConfig?.procedural;
+    const fallbackConfig =
+      baseConfig?.url && hasProceduralFallback
+        ? cloneWithNeutralFallbackTint(baseConfig)
+        : null;
+
+    let baseTexture = null;
+    let usingFallbackTint = false;
+
+    if (baseConfig?.url) {
+      baseTexture = loadTexture(
+        baseConfig.url,
+        baseConfig,
+        () => {
+          if (!material || !fallbackConfig) return;
+          const fallbackTexture = createProceduralTexture(fallbackConfig);
+          if (fallbackTexture) {
+            configureTexture(fallbackTexture, fallbackConfig);
+            material.map = fallbackTexture;
+            material.needsUpdate = true;
+          }
+        },
+      );
+
+      if (!baseTexture && fallbackConfig) {
+        baseTexture = createProceduralTexture(fallbackConfig);
+        usingFallbackTint = Boolean(baseTexture);
+      }
+    } else if (hasProceduralFallback) {
+      baseTexture = createProceduralTexture(baseConfig);
+    }
+
     if (baseTexture) {
-      configureTexture(baseTexture, baseConfig);
+      const textureOptions = usingFallbackTint && fallbackConfig
+        ? fallbackConfig
+        : baseConfig;
+      configureTexture(baseTexture, textureOptions);
       material.map = baseTexture;
       material.needsUpdate = true;
     }

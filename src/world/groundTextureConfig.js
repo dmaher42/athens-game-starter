@@ -2,6 +2,15 @@
 // existing vertex-colored ground. The JPG files referenced here should live in
 // the public/textures/ground directory. Values are safe defaults that won't try
 // to load textures until you provide URLs.
+export const NEUTRAL_GROUND_FALLBACK_TINT = {
+  baseColor: [160, 160, 160],
+  shadowColor: [120, 120, 120],
+  highlightColor: [200, 200, 200],
+  shadowStrength: 0.22,
+  highlightStrength: 0.28,
+  contrast: 1,
+};
+
 const textureUrl = (filename) => {
   const baseUrl = import.meta?.env?.BASE_URL ?? "/";
   return `${baseUrl}textures/ground/${filename}`;
@@ -12,7 +21,7 @@ export const GROUND_TEXTURE_CONFIG = {
    * Optional base map that replaces the flat color tint of the material. This
    * is useful for broad strokes like grass or dirt. Leave the URL as null to
    * keep the existing vertex colors.
-  */
+   */
   base: {
     /**
      * Keep the procedural generator available as a fallback if the JPGs are
@@ -35,13 +44,19 @@ export const GROUND_TEXTURE_CONFIG = {
     metalness: 0.02,
     aoUrl: textureUrl("grass-ao.jpg"),
     aoIntensity: 1.2,
-    /** Brighten the procedural fallback grass so the terrain reads lighter overall. */
-    baseColor: [121, 182, 112], // Grass weight/tint bump
-    shadowColor: [67, 117, 70], // Grass weight/tint bump
-    highlightColor: [198, 246, 154], // Grass weight/tint bump
-    shadowStrength: 0.45,
-    highlightStrength: 0.65,
-    contrast: 1.02,
+    /**
+     * Neutral tint defaults keep the fallback generator close to the vertex
+     * colors. Artists can re-introduce stronger tints by overriding these
+     * values or setting preserveFallbackTint to true when authoring new
+     * textures.
+     */
+    preserveFallbackTint: false,
+    baseColor: [...NEUTRAL_GROUND_FALLBACK_TINT.baseColor],
+    shadowColor: [...NEUTRAL_GROUND_FALLBACK_TINT.shadowColor],
+    highlightColor: [...NEUTRAL_GROUND_FALLBACK_TINT.highlightColor],
+    shadowStrength: NEUTRAL_GROUND_FALLBACK_TINT.shadowStrength,
+    highlightStrength: NEUTRAL_GROUND_FALLBACK_TINT.highlightStrength,
+    contrast: NEUTRAL_GROUND_FALLBACK_TINT.contrast,
     /** Repeat count for the base texture across the terrain. */
     // de-tiling: lower repeats + anisotropy + slight rotation
     repeat: [18, 18],
