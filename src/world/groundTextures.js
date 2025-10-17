@@ -187,6 +187,14 @@ function createDetailLayer(config) {
   configureTexture(texture, config);
 
   const strength = THREE.MathUtils.clamp(config.strength ?? 0.35, 0, 1);
+  const hasRealTexture = Boolean(config?.url);
+  const attenuationOverride = Number.isFinite(config?.tintAttenuation)
+    ? config.tintAttenuation
+    : undefined;
+  const tintAttenuation = hasRealTexture
+    ? THREE.MathUtils.clamp(attenuationOverride ?? 0.45, 0, 1)
+    : THREE.MathUtils.clamp(attenuationOverride ?? 1, 0, 1);
+  const effectiveStrength = strength * tintAttenuation;
   const minHeight = Number.isFinite(config.minHeight)
     ? config.minHeight
     : -1000;
@@ -195,24 +203,28 @@ function createDetailLayer(config) {
     : 1000;
   const fade = Math.max(config.fade ?? 8, 0);
 
+  const applyTintMultiplier = config.tintMultiplier !== false;
   const tint = new THREE.Color(1, 1, 1);
-  if (Array.isArray(config.tint)) {
-    tint.setRGB(
-      config.tint[0] ?? 1,
-      config.tint[1] ?? config.tint[0] ?? 1,
-      config.tint[2] ?? config.tint[1] ?? config.tint[0] ?? 1,
-    );
-  } else if (typeof config.tint === "string") {
-    tint.set(config.tint);
+  if (applyTintMultiplier) {
+    if (Array.isArray(config.tint)) {
+      tint.setRGB(
+        config.tint[0] ?? 1,
+        config.tint[1] ?? config.tint[0] ?? 1,
+        config.tint[2] ?? config.tint[1] ?? config.tint[0] ?? 1,
+      );
+    } else if (typeof config.tint === "string") {
+      tint.set(config.tint);
+    }
   }
 
   const mode = config.mode === "mix" ? 1 : 0;
 
   return {
     texture,
-    params: new THREE.Vector4(minHeight, maxHeight, fade, strength),
+    params: new THREE.Vector4(minHeight, maxHeight, fade, effectiveStrength),
     tint,
     mode,
+    tintMultiplier: applyTintMultiplier ? 1 : 0,
   };
 }
 
@@ -377,11 +389,15 @@ export function injectGroundTextureShader(shader, state) {
     const paramName = `uGroundDetailParams${index}`;
     const tintName = `uGroundDetailTint${index}`;
     const modeName = `uGroundDetailMode${index}`;
+    const tintMultiplierName = `uGroundDetailTintMultiplier${index}`;
 
     shader.uniforms[mapName] = { value: layer.texture };
     shader.uniforms[paramName] = { value: layer.params };
     shader.uniforms[tintName] = { value: layer.tint };
     shader.uniforms[modeName] = { value: layer.mode };
+    shader.uniforms[tintMultiplierName] = {
+      value: layer.tintMultiplier ?? 1,
+    };
 
     header.push(
       [
@@ -389,6 +405,7 @@ export function injectGroundTextureShader(shader, state) {
         `uniform vec4 ${paramName};`,
         `uniform vec3 ${tintName};`,
         `uniform float ${modeName};`,
+        `uniform float ${tintMultiplierName};`,
       ].join("\n"),
     );
 
@@ -406,7 +423,8 @@ export function injectGroundTextureShader(shader, state) {
         }
         float layerStrength = strength * mask;
         if (layerStrength > 0.0) {
-          vec3 layerColor = detailSample.rgb * ${tintName};
+          vec3 layerColor = detailSample.rgb;
+          layerColor *= mix(vec3(1.0), ${tintName}, ${tintMultiplierName});
           if (abs(${modeName} - 1.0) < 0.5) {
             diffuseColor.rgb = mix(diffuseColor.rgb, layerColor, layerStrength);
           } else {
