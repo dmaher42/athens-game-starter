@@ -68,10 +68,11 @@ export const GROUND_TEXTURE_CONFIG = {
       tint: [1.02, 1.02, 1], // Heavier tinting is best reserved for procedural-only setups
       minHeight: -15,
       maxHeight: 32,
-      fade: 10, // Grass weight/tint bump
-      slopeMax: 0.42, // Grass weight/tint bump
+      fade: 18, // Broader cross-fade keeps blends subtle
+      slopeMax: 0.33, // Favor gentler slopes when photo textures drive the look
       mode: "mix",
       seed: 404,
+      tintAttenuation: 0.42,
     },
     // extra detail layers for lowlands/midslopes
     {
@@ -83,10 +84,11 @@ export const GROUND_TEXTURE_CONFIG = {
       tint: [1, 1.03, 1], // Heavier tinting is best reserved for procedural-only setups
       minHeight: -20,
       maxHeight: 18, // Grass weight/tint bump
-      fade: 8, // Grass weight/tint bump
-      slopeMax: 0.38, // Grass weight/tint bump
+      fade: 16, // Broader cross-fade keeps blends subtle
+      slopeMax: 0.29, // Favor gentler slopes when photo textures drive the look
       mode: "mix",
       seed: 405,
+      tintAttenuation: 0.4,
     },
     {
       generator: "dry-grass-detail",
@@ -97,10 +99,11 @@ export const GROUND_TEXTURE_CONFIG = {
       tint: [1.03, 1, 0.96], // Heavier tinting is best reserved for procedural-only setups
       minHeight: 16, // Grass weight/tint bump
       maxHeight: 46, // Grass weight/tint bump
-      fade: 6, // Grass weight/tint bump
-      slopeMin: 0.32, // Grass weight/tint bump
+      fade: 14, // Broader cross-fade keeps blends subtle
+      slopeMin: 0.21, // Favor gentler slopes when photo textures drive the look
       mode: "multiply",
       seed: 406,
+      tintAttenuation: 0.38,
     },
   ],
 };
