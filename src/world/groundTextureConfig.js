@@ -57,13 +57,15 @@ export const GROUND_TEXTURE_CONFIG = {
    * lush. Add or remove entries in this array to match the JPGs you provide.
    */
   details: [
-    { 
+    // Set tintMultiplier: false on any entry to bypass tinting when relying on
+    // baked-in color work.
+    {
       generator: "lush-grass-detail",
       repeat: [36, 36],
       rotation: 0.23,
       anisotropy: 8,
-      strength: 0.75, // Grass weight/tint bump
-      tint: [1.1, 1.12, 1.02],
+      strength: 0.38, // Softer blend for photo textures
+      tint: [1.02, 1.02, 1], // Heavier tinting is best reserved for procedural-only setups
       minHeight: -15,
       maxHeight: 32,
       fade: 10, // Grass weight/tint bump
@@ -77,8 +79,8 @@ export const GROUND_TEXTURE_CONFIG = {
       repeat: [48, 48],
       rotation: 0.47,
       anisotropy: 8,
-      strength: 0.5, // Grass weight/tint bump
-      tint: [1.18, 1.2, 1.08], // Grass weight/tint bump
+      strength: 0.32, // Softer blend for photo textures
+      tint: [1, 1.03, 1], // Heavier tinting is best reserved for procedural-only setups
       minHeight: -20,
       maxHeight: 18, // Grass weight/tint bump
       fade: 8, // Grass weight/tint bump
@@ -91,8 +93,8 @@ export const GROUND_TEXTURE_CONFIG = {
       repeat: [32, 32],
       rotation: 0.11,
       anisotropy: 8,
-      strength: 0.28, // Grass weight/tint bump
-      tint: [1.04, 1, 0.92], // Grass weight/tint bump
+      strength: 0.27, // Softer blend for photo textures
+      tint: [1.03, 1, 0.96], // Heavier tinting is best reserved for procedural-only setups
       minHeight: 16, // Grass weight/tint bump
       maxHeight: 46, // Grass weight/tint bump
       fade: 6, // Grass weight/tint bump
