@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { queueSceneInteractable } from "./interactions.js";
-import { HARBOR_CENTER_3D, getSeaLevelY } from "./locations.js";
+import { HARBOR_CENTER_3D, getSeaLevelY, getHarborSeaLevel } from "./locations.js";
+import {
+  HARBOR_FLOOR_DEPTH,
+  getHarborShoreBlendProfile,
+} from "./harborTerrainConfig.js";
 
 const _postMatrix = new THREE.Matrix4();
 const _postPosition = new THREE.Vector3();
@@ -34,21 +38,77 @@ function accumulateEdgePosts(target, options) {
 
   const halfWidth = width / 2 - inset;
   const halfLength = length / 2 - inset;
-  const baseY = deckHeight - postHeight;
-
   for (let z = -halfLength; z <= halfLength + 1e-3; z += spacing) {
-    target.push({ x: offsetX - halfWidth, y: baseY, z: offsetZ + z });
-    target.push({ x: offsetX + halfWidth, y: baseY, z: offsetZ + z });
+    target.push({ x: offsetX - halfWidth, z: offsetZ + z });
+    target.push({ x: offsetX + halfWidth, z: offsetZ + z });
   }
 }
 
-function buildPostMesh(name, positions, { height, radiusTop, radiusBottom, material }) {
+function resolvePostInstances(positions, context = {}) {
+  const {
+    center,
+    deckHeight,
+    defaultHeight,
+    terrainHeightSampler,
+    harborProfile,
+    seaLevel,
+  } = context;
+
+  if (!Array.isArray(positions) || positions.length === 0) {
+    return [];
+  }
+
+  const deckWorldY = (center?.y ?? 0) + (deckHeight ?? 0);
+  const radii = harborProfile?.radii ?? {};
+  const innerRadius = radii.inner ?? 0;
+  const shelfRadius = radii.shelf ?? innerRadius;
+  const outerRadius = radii.outer ?? shelfRadius;
+  const resolvedSeaLevel = Number.isFinite(seaLevel) ? seaLevel : getHarborSeaLevel();
+  const shelfHeight = resolvedSeaLevel - (harborProfile?.shoreShelfDepth ?? 0);
+  const shorelineHeight = resolvedSeaLevel;
+  const floorHeight = shorelineHeight - HARBOR_FLOOR_DEPTH;
+
+  return positions.map((position) => {
+    const worldX = (center?.x ?? 0) + position.x;
+    const worldZ = (center?.z ?? 0) + position.z;
+    const dx = worldX - (center?.x ?? 0);
+    const dz = worldZ - (center?.z ?? 0);
+    const distance = Math.hypot(dx, dz);
+
+    let groundSample = terrainHeightSampler?.(worldX, worldZ);
+    let groundY = Number.isFinite(groundSample)
+      ? groundSample
+      : undefined;
+
+    if (!Number.isFinite(groundY)) {
+      if (distance <= innerRadius) {
+        groundY = floorHeight;
+      } else if (distance <= shelfRadius) {
+        groundY = shelfHeight;
+      } else if (distance <= outerRadius) {
+        groundY = shorelineHeight;
+      } else {
+        groundY = deckWorldY - defaultHeight;
+      }
+    }
+
+    const resolvedHeight = Math.max(0.5, deckWorldY - groundY);
+    return {
+      x: position.x,
+      y: deckHeight - resolvedHeight,
+      z: position.z,
+      height: resolvedHeight,
+    };
+  });
+}
+
+function buildPostMesh(name, positions, { defaultHeight, radiusTop, radiusBottom, material }) {
   if (!positions || positions.length === 0) {
     return null;
   }
 
-  const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 12);
-  geometry.translate(0, height / 2, 0);
+  const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, defaultHeight, 12);
+  geometry.translate(0, defaultHeight / 2, 0);
 
   const mesh = new THREE.InstancedMesh(geometry, material, positions.length);
   mesh.name = name;
@@ -57,6 +117,8 @@ function buildPostMesh(name, positions, { height, radiusTop, radiusBottom, mater
 
   for (let i = 0; i < positions.length; i++) {
     const position = positions[i];
+    const scaleY = position.height ? position.height / defaultHeight : 1;
+    _postScale.set(1, scaleY, 1);
     _postPosition.set(position.x, position.y, position.z);
     _postMatrix.compose(_postPosition, _identityQuaternion, _postScale);
     mesh.setMatrixAt(i, _postMatrix);
@@ -70,6 +132,7 @@ export function createHarbor(scene, options = {}) {
   const seaLevel = Number.isFinite(options?.seaLevel)
     ? options.seaLevel
     : getSeaLevelY();
+  const harborProfile = getHarborShoreBlendProfile();
   const center = options.center ? options.center.clone() : HARBOR_CENTER_3D.clone();
   if (!Number.isFinite(options?.center?.y)) {
     center.y = seaLevel;
@@ -117,15 +180,11 @@ export function createHarbor(scene, options = {}) {
     width: mainWidth,
     length: mainLength,
     spacing: postSpacing,
-    deckHeight,
-    postHeight: pierPostHeight,
   });
   accumulateEdgePosts(pierPostPositions, {
     width: mainWidth - 4,
     length: spurLength,
     spacing: postSpacing,
-    deckHeight,
-    postHeight: pierPostHeight,
     offsetX: -mainWidth / 2 + 1.2,
     offsetZ: spurLength / 2 + 2,
   });
@@ -133,14 +192,21 @@ export function createHarbor(scene, options = {}) {
     width: mainWidth - 4,
     length: spurLength,
     spacing: postSpacing,
-    deckHeight,
-    postHeight: pierPostHeight,
     offsetX: -mainWidth / 2 + 1.2,
     offsetZ: -(spurLength / 2 + 2),
   });
 
-  const pierPosts = buildPostMesh("HarborPierPosts", pierPostPositions, {
-    height: pierPostHeight,
+  const pierPostInstances = resolvePostInstances(pierPostPositions, {
+    center,
+    deckHeight,
+    defaultHeight: pierPostHeight,
+    terrainHeightSampler,
+    harborProfile,
+    seaLevel,
+  });
+
+  const pierPosts = buildPostMesh("HarborPierPosts", pierPostInstances, {
+    defaultHeight: pierPostHeight,
     radiusTop: 0.45,
     radiusBottom: 0.55,
     material: postMaterial,
@@ -161,13 +227,20 @@ export function createHarbor(scene, options = {}) {
   const walkwayHalfWidth = (mainWidth - 2) / 2 - 0.6;
   const walkwayPosts = [];
   const walkwayBaseX = mainWidth / 2 + approachLength / 2;
-  const walkwayBaseY = deckHeight - walkwayPostHeight;
   for (let x = -approachLength / 2; x <= approachLength / 2 + 1e-3; x += postSpacing) {
-    walkwayPosts.push({ x: walkwayBaseX + x, y: walkwayBaseY, z: -walkwayHalfWidth });
-    walkwayPosts.push({ x: walkwayBaseX + x, y: walkwayBaseY, z: walkwayHalfWidth });
+    walkwayPosts.push({ x: walkwayBaseX + x, z: -walkwayHalfWidth });
+    walkwayPosts.push({ x: walkwayBaseX + x, z: walkwayHalfWidth });
   }
-  const walkwayPostMesh = buildPostMesh("HarborWalkwayPosts", walkwayPosts, {
-    height: walkwayPostHeight,
+  const walkwayPostInstances = resolvePostInstances(walkwayPosts, {
+    center,
+    deckHeight,
+    defaultHeight: walkwayPostHeight,
+    terrainHeightSampler,
+    harborProfile,
+    seaLevel,
+  });
+  const walkwayPostMesh = buildPostMesh("HarborWalkwayPosts", walkwayPostInstances, {
+    defaultHeight: walkwayPostHeight,
     radiusTop: 0.4,
     radiusBottom: 0.5,
     material: postMaterial,

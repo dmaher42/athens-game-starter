@@ -16,6 +16,7 @@ import {
   AGORA_CENTER_3D,
   ACROPOLIS_PEAK_3D,
 } from "./locations.js";
+import { HARBOR_FLOOR_DEPTH, getHarborShoreBlendProfile } from "./harborTerrainConfig.js";
 import { createRoad } from "./roads.js";
 import { addFoundationPad } from "./foundations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
@@ -874,6 +875,34 @@ export async function createCity(scene, terrain, options = {}) {
     };
   }
 
+  const harborShoreProfile = getHarborShoreBlendProfile();
+  const harborBlendOuterRadius = harborShoreProfile?.radii?.outer ?? 0;
+  const harborBlendInnerRadius = harborShoreProfile?.radii?.inner ?? 0;
+  const harborBlendShelfRadius = harborShoreProfile?.radii?.shelf ?? harborBlendInnerRadius;
+  const harborShelfHeight = getSeaLevelY() - (harborShoreProfile?.shoreShelfDepth ?? 0);
+  const harborFloorHeight = getSeaLevelY() - HARBOR_FLOOR_DEPTH;
+  const harborShorelineHeight = getSeaLevelY();
+
+  function samplePromenadeHeight(x, z) {
+    const sample = sampleHeight(terrain, x, z, getSeaLevelY());
+    if (!Number.isFinite(sample)) {
+      return sample;
+    }
+    const dx = x - HARBOR_CENTER_3D.x;
+    const dz = z - HARBOR_CENTER_3D.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance > harborBlendOuterRadius) {
+      return sample;
+    }
+    if (distance <= harborBlendInnerRadius) {
+      return Math.max(sample, harborFloorHeight);
+    }
+    if (distance <= harborBlendShelfRadius) {
+      return Math.max(sample, harborShelfHeight);
+    }
+    return Math.max(sample, harborShorelineHeight - 0.02);
+  }
+
   const promenadeControlPoints = [];
   const promenadeNorth = HARBOR_WATER_BOUNDS.north + 6;
   const promenadeSouth = HARBOR_WATER_BOUNDS.south - 6;
@@ -885,7 +914,7 @@ export async function createCity(scene, terrain, options = {}) {
     const z = THREE.MathUtils.lerp(promenadeNorth, promenadeSouth, alpha);
     const sway = Math.sin(alpha * Math.PI) * promenadeBulge;
     const x = promenadeOffset + sway;
-    const h = sampleHeight(terrain, x, z, getSeaLevelY());
+    const h = samplePromenadeHeight(x, z);
     const y = clampSurfaceHeight(h);
     promenadeControlPoints.push(new THREE.Vector3(x, y, z));
   }
@@ -894,7 +923,12 @@ export async function createCity(scene, terrain, options = {}) {
     0,
     new THREE.Vector3(
       promenadeOffset + promenadeBulge * 0.65,
-      clampSurfaceHeight(sampleHeight(terrain, promenadeOffset + promenadeBulge * 0.65, HARBOR_CENTER_3D.z, getSeaLevelY())),
+      clampSurfaceHeight(
+        samplePromenadeHeight(
+          promenadeOffset + promenadeBulge * 0.65,
+          HARBOR_CENTER_3D.z,
+        ),
+      ),
       HARBOR_CENTER_3D.z
     )
   );
@@ -908,7 +942,7 @@ export async function createCity(scene, terrain, options = {}) {
     for (let i = 0; i <= lookupCount; i++) {
       const t = i / lookupCount;
       const pt = promenadeCurve.getPoint(t).clone();
-      const terrainHeight = sampleHeight(terrain, pt.x, pt.z, getSeaLevelY());
+      const terrainHeight = samplePromenadeHeight(pt.x, pt.z);
       pt.y = clampSurfaceHeight(terrainHeight);
       promenadeLookup.push({ t, point: pt });
     }
