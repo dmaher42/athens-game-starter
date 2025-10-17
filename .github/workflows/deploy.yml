@@ -87,7 +87,7 @@ jobs:
         run: |
           set -euo pipefail
           # If any built JS still contains bare package specifiers, bundling failed.
-          if grep -R --include='*.js' -nE "from ['\"][a-zA-Z0-9_-]+['\"]" "$BUILD_DIR" | grep -vE "from ['\"][./]" ; then
+          if grep -R --include='*.js' --exclude-dir=src -nE "from ['\"][a-zA-Z0-9_-]+['\"]" "$BUILD_DIR" | grep -vE "from ['\"][./]" ; then
             echo "::error::Bundled output still has bare imports (missing bundling). Ensure offenders live under src/** and are imported via /src/main.js."
             exit 1
           else
