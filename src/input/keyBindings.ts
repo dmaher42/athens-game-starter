@@ -1,53 +1,63 @@
-// src/input/keyBindings.ts
-// Centralised definitions for keyboard bindings used by movement and look logic.
-// Keeping the keys in one place makes it easy to ensure consistency between
-// systems (InputMap, character controllers, UI overlays, etc.).
-
-export type KeyGroup = Record<string, readonly string[]>;
-export type ReadonlyKeyGroup<T extends KeyGroup = KeyGroup> = {
-  readonly [K in keyof T]: readonly string[];
-};
-
+// Enhanced key bindings for typical 3D game feel
 export const MOVEMENT_KEYS = Object.freeze({
-  forward: ["KeyW"],
-  back: ["KeyS"],
-  left: ["KeyA"],
-  right: ["KeyD"],
-} as const satisfies ReadonlyKeyGroup);
-
+  forward: Object.freeze(["KeyW", "ArrowUp"]),
+  back: Object.freeze(["KeyS", "ArrowDown"]),
+  left: Object.freeze(["KeyA", "ArrowLeft"]),
+  right: Object.freeze(["KeyD", "ArrowRight"]),
+});
+ 
 export const LOOK_KEYS = Object.freeze({
-  left: ["ArrowLeft"],
-  right: ["ArrowRight"],
-  up: ["ArrowUp"],
-  down: ["ArrowDown"],
-} as const satisfies ReadonlyKeyGroup);
-
-export function flattenKeyGroups(groups: KeyGroup): readonly string[] {
-  const flattened: string[] = [];
-  for (const codes of Object.values(groups)) {
+  left: Object.freeze(["KeyQ", "Comma"]),
+  right: Object.freeze(["KeyE", "Period"]),
+  up: Object.freeze(["KeyR"]),
+  down: Object.freeze(["KeyF"]),
+});
+ 
+export const ALT_LOOK_KEYS = Object.freeze({
+  left: Object.freeze(["KeyJ"]),
+  right: Object.freeze(["KeyL"]),
+  up: Object.freeze(["KeyI"]),
+  down: Object.freeze(["KeyK"]),
+});
+ 
+export const ALL_LOOK_KEYS = Object.freeze({
+  left: Object.freeze([...LOOK_KEYS.left, ...ALT_LOOK_KEYS.left]),
+  right: Object.freeze([...LOOK_KEYS.right, ...ALT_LOOK_KEYS.right]),
+  up: Object.freeze([...LOOK_KEYS.up, ...ALT_LOOK_KEYS.up]),
+  down: Object.freeze([...LOOK_KEYS.down, ...ALT_LOOK_KEYS.down]),
+});
+ 
+export const ACTION_KEYS = Object.freeze({
+  jump: Object.freeze(["Space"]),
+  sprint: Object.freeze(["ShiftLeft", "ShiftRight"]),
+  flyToggle: Object.freeze(["KeyG"]),
+  crouch: Object.freeze(["ControlLeft", "ControlRight", "KeyC"]),
+});
+ 
+export function flattenKeyGroups(groups) {
+  return Object.values(groups).reduce((acc, codes) => {
     if (Array.isArray(codes)) {
-      flattened.push(...codes);
+      acc.push(...codes);
     }
-  }
-  return Object.freeze(flattened) as readonly string[];
+    return acc;
+  }, []);
 }
-
-const LOOK_KEY_SET = new Set(flattenKeyGroups(LOOK_KEYS));
-const EMPTY_CODES = Object.freeze([] as const);
-
-function filterMovementCodes(codes: readonly string[] = EMPTY_CODES): readonly string[] {
+ 
+const LOOK_KEY_SET = new Set(flattenKeyGroups(ALL_LOOK_KEYS));
+ 
+function filterMovementCodes(codes = []) {
   if (!Array.isArray(codes)) {
-    return EMPTY_CODES;
+    return Object.freeze([]);
   }
   const filtered = codes.filter(
-    (code): code is string => typeof code === "string" && code.length > 0 && !LOOK_KEY_SET.has(code)
+    (code) => typeof code === "string" && code.length > 0 && !LOOK_KEY_SET.has(code)
   );
-  return Object.freeze(filtered) as readonly string[];
+  return Object.freeze(filtered);
 }
-
+ 
 export const MOVEMENT_ONLY_KEYS = Object.freeze({
   forward: filterMovementCodes(MOVEMENT_KEYS.forward),
   back: filterMovementCodes(MOVEMENT_KEYS.back),
   left: filterMovementCodes(MOVEMENT_KEYS.left),
   right: filterMovementCodes(MOVEMENT_KEYS.right),
-} as const satisfies ReadonlyKeyGroup);
+});
