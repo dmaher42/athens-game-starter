@@ -1,18 +1,67 @@
+import type { Vector3 } from "three";
+
 import { getUISlot } from "./uiRoot.js";
 
+type Vector3Like = Pick<Vector3, "x" | "y" | "z">;
+type ImportMetaWithEnv = ImportMeta & { env?: { DEV?: boolean } };
+type WindowWithHudFlag = Window & typeof globalThis & { SHOW_HUD?: boolean };
+
+export interface LightingPresetMeta {
+  readonly label?: string;
+  readonly hotkey?: string;
+}
+
+export interface DevHudOptions {
+  readonly getPosition?: () => Vector3Like | null | undefined;
+  readonly getDirection?: () => Vector3Like | null | undefined;
+  readonly onPin?: (position: Vector3Like) => void;
+  readonly onSetLightingPreset?: (name: string) => void;
+  readonly lightingPresets?: Record<string, LightingPresetMeta | null | undefined>;
+  readonly getFogEnabled?: () => boolean;
+  readonly onToggleFog?: () => void;
+}
+
+type OceanBounds = {
+  readonly west?: number;
+  readonly east?: number;
+  readonly north?: number;
+  readonly south?: number;
+};
+
+interface OceanStatusOptions {
+  readonly seaLevel?: number;
+  readonly bounds?: OceanBounds;
+}
+
+interface HudReadoutElement extends HTMLDivElement {
+  _presetKeyBindings?: Map<string, string>;
+}
+
+export interface DevHudHandle {
+  dispose(): void;
+  setStatusLine(id: string, text?: string | null): void;
+  setOceanStatus(options?: OceanStatusOptions | null): void;
+  readonly rootElement: HudReadoutElement;
+  updateFogState(state?: boolean | null): void;
+}
+
 // Dev HUD: compass + coordinates + pin hotkey (P)
-export function mountDevHUD({
-  getPosition,
-  getDirection,
-  onPin,
-  onSetLightingPreset,
-  lightingPresets,
-  getFogEnabled,
-  onToggleFog,
-} = {}) {
-  const allowHud =
-    import.meta.env?.DEV ||
-    (typeof window !== "undefined" && window.SHOW_HUD === true);
+export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
+  const {
+    getPosition,
+    getDirection,
+    onPin,
+    onSetLightingPreset,
+    lightingPresets,
+    getFogEnabled,
+    onToggleFog,
+  } = options;
+  const isDevBuild = Boolean(
+    (import.meta as ImportMetaWithEnv).env?.DEV,
+  );
+  const runtimeWindow: WindowWithHudFlag | null =
+    typeof window !== "undefined" ? (window as WindowWithHudFlag) : null;
+  const allowHud = isDevBuild || runtimeWindow?.SHOW_HUD === true;
   if (!allowHud) return null;
 
   // --- DOM
@@ -53,7 +102,7 @@ export function mountDevHUD({
   });
 
   // Readout
-  const read = document.createElement("div");
+  const read = document.createElement("div") as HudReadoutElement;
   read.style.pointerEvents = "auto"; // allow copy selection
   read.style.background = "rgba(0,0,0,0.55)";
   read.style.backdropFilter = "blur(3px)";
@@ -75,11 +124,11 @@ export function mountDevHUD({
   });
   read.appendChild(statusSection);
 
-  const statusEntries = new Map();
+  const statusEntries = new Map<string, HTMLDivElement>();
   const updateStatusVisibility = () => {
     statusSection.style.display = statusEntries.size ? "block" : "none";
   };
-  const setStatusLine = (id, text) => {
+  const setStatusLine = (id: string, text?: string | null) => {
     if (!id) return;
     const message = typeof text === "string" ? text.trim() : "";
     let entry = statusEntries.get(id);
@@ -109,26 +158,32 @@ export function mountDevHUD({
 
   setStatusLine("proc", "Procedural: off");
 
-  const setOceanStatus = (options = {}) => {
+  const setOceanStatus = (options: OceanStatusOptions = {}) => {
     const { seaLevel, bounds } = options;
     const levelIsFinite = Number.isFinite(seaLevel);
+    const boundKeys: Array<keyof OceanBounds> = [
+      "west",
+      "east",
+      "north",
+      "south",
+    ];
     const boundsAreValid =
-      bounds &&
-      ["west", "east", "north", "south"].every((key) =>
-        Number.isFinite(bounds?.[key])
-      );
+      !!bounds && boundKeys.every((key) => Number.isFinite(bounds?.[key]));
 
     if (!levelIsFinite || !boundsAreValid) {
       setStatusLine("sea", "");
       return;
     }
 
-    const formatBound = (value) => Number(value).toFixed(1);
+    const safeBounds = bounds as Record<keyof OceanBounds, number>;
+    const formatBound = (value: number) => value.toFixed(1);
     const message = [
       `Sea level: ${Number(seaLevel).toFixed(2)}`,
-      `Ocean bounds: W ${formatBound(bounds.west)} / E ${formatBound(
-        bounds.east
-      )} / N ${formatBound(bounds.north)} / S ${formatBound(bounds.south)}`,
+      `Ocean bounds: W ${formatBound(safeBounds.west)} / E ${formatBound(
+        safeBounds.east
+      )} / N ${formatBound(safeBounds.north)} / S ${formatBound(
+        safeBounds.south
+      )}`,
     ].join("\n");
 
     setStatusLine("sea", message);
@@ -145,10 +200,10 @@ export function mountDevHUD({
     return lightingPresets[name] != null;
   });
 
-  let fogButton = null;
-  const updateFogControls = (state) => {
+  let fogButton: HTMLButtonElement | null = null;
+  const updateFogControls = (state?: boolean | null) => {
     if (!fogButton) return;
-    let enabled;
+    let enabled: boolean;
     if (typeof state === "boolean") {
       enabled = state;
     } else if (typeof getFogEnabled === "function") {
@@ -191,14 +246,18 @@ export function mountDevHUD({
       marginTop: "6px",
     });
 
-    const presetHotkeyConfig = [
+    const presetHotkeyConfig: Array<{
+      name: string;
+      codes: string[];
+      keys: string[];
+    }> = [
       { name: "dawn", codes: ["Digit1", "Numpad1"], keys: ["1"] },
       { name: "noon", codes: ["Digit2", "Numpad2"], keys: ["2"] },
       { name: "dusk", codes: ["Digit3", "Numpad3"], keys: ["3"] },
       { name: "night", codes: ["Digit4", "Numpad4"], keys: ["4"] },
     ];
     const activePresetNames = new Set(availablePresets.map((preset) => preset.name));
-    const presetKeyBindings = new Map();
+    const presetKeyBindings = new Map<string, string>();
 
     for (const preset of availablePresets) {
       const presetMeta = lightingPresets?.[preset.name] || {};
@@ -289,9 +348,9 @@ export function mountDevHUD({
       marginTop: "6px",
     });
 
-    fogButton = document.createElement("button");
-    fogButton.type = "button";
-    Object.assign(fogButton.style, {
+    const buttonElement = document.createElement("button");
+    buttonElement.type = "button";
+    Object.assign(buttonElement.style, {
       padding: "4px 8px",
       borderRadius: "4px",
       border: "1px solid rgba(255,255,255,0.35)",
@@ -302,21 +361,22 @@ export function mountDevHUD({
       pointerEvents: "auto",
       transition: "background 0.2s ease, border-color 0.2s ease",
     });
-    fogButton.addEventListener("mouseenter", () => {
-      fogButton.style.background = "rgba(255,255,255,0.18)";
-      fogButton.style.borderColor = "rgba(255,255,255,0.55)";
+    buttonElement.addEventListener("mouseenter", () => {
+      buttonElement.style.background = "rgba(255,255,255,0.18)";
+      buttonElement.style.borderColor = "rgba(255,255,255,0.55)";
     });
-    fogButton.addEventListener("mouseleave", () => {
-      fogButton.style.background = "rgba(0,0,0,0.35)";
-      fogButton.style.borderColor = "rgba(255,255,255,0.35)";
+    buttonElement.addEventListener("mouseleave", () => {
+      buttonElement.style.background = "rgba(0,0,0,0.35)";
+      buttonElement.style.borderColor = "rgba(255,255,255,0.35)";
     });
-    fogButton.addEventListener("click", (event) => {
+    buttonElement.addEventListener("click", (event) => {
       event.preventDefault();
       onToggleFog();
       updateFogControls();
     });
 
-    buttonRow.appendChild(fogButton);
+    buttonRow.appendChild(buttonElement);
+    fogButton = buttonElement;
     section.appendChild(buttonRow);
     read.appendChild(section);
     updateFogControls();
@@ -325,13 +385,13 @@ export function mountDevHUD({
   wrap.appendChild(comp);
   wrap.appendChild(read);
   const slot = getUISlot("topRight");
-  slot.appendChild(wrap);
+  slot?.appendChild(wrap);
 
-  const elPos = read.querySelector("#hud-pos");
-  const elBear= read.querySelector("#hud-bear");
+  const elPos = read.querySelector<HTMLSpanElement>("#hud-pos");
+  const elBear = read.querySelector<HTMLSpanElement>("#hud-bear");
 
   // helpers
-  const toBearing = (dir) => {
+  const toBearing = (dir: Vector3Like) => {
     // dir: THREE.Vector3 camera forward; bearing measured on XZ plane:
     // yawDegrees = atan2(x, z) in degrees, normalized 0..360 (0 = North/ +Z)
     const yaw = Math.atan2(dir.x, dir.z) * 180 / Math.PI;
@@ -342,16 +402,17 @@ export function mountDevHUD({
   };
 
   // update loop (requestAnimationFrame)
-  let rafId = 0, running = true;
+  let rafId = 0;
+  let running = true;
   const loop = () => {
     if (!running) return;
     try {
       const p = getPosition?.();
       const d = getDirection?.();
-      if (p) {
+      if (p && elPos) {
         elPos.textContent = `(${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)})`;
       }
-      if (d) {
+      if (d && elBear) {
         const b = toBearing(d);
         elBear.textContent = `${b.deg}° ${b.label}`;
         needle.style.transform = `translate(-1px, -40px) rotate(${b.deg}deg)`;
@@ -362,14 +423,11 @@ export function mountDevHUD({
   loop();
 
   // pin hotkey (P) to drop a marker and log coords
-  const getPresetKeyBindings = () => {
-    if (read?._presetKeyBindings instanceof Map) {
-      return read._presetKeyBindings;
-    }
-    return null;
+  const getPresetKeyBindings = (): Map<string, string> | null => {
+    return read?._presetKeyBindings ?? null;
   };
 
-  const onKey = (e) => {
+  const onKey = (e: KeyboardEvent) => {
     if (e.key?.toLowerCase() === "p") {
       const p = getPosition?.();
       if (p) {
@@ -391,9 +449,10 @@ export function mountDevHUD({
   };
   window.addEventListener("keydown", onKey);
 
-  return {
-    dispose(){
-      running = false; cancelAnimationFrame(rafId);
+  const handle: DevHudHandle = {
+    dispose() {
+      running = false;
+      cancelAnimationFrame(rafId);
       window.removeEventListener("keydown", onKey);
       wrap.remove();
     },
@@ -402,4 +461,5 @@ export function mountDevHUD({
     rootElement: read,
     updateFogState: updateFogControls,
   };
+  return handle;
 }
