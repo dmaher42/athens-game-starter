@@ -167,14 +167,15 @@ function createDetailLayer(config) {
 
   configureTexture(texture, config);
 
-  const baseStrength = THREE.MathUtils.clamp(config.strength ?? 0.35, 0, 1);
-  const usesExternalTexture = Boolean(config?.url);
-  const attenuation = THREE.MathUtils.clamp(
-    config.tintAttenuation ?? (usesExternalTexture ? 0.45 : 1),
-    0,
-    1,
-  );
-  const strength = baseStrength * attenuation;
+  const strength = THREE.MathUtils.clamp(config.strength ?? 0.35, 0, 1);
+  const hasRealTexture = Boolean(config?.url);
+  const attenuationOverride = Number.isFinite(config?.tintAttenuation)
+    ? config.tintAttenuation
+    : undefined;
+  const tintAttenuation = hasRealTexture
+    ? THREE.MathUtils.clamp(attenuationOverride ?? 0.45, 0, 1)
+    : THREE.MathUtils.clamp(attenuationOverride ?? 1, 0, 1);
+  const effectiveStrength = strength * tintAttenuation;
   const minHeight = Number.isFinite(config.minHeight)
     ? config.minHeight
     : -1000;
@@ -201,7 +202,7 @@ function createDetailLayer(config) {
 
   return {
     texture,
-    params: new THREE.Vector4(minHeight, maxHeight, fade, strength),
+    params: new THREE.Vector4(minHeight, maxHeight, fade, effectiveStrength),
     tint,
     mode,
     tintMultiplier: applyTintMultiplier ? 1 : 0,
