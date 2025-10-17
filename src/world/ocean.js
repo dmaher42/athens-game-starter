@@ -5,6 +5,7 @@ import {
   HARBOR_WATER_CENTER,
   HARBOR_WATER_SIZE,
   HARBOR_WATER_EAST_LIMIT,
+  HARBOR_WATER_BOUNDS,
   HARBOR_WATER_NORMAL_CANDIDATES,
   getSeaLevelY,
 } from "./locations.js";
@@ -109,7 +110,17 @@ const _dayWaterColor = new THREE.Color(0x1a4e80);
 const _nightWaterColor = new THREE.Color(0x091c2a);
 const _moodWaterColor = new THREE.Color();
 
-const FRONT_Z_HARD = -117;
+const DEFAULT_SEAWARD_PADDING = 4;
+const DEFAULT_INLAND_PADDING = 2;
+const DEFAULT_SEAWARD_CLIP = Number.isFinite(HARBOR_WATER_BOUNDS?.north)
+  ? HARBOR_WATER_BOUNDS.north - DEFAULT_SEAWARD_PADDING
+  : -120;
+const DEFAULT_INLAND_CLIP = Number.isFinite(HARBOR_WATER_BOUNDS?.south)
+  ? HARBOR_WATER_BOUNDS.south + DEFAULT_INLAND_PADDING
+  : 160;
+const TERRAIN_CLEARANCE_EPSILON = 0.02;
+const SHORE_PROBE_X_FRACTIONS = [0.2, 0.5, 0.8];
+const SHORE_PROBE_Z_FRACTIONS = [0.0, 0.5, 0.9];
 
 let cachedWaterNormalsTexture = null;
 let cachedWaterNormalsKey = null;
@@ -198,6 +209,53 @@ function computeRenderTargetSize(options) {
   return THREE.MathUtils.clamp(size, 256, 2048);
 }
 
+function resolveHeightSampler(scene, options) {
+  if (options) {
+    if (typeof options.heightSampler === "function") {
+      return options.heightSampler;
+    }
+    const terrainSampler = options.terrain?.userData?.getHeightAt;
+    if (typeof terrainSampler === "function") {
+      return terrainSampler;
+    }
+  }
+
+  const sceneSampler =
+    typeof scene?.userData?.terrainHeightSampler === "function"
+      ? scene.userData.terrainHeightSampler
+      : scene?.userData?.getHeightAt;
+  if (typeof sceneSampler === "function") {
+    return sceneSampler;
+  }
+  return null;
+}
+
+function parseClipPadding(padding) {
+  const resolved = { front: null, back: null };
+  if (Number.isFinite(padding)) {
+    resolved.front = padding;
+    resolved.back = padding;
+    return resolved;
+  }
+  if (!padding || typeof padding !== "object") {
+    return resolved;
+  }
+
+  if (Number.isFinite(padding.front)) {
+    resolved.front = padding.front;
+  } else if (Number.isFinite(padding.north)) {
+    resolved.front = padding.north;
+  }
+
+  if (Number.isFinite(padding.back)) {
+    resolved.back = padding.back;
+  } else if (Number.isFinite(padding.south)) {
+    resolved.back = padding.south;
+  }
+
+  return resolved;
+}
+
 export async function createOcean(scene, options = {}) {
   const renderTargetSize = computeRenderTargetSize(options);
 
@@ -210,6 +268,11 @@ export async function createOcean(scene, options = {}) {
         };
 
   const waterNormals = await resolveWaterNormalsTexture(waterNormalsOptions);
+
+  const resolvedSeaLevel = Number.isFinite(options?.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
+  const heightSampler = resolveHeightSampler(scene, options);
 
   // remove prior water meshes if any
   scene.traverse((o) => {
@@ -252,20 +315,13 @@ export async function createOcean(scene, options = {}) {
     const cx = resolvedCenterX;
     const cz = resolvedCenterZ;
 
-    // Hard seaward cut: never render water with z < -117
     const zFrontDesired = cz - halfZFront;
-    const zFront = Math.max(zFrontDesired, FRONT_Z_HARD);
-    // For clarity, also keep the inland boundary as-is:
     const zBack = cz + halfZBack;
 
     west = cx - halfX;
     east = Math.min(cx + halfX, HARBOR_WATER_EAST_LIMIT);
-    north = zFront;
+    north = Math.max(zFrontDesired, DEFAULT_SEAWARD_CLIP);
     south = Math.max(zBack, north);
-
-    if (import.meta.env?.DEV) {
-      console.log("[water clip]", { cx, cz, zFront, zBack, FRONT_Z_HARD });
-    }
   }
 
   if (west > east) {
@@ -274,6 +330,8 @@ export async function createOcean(scene, options = {}) {
   if (north > south) {
     [north, south] = [south, north];
   }
+
+  const baseBounds = { west, east, north, south };
 
   let width = Math.max(0.1, east - west);
   let depth = Math.max(0.1, south - north);
@@ -289,6 +347,78 @@ export async function createOcean(scene, options = {}) {
     north = centerZ - depth * 0.5;
     south = centerZ + depth * 0.5;
   }
+
+  const expandedBounds = { west, east, north, south };
+
+  const clipPadding = parseClipPadding(options?.clipPadding);
+  const shoreBlendWidth =
+    Number.isFinite(options?.shoreBlendWidth) && options.shoreBlendWidth !== 0
+      ? Math.abs(options.shoreBlendWidth)
+      : null;
+
+  let clipZFront = baseBounds.north;
+  let clipZBack = baseBounds.south;
+
+  if (Number.isFinite(DEFAULT_SEAWARD_CLIP)) {
+    clipZFront = Math.min(clipZFront, DEFAULT_SEAWARD_CLIP);
+  }
+  if (Number.isFinite(DEFAULT_INLAND_CLIP)) {
+    clipZBack = Math.max(clipZBack, DEFAULT_INLAND_CLIP);
+  }
+
+  if (shoreBlendWidth !== null) {
+    clipZFront = Math.min(clipZFront, baseBounds.north - shoreBlendWidth);
+    clipZBack = Math.max(clipZBack, baseBounds.south + shoreBlendWidth);
+  }
+
+  if (clipPadding.front !== null) {
+    clipZFront = baseBounds.north + clipPadding.front;
+  }
+  if (clipPadding.back !== null) {
+    clipZBack = baseBounds.south + clipPadding.back;
+  }
+
+  clipZFront = Math.max(clipZFront, expandedBounds.north);
+  clipZFront = Math.min(clipZFront, expandedBounds.south);
+  clipZBack = Math.max(clipZBack, clipZFront + 0.01);
+  clipZBack = Math.min(clipZBack, expandedBounds.south);
+
+  const seawardExtension = baseBounds.north - clipZFront;
+  if (heightSampler && seawardExtension > 0.05) {
+    const sampleXs = SHORE_PROBE_X_FRACTIONS.map((fraction) =>
+      THREE.MathUtils.lerp(baseBounds.west, baseBounds.east, fraction)
+    );
+    const sampleZs = SHORE_PROBE_Z_FRACTIONS.map((fraction) =>
+      clipZFront + seawardExtension * fraction
+    );
+
+    let clampSeaward = false;
+    for (const sampleX of sampleXs) {
+      for (const sampleZ of sampleZs) {
+        const ground = heightSampler(sampleX, sampleZ);
+        if (
+          Number.isFinite(ground) &&
+          ground >= resolvedSeaLevel - TERRAIN_CLEARANCE_EPSILON
+        ) {
+          clampSeaward = true;
+          break;
+        }
+      }
+      if (clampSeaward) break;
+    }
+
+    if (clampSeaward) {
+      clipZFront = baseBounds.north;
+      if (import.meta.env?.DEV) {
+        console.info("[ocean] Clamped seaward water extent due to terrain clearance.");
+      }
+    }
+  }
+
+  clipZFront = Math.max(clipZFront, expandedBounds.north);
+  clipZFront = Math.min(clipZFront, expandedBounds.south);
+  clipZBack = Math.max(clipZBack, clipZFront + 0.01);
+  clipZBack = Math.min(clipZBack, expandedBounds.south);
 
   const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
   const water = new Water(geometry, {
@@ -309,14 +439,18 @@ export async function createOcean(scene, options = {}) {
   water.position.set(cx, resolvedSeaLevel, cz);
 
   const halfX = (east - west) * 0.5;
-  const clipZFront = Math.max(north, FRONT_Z_HARD);
-  const clipZBack = Math.max(south, clipZFront);
+  const clipBounds = {
+    west: cx - halfX,
+    east: cx + halfX,
+    north: clipZFront,
+    south: clipZBack,
+  };
 
   const planes = [
-    new THREE.Plane(new THREE.Vector3(1, 0, 0), -(cx - halfX)),
-    new THREE.Plane(new THREE.Vector3(-1, 0, 0), cx + halfX),
-    new THREE.Plane(new THREE.Vector3(0, 0, -1), clipZBack),
-    new THREE.Plane(new THREE.Vector3(0, 0, 1), -clipZFront),
+    new THREE.Plane(new THREE.Vector3(1, 0, 0), -clipBounds.west),
+    new THREE.Plane(new THREE.Vector3(-1, 0, 0), clipBounds.east),
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), clipBounds.south),
+    new THREE.Plane(new THREE.Vector3(0, 0, 1), -clipBounds.north),
   ];
 
   water.renderOrder = 1;
@@ -345,10 +479,8 @@ export async function createOcean(scene, options = {}) {
       }
       mountWaterClipDebug(
         scene,
-        west,
-        east,
-        clipZFront,
-        clipZBack,
+        baseBounds,
+        clipBounds,
         resolvedSeaLevel,
       );
     }
@@ -365,12 +497,7 @@ export async function createOcean(scene, options = {}) {
   scene.add(water);
   if (import.meta.env?.DEV) {
     console.log(
-      `[ocean] y=${resolvedSeaLevel}, bounds=${JSON.stringify({
-        west,
-        east,
-        north: clipZFront,
-        south: clipZBack,
-      })}`,
+      `[ocean] y=${resolvedSeaLevel}, base=${JSON.stringify(baseBounds)}, clip=${JSON.stringify(clipBounds)}`,
     );
     const debugCenter = new THREE.Vector3(cx, resolvedSeaLevel, cz);
     const debugSize = new THREE.Vector2(width, depth);
@@ -387,26 +514,64 @@ export async function createOcean(scene, options = {}) {
   };
 }
 
-export function mountWaterClipDebug(
-  scene,
-  west,
-  east,
-  north,
-  south,
-  seaLevel = getSeaLevelY(),
-) {
-  const g = new THREE.BufferGeometry().setFromPoints([
+function createBoundsLoop(bounds, color, yOffset) {
+  if (!bounds) return null;
+  const { west, east, north, south } = bounds;
+  if (
+    !Number.isFinite(west) ||
+    !Number.isFinite(east) ||
+    !Number.isFinite(north) ||
+    !Number.isFinite(south)
+  ) {
+    return null;
+  }
+
+  const geometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(west, 0, north),
     new THREE.Vector3(east, 0, north),
     new THREE.Vector3(east, 0, south),
     new THREE.Vector3(west, 0, south),
-    new THREE.Vector3(west, 0, north),
   ]);
-  const line = new THREE.Line(g, new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 }));
-  line.position.y = seaLevel + 0.02;
-  line.name = "WaterClipDebug";
-  scene.add(line);
-  return line;
+  const material = new THREE.LineBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+    depthTest: false,
+  });
+  const loop = new THREE.LineLoop(geometry, material);
+  loop.position.y = yOffset;
+  return loop;
+}
+
+export function mountWaterClipDebug(
+  scene,
+  rawBounds,
+  clipBounds,
+  seaLevel = getSeaLevelY(),
+) {
+  const group = new THREE.Group();
+  group.name = "WaterClipDebug";
+
+  const baseY = seaLevel + 0.01;
+  const rawLoop = createBoundsLoop(rawBounds, 0xffb347, baseY);
+  if (rawLoop) {
+    rawLoop.name = "WaterClipDebug:raw";
+    group.add(rawLoop);
+  }
+
+  const clipLoop = createBoundsLoop(clipBounds, 0x4ec3ff, baseY + 0.01);
+  if (clipLoop) {
+    clipLoop.name = "WaterClipDebug:clip";
+    group.add(clipLoop);
+  }
+
+  if (group.children.length === 0) {
+    return null;
+  }
+
+  scene.add(group);
+  return group;
 }
 
 export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0) {
@@ -431,7 +596,3 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0) {
     );
   }
 }
-  const resolvedSeaLevel = Number.isFinite(options?.seaLevel)
-    ? options.seaLevel
-    : getSeaLevelY();
-
