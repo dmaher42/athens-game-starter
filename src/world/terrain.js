@@ -4,6 +4,7 @@ import {
   AGORA_CENTER_3D,
   CITY_AREA_RADIUS,
   getSeaLevelY,
+  getHarborSeaLevel,
 } from "./locations.js";
 import {
   createGroundTextureState,
@@ -11,6 +12,10 @@ import {
 } from "./groundTextures.js";
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
 import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
+import {
+  HARBOR_FLOOR_DEPTH,
+  getHarborShoreBlendProfile,
+} from "./harborTerrainConfig.js";
 
 // Utility: basic pseudo-random gradient noise using deterministic hashing so we can
 // produce repeatable rolling hills without pulling in an additional dependency.
@@ -70,16 +75,18 @@ function fbm(x, z, octaves, persistence, lacunarity) {
 
 // Cache vector instances so updateTerrain can reuse them without churn.
 const _scratchVec = new THREE.Vector3();
-const HARBOR_INNER_RADIUS = 18;
-const HARBOR_OUTER_RADIUS = 70;
-const HARBOR_FLOOR_DEPTH = 2.5;
-// Start the harbor floor depression near the docks and blend it back to
-// sea-level before the outer seawall so players still get a dry shoreline.
-const HARBOR_FLOOR_TAPER_START = HARBOR_INNER_RADIUS * 0.4;
-const HARBOR_FLOOR_TAPER_END = HARBOR_INNER_RADIUS * 0.95;
+const HARBOR_SHORE_PROFILE = getHarborShoreBlendProfile();
+const {
+  radii: {
+    inner: HARBOR_BLEND_INNER_RADIUS,
+    shelf: HARBOR_BLEND_SHELF_RADIUS,
+    outer: HARBOR_BLEND_OUTER_RADIUS,
+  },
+  shoreShelfDepth: HARBOR_SHORE_SHELF_DEPTH,
+  taperFalloff: HARBOR_SHORE_TAPER_FALLOFF,
+} = HARBOR_SHORE_PROFILE;
 
 export function createTerrain(scene) {
-  const harborSeaLevel = getSeaLevelY();
   // A large subdivided plane gives us enough vertices to push around and create
   // rolling hills. More segments = smoother displacement at the cost of perf.
   const size = 500;
@@ -136,24 +143,55 @@ export function createTerrain(scene) {
     const dx = x - HARBOR_CENTER.x;
     const dz = z - HARBOR_CENTER.y;
     const distance = Math.hypot(dx, dz);
-    if (distance < HARBOR_OUTER_RADIUS) {
+    if (distance < HARBOR_BLEND_OUTER_RADIUS) {
       const flatten = 1 - THREE.MathUtils.smoothstep(
         distance,
-        HARBOR_INNER_RADIUS,
-        HARBOR_OUTER_RADIUS
+        HARBOR_BLEND_INNER_RADIUS,
+        HARBOR_BLEND_OUTER_RADIUS,
       );
       if (flatten > 0) {
-        const depthBlend = THREE.MathUtils.smoothstep(
-          distance,
-          HARBOR_FLOOR_TAPER_START,
-          HARBOR_FLOOR_TAPER_END,
+        const runtimeSeaLevel = getHarborSeaLevel();
+        const harborShorelineSurface = runtimeSeaLevel - 0.02; // tiny offset so shoreline doesn’t occlude water
+        const harborFloorHeight = runtimeSeaLevel - HARBOR_FLOOR_DEPTH;
+        const harborShelfHeight = runtimeSeaLevel - HARBOR_SHORE_SHELF_DEPTH;
+        const firstStageSpan = Math.max(
+          1e-3,
+          HARBOR_BLEND_SHELF_RADIUS - HARBOR_BLEND_INNER_RADIUS,
         );
-        const harborShorelineSurface = harborSeaLevel - 0.02; // tiny offset so shoreline doesn’t occlude water
-        const harborTargetHeight = THREE.MathUtils.lerp(
-          harborSeaLevel - HARBOR_FLOOR_DEPTH,
-          harborShorelineSurface,
-          THREE.MathUtils.clamp(depthBlend, 0, 1),
+        const secondStageSpan = Math.max(
+          1e-3,
+          HARBOR_BLEND_OUTER_RADIUS - HARBOR_BLEND_SHELF_RADIUS,
         );
+        const distanceIntoBlend = distance - HARBOR_BLEND_INNER_RADIUS;
+        const shelfStageT = THREE.MathUtils.clamp(
+          distanceIntoBlend / firstStageSpan,
+          0,
+          1,
+        );
+        const shorelineStageT = THREE.MathUtils.clamp(
+          (distance - HARBOR_BLEND_SHELF_RADIUS) / secondStageSpan,
+          0,
+          1,
+        );
+        let harborTargetHeight = harborFloorHeight;
+        if (distance <= HARBOR_BLEND_SHELF_RADIUS) {
+          const easedShelf = shelfStageT * shelfStageT;
+          harborTargetHeight = THREE.MathUtils.lerp(
+            harborFloorHeight,
+            harborShelfHeight,
+            easedShelf,
+          );
+        } else {
+          const easedFalloff = 1 - Math.pow(
+            1 - shorelineStageT,
+            HARBOR_SHORE_TAPER_FALLOFF,
+          );
+          harborTargetHeight = THREE.MathUtils.lerp(
+            harborShelfHeight,
+            harborShorelineSurface,
+            easedFalloff,
+          );
+        }
         height = THREE.MathUtils.lerp(height, harborTargetHeight, flatten);
       }
     }
