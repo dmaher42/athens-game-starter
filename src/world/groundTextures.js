@@ -167,7 +167,14 @@ function createDetailLayer(config) {
 
   configureTexture(texture, config);
 
-  const strength = THREE.MathUtils.clamp(config.strength ?? 0.35, 0, 1);
+  const baseStrength = THREE.MathUtils.clamp(config.strength ?? 0.35, 0, 1);
+  const usesExternalTexture = Boolean(config?.url);
+  const attenuation = THREE.MathUtils.clamp(
+    config.tintAttenuation ?? (usesExternalTexture ? 0.45 : 1),
+    0,
+    1,
+  );
+  const strength = baseStrength * attenuation;
   const minHeight = Number.isFinite(config.minHeight)
     ? config.minHeight
     : -1000;
