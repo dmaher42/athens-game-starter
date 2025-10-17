@@ -176,15 +176,18 @@ function createDetailLayer(config) {
     : 1000;
   const fade = Math.max(config.fade ?? 8, 0);
 
+  const applyTintMultiplier = config.tintMultiplier !== false;
   const tint = new THREE.Color(1, 1, 1);
-  if (Array.isArray(config.tint)) {
-    tint.setRGB(
-      config.tint[0] ?? 1,
-      config.tint[1] ?? config.tint[0] ?? 1,
-      config.tint[2] ?? config.tint[1] ?? config.tint[0] ?? 1,
-    );
-  } else if (typeof config.tint === "string") {
-    tint.set(config.tint);
+  if (applyTintMultiplier) {
+    if (Array.isArray(config.tint)) {
+      tint.setRGB(
+        config.tint[0] ?? 1,
+        config.tint[1] ?? config.tint[0] ?? 1,
+        config.tint[2] ?? config.tint[1] ?? config.tint[0] ?? 1,
+      );
+    } else if (typeof config.tint === "string") {
+      tint.set(config.tint);
+    }
   }
 
   const mode = config.mode === "mix" ? 1 : 0;
@@ -194,6 +197,7 @@ function createDetailLayer(config) {
     params: new THREE.Vector4(minHeight, maxHeight, fade, strength),
     tint,
     mode,
+    tintMultiplier: applyTintMultiplier ? 1 : 0,
   };
 }
 
@@ -326,11 +330,15 @@ export function injectGroundTextureShader(shader, state) {
     const paramName = `uGroundDetailParams${index}`;
     const tintName = `uGroundDetailTint${index}`;
     const modeName = `uGroundDetailMode${index}`;
+    const tintMultiplierName = `uGroundDetailTintMultiplier${index}`;
 
     shader.uniforms[mapName] = { value: layer.texture };
     shader.uniforms[paramName] = { value: layer.params };
     shader.uniforms[tintName] = { value: layer.tint };
     shader.uniforms[modeName] = { value: layer.mode };
+    shader.uniforms[tintMultiplierName] = {
+      value: layer.tintMultiplier ?? 1,
+    };
 
     header.push(
       [
@@ -338,6 +346,7 @@ export function injectGroundTextureShader(shader, state) {
         `uniform vec4 ${paramName};`,
         `uniform vec3 ${tintName};`,
         `uniform float ${modeName};`,
+        `uniform float ${tintMultiplierName};`,
       ].join("\n"),
     );
 
@@ -355,7 +364,8 @@ export function injectGroundTextureShader(shader, state) {
         }
         float layerStrength = strength * mask;
         if (layerStrength > 0.0) {
-          vec3 layerColor = detailSample.rgb * ${tintName};
+          vec3 layerColor = detailSample.rgb;
+          layerColor *= mix(vec3(1.0), ${tintName}, ${tintMultiplierName});
           if (abs(${modeName} - 1.0) < 0.5) {
             diffuseColor.rgb = mix(diffuseColor.rgb, layerColor, layerStrength);
           } else {
