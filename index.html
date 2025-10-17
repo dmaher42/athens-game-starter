@@ -41,7 +41,16 @@
           document.currentScript.nextSibling,
         );
       }
+
+      const moduleScript = document.createElement("script");
+      moduleScript.type = "module";
+      moduleScript.src = isViteDevServer
+        ? "./src/main.ts"
+        : "./src/main.bundleless.js";
+      document.currentScript?.parentNode?.insertBefore(
+        moduleScript,
+        document.currentScript.nextSibling,
+      );
     </script>
-    <script type="module" src="./src/main.ts"></script>
   </body>
 </html>
