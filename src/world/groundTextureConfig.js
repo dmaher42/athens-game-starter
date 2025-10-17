@@ -72,6 +72,7 @@ export const GROUND_TEXTURE_CONFIG = {
       slopeMax: 0.33, // Favor broad, low-slope coverage
       mode: "mix",
       seed: 404,
+      tintAttenuation: 0.42,
     },
     // extra detail layers for lowlands/midslopes
     {
@@ -87,6 +88,7 @@ export const GROUND_TEXTURE_CONFIG = {
       slopeMax: 0.3, // Favor broad, low-slope coverage
       mode: "mix",
       seed: 405,
+      tintAttenuation: 0.4,
     },
     {
       generator: "dry-grass-detail",
@@ -101,6 +103,7 @@ export const GROUND_TEXTURE_CONFIG = {
       slopeMin: 0.26, // Favor broad, low-slope coverage
       mode: "multiply",
       seed: 406,
+      tintAttenuation: 0.38,
     },
   ],
 };
