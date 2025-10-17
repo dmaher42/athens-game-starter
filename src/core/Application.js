@@ -65,7 +65,7 @@ import {
   updateLoadingStatus,
   showLoadingError,
   hideLoadingScreen,
-} from "../ui/loadingScreen.ts";
+} from "../ui/loadingScreen.js";
 import { createPin } from "../world/pins.js";
 import { attachHeightSampler, probeAt } from "../world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "../world/occluders.js";
