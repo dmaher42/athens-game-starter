@@ -34,25 +34,25 @@ export const ACTION_KEYS = Object.freeze({
   crouch: Object.freeze(["ControlLeft", "ControlRight", "KeyC"]),
 });
  
-export function flattenKeyGroups(groups) {
-  return Object.values(groups).reduce((acc, codes) => {
-    if (Array.isArray(codes)) {
-      acc.push(...codes);
-    }
+export type KeyGroupMap = Readonly<Record<string, readonly string[]>>;
+
+export function flattenKeyGroups(groups: KeyGroupMap): string[] {
+  return Object.values(groups).reduce<string[]>((acc, codes) => {
+    acc.push(...codes);
     return acc;
   }, []);
 }
- 
-const LOOK_KEY_SET = new Set(flattenKeyGroups(ALL_LOOK_KEYS));
- 
-function filterMovementCodes(codes = []) {
-  if (!Array.isArray(codes)) {
-    return Object.freeze([]);
+
+const LOOK_KEY_SET = new Set<string>(flattenKeyGroups(ALL_LOOK_KEYS));
+
+function filterMovementCodes(codes: readonly string[] | undefined): readonly string[] {
+  if (!codes) {
+    return Object.freeze([] as string[]);
   }
   const filtered = codes.filter(
-    (code) => typeof code === "string" && code.length > 0 && !LOOK_KEY_SET.has(code)
+    (code): code is string => typeof code === "string" && code.length > 0 && !LOOK_KEY_SET.has(code)
   );
-  return Object.freeze(filtered);
+  return Object.freeze([...filtered]);
 }
  
 export const MOVEMENT_ONLY_KEYS = Object.freeze({

@@ -21,11 +21,11 @@ export type CameraSettingsListener = (settings: CameraSettings) => void;
 // Shape with defaults
 export const defaultCameraSettings: CameraSettings = {
   enableArrowOrbit: true,
-  yawSpeed: 0.9, // rad/s
-  pitchSpeed: 0.9, // rad/s
+  yawSpeed: 1.5, // rad/s
+  pitchSpeed: 1.5, // rad/s
   zoomSpeed: 3.0, // units/s for PageUp/Down
-  minPitch: -0.6, // radians
-  maxPitch: 0.6, // radians
+  minPitch: -1.4, // radians
+  maxPitch: 1.0, // radians
   minDist: 2.5, // meters
   maxDist: 7.5, // meters
   invertPitch: false,
