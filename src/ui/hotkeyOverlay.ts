@@ -1,27 +1,41 @@
+import type {
+  HotkeyDescriptor,
+  HotkeyOverlayHandle as HotkeyOverlayHandleContract,
+  HotkeyOverlayOptions,
+} from "@app/types";
+
 import { getUISlot } from "./uiRoot.js";
 
-const STYLE_ID = "hotkey-overlay-style";
-const ROOT_CLASS = "hotkey-overlay";
-const HIDDEN_MOD = "hotkey-overlay--hidden";
-const STORAGE_KEY = "hotkeyOverlayOpen";
+const STYLE_ID = "hotkey-overlay-style" as const;
+const ROOT_CLASS = "hotkey-overlay" as const;
+const HIDDEN_MOD = "hotkey-overlay--hidden" as const;
+const STORAGE_KEY = "hotkeyOverlayOpen" as const;
 
-function loadOpenState() {
+export type HotkeyOverlayHandle = HotkeyOverlayHandleContract;
+
+function loadOpenState(): boolean {
+  if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
+    return false;
+  }
   try {
-    return localStorage.getItem(STORAGE_KEY) === "1";
+    return window.localStorage.getItem(STORAGE_KEY) === "1";
   } catch {
     return false;
   }
 }
 
-function saveOpenState(isOpen) {
+function saveOpenState(isOpen: boolean): void {
+  if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
+    return;
+  }
   try {
-    localStorage.setItem(STORAGE_KEY, isOpen ? "1" : "0");
+    window.localStorage.setItem(STORAGE_KEY, isOpen ? "1" : "0");
   } catch {
     // ignore write errors (e.g., storage disabled)
   }
 }
 
-const DEFAULT_HOTKEYS = [
+const DEFAULT_HOTKEYS: readonly HotkeyDescriptor[] = [
   { keys: ["W", "A", "S", "D"], description: "Move" },
   { keys: ["Shift"], description: "Sprint" },
   { keys: ["Space"], description: "Jump / fly up" },
@@ -32,29 +46,22 @@ const DEFAULT_HOTKEYS = [
   { keys: ["F9"], description: "Toggle exposure slider" },
 ];
 
-/**
- * @typedef {{
- *  hotkeys?: { keys: string[]; description: string }[];
- *  toggleKey?: string;
- *  showButton?: boolean;
- * }} HotkeyOverlayOptions
- */
-
-/**
- * Mounts a floating hotkey reference along with a toggle button.
- * Subsequent calls are ignored so the overlay only mounts once.
- * @param {HotkeyOverlayOptions} [options]
- */
-export function mountHotkeyOverlay(options = {}) {
+export function mountHotkeyOverlay(
+  options: HotkeyOverlayOptions = {},
+): HotkeyOverlayHandle | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
   if (document.querySelector(`.${ROOT_CLASS}`)) {
-    return;
+    return null;
   }
 
   ensureStyles();
 
-  const hotkeys = Array.isArray(options.hotkeys) && options.hotkeys.length > 0
-    ? options.hotkeys
-    : DEFAULT_HOTKEYS;
+  const hotkeys: readonly HotkeyDescriptor[] =
+    Array.isArray(options.hotkeys) && options.hotkeys.length > 0
+      ? options.hotkeys
+      : DEFAULT_HOTKEYS;
 
   const toggleKey = typeof options.toggleKey === "string" && options.toggleKey.trim().length > 0
     ? options.toggleKey
@@ -71,11 +78,12 @@ export function mountHotkeyOverlay(options = {}) {
   toggleButton.type = "button";
   toggleButton.className = `${ROOT_CLASS}__toggle`;
   toggleButton.innerHTML = `
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor"
-        d="M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-6l-3.5 3.5a1 1 0 0 1-1.7-.7V17H6a3 3 0 0 1-3-3V6zm4 2a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2H7zm5 0a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2h-2zm5 0a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2h-2z"/>
+    <svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" aria-hidden=\"true\">
+      <path fill=\"currentColor\"
+        d=\"M3 6a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-6l-3.5 3.5a1 1 0 0 1-1.7-.7V17H6a3 3 0 0 1-3-3V6zm4 2a1 1 0 1 0
+0 2h2a1 1 0 1 0 0-2H7zm5 0a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2h-2zm5 0a1 1 0 1 0 0 2h2a1 1 0 1 0 0-2h-2z\"/>
     </svg>
-    <span class="${ROOT_CLASS}__sr">Hotkeys (press ${resolveKeyLabel(toggleKey)})</span>
+    <span class=\"${ROOT_CLASS}__sr\">Hotkeys (press ${resolveKeyLabel(toggleKey)})</span>
   `;
   toggleButton.setAttribute("title", `Hotkeys (${resolveKeyLabel(toggleKey)})`);
   toggleButton.setAttribute("aria-expanded", "false");
@@ -99,7 +107,7 @@ export function mountHotkeyOverlay(options = {}) {
     if (!entry || !Array.isArray(entry.keys) || entry.keys.length === 0) {
       continue;
     }
-    const keys = entry.keys.map((key) => String(key).trim()).filter(Boolean);
+    const keys = entry.keys.map((key: string) => String(key).trim()).filter(Boolean);
     const description = typeof entry.description === "string" ? entry.description : "";
     if (keys.length === 0 || !description) {
       continue;
@@ -135,23 +143,28 @@ export function mountHotkeyOverlay(options = {}) {
     root.appendChild(toggleButton);
   }
   root.appendChild(panel);
-  getUISlot("topRight").appendChild(root);
 
-  const applyVisibility = (shouldOpen) => {
+  const slot = getUISlot("topRight");
+  if (!slot) {
+    return null;
+  }
+  slot.appendChild(root);
+
+  const applyVisibility = (shouldOpen: boolean): void => {
     if (shouldOpen) {
       root.classList.remove(HIDDEN_MOD);
     } else {
       root.classList.add(HIDDEN_MOD);
     }
     const isOpen = !root.classList.contains(HIDDEN_MOD);
-    toggleButton?.setAttribute?.("aria-expanded", String(isOpen));
+    toggleButton.setAttribute("aria-expanded", String(isOpen));
     panel.setAttribute("aria-hidden", String(!isOpen));
     saveOpenState(isOpen);
   };
 
   applyVisibility(initialOpen);
 
-  const updateVisibility = (toggle) => {
+  const updateVisibility = (toggle?: boolean): void => {
     if (toggle === true) {
       applyVisibility(root.classList.contains(HIDDEN_MOD));
       return;
@@ -169,17 +182,41 @@ export function mountHotkeyOverlay(options = {}) {
     });
   }
 
-  window.addEventListener("keydown", (event) => {
+  const handleKeydown = (event: KeyboardEvent): void => {
     if (event.code === toggleKey && !event.repeat) {
       updateVisibility(true);
     }
     if (event.code === "Escape" && !root.classList.contains(HIDDEN_MOD)) {
       updateVisibility(false);
     }
-  });
+  };
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("keydown", handleKeydown);
+  }
+
+  return {
+    element: root,
+    toggle(forceOpen?: boolean) {
+      if (forceOpen === undefined) {
+        updateVisibility();
+      } else {
+        applyVisibility(Boolean(forceOpen));
+      }
+    },
+    dispose() {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("keydown", handleKeydown);
+      }
+      root.remove();
+    },
+  };
 }
 
-function ensureStyles() {
+function ensureStyles(): void {
+  if (typeof document === "undefined") {
+    return;
+  }
   if (document.getElementById(STYLE_ID)) {
     return;
   }
@@ -282,7 +319,7 @@ function ensureStyles() {
   document.head.appendChild(style);
 }
 
-function resolveKeyLabel(code) {
+function resolveKeyLabel(code: string): string {
   switch (code) {
     case "KeyH":
       return "H";

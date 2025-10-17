@@ -1,12 +1,35 @@
 // HUDCameraSettings: lightweight HUD panel for camera tuning
 import {
+  defaultCameraSettings,
   loadSettings,
   saveSettings,
   subscribe,
-  defaultCameraSettings,
-} from "../state/settingsStore.js";
+} from "../state/settingsStore";
+import type {
+  CameraSettings,
+  CameraSettingsUpdate,
+} from "../state/settingsStore";
 
-const RANGE_CONFIG = {
+type RangeKey = Extract<
+  keyof CameraSettings,
+  | "yawSpeed"
+  | "pitchSpeed"
+  | "zoomSpeed"
+  | "minPitch"
+  | "maxPitch"
+  | "minDist"
+  | "maxDist"
+>;
+
+interface RangeConfig {
+  readonly min: number;
+  readonly max: number;
+  readonly step: number;
+  readonly label: string;
+  readonly suffix: string;
+}
+
+const RANGE_CONFIG: Record<RangeKey, RangeConfig> = {
   yawSpeed: { min: 0.1, max: 2.0, step: 0.05, label: "Yaw Speed", suffix: "rad/s" },
   pitchSpeed: { min: 0.1, max: 2.0, step: 0.05, label: "Pitch Speed", suffix: "rad/s" },
   zoomSpeed: { min: 0.5, max: 8.0, step: 0.1, label: "Zoom Speed", suffix: "u/s" },
@@ -16,7 +39,32 @@ const RANGE_CONFIG = {
   maxDist: { min: 4.0, max: 12.0, step: 0.1, label: "Max Distance", suffix: "m" },
 };
 
-const formatValue = (value, suffix = "") => {
+interface SliderControl {
+  readonly wrapper: HTMLDivElement;
+  readonly slider: HTMLInputElement;
+  readonly valueEl: HTMLSpanElement;
+}
+
+interface CheckboxControl {
+  readonly wrapper: HTMLLabelElement;
+  readonly checkbox: HTMLInputElement;
+}
+
+export interface HUDCameraSettingsHandle {
+  dispose(): void;
+}
+
+const SLIDER_KEYS: RangeKey[] = [
+  "yawSpeed",
+  "pitchSpeed",
+  "zoomSpeed",
+  "minPitch",
+  "maxPitch",
+  "minDist",
+  "maxDist",
+];
+
+const formatValue = (value: number, suffix = ""): string => {
   if (!Number.isFinite(value)) return `0${suffix ? " " + suffix : ""}`;
   const abs = Math.abs(value);
   const decimals = abs >= 10 ? 1 : 2;
@@ -24,13 +72,17 @@ const formatValue = (value, suffix = "") => {
   return suffix ? `${text} ${suffix}` : text;
 };
 
-function createSlider(key, config, onInput) {
+function createSlider(
+  key: RangeKey,
+  config: RangeConfig,
+  onInput: (key: RangeKey, value: number) => void,
+): SliderControl {
   const wrapper = document.createElement("div");
   Object.assign(wrapper.style, {
     display: "flex",
     flexDirection: "column",
     gap: "4px",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
   const labelRow = document.createElement("div");
   Object.assign(labelRow.style, {
@@ -42,7 +94,7 @@ function createSlider(key, config, onInput) {
     textTransform: "uppercase",
     letterSpacing: "0.06em",
     opacity: "0.85",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
   const label = document.createElement("span");
   label.textContent = config.label;
@@ -62,7 +114,7 @@ function createSlider(key, config, onInput) {
   slider.setAttribute("aria-label", config.label);
   Object.assign(slider.style, {
     width: "100%",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
   slider.addEventListener("input", () => {
     const value = Number.parseFloat(slider.value);
@@ -76,7 +128,11 @@ function createSlider(key, config, onInput) {
   return { wrapper, slider, valueEl };
 }
 
-function createCheckbox(labelText, key, onChange) {
+function createCheckbox(
+  labelText: string,
+  key: keyof CameraSettings,
+  onChange: (key: keyof CameraSettings, checked: boolean) => void,
+): CheckboxControl {
   const wrapper = document.createElement("label");
   Object.assign(wrapper.style, {
     display: "flex",
@@ -85,7 +141,7 @@ function createCheckbox(labelText, key, onChange) {
     cursor: "pointer",
     fontSize: "12px",
     opacity: "0.9",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
@@ -100,15 +156,15 @@ function createCheckbox(labelText, key, onChange) {
   wrapper.appendChild(checkbox);
   wrapper.appendChild(text);
 
-  return { wrapper, checkbox };
+  return { wrapper: wrapper as HTMLLabelElement, checkbox };
 }
 
-export function mount(rootEl) {
+export function mount(rootEl: HTMLElement | null): HUDCameraSettingsHandle {
   if (!(rootEl instanceof HTMLElement)) {
     return { dispose() {} };
   }
 
-  const state = {
+  const state: { settings: CameraSettings; disposed: boolean } = {
     settings: loadSettings(),
     disposed: false,
   };
@@ -120,7 +176,7 @@ export function mount(rootEl) {
     paddingTop: "8px",
     borderTop: "1px solid rgba(255,255,255,0.15)",
     pointerEvents: "auto",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
   const header = document.createElement("div");
   Object.assign(header.style, {
@@ -128,17 +184,17 @@ export function mount(rootEl) {
     alignItems: "center",
     justifyContent: "space-between",
     gap: "8px",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
   const title = document.createElement("span");
   title.textContent = "Camera";
   Object.assign(title.style, {
-    fontWeight: 600,
+    fontWeight: "600",
     letterSpacing: "0.08em",
     fontSize: "11px",
     textTransform: "uppercase",
     opacity: "0.85",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
   const toggleButton = document.createElement("button");
   toggleButton.type = "button";
@@ -159,7 +215,7 @@ export function mount(rootEl) {
     placeItems: "center",
     cursor: "pointer",
     padding: "0",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
   const panel = document.createElement("div");
   Object.assign(panel.style, {
@@ -171,30 +227,23 @@ export function mount(rootEl) {
     maxHeight: "260px",
     overflowY: "auto",
     display: "none",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
-  const controls = {};
+  const controls: Partial<Record<RangeKey, SliderControl>> = {};
   const slidersContainer = document.createElement("div");
   Object.assign(slidersContainer.style, {
     display: "flex",
     flexDirection: "column",
     gap: "10px",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
-  const onSliderInput = (key, value) => {
+  const onSliderInput = (key: RangeKey, value: number) => {
     if (state.disposed) return;
-    saveSettings({ [key]: value });
+    const update = { [key]: value } as CameraSettingsUpdate;
+    saveSettings(update);
   };
 
-  for (const key of [
-    "yawSpeed",
-    "pitchSpeed",
-    "zoomSpeed",
-    "minPitch",
-    "maxPitch",
-    "minDist",
-    "maxDist",
-  ]) {
+  for (const key of SLIDER_KEYS) {
     const config = RANGE_CONFIG[key];
     const slider = createSlider(key, config, onSliderInput);
     controls[key] = slider;
@@ -207,23 +256,25 @@ export function mount(rootEl) {
     flexDirection: "column",
     gap: "6px",
     marginBottom: "8px",
-  });
+  } satisfies Partial<CSSStyleDeclaration>);
 
   const enableCheckbox = createCheckbox(
     "Enable Arrow Orbit",
     "enableArrowOrbit",
     (key, checked) => {
       if (state.disposed) return;
-      saveSettings({ [key]: checked });
-    }
+      const update = { [key]: checked } as CameraSettingsUpdate;
+      saveSettings(update);
+    },
   );
   const invertCheckbox = createCheckbox(
     "Invert Pitch",
     "invertPitch",
     (key, checked) => {
       if (state.disposed) return;
-      saveSettings({ [key]: checked });
-    }
+      const update = { [key]: checked } as CameraSettingsUpdate;
+      saveSettings(update);
+    },
   );
 
   toggles.appendChild(enableCheckbox.wrapper);
@@ -238,12 +289,12 @@ export function mount(rootEl) {
   section.appendChild(header);
   section.appendChild(panel);
 
-  const applySettingsToUI = (settings) => {
+  const applySettingsToUI = (settings: CameraSettings) => {
     state.settings = settings;
     enableCheckbox.checkbox.checked = settings.enableArrowOrbit;
     invertCheckbox.checkbox.checked = settings.invertPitch;
 
-    for (const key of Object.keys(RANGE_CONFIG)) {
+    for (const key of SLIDER_KEYS) {
       const control = controls[key];
       if (!control) continue;
       const value = settings[key] ?? defaultCameraSettings[key];
@@ -263,7 +314,7 @@ export function mount(rootEl) {
     }
   };
 
-  const onToggleClick = (event) => {
+  const onToggleClick = (event: MouseEvent) => {
     event.preventDefault();
     togglePanel();
   };
@@ -278,7 +329,7 @@ export function mount(rootEl) {
 
   rootEl.appendChild(section);
 
-  return {
+  const handle: HUDCameraSettingsHandle = {
     dispose() {
       if (state.disposed) return;
       state.disposed = true;
@@ -287,6 +338,7 @@ export function mount(rootEl) {
       section.remove();
     },
   };
+  return handle;
 }
 
 export default { mount };

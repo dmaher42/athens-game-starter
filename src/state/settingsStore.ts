@@ -3,12 +3,23 @@
 const STORAGE_KEY = "athens.settings.camera";
 const PERSIST_DELAY_MS = 150;
 
-/**
- * @typedef {ReturnType<typeof loadSettings>} CameraSettings
- */
+export type CameraSettings = {
+  enableArrowOrbit: boolean;
+  yawSpeed: number;
+  pitchSpeed: number;
+  zoomSpeed: number;
+  minPitch: number;
+  maxPitch: number;
+  minDist: number;
+  maxDist: number;
+  invertPitch: boolean;
+};
+
+export type CameraSettingsUpdate = Partial<CameraSettings>;
+export type CameraSettingsListener = (settings: CameraSettings) => void;
 
 // Shape with defaults
-export const defaultCameraSettings = {
+export const defaultCameraSettings: CameraSettings = {
   enableArrowOrbit: true,
   yawSpeed: 0.9, // rad/s
   pitchSpeed: 0.9, // rad/s
@@ -20,7 +31,18 @@ export const defaultCameraSettings = {
   invertPitch: false,
 };
 
-const CAMERA_RANGES = {
+type NumericSettingKey =
+  | "yawSpeed"
+  | "pitchSpeed"
+  | "zoomSpeed"
+  | "minPitch"
+  | "maxPitch"
+  | "minDist"
+  | "maxDist";
+
+type NumericSettingRange = { min: number; max: number };
+
+const CAMERA_RANGES: Record<NumericSettingKey, NumericSettingRange> = {
   yawSpeed: { min: 0.1, max: 2.0 },
   pitchSpeed: { min: 0.1, max: 2.0 },
   zoomSpeed: { min: 0.5, max: 8.0 },
@@ -30,28 +52,29 @@ const CAMERA_RANGES = {
   maxDist: { min: 4.0, max: 12.0 },
 };
 
-const listeners = new Set();
-let currentSettings = { ...defaultCameraSettings };
+const listeners: Set<CameraSettingsListener> = new Set();
+let currentSettings: CameraSettings = { ...defaultCameraSettings };
 let loaded = false;
-let persistTimer = null;
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
 
-function clamp(value, min, max) {
+function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   if (value < min) return min;
   if (value > max) return max;
   return value;
 }
 
-function toNumber(value, fallback) {
-  const num = typeof value === "string" ? Number.parseFloat(value) : Number(value);
+function toNumber(value: unknown, fallback: number): number {
+  const num =
+    typeof value === "string" ? Number.parseFloat(value) : Number(value);
   return Number.isFinite(num) ? num : fallback;
 }
 
-function cloneSettings(settings) {
+function cloneSettings(settings: CameraSettings): CameraSettings {
   return { ...settings };
 }
 
-function hasStorage() {
+function hasStorage(): boolean {
   try {
     return typeof window !== "undefined" && !!window.localStorage;
   } catch {
@@ -59,20 +82,20 @@ function hasStorage() {
   }
 }
 
-function readStoredSettings() {
+function readStoredSettings(): CameraSettingsUpdate | null {
   if (!hasStorage()) return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return null;
-    return parsed;
+    return parsed as CameraSettingsUpdate;
   } catch {
     return null;
   }
 }
 
-function writeStoredSettings(settings) {
+function writeStoredSettings(settings: CameraSettings): void {
   if (!hasStorage()) return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
@@ -81,10 +104,10 @@ function writeStoredSettings(settings) {
   }
 }
 
-function normalizeSettings(partial = {}) {
-  const merged = { ...defaultCameraSettings, ...partial };
+function normalizeSettings(partial: CameraSettingsUpdate = {}): CameraSettings {
+  const merged: CameraSettings = { ...defaultCameraSettings, ...partial };
 
-  const normalized = {
+  const normalized: CameraSettings = {
     enableArrowOrbit: Boolean(merged.enableArrowOrbit),
     yawSpeed: clamp(
       toNumber(merged.yawSpeed, defaultCameraSettings.yawSpeed),
@@ -161,7 +184,7 @@ function normalizeSettings(partial = {}) {
   return normalized;
 }
 
-function ensureLoaded() {
+function ensureLoaded(): void {
   if (loaded) return;
   const stored = readStoredSettings();
   if (stored) {
@@ -172,7 +195,7 @@ function ensureLoaded() {
   loaded = true;
 }
 
-function schedulePersist() {
+function schedulePersist(): void {
   if (!hasStorage()) return;
   if (persistTimer !== null) {
     clearTimeout(persistTimer);
@@ -183,7 +206,7 @@ function schedulePersist() {
   }, PERSIST_DELAY_MS);
 }
 
-function notifyListeners() {
+function notifyListeners(): void {
   const snapshot = cloneSettings(currentSettings);
   listeners.forEach((listener) => {
     try {
@@ -194,26 +217,26 @@ function notifyListeners() {
   });
 }
 
-function settingsEqual(a, b) {
+function settingsEqual(a: CameraSettings | null, b: CameraSettings | null): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
-  const keys = Object.keys(defaultCameraSettings);
+  const keys = Object.keys(defaultCameraSettings) as (keyof CameraSettings)[];
   for (const key of keys) {
     if (a[key] !== b[key]) return false;
   }
   return true;
 }
 
-export function loadSettings() {
+export function loadSettings(): CameraSettings {
   ensureLoaded();
   return cloneSettings(currentSettings);
 }
 
-export function getSettings() {
+export function getSettings(): CameraSettings {
   return loadSettings();
 }
 
-export function saveSettings(partial = {}) {
+export function saveSettings(partial?: CameraSettingsUpdate | null): CameraSettings {
   ensureLoaded();
   if (!partial || typeof partial !== "object") {
     return cloneSettings(currentSettings);
@@ -230,7 +253,7 @@ export function saveSettings(partial = {}) {
   return cloneSettings(currentSettings);
 }
 
-export function subscribe(listener) {
+export function subscribe(listener: CameraSettingsListener): () => void {
   if (typeof listener !== "function") {
     return () => {};
   }

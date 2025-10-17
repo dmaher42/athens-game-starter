@@ -1,3 +1,5 @@
+import type { Vector3 } from "three";
+
 import {
   ACROPOLIS_PEAK_3D,
   AGORA_CENTER_3D,
@@ -10,7 +12,39 @@ import { getUISlot } from "./uiRoot.js";
 
 const STYLE_ID = "mini-map-style";
 
-function ensureStyles() {
+type Vector3Like = Pick<Vector3, "x" | "y" | "z">;
+
+interface MiniMapPoint {
+  readonly x: number;
+  readonly z: number;
+}
+
+interface MiniMapBounds {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minZ: number;
+  readonly maxZ: number;
+}
+
+export interface MiniMapFeature {
+  readonly id: string;
+  readonly name: string;
+  readonly position: MiniMapPoint;
+  readonly type: "landmark" | "district";
+}
+
+export interface MiniMapOptions {
+  readonly getPosition?: () => Vector3Like | MiniMapPoint | null | undefined;
+  readonly getDirection?: () => Vector3Like | MiniMapPoint | null | undefined;
+  readonly features?: readonly MiniMapFeature[];
+}
+
+export interface MiniMapHandle {
+  readonly rootElement: HTMLDivElement;
+  dispose(): void;
+}
+
+function ensureStyles(): void {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
   const style = document.createElement("style");
@@ -118,10 +152,14 @@ function ensureStyles() {
   document.head.appendChild(style);
 }
 
-function normalizePosition(position) {
+function normalizePosition(position: unknown): MiniMapPoint | null {
   if (!position) return null;
-  if (typeof position.x === "number" && typeof position.z === "number") {
-    return { x: position.x, z: position.z };
+  if (
+    typeof (position as Vector3Like).x === "number" &&
+    typeof (position as Vector3Like).z === "number"
+  ) {
+    const vec = position as Vector3Like;
+    return { x: vec.x, z: vec.z };
   }
   if (Array.isArray(position) && position.length >= 3) {
     return { x: Number(position[0]) || 0, z: Number(position[2]) || 0 };
@@ -129,9 +167,16 @@ function normalizePosition(position) {
   return null;
 }
 
-function buildLandmarkFeatures() {
-  const features = [];
-  const groups = athensLayoutConfig?.groups ?? [];
+function buildLandmarkFeatures(): MiniMapFeature[] {
+  const features: MiniMapFeature[] = [];
+  const groups = (athensLayoutConfig?.groups ?? []) as Array<{
+    landmarks?: Array<{
+      enabled?: boolean;
+      name?: string;
+      id?: string;
+      placement?: { position?: unknown };
+    }>;
+  }>;
   for (const group of groups) {
     if (!group || !Array.isArray(group.landmarks)) continue;
     for (const landmark of group.landmarks) {
@@ -151,11 +196,11 @@ function buildLandmarkFeatures() {
   return features;
 }
 
-function buildDistrictFeatures() {
+function buildDistrictFeatures(): MiniMapFeature[] {
   const agora = normalizePosition(AGORA_CENTER_3D);
   const harbor = normalizePosition(HARBOR_CENTER_3D);
   const acropolis = normalizePosition(ACROPOLIS_PEAK_3D);
-  const features = [];
+  const features: MiniMapFeature[] = [];
   if (harbor) {
     features.push({
       id: "district:harbor",
@@ -213,9 +258,9 @@ function buildDistrictFeatures() {
   return features;
 }
 
-function combineFeatures() {
+function combineFeatures(): MiniMapFeature[] {
   const combined = [...buildDistrictFeatures(), ...buildLandmarkFeatures()];
-  const seen = new Set();
+  const seen = new Set<string>();
   return combined.filter((feature) => {
     if (!feature?.id) return false;
     if (seen.has(feature.id)) return false;
@@ -224,9 +269,13 @@ function combineFeatures() {
   });
 }
 
-const DEFAULT_FEATURES = combineFeatures();
+const DEFAULT_FEATURES: MiniMapFeature[] = combineFeatures();
 
-function worldToCanvas(point, canvas, bounds) {
+function worldToCanvas(
+  point: MiniMapPoint | null,
+  canvas: HTMLCanvasElement | null,
+  bounds: MiniMapBounds | null,
+): { x: number; y: number } | null {
   if (!point || !canvas || !bounds) return null;
   const { width, height } = canvas;
   const normX = (point.x - bounds.minX) / (bounds.maxX - bounds.minX || 1);
@@ -237,7 +286,7 @@ function worldToCanvas(point, canvas, bounds) {
   };
 }
 
-function computeBounds(features) {
+function computeBounds(features: readonly MiniMapFeature[]): MiniMapBounds {
   const center = normalizePosition(CITY_CHUNK_CENTER) ?? { x: 0, z: 0 };
   const radius = Number.isFinite(CITY_AREA_RADIUS) ? CITY_AREA_RADIUS : 260;
   let minX = center.x - radius;
@@ -265,7 +314,11 @@ function computeBounds(features) {
   };
 }
 
-function drawCompass(ctx, direction, width) {
+function drawCompass(
+  ctx: CanvasRenderingContext2D | null,
+  direction: (Vector3Like | MiniMapPoint | null | undefined),
+  width: number,
+): void {
   if (!ctx || !direction) return;
   const size = 48;
   const padding = 10;
@@ -280,7 +333,8 @@ function drawCompass(ctx, direction, width) {
   ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
   ctx.stroke();
 
-  const angle = Math.atan2(direction.x || 0, direction.z || 1);
+  const vec = direction as Vector3Like;
+  const angle = Math.atan2(vec?.x || 0, vec?.z || 1);
   ctx.rotate(angle);
   ctx.fillStyle = "rgba(255, 99, 71, 0.9)";
   ctx.beginPath();
@@ -304,8 +358,8 @@ function drawCompass(ctx, direction, width) {
   ctx.restore();
 }
 
-function drawGrid(ctx, canvas) {
-  if (!ctx || !canvas) return;
+function drawGrid(ctx: CanvasRenderingContext2D | null, canvas: HTMLCanvasElement): void {
+  if (!ctx) return;
   const spacing = 36;
   ctx.save();
   ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
@@ -325,8 +379,13 @@ function drawGrid(ctx, canvas) {
   ctx.restore();
 }
 
-function drawFeatures(ctx, canvas, features, bounds) {
-  if (!ctx || !canvas) return;
+function drawFeatures(
+  ctx: CanvasRenderingContext2D | null,
+  canvas: HTMLCanvasElement,
+  features: readonly MiniMapFeature[],
+  bounds: MiniMapBounds,
+): void {
+  if (!ctx) return;
   ctx.save();
   ctx.font = "10px ui-sans-serif";
   ctx.textBaseline = "top";
@@ -357,13 +416,20 @@ function drawFeatures(ctx, canvas, features, bounds) {
   ctx.restore();
 }
 
-function drawPlayer(ctx, canvas, position, direction, bounds) {
-  if (!ctx || !canvas || !position) return;
+function drawPlayer(
+  ctx: CanvasRenderingContext2D | null,
+  canvas: HTMLCanvasElement,
+  position: MiniMapPoint | null,
+  direction: Vector3Like | MiniMapPoint | null | undefined,
+  bounds: MiniMapBounds,
+): void {
+  if (!ctx || !position) return;
   const mapped = worldToCanvas(position, canvas, bounds);
   if (!mapped) return;
   ctx.save();
   ctx.translate(mapped.x, mapped.y);
-  const angle = Math.atan2(direction?.x || 0, direction?.z || 1);
+  const vec = direction as Vector3Like | undefined;
+  const angle = Math.atan2(vec?.x || 0, vec?.z || 1);
   ctx.rotate(angle);
   ctx.fillStyle = "#ff9f1c";
   ctx.beginPath();
@@ -378,7 +444,7 @@ function drawPlayer(ctx, canvas, position, direction, bounds) {
   ctx.restore();
 }
 
-function formatDistance(distanceMeters) {
+function formatDistance(distanceMeters: number): string {
   if (!Number.isFinite(distanceMeters)) return "";
   const paces = distanceMeters / 0.75;
   if (paces < 1) return "<1 pace";
@@ -386,8 +452,11 @@ function formatDistance(distanceMeters) {
   return `${Math.round(paces)} paces`;
 }
 
-function updateLegend(listElement, position, features) {
-  if (!listElement || !position || !Array.isArray(features)) return;
+function updateLegend(
+  listElement: HTMLUListElement,
+  position: MiniMapPoint,
+  features: readonly MiniMapFeature[],
+): void {
   const items = features
     .map((feature) => {
       const dx = (feature?.position?.x ?? 0) - position.x;
@@ -418,7 +487,7 @@ function updateLegend(listElement, position, features) {
   }
 }
 
-export function mountMiniMap(options = {}) {
+export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null {
   if (typeof document === "undefined") return null;
   ensureStyles();
 
@@ -458,6 +527,10 @@ export function mountMiniMap(options = {}) {
   wrap.appendChild(legend);
 
   const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    console.warn("[MiniMap] unable to acquire 2D context");
+    return null;
+  }
   const bounds = computeBounds(features);
 
   let isExpanded = false;
@@ -493,7 +566,8 @@ export function mountMiniMap(options = {}) {
       drawGrid(ctx, canvas);
       drawFeatures(ctx, canvas, features, bounds);
 
-      const position = getPosition?.();
+      const rawPosition = getPosition?.();
+      const position = normalizePosition(rawPosition);
       const direction = getDirection?.();
       if (position) {
         drawPlayer(ctx, canvas, position, direction, bounds);
@@ -512,9 +586,9 @@ export function mountMiniMap(options = {}) {
   loop();
 
   const slot = getUISlot("topLeft");
-  slot.appendChild(wrap);
+  slot?.appendChild(wrap);
 
-  return {
+  const handle: MiniMapHandle = {
     rootElement: wrap,
     dispose() {
       disposed = true;
@@ -522,6 +596,7 @@ export function mountMiniMap(options = {}) {
       wrap.remove();
     },
   };
+  return handle;
 }
 
 export default mountMiniMap;

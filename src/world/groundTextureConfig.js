@@ -57,7 +57,9 @@ export const GROUND_TEXTURE_CONFIG = {
    * lush. Add or remove entries in this array to match the JPGs you provide.
    */
   details: [
-    { 
+    // Set tintMultiplier: false on any entry to bypass tinting when relying on
+    // baked-in color work.
+    {
       generator: "lush-grass-detail",
       repeat: [36, 36],
       rotation: 0.23,
@@ -66,10 +68,11 @@ export const GROUND_TEXTURE_CONFIG = {
       tint: [1.0, 1.0, 1.0], // Neutral tint
       minHeight: -15,
       maxHeight: 32,
-      fade: 10, // Grass weight/tint bump
-      slopeMax: 0.42, // Grass weight/tint bump
+      fade: 16, // Encourage softer transitions for photo textures
+      slopeMax: 0.33, // Favor broad, low-slope coverage
       mode: "mix",
       seed: 404,
+      tintAttenuation: 0.42,
     },
     // extra detail layers for lowlands/midslopes
     {
@@ -81,10 +84,11 @@ export const GROUND_TEXTURE_CONFIG = {
       tint: [1.0, 1.0, 1.0], // Neutral tint
       minHeight: -20,
       maxHeight: 18, // Grass weight/tint bump
-      fade: 8, // Grass weight/tint bump
-      slopeMax: 0.38, // Grass weight/tint bump
+      fade: 14, // Encourage softer transitions for photo textures
+      slopeMax: 0.3, // Favor broad, low-slope coverage
       mode: "mix",
       seed: 405,
+      tintAttenuation: 0.4,
     },
     {
       generator: "dry-grass-detail",
@@ -95,10 +99,11 @@ export const GROUND_TEXTURE_CONFIG = {
       tint: [1.0, 1.0, 1.0], // Neutral tint
       minHeight: 16, // Grass weight/tint bump
       maxHeight: 46, // Grass weight/tint bump
-      fade: 6, // Grass weight/tint bump
-      slopeMin: 0.32, // Grass weight/tint bump
+      fade: 10, // Encourage softer transitions for photo textures
+      slopeMin: 0.26, // Favor broad, low-slope coverage
       mode: "multiply",
       seed: 406,
+      tintAttenuation: 0.38,
     },
   ],
 };
