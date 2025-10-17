@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.bundleless/
 
 # --- Project: allow public assets to publish on GitHub Pages ---
 !public/models/**
