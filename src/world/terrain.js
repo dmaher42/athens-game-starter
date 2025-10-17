@@ -219,7 +219,7 @@ export function createTerrain(scene) {
     color: 0xffffff,
     roughness: 0.90,
     metalness: 0.0,
-    vertexColors: true,
+    vertexColors: false, // Disable vertex colors to prevent tinting
   });
 
   const groundTextureState = createGroundTextureState(
