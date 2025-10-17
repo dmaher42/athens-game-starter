@@ -1,6 +1,6 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
-import { SEA_LEVEL_Y, HARBOR_WATER_EAST_LIMIT } from "./locations.js";
+import { getSeaLevelY, HARBOR_WATER_EAST_LIMIT } from "./locations.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 function sanitizeRelativePath(value) {
@@ -536,6 +536,9 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   const seed = Number.isFinite(options.seed) ? options.seed : 12345;
   const rng = mulberry32(seed);
   const glowRng = mulberry32(seed ^ 0x9e3779b9);
+  const seaLevel = Number.isFinite(options.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
 
   // Find the group named "LotPads" that city.js created
   const padsGroup = worldRoot.getObjectByName("LotPads");
@@ -657,7 +660,7 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     if (typeKey === "pier") {
       const pier = built;
       const deckHeight = 1.4; // or whatever the project uses
-      pier.position.y = SEA_LEVEL_Y + deckHeight; // pier deck sits above current sea level.
+      pier.position.y = seaLevel + deckHeight; // pier deck sits above current sea level.
     } else {
       built.position.y = Math.max(built.position.y, 0) + 0.01; // float slightly above ground to avoid z-fight
     }

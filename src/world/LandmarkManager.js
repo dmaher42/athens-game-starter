@@ -14,7 +14,7 @@
 
 import * as THREE from "three";
 import { loadLandmark } from "./landmarks.js";
-import { SEA_LEVEL_Y } from "./locations.js";
+import { getSeaLevelY } from "./locations.js";
 import { snapAboveGround } from "./ground.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { buildTemple } from "../features/temples.js";
@@ -212,7 +212,7 @@ export class LandmarkManager {
 
   resolveSnapOptions(spec = {}) {
     const merged = mergeSettings(
-      { clampToSea: true, seaLevel: SEA_LEVEL_Y },
+      { clampToSea: true, seaLevel: getSeaLevelY() },
       this.globalDefaults.snapOptions,
       spec.snapOptions,
       spec.placement?.snapOptions
@@ -221,7 +221,7 @@ export class LandmarkManager {
       merged.minAboveSea = 0.02;
     }
     if (typeof merged.seaLevel !== "number") {
-      merged.seaLevel = SEA_LEVEL_Y;
+      merged.seaLevel = getSeaLevelY();
     }
     return merged;
   }

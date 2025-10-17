@@ -38,7 +38,8 @@ import {
   ACROPOLIS_PEAK_3D,
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_NORMAL_CANDIDATES,
-  SEA_LEVEL_Y,
+  getSeaLevelY,
+  setSeaLevelY,
 } from "../world/locations.js";
 import {
   initializeAssetTranscoders,
@@ -465,22 +466,98 @@ export class Application {
       );
     }
 
+    const currentSeaLevel = getSeaLevelY();
+    const harborSampler = terrain?.userData?.getHeightAt;
+    let sampledSeaLevel = currentSeaLevel;
+    let harborSampleCount = 0;
+
+    if (typeof harborSampler === "function") {
+      const { west, east, north, south } = HARBOR_WATER_BOUNDS;
+      const centerX = (west + east) * 0.5;
+      const centerZ = (north + south) * 0.5;
+      const width = Math.max(1, Math.abs(east - west));
+      const depth = Math.max(1, Math.abs(south - north));
+      const insetX = Math.min(width * 0.1, 4);
+      const insetZ = Math.min(depth * 0.15, 6);
+      const sampleWestX = west + insetX;
+      const sampleEastX = east - insetX;
+      const shorelineOffsets = [0, depth * 0.25, -depth * 0.25];
+
+      const samplePoints = [
+        { x: sampleWestX, z: centerZ },
+        { x: sampleEastX, z: centerZ },
+        { x: centerX, z: north + insetZ },
+        { x: centerX, z: south - insetZ },
+        { x: centerX, z: centerZ },
+      ];
+
+      for (const offset of shorelineOffsets) {
+        samplePoints.push({ x: sampleEastX, z: centerZ + offset });
+      }
+
+      const samples = [];
+      for (const point of samplePoints) {
+        const height = harborSampler(point.x, point.z);
+        if (Number.isFinite(height)) {
+          samples.push(height);
+        }
+      }
+
+      harborSampleCount = samples.length;
+      if (samples.length >= 3) {
+        samples.sort((a, b) => a - b);
+        const trimmed =
+          samples.length > 4 ? samples.slice(1, samples.length - 1) : samples;
+        const total = trimmed.reduce((sum, value) => sum + value, 0);
+        const average = total / trimmed.length;
+        if (Number.isFinite(average)) {
+          sampledSeaLevel = average;
+        }
+      }
+    }
+
+    if (
+      Number.isFinite(sampledSeaLevel) &&
+      Math.abs(sampledSeaLevel - currentSeaLevel) > 1e-3
+    ) {
+      const changed = setSeaLevelY(sampledSeaLevel, {
+        reason: "harbor-sampling",
+        samples: harborSampleCount,
+      });
+      if (changed && import.meta.env?.DEV) {
+        console.assert(
+          Math.abs(getSeaLevelY() - sampledSeaLevel) < 1e-6,
+          "[seaLevel] mismatch after harbor sampling",
+        );
+      }
+    } else if (import.meta.env?.DEV && harborSampleCount < 3) {
+      console.info(
+        `[seaLevel] Harbor sampling unavailable (samples=${harborSampleCount}); using fallback ${currentSeaLevel.toFixed(3)}`,
+      );
+    }
+
+    const resolvedSeaLevel = getSeaLevelY();
+
     const grassEnabled =
       engineConfig.performance?.enableGrass ?? parseBooleanQuery("grass", false);
 
     ocean = await createOcean(scene, {
       bounds: HARBOR_WATER_BOUNDS,
       waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
+      seaLevel: resolvedSeaLevel,
     });
     this.ocean = ocean;
     onFogChange(fogEnabled);
     pendingOceanStatus = {
-      seaLevel: SEA_LEVEL_Y,
+      seaLevel: resolvedSeaLevel,
       bounds: HARBOR_WATER_BOUNDS,
     };
     this.pendingOceanStatus = pendingOceanStatus;
     updateOceanHudStatus();
-    const harbor = createHarbor(scene, { center: HARBOR_CENTER_3D });
+    const harbor = createHarbor(scene, {
+      center: HARBOR_CENTER_3D,
+      seaLevel: resolvedSeaLevel,
+    });
     const envCollider = new EnvironmentCollider();
     scene.add(envCollider.mesh);
 
@@ -586,6 +663,7 @@ export class Application {
       roadsVisible,
       useProceduralBlocks: FORCE_PROCEDURAL_LANDMARKS,
       forceProcedural: FORCE_PROC,
+      seaLevel: resolvedSeaLevel,
     });
 
     // Hill-city buildings (uses terrain sampler + road curve)
@@ -621,6 +699,7 @@ export class Application {
     createHarborDecorations(worldRoot, {
       harborCity,
       terrain,
+      seaLevel: resolvedSeaLevel,
     });
 
     // Overlay the modern planning strategy as a holographic layer so players can
@@ -662,7 +741,7 @@ export class Application {
       searchRadius: AGORA_RADIUS + 60,
       radialStep: 4,
       arcLength: 6,
-      seaLevel: SEA_LEVEL_Y,
+      seaLevel: resolvedSeaLevel,
       minAboveSea: 0.25,
     });
     player.object.position.set(
@@ -679,7 +758,7 @@ export class Application {
       spawnOffset,
       {
         clampToSea: true,
-        seaLevel: SEA_LEVEL_Y,
+        seaLevel: resolvedSeaLevel,
         minAboveSea: 0.25,
       },
     );
@@ -1373,7 +1452,7 @@ export class Application {
       const worldZ = monument.position.z;
       snapAboveGround(monument, terrain, worldX, worldZ, 0.05, {
         clampToSea: true,
-        seaLevel: SEA_LEVEL_Y,
+        seaLevel: resolvedSeaLevel,
         minAboveSea: 0.02,
       });
 

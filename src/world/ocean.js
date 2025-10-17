@@ -6,7 +6,7 @@ import {
   HARBOR_WATER_SIZE,
   HARBOR_WATER_EAST_LIMIT,
   HARBOR_WATER_NORMAL_CANDIDATES,
-  SEA_LEVEL_Y,
+  getSeaLevelY,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
 
@@ -306,7 +306,7 @@ export async function createOcean(scene, options = {}) {
   const cz = (north + south) * 0.5;
 
   water.rotation.x = -Math.PI / 2;
-  water.position.set(cx, SEA_LEVEL_Y, cz);
+  water.position.set(cx, resolvedSeaLevel, cz);
 
   const halfX = (east - west) * 0.5;
   const clipZFront = Math.max(north, FRONT_Z_HARD);
@@ -343,7 +343,14 @@ export async function createOcean(scene, options = {}) {
       if (existing) {
         scene.remove(existing);
       }
-      mountWaterClipDebug(scene, west, east, clipZFront, clipZBack);
+      mountWaterClipDebug(
+        scene,
+        west,
+        east,
+        clipZFront,
+        clipZBack,
+        resolvedSeaLevel,
+      );
     }
   }
 
@@ -358,14 +365,14 @@ export async function createOcean(scene, options = {}) {
   scene.add(water);
   if (import.meta.env?.DEV) {
     console.log(
-      `[ocean] y=${SEA_LEVEL_Y}, bounds=${JSON.stringify({
+      `[ocean] y=${resolvedSeaLevel}, bounds=${JSON.stringify({
         west,
         east,
         north: clipZFront,
         south: clipZBack,
       })}`,
     );
-    const debugCenter = new THREE.Vector3(cx, SEA_LEVEL_Y, cz);
+    const debugCenter = new THREE.Vector3(cx, resolvedSeaLevel, cz);
     const debugSize = new THREE.Vector2(width, depth);
     const existingBoundsHelper = scene.getObjectByName?.("WaterBoundsDebug");
     if (existingBoundsHelper) {
@@ -380,7 +387,14 @@ export async function createOcean(scene, options = {}) {
   };
 }
 
-export function mountWaterClipDebug(scene, west, east, north, south) {
+export function mountWaterClipDebug(
+  scene,
+  west,
+  east,
+  north,
+  south,
+  seaLevel = getSeaLevelY(),
+) {
   const g = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(west, 0, north),
     new THREE.Vector3(east, 0, north),
@@ -389,7 +403,7 @@ export function mountWaterClipDebug(scene, west, east, north, south) {
     new THREE.Vector3(west, 0, north),
   ]);
   const line = new THREE.Line(g, new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 }));
-  line.position.y = SEA_LEVEL_Y + 0.02;
+  line.position.y = seaLevel + 0.02;
   line.name = "WaterClipDebug";
   scene.add(line);
   return line;
@@ -417,3 +431,7 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0) {
     );
   }
 }
+  const resolvedSeaLevel = Number.isFinite(options?.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
+

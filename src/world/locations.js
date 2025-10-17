@@ -1,54 +1,16 @@
 import * as THREE from "three";
+import { getSeaLevelY, setSeaLevelY, subscribeSeaLevelChange } from "./seaLevelState.js";
 
-const parseValidNumber = (value) => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
+export { getSeaLevelY, setSeaLevelY } from "./seaLevelState.js";
 
-const EXISTING_SEA_LEVEL_Y = (() => {
-  if (
-    typeof globalThis !== "undefined" &&
-    typeof globalThis.SEA_LEVEL_Y !== "undefined"
-  ) {
-    const override = parseValidNumber(globalThis.SEA_LEVEL_Y);
-    if (typeof override !== "undefined") {
-      return override;
-    }
-  }
-
-  if (
-    typeof globalThis !== "undefined" &&
-    typeof globalThis.location === "object" &&
-    globalThis.location !== null
-  ) {
-    const { search } = globalThis.location;
-
-    if (typeof search === "string" && search.length > 0) {
-      try {
-        const params = new URLSearchParams(
-          search.startsWith("?") ? search : `?${search}`
-        );
-        const paramValue = params.get("sea");
-        const parsedParam = parseValidNumber(paramValue);
-
-        if (typeof parsedParam !== "undefined") {
-          return parsedParam;
-        }
-      } catch (error) {
-        // Ignore malformed query strings or missing URLSearchParams
-      }
-    }
-  }
-
-  return undefined;
-})();
-
-export const SEA_LEVEL_Y =
-  typeof EXISTING_SEA_LEVEL_Y !== "undefined" ? EXISTING_SEA_LEVEL_Y : 4.5; // keep existing if defined but lift default so water is visible
-// export const SEA_LEVEL_Y = -0.3; // uncomment to lower globally if shoreline splashes
+const resolveSeaLevelY = () => getSeaLevelY();
 
 // Key anchors (coastal → uphill)
-export const HARBOR_CENTER_3D = new THREE.Vector3(-120, SEA_LEVEL_Y, 80);
+export const HARBOR_CENTER_3D = new THREE.Vector3(
+  -120,
+  resolveSeaLevelY(),
+  80,
+);
 export const AGORA_CENTER_3D = new THREE.Vector3(-80, 8, 40); // slightly higher than sea
 export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, 14, 10); // hill crown
 
@@ -67,7 +29,9 @@ export const MAX_SLOPE_DELTA = 0.35; // 1m sample slope threshold
 export const MAIN_ROAD_WIDTH = 3.2;
 
 export const HARBOR_CENTER = new THREE.Vector2(-120, 80);
-export const HARBOR_SEA_LEVEL = SEA_LEVEL_Y;
+export function getHarborSeaLevel() {
+  return getSeaLevelY();
+}
 
 export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, 0, 25);
 export const CITY_CHUNK_SIZE = new THREE.Vector2(140, 110); // city grid footprint
@@ -129,6 +93,11 @@ export const HARBOR_SETBACKS = [
 // Convenience centers
 export const HARBOR_WATER_CENTER = new THREE.Vector3(
   HARBOR_CENTER_3D.x + HARBOR_WATER_OFFSET.x,
-  SEA_LEVEL_Y,
+  resolveSeaLevelY(),
   HARBOR_CENTER_3D.z + HARBOR_WATER_OFFSET.y
 );
+
+subscribeSeaLevelChange((seaLevelY) => {
+  HARBOR_CENTER_3D.y = seaLevelY;
+  HARBOR_WATER_CENTER.y = seaLevelY;
+});

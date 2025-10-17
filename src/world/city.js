@@ -4,7 +4,7 @@ import {
   CITY_CHUNK_CENTER,
   CITY_CHUNK_SIZE,
   CITY_SEED,
-  SEA_LEVEL_Y,
+  getSeaLevelY,
   MIN_ABOVE_SEA,
   MAX_SLOPE_DELTA,
   CITY_AREA_RADIUS,
@@ -330,7 +330,7 @@ function createVisibleRoad(start, end, scene, terrain, options = {}) {
 }
 
 const SURFACE_OFFSET = 0.05;
-const MIN_CITY_GRADE = SEA_LEVEL_Y + MIN_ABOVE_SEA;
+const MIN_CITY_GRADE = getSeaLevelY() + MIN_ABOVE_SEA;
 const MIN_CITY_SURFACE = MIN_CITY_GRADE + SURFACE_OFFSET;
 
 function clampSurfaceHeight(height) {
@@ -558,6 +558,9 @@ export async function createCity(scene, terrain, options = {}) {
   const showFoundationPads = options.showFoundationPads === true;
   const useProceduralBlocks = options.useProceduralBlocks === true;
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
+  const seaLevel = Number.isFinite(options.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
   const renderer = scene?.userData?.renderer ?? null;
   const rng = mulberry32(options.seed ?? CITY_SEED);
   const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
@@ -882,7 +885,7 @@ export async function createCity(scene, terrain, options = {}) {
     const z = THREE.MathUtils.lerp(promenadeNorth, promenadeSouth, alpha);
     const sway = Math.sin(alpha * Math.PI) * promenadeBulge;
     const x = promenadeOffset + sway;
-    const h = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
+    const h = sampleHeight(terrain, x, z, getSeaLevelY());
     const y = clampSurfaceHeight(h);
     promenadeControlPoints.push(new THREE.Vector3(x, y, z));
   }
@@ -891,7 +894,7 @@ export async function createCity(scene, terrain, options = {}) {
     0,
     new THREE.Vector3(
       promenadeOffset + promenadeBulge * 0.65,
-      clampSurfaceHeight(sampleHeight(terrain, promenadeOffset + promenadeBulge * 0.65, HARBOR_CENTER_3D.z, SEA_LEVEL_Y)),
+      clampSurfaceHeight(sampleHeight(terrain, promenadeOffset + promenadeBulge * 0.65, HARBOR_CENTER_3D.z, getSeaLevelY())),
       HARBOR_CENTER_3D.z
     )
   );
@@ -905,7 +908,7 @@ export async function createCity(scene, terrain, options = {}) {
     for (let i = 0; i <= lookupCount; i++) {
       const t = i / lookupCount;
       const pt = promenadeCurve.getPoint(t).clone();
-      const terrainHeight = sampleHeight(terrain, pt.x, pt.z, SEA_LEVEL_Y);
+      const terrainHeight = sampleHeight(terrain, pt.x, pt.z, getSeaLevelY());
       pt.y = clampSurfaceHeight(terrainHeight);
       promenadeLookup.push({ t, point: pt });
     }
@@ -960,7 +963,7 @@ export async function createCity(scene, terrain, options = {}) {
       }
 
       if (isInsideEllipse({ x: centerX, z: centerZ }, waterfrontPlazaMask)) {
-        const plazaHeight = sampleHeight(terrain, centerX, centerZ, SEA_LEVEL_Y);
+        const plazaHeight = sampleHeight(terrain, centerX, centerZ, getSeaLevelY());
         if (Number.isFinite(plazaHeight)) {
           waterfrontPlazaSpots.push({
             x: centerX,
@@ -1075,7 +1078,7 @@ export async function createCity(scene, terrain, options = {}) {
       }
 
       const sampledY = Number.isFinite(lot.height) ? lot.height : NaN;
-      if (!Number.isFinite(sampledY) || sampledY <= SEA_LEVEL_Y + 0.01) {
+      if (!Number.isFinite(sampledY) || sampledY <= getSeaLevelY() + 0.01) {
         continue;
       }
 
@@ -1374,7 +1377,7 @@ export async function createCity(scene, terrain, options = {}) {
             const remaining = nextRowDistance - rowDistanceAccum;
             const t = THREE.MathUtils.clamp(remaining / segmentLength, 0, 1);
             const position = start.clone().lerp(end, t);
-            const height = sampleHeight(terrain, position.x, position.z, SEA_LEVEL_Y);
+            const height = sampleHeight(terrain, position.x, position.z, getSeaLevelY());
             if (Number.isFinite(height)) {
               secondaryBoulevardLightPositions.push({
                 x: position.x,
@@ -1425,7 +1428,7 @@ export async function createCity(scene, terrain, options = {}) {
             const remaining = nextColumnDistance - columnDistanceAccum;
             const t = THREE.MathUtils.clamp(remaining / segmentLength, 0, 1);
             const position = start.clone().lerp(end, t);
-            const height = sampleHeight(terrain, position.x, position.z, SEA_LEVEL_Y);
+            const height = sampleHeight(terrain, position.x, position.z, getSeaLevelY());
             if (Number.isFinite(height)) {
               secondaryBoulevardLightPositions.push({
                 x: position.x,
@@ -1445,8 +1448,8 @@ export async function createCity(scene, terrain, options = {}) {
   const quayX = HARBOR_WATER_EAST_LIMIT + 1.5;
   const quayStartZ = roadStartZ;
   const quayEndZ = roadStartZ + spacingZ * countZ;
-  const quayStartHeight = sampleHeight(terrain, quayX, quayStartZ, SEA_LEVEL_Y);
-  const quayEndHeight = sampleHeight(terrain, quayX, quayEndZ, SEA_LEVEL_Y);
+  const quayStartHeight = sampleHeight(terrain, quayX, quayStartZ, getSeaLevelY());
+  const quayEndHeight = sampleHeight(terrain, quayX, quayEndZ, getSeaLevelY());
   const quayStart = new THREE.Vector3(
     quayX,
     clampSurfaceHeight(quayStartHeight),
@@ -1482,7 +1485,7 @@ export async function createCity(scene, terrain, options = {}) {
     }
 
     const boulevardPoints = segment.map((point) => {
-      const height = sampleHeight(terrain, point.x, point.z, SEA_LEVEL_Y);
+      const height = sampleHeight(terrain, point.x, point.z, getSeaLevelY());
       return new THREE.Vector3(point.x, clampSurfaceHeight(height), point.z);
     });
 
@@ -1509,7 +1512,7 @@ export async function createCity(scene, terrain, options = {}) {
         const remaining = nextDistance - distanceAccum;
         const t = THREE.MathUtils.clamp(remaining / segmentLength, 0, 1);
         const position = start.clone().lerp(end, t);
-        const height = sampleHeight(terrain, position.x, position.z, SEA_LEVEL_Y);
+        const height = sampleHeight(terrain, position.x, position.z, getSeaLevelY());
         if (Number.isFinite(height)) {
           mainAvenueLightPositions.push({
             x: position.x,
@@ -1797,8 +1800,8 @@ export async function createCity(scene, terrain, options = {}) {
       THREE,
       scene,
       lots: finalPadCandidates,
-      getHeightAt: (x, z) => sampleHeight(terrain, x, z, SEA_LEVEL_Y),
-      seaLevel: SEA_LEVEL_Y,
+      getHeightAt: (x, z) => sampleHeight(terrain, x, z, getSeaLevelY()),
+      seaLevel: getSeaLevelY(),
       loadModel: () => null,
     });
     for (const padData of finalPadCandidates) {
@@ -1818,7 +1821,7 @@ export async function createCity(scene, terrain, options = {}) {
 
   if (waterfrontPlazaSpots.length > 0) {
     const plazaAnchor = waterfrontPlazaMask.center;
-    const plazaHeightSample = sampleHeight(terrain, plazaAnchor.x, plazaAnchor.z, SEA_LEVEL_Y);
+    const plazaHeightSample = sampleHeight(terrain, plazaAnchor.x, plazaAnchor.z, getSeaLevelY());
     const plazaBaseHeight = clampSurfaceHeight(plazaHeightSample);
     const plazaRadius = Math.max(waterfrontPlazaMask.radiusX, waterfrontPlazaMask.radiusZ) * 0.65;
     const plazaMainPad = addFoundationPad(
@@ -1844,7 +1847,7 @@ export async function createCity(scene, terrain, options = {}) {
       );
       const padX = plazaAnchor.x + offset.x;
       const padZ = plazaAnchor.z + offset.z;
-      const padHeight = sampleHeight(terrain, padX, padZ, SEA_LEVEL_Y);
+      const padHeight = sampleHeight(terrain, padX, padZ, getSeaLevelY());
       const padY = clampSurfaceHeight(padHeight);
       const pad = addFoundationPad(city, padX, padY, padZ, plazaRadius * 0.22, foundationPadMaterial);
       if (pad) {
@@ -1886,7 +1889,7 @@ export async function createCity(scene, terrain, options = {}) {
 
     for (let i = 0; i < planterPositions.length; i++) {
       const pos = planterPositions[i];
-      const heightSample = sampleHeight(terrain, pos.x, pos.z, SEA_LEVEL_Y);
+      const heightSample = sampleHeight(terrain, pos.x, pos.z, getSeaLevelY());
       const y = clampSurfaceHeight(heightSample);
       _position.set(pos.x, y, pos.z);
       _quaternion.identity();
@@ -1922,7 +1925,7 @@ export async function createCity(scene, terrain, options = {}) {
       terrain,
       pierPlazaCenter.x,
       pierPlazaCenter.z,
-      SEA_LEVEL_Y
+      getSeaLevelY()
     );
     const plazaBaseHeight = clampSurfaceHeight(plazaHeightSample);
     addFoundationPad(
@@ -2060,7 +2063,7 @@ export async function createCity(scene, terrain, options = {}) {
             }
           }
 
-          const terrainHeight = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
+          const terrainHeight = sampleHeight(terrain, x, z, getSeaLevelY());
           if (!Number.isFinite(terrainHeight)) {
             continue;
           }
@@ -2150,7 +2153,7 @@ export async function createCity(scene, terrain, options = {}) {
 
           const x = pierPlazaCenter.x + offsetX;
           const z = pierPlazaCenter.z + offsetZ;
-          const terrainHeight = sampleHeight(terrain, x, z, SEA_LEVEL_Y);
+          const terrainHeight = sampleHeight(terrain, x, z, getSeaLevelY());
           if (!Number.isFinite(terrainHeight)) {
             continue;
           }
@@ -2237,7 +2240,7 @@ export async function createCity(scene, terrain, options = {}) {
 
       for (let i = 0; i < lampPositions.length; i++) {
         const target = lampPositions[i];
-        const terrainHeight = sampleHeight(terrain, target.x, target.z, SEA_LEVEL_Y);
+        const terrainHeight = sampleHeight(terrain, target.x, target.z, getSeaLevelY());
         const groundY = clampSurfaceHeight(terrainHeight);
 
         _position.set(target.x, groundY, target.z);
@@ -2269,7 +2272,7 @@ export async function createCity(scene, terrain, options = {}) {
       terrain,
       pierPlazaCenter.x,
       pierPlazaCenter.z,
-      SEA_LEVEL_Y
+      getSeaLevelY()
     );
     const interactiveLampY = clampSurfaceHeight(interactiveLampHeight);
 
@@ -2366,7 +2369,7 @@ export async function createCity(scene, terrain, options = {}) {
   if (promenadeCurve) {
     const sampled = promenadeCurve.getSpacedPoints(48);
     walkwayPoints = sampled.map((pt) => {
-      const terrainHeight = sampleHeight(terrain, pt.x, pt.z, SEA_LEVEL_Y);
+      const terrainHeight = sampleHeight(terrain, pt.x, pt.z, getSeaLevelY());
       return new THREE.Vector3(pt.x, clampSurfaceHeight(terrainHeight), pt.z);
     });
   }
@@ -2387,6 +2390,7 @@ export async function createCity(scene, terrain, options = {}) {
   const buildingSpawn = await spawnBuildingsFromPads(city, {
     seed: options.seed ?? 12345,
     leavePadsVisible: false,
+    seaLevel,
   });
   if (buildingSpawn?.group) {
     city.userData.buildingsGroup = buildingSpawn.group;
@@ -2626,9 +2630,9 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     seed = 20251007,
     buildingCount = 140,
     spacing = 5.5,
-    harborBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 5.5],
-    agoraBand = [SEA_LEVEL_Y + 3.0, SEA_LEVEL_Y + 8.0],
-    acroBand = [SEA_LEVEL_Y + 7.0, SEA_LEVEL_Y + 14.0],
+    harborBand = [getSeaLevelY() + 3.0, getSeaLevelY() + 5.5],
+    agoraBand = [getSeaLevelY() + 3.0, getSeaLevelY() + 8.0],
+    acroBand = [getSeaLevelY() + 7.0, getSeaLevelY() + 14.0],
     avoidHarborRadius = HARBOR_EXCLUDE_RADIUS + 18,
   } = opts;
   const showHillFoundationPads = opts.showFoundationPads === true;
@@ -2668,7 +2672,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       const h = getH ? getH(x, z) : undefined;
       if (!Number.isFinite(h)) continue;
       if (h < band[0] || h > band[1]) continue;
-      if (h < SEA_LEVEL_Y + MIN_ABOVE_SEA) continue;
+      if (h < getSeaLevelY() + MIN_ABOVE_SEA) continue;
 
       const k = keyFrom(x, z);
       if (hash.has(k)) continue; // avoid duplicates early
@@ -2711,7 +2715,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     const liftedSample = Number.isFinite(ySample)
       ? ySample + SURFACE_OFFSET
       : p.y + SURFACE_OFFSET;
-    const baseY = Math.max(liftedSample, SEA_LEVEL_Y + MIN_ABOVE_SEA + SURFACE_OFFSET);
+    const baseY = Math.max(liftedSample, getSeaLevelY() + MIN_ABOVE_SEA + SURFACE_OFFSET);
 
     const buildingScale = 0.9 + rng() * 0.3;
     const padRadius = Math.max(2.0, 1.8 * buildingScale);

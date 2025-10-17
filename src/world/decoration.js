@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { SEA_LEVEL_Y } from "./locations.js";
+import { getSeaLevelY } from "./locations.js";
 import { makeTreeMaterials } from "./materials.js";
 
 const HARBOR_SCATTER_RADIUS = 5;
@@ -50,7 +50,7 @@ function shouldPlace() {
   return Math.random() < threshold;
 }
 
-function sampleHeight(terrain, x, z, fallback = SEA_LEVEL_Y) {
+function sampleHeight(terrain, x, z, fallback = getSeaLevelY()) {
   const sampler = terrain?.userData?.getHeightAt;
   if (typeof sampler === "function") {
     const h = sampler(x, z);
@@ -302,6 +302,9 @@ function pickAlleyPrefab(treeMaterials) {
 
 function scatterAroundHarbor(group, options) {
   const { center, terrain, treeMaterials } = options;
+  const resolvedSeaLevel = Number.isFinite(options?.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
   if (!center) return;
 
   const attempts = options.attempts ?? 28;
@@ -311,8 +314,8 @@ function scatterAroundHarbor(group, options) {
     const theta = Math.random() * Math.PI * 2;
     const x = center.x + Math.cos(theta) * radius;
     const z = center.z + Math.sin(theta) * radius;
-    const ground = sampleHeight(terrain, x, z, center.y ?? SEA_LEVEL_Y);
-    if (!Number.isFinite(ground) || ground < SEA_LEVEL_Y - 0.05) continue;
+    const ground = sampleHeight(terrain, x, z, center.y ?? resolvedSeaLevel);
+    if (!Number.isFinite(ground) || ground < resolvedSeaLevel - 0.05) continue;
 
     const object = pickHarborPrefab(treeMaterials);
     object.position.set(x, ground + 0.02, z);
@@ -339,6 +342,9 @@ function collectBuildingWorldPositions(buildingGroup) {
 
 function scatterBetweenBuildings(group, options) {
   const { buildingGroup, terrain, treeMaterials } = options;
+  const resolvedSeaLevel = Number.isFinite(options?.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
   if (!buildingGroup) return;
 
   const positions = collectBuildingWorldPositions(buildingGroup);
@@ -386,8 +392,8 @@ function scatterBetweenBuildings(group, options) {
       _tempVecC.add(perpendicular);
     }
 
-    const ground = sampleHeight(terrain, _tempVecC.x, _tempVecC.z, SEA_LEVEL_Y);
-    if (!Number.isFinite(ground) || ground < SEA_LEVEL_Y - 0.05) continue;
+    const ground = sampleHeight(terrain, _tempVecC.x, _tempVecC.z, resolvedSeaLevel);
+    if (!Number.isFinite(ground) || ground < resolvedSeaLevel - 0.05) continue;
 
     const object = pickAlleyPrefab(treeMaterials);
     object.position.set(_tempVecC.x, ground + 0.015, _tempVecC.z);
@@ -407,11 +413,16 @@ export function createHarborDecorations(parent, options = {}) {
 
   const treeMaterials = makeTreeMaterials(THREE);
 
+  const seaLevel = Number.isFinite(options?.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
+
   scatterAroundHarbor(group, {
     center: options.harborPlazaCenter || options.center || options.harborCity?.userData?.pierPlazaCenter,
     terrain: options.terrain ?? null,
     attempts: options.harborAttempts,
     treeMaterials,
+    seaLevel,
   });
 
   const buildingGroup = options.buildingsGroup || options.harborCity?.userData?.buildingsGroup || null;
@@ -419,6 +430,7 @@ export function createHarborDecorations(parent, options = {}) {
     buildingGroup,
     terrain: options.terrain ?? null,
     treeMaterials,
+    seaLevel,
   });
 
   if (group.children.length === 0) {
