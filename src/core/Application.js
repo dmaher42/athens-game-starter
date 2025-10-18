@@ -1818,7 +1818,7 @@ export class Application {
         setThirdPersonEnabled(!thirdPersonEnabled);
       } else if (event.code === "KeyE") {
         interactor.useObject();
-      } else if (event.code === "KeyF" && !event.repeat) {
+      } else if (event.code === "KeyG" && !event.repeat) {
         toggleFog();
       } else if (event.code === "F8" && !event.repeat) {
         const position = player?.object?.position;

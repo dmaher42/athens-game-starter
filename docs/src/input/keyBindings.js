@@ -20,7 +20,7 @@ export const LOOK_KEYS = createKeyGroups({
     left: ["KeyQ", "Comma"],
     right: ["KeyE", "Period"],
     up: ["KeyR"],
-    down: ["KeyF"],
+    down: ["KeyX"],
 });
 export const ALT_LOOK_KEYS = createKeyGroups({
     left: ["KeyJ"],
@@ -37,7 +37,7 @@ export const ALL_LOOK_KEYS = createKeyGroups({
 export const ACTION_KEYS = createKeyGroups({
     jump: ["Space"],
     sprint: ["ShiftLeft", "ShiftRight"],
-    flyToggle: ["KeyG"],
+    flyToggle: ["KeyF"],
     crouch: ["ControlLeft", "ControlRight", "KeyC"],
 });
 export function flattenKeyGroups(groups) {
