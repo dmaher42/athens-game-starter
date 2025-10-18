@@ -1,4 +1,13 @@
-import { cp, mkdir, stat, rm, readdir, copyFile } from 'node:fs/promises';
+import {
+  cp,
+  mkdir,
+  stat,
+  rm,
+  readdir,
+  copyFile,
+  readFile,
+  writeFile,
+} from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 async function findBuildDir() {
@@ -40,6 +49,7 @@ async function copyBundlelessSources() {
   await mkdir(destination, { recursive: true });
   await cp(compiledSource, destination, { recursive: true });
   await copyOverlayJs(source, destination);
+  await rewriteModuleSpecifiers(destination);
 
   console.log(`Copied bundleless sources to ${destination}`);
 }
@@ -58,6 +68,34 @@ async function copyOverlayJs(source, destination) {
       await copyFile(srcPath, destPath);
     }
   }
+}
+
+async function rewriteModuleSpecifiers(targetDir) {
+  const entries = await readdir(targetDir, { withFileTypes: true });
+
+  await Promise.all(
+    entries.map(async (entry) => {
+      const currentPath = join(targetDir, entry.name);
+
+      if (entry.isDirectory()) {
+        await rewriteModuleSpecifiers(currentPath);
+        return;
+      }
+
+      if (!entry.isFile() || !entry.name.endsWith('.js')) {
+        return;
+      }
+
+      const original = await readFile(currentPath, 'utf8');
+      const updated = original
+        .replace(/(from\s+['"][^'"]+?)(\.ts)(['"])/g, '$1.js$3')
+        .replace(/(import\s*\(\s*['"][^'"]+?)(\.ts)(['"]\s*\))/g, '$1.js$3');
+
+      if (updated !== original) {
+        await writeFile(currentPath, updated);
+      }
+    }),
+  );
 }
 
 copyBundlelessSources().catch((error) => {
