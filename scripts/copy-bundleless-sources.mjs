@@ -50,7 +50,9 @@ async function copyBundlelessSources() {
   await mkdir(destination, { recursive: true });
   await cp(compiledSource, destination, { recursive: true });
   await copyOverlayJs(source, destination);
-  await rewriteModuleSpecifiers(destination);
+  const jsonDependencies = new Set();
+  await rewriteModuleSpecifiers(destination, jsonDependencies);
+  await emitJsonModules(jsonDependencies);
 
   console.log(`Copied bundleless sources to ${destination}`);
 }
@@ -71,14 +73,14 @@ async function copyOverlayJs(source, destination) {
   }
 }
 
-async function rewriteModuleSpecifiers(targetDir) {
+async function rewriteModuleSpecifiers(targetDir, jsonDependencies) {
   const entries = await readdir(targetDir, { withFileTypes: true });
 
   for (const entry of entries) {
     const currentPath = join(targetDir, entry.name);
 
     if (entry.isDirectory()) {
-      await rewriteModuleSpecifiers(currentPath);
+      await rewriteModuleSpecifiers(currentPath, jsonDependencies);
       continue;
     }
 
@@ -87,7 +89,7 @@ async function rewriteModuleSpecifiers(targetDir) {
     }
 
     const original = await readFile(currentPath, 'utf8');
-    const updated = rewriteSpecifiersForFile(original, currentPath);
+    const updated = rewriteSpecifiersForFile(original, currentPath, jsonDependencies);
 
     if (updated !== original) {
       await writeFile(currentPath, updated);
@@ -95,13 +97,13 @@ async function rewriteModuleSpecifiers(targetDir) {
   }
 }
 
-function rewriteSpecifiersForFile(source, currentPath) {
+function rewriteSpecifiersForFile(source, currentPath, jsonDependencies) {
   let output = source;
 
   output = output.replace(
     /(from\s+['"])([^'"]+)(['"])/g,
     (full, prefix, specifier, suffix) => {
-      const next = normalizeSpecifier(specifier, currentPath);
+      const next = normalizeSpecifier(specifier, currentPath, jsonDependencies);
       return `${prefix}${next}${suffix}`;
     },
   );
@@ -109,7 +111,7 @@ function rewriteSpecifiersForFile(source, currentPath) {
   output = output.replace(
     /(import\s+['"])([^'"]+)(['"])/g,
     (full, prefix, specifier, suffix) => {
-      const next = normalizeSpecifier(specifier, currentPath);
+      const next = normalizeSpecifier(specifier, currentPath, jsonDependencies);
       return `${prefix}${next}${suffix}`;
     },
   );
@@ -117,7 +119,7 @@ function rewriteSpecifiersForFile(source, currentPath) {
   output = output.replace(
     /(import\s*\(\s*['"])([^'"]+)(['"]\s*\))/g,
     (full, prefix, specifier, suffix) => {
-      const next = normalizeSpecifier(specifier, currentPath);
+      const next = normalizeSpecifier(specifier, currentPath, jsonDependencies);
       return `${prefix}${next}${suffix}`;
     },
   );
@@ -125,31 +127,28 @@ function rewriteSpecifiersForFile(source, currentPath) {
   output = output.replace(
     /(export\s+[^'"`]*?from\s+['"])([^'"]+)(['"])/g,
     (full, prefix, specifier, suffix) => {
-      const next = normalizeSpecifier(specifier, currentPath);
+      const next = normalizeSpecifier(specifier, currentPath, jsonDependencies);
       return `${prefix}${next}${suffix}`;
-    },
-  );
-
-  output = output.replace(
-    /(import\s+[^;]*?from\s+['"][^'"]+\.json['"])(\s*;?)/g,
-    (full, statement, suffix) => {
-      if (/assert\s*\{\s*type\s*:\s*['"]json['"]\s*\}/i.test(full)) {
-        return full;
-      }
-      const finalSuffix = suffix && suffix.length > 0 ? suffix : ';';
-      return `${statement} assert { type: 'json' }${finalSuffix}`;
     },
   );
 
   return output;
 }
 
-function normalizeSpecifier(specifier, currentPath) {
+function normalizeSpecifier(specifier, currentPath, jsonDependencies) {
   if (!specifier.startsWith('.')) {
     return specifier;
   }
 
-  if (specifier.endsWith('.js') || specifier.endsWith('.json')) {
+  if (specifier.endsWith('.json')) {
+    if (jsonDependencies) {
+      const resolvedJson = resolve(dirname(currentPath), specifier);
+      jsonDependencies.add(resolvedJson);
+    }
+    return `${specifier}.js`;
+  }
+
+  if (specifier.endsWith('.js')) {
     return specifier;
   }
 
@@ -177,6 +176,25 @@ function normalizeSpecifier(specifier, currentPath) {
   }
 
   return specifier;
+}
+
+async function emitJsonModules(jsonDependencies) {
+  if (!jsonDependencies || jsonDependencies.size === 0) {
+    return;
+  }
+
+  await Promise.all(
+    Array.from(jsonDependencies).map(async (jsonPath) => {
+      try {
+        const content = await readFile(jsonPath, 'utf8');
+        const parsed = JSON.parse(content);
+        const moduleSource = `export default ${JSON.stringify(parsed, null, 2)};\n`;
+        await writeFile(`${jsonPath}.js`, moduleSource, 'utf8');
+      } catch (error) {
+        console.warn(`Unable to emit JSON module for ${jsonPath}:`, error.message);
+      }
+    }),
+  );
 }
 
 copyBundlelessSources().catch((error) => {
