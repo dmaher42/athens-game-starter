@@ -90,7 +90,7 @@ export class InputMap {
         return;
       }
       this.keys.add(event.code);
-      if (event.code === "KeyG" && !event.repeat) {
+      if (event.code === "KeyF" && !event.repeat) {
         this.flyToggleQueued = true;
       }
       if (CONTROL_KEYS.has(event.code)) {
