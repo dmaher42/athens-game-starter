@@ -8,7 +8,8 @@ import {
   readFile,
   writeFile,
 } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, extname, join, resolve } from 'node:path';
 
 async function findBuildDir() {
   const candidates = ['docs', 'dist'];
@@ -73,29 +74,109 @@ async function copyOverlayJs(source, destination) {
 async function rewriteModuleSpecifiers(targetDir) {
   const entries = await readdir(targetDir, { withFileTypes: true });
 
-  await Promise.all(
-    entries.map(async (entry) => {
-      const currentPath = join(targetDir, entry.name);
+  for (const entry of entries) {
+    const currentPath = join(targetDir, entry.name);
 
-      if (entry.isDirectory()) {
-        await rewriteModuleSpecifiers(currentPath);
-        return;
-      }
+    if (entry.isDirectory()) {
+      await rewriteModuleSpecifiers(currentPath);
+      continue;
+    }
 
-      if (!entry.isFile() || !entry.name.endsWith('.js')) {
-        return;
-      }
+    if (!entry.isFile() || !entry.name.endsWith('.js')) {
+      continue;
+    }
 
-      const original = await readFile(currentPath, 'utf8');
-      const updated = original
-        .replace(/(from\s+['"][^'"]+?)(\.ts)(['"])/g, '$1.js$3')
-        .replace(/(import\s*\(\s*['"][^'"]+?)(\.ts)(['"]\s*\))/g, '$1.js$3');
+    const original = await readFile(currentPath, 'utf8');
+    const updated = rewriteSpecifiersForFile(original, currentPath);
 
-      if (updated !== original) {
-        await writeFile(currentPath, updated);
-      }
-    }),
+    if (updated !== original) {
+      await writeFile(currentPath, updated);
+    }
+  }
+}
+
+function rewriteSpecifiersForFile(source, currentPath) {
+  let output = source;
+
+  output = output.replace(
+    /(from\s+['"])([^'"]+)(['"])/g,
+    (full, prefix, specifier, suffix) => {
+      const next = normalizeSpecifier(specifier, currentPath);
+      return `${prefix}${next}${suffix}`;
+    },
   );
+
+  output = output.replace(
+    /(import\s+['"])([^'"]+)(['"])/g,
+    (full, prefix, specifier, suffix) => {
+      const next = normalizeSpecifier(specifier, currentPath);
+      return `${prefix}${next}${suffix}`;
+    },
+  );
+
+  output = output.replace(
+    /(import\s*\(\s*['"])([^'"]+)(['"]\s*\))/g,
+    (full, prefix, specifier, suffix) => {
+      const next = normalizeSpecifier(specifier, currentPath);
+      return `${prefix}${next}${suffix}`;
+    },
+  );
+
+  output = output.replace(
+    /(export\s+[^'"`]*?from\s+['"])([^'"]+)(['"])/g,
+    (full, prefix, specifier, suffix) => {
+      const next = normalizeSpecifier(specifier, currentPath);
+      return `${prefix}${next}${suffix}`;
+    },
+  );
+
+  output = output.replace(
+    /(import\s+[^;]*?from\s+['"][^'"]+\.json['"])(\s*;?)/g,
+    (full, statement, suffix) => {
+      if (/assert\s*\{\s*type\s*:\s*['"]json['"]\s*\}/i.test(full)) {
+        return full;
+      }
+      const finalSuffix = suffix && suffix.length > 0 ? suffix : ';';
+      return `${statement} assert { type: 'json' }${finalSuffix}`;
+    },
+  );
+
+  return output;
+}
+
+function normalizeSpecifier(specifier, currentPath) {
+  if (!specifier.startsWith('.')) {
+    return specifier;
+  }
+
+  if (specifier.endsWith('.js') || specifier.endsWith('.json')) {
+    return specifier;
+  }
+
+  if (specifier.endsWith('.ts')) {
+    return `${specifier.slice(0, -3)}.js`;
+  }
+
+  const extension = extname(specifier);
+  if (extension && extension !== '.js') {
+    return specifier;
+  }
+
+  const base = specifier;
+  const resolved = resolve(dirname(currentPath), base);
+  const jsCandidate = `${resolved}.js`;
+
+  if (existsSync(jsCandidate)) {
+    return `${base}.js`;
+  }
+
+  const indexCandidate = resolve(dirname(currentPath), base, 'index.js');
+  if (existsSync(indexCandidate)) {
+    const separator = base.endsWith('/') ? '' : '/';
+    return `${base}${separator}index.js`;
+  }
+
+  return specifier;
 }
 
 copyBundlelessSources().catch((error) => {

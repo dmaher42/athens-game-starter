@@ -1,5 +1,5 @@
-import { loadSettings, subscribe, defaultCameraSettings, } from "../state/settingsStore";
-import { MOVEMENT_ONLY_KEYS, ALL_LOOK_KEYS, ACTION_KEYS, flattenKeyGroups, } from "./keyBindings";
+import { loadSettings, subscribe, defaultCameraSettings, } from "../state/settingsStore.js";
+import { MOVEMENT_ONLY_KEYS, ALL_LOOK_KEYS, ACTION_KEYS, flattenKeyGroups, } from "./keyBindings.js";
 const LOOK_KEY_LIST = flattenKeyGroups(ALL_LOOK_KEYS);
 const MOVEMENT_KEY_LIST = flattenKeyGroups(MOVEMENT_ONLY_KEYS);
 const ACTION_KEY_LIST = flattenKeyGroups(ACTION_KEYS);
