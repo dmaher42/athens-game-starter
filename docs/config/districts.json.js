@@ -1,4 +1,31 @@
 export default {
-  "version": 1,
-  "districts": []
+  "version": 2,
+  "seed": 1337,
+  "roadSetbackMeters": 4,
+  "maxSlopeDeltaPerLot": 2,
+  "densitySpacingMeters": {
+    "high": 11,
+    "medium": 16,
+    "low": 22
+  },
+  "districts": [
+    {
+      "id": "default",
+      "label": "Default Plateau",
+      "heightRange": [
+        -999,
+        999
+      ],
+      "buildingDensity": "medium",
+      "minSeparation": 16,
+      "allowedTypes": [
+        "house",
+        "shop"
+      ],
+      "road": {
+        "width": 3.2,
+        "color": 3355443
+      }
+    }
+  ]
 };
