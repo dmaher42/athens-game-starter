@@ -79,7 +79,7 @@ export const GROUND_TEXTURE_CONFIG = {
       repeat: [36, 36],
       rotation: 0.23,
       anisotropy: 8,
-      strength: 0.0, // Disable detail layer tinting
+      strength: 1.0, // Disable detail layer tinting
       tint: [1.0, 1.0, 1.0], // Neutral tint
       minHeight: -15,
       maxHeight: 32,
@@ -95,7 +95,7 @@ export const GROUND_TEXTURE_CONFIG = {
       repeat: [48, 48],
       rotation: 0.47,
       anisotropy: 8,
-      strength: 0.0, // Disable detail layer tinting
+      strength: 1.0, // Disable detail layer tinting
       tint: [1.0, 1.0, 1.0], // Neutral tint
       minHeight: -20,
       maxHeight: 18, // Grass weight/tint bump
@@ -110,7 +110,7 @@ export const GROUND_TEXTURE_CONFIG = {
       repeat: [32, 32],
       rotation: 0.11,
       anisotropy: 8,
-      strength: 0.0, // Disable detail layer tinting
+      strength: 1.0, // Disable detail layer tinting
       tint: [1.0, 1.0, 1.0], // Neutral tint
       minHeight: 16, // Grass weight/tint bump
       maxHeight: 46, // Grass weight/tint bump
