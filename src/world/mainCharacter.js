@@ -305,7 +305,7 @@ export class MainCharacter {
       groundRaycaster.set(rayOrigin, DOWN_AXIS);
       const distanceFromOriginToFeet = this.halfHeight * 2 + 0.5;
       groundRaycaster.far = distanceFromOriginToFeet; // Reach from above the head to the feet.
-      const hits = groundRaycaster.intersectObjects([this.mesh, ...validTargets], true);
+      const hits = groundRaycaster.intersectObjects(validTargets, true);
 
       if (hits.length > 0) {
         const hit = hits[0];

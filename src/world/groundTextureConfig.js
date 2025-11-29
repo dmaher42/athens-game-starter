@@ -88,37 +88,6 @@ export const GROUND_TEXTURE_CONFIG = {
       mode: "mix",
       seed: 404,
       tintAttenuation: 0.42,
-    },
-    // extra detail layers for lowlands/midslopes
-    {
-      generator: "fresh-grass-lowlands",
-      repeat: [48, 48],
-      rotation: 0.47,
-      anisotropy: 8,
-      strength: 0.4, // Disable detail layer tinting
-      tint: [1.0, 1.0, 1.0], // Neutral tint
-      minHeight: -20,
-      maxHeight: 18, // Grass weight/tint bump
-      fade: 14, // Encourage softer transitions for photo textures
-      slopeMax: 0.3, // Favor broad, low-slope coverage
-      mode: "mix",
-      seed: 405,
-      tintAttenuation: 0.4,
-    },
-    {
-      generator: "dry-grass-detail",
-      repeat: [32, 32],
-      rotation: 0.11,
-      anisotropy: 8,
-      strength: 0.4, // Disable detail layer tinting
-      tint: [1.0, 1.0, 1.0], // Neutral tint
-      minHeight: 16, // Grass weight/tint bump
-      maxHeight: 46, // Grass weight/tint bump
-      fade: 10, // Encourage softer transitions for photo textures
-      slopeMin: 0.26, // Favor broad, low-slope coverage
-      mode: "multiply",
-      seed: 406,
-      tintAttenuation: 0.38,
-    },
+    }
   ],
 };
