@@ -27,12 +27,17 @@ function segmentFromImportMeta() {
   return "";
 }
 
+// Build output directories that should not be used as repo segments
+const EXCLUDED_SEGMENTS = new Set(["docs", "public", "dist", "build", "out"]);
+
 function segmentFromLocation() {
   if (typeof window === "undefined" || !window.location) return "";
   const path = sanitizeSegment(window.location.pathname || "");
   if (!path.length) return "";
   const [first] = path.split("/");
-  return first || "";
+  // Exclude common build output directories from being used as repo segments
+  if (!first || EXCLUDED_SEGMENTS.has(first.toLowerCase())) return "";
+  return first;
 }
 
 const globalRepoSegment =
