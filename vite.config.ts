@@ -2,7 +2,7 @@ import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "/",
+  base: "/athens-game-starter/",
   resolve: {
     alias: {
       "@app/types": fileURLToPath(new URL("./src/types", import.meta.url)),

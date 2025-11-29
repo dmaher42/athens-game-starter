@@ -14,10 +14,10 @@ def run_verification():
 
         try:
             # Navigate to the local development server
-            page.goto("http://localhost:8000", timeout=60000)
+            page.goto("http://localhost:8000/athens-game-starter/", timeout=60000)
 
-            # Wait for 30 seconds to ensure the application is fully loaded.
-            time.sleep(30)
+            # Wait for 60 seconds to ensure the application is fully loaded.
+            time.sleep(60)
 
             # Click the "High Noon" button to change the lighting
             high_noon_button = page.get_by_role("button", name="High Noon")
