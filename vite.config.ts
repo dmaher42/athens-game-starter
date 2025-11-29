@@ -2,12 +2,18 @@ import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "/athens-game-starter/",
+  base: "/",
   resolve: {
     alias: {
       "@app/types": fileURLToPath(new URL("./src/types", import.meta.url)),
     },
     extensions: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  server: {
+    port: 8000,
+    fs: {
+      strict: false,
+    },
   },
   build: {
     outDir: "docs",
