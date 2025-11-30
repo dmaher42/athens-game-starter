@@ -9,6 +9,12 @@ export default defineConfig({
     },
     extensions: [".ts", ".tsx", ".js", ".jsx"],
   },
+  server: {
+    port: 8000,
+    fs: {
+      strict: false,
+    },
+  },
   build: {
     outDir: "docs",
     emptyOutDir: true,

@@ -264,6 +264,7 @@ function addWindowBand(group, opts) {
 
 function addEntrySteps(group, width, rng) {
   const steps = new THREE.Group();
+  steps.name = "ProceduralSteps";
   steps.position.y = 0.15;
   const riserCount = 3 + Math.floor(rng() * 2);
   for (let i = 0; i < riserCount; i++) {
@@ -275,6 +276,47 @@ function addEntrySteps(group, width, rng) {
   }
   group.add(steps);
   return steps;
+}
+
+function addPortico(group, w, d, h, rng) {
+  const portico = new THREE.Group();
+  portico.name = "ProceduralPortico";
+  const roof = makeGableRoof(w * 1.2, d * 0.6, h * 0.4, rng);
+  roof.position.y = h + (h * 0.4 * 0.5);
+  portico.add(roof);
+
+  const colGeom = new THREE.CylinderGeometry(0.15, 0.15, h, 12);
+  const colMat = createMaterial("marble", rng);
+  const col1 = new THREE.Mesh(colGeom, colMat);
+  col1.position.set(-w * 0.4, h * 0.5, d * 0.5);
+  portico.add(col1);
+
+  const col2 = col1.clone();
+  col2.position.set(w * 0.4, h * 0.5, d * 0.5);
+  portico.add(col2);
+
+  portico.position.z = d * 0.5;
+  group.add(portico);
+}
+
+function addShopEntrance(group, w, d, h, rng) {
+  const entrance = new THREE.Group();
+  const awning = makeBox(w * 1.1, 0.2, d * 0.5, createMaterial("roof", rng));
+  awning.position.y = h * 0.8;
+  entrance.add(awning);
+
+  const postGeom = new THREE.CylinderGeometry(0.1, 0.1, h * 0.8, 8);
+  const postMat = createMaterial("wood", rng);
+  const post1 = new THREE.Mesh(postGeom, postMat);
+  post1.position.set(-w * 0.4, h * 0.4, 0);
+  entrance.add(post1);
+
+  const post2 = post1.clone();
+  post2.position.set(w * 0.4, h * 0.4, 0);
+  entrance.add(post2);
+
+  entrance.position.z = d * 0.5;
+  group.add(entrance);
 }
 
 // Parametric “prefabs” (fast + zero textures). All return a Group.
@@ -295,7 +337,7 @@ const Prefabs = {
       g.add(trim);
     }
 
-    const roofHeight = 0.9 + rng() * 0.6;
+    const roofHeight = 0.5 + rng() * 0.3;
     const roof = makeGableRoof(w * (1.05 + rng() * 0.04), d * (1.05 + rng() * 0.04), roofHeight, rng);
     roof.position.y = baseHeight + roofHeight * 0.5 + 0.1;
     g.add(roof);
@@ -351,6 +393,8 @@ const Prefabs = {
 
     if (rng() < 0.7) {
       addEntrySteps(g, Math.min(w, d) * 0.8, rng);
+    } else {
+      addPortico(g, w, d, baseHeight, rng);
     }
 
     return g;
@@ -392,8 +436,22 @@ const Prefabs = {
 
     return g;
   },
-  shop(opts) { return Prefabs.house({ ...opts, w: 6, d: 6, h: 3.4 }); },
-  workshop(opts) { return Prefabs.house({ ...opts, w: 6, d: 8, h: 4.0 }); },
+  shop({ w = 6, d = 6, h = 3.4, rng = Math.random } = {}) {
+    const g = Prefabs.house({ w, d, h, rng });
+    g.name = "ProceduralShop";
+    addShopEntrance(g, w, d, h, rng);
+    return g;
+  },
+  workshop({ w = 6, d = 8, h = 4.0, rng = Math.random } = {}) {
+    const g = Prefabs.house({ w, d, h, rng });
+    g.name = "ProceduralWorkshop";
+    // remove the entrance from the house
+    const entrance = g.children.find(c => c.name === "ProceduralPortico" || c.name === "ProceduralSteps");
+    if (entrance) {
+      g.remove(entrance);
+    }
+    return g;
+  },
   warehouse({ w = 9, d = 12, h = 5.2, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralWarehouse";
