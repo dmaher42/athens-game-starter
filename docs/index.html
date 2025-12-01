@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="favicon.ico" />
+    <link rel="icon" href="/athens-game-starter/assets/favicon-9j6xx7HW.ico" />
     <title>Athens Game Starter</title>
   </head>
   <body>
@@ -42,15 +42,23 @@
         );
       }
 
-      const moduleScript = document.createElement("script");
-      moduleScript.type = "module";
-      moduleScript.src = isViteDevServer
-        ? "./src/main.ts"
-        : "./src/main.bundleless.js";
-      document.currentScript?.parentNode?.insertBefore(
-        moduleScript,
-        document.currentScript.nextSibling,
-      );
+      const shouldRedirectToDocs =
+        !isViteDevServer && window.location.protocol !== "file:";
+
+      if (shouldRedirectToDocs) {
+        const docsUrl = new URL("./docs/", window.location.href);
+        window.location.replace(docsUrl);
+      } else {
+        const moduleScript = document.createElement("script");
+        moduleScript.type = "module";
+        moduleScript.src = isViteDevServer
+          ? "./src/main.ts"
+          : "./src/main.bundleless.js";
+        document.currentScript?.parentNode?.insertBefore(
+          moduleScript,
+          document.currentScript.nextSibling,
+        );
+      }
     </script>
   </body>
 </html>

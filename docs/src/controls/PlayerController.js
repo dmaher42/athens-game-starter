@@ -363,6 +363,17 @@ export class PlayerController {
     let slopeNormal = null;
 
     if (collider?.capsuleIntersect) {
+      // Perform a downward raycast from the capsule's center to detect ground.
+      // This provides a more reliable ground detection than just capsule intersection.
+      const center = this.getCapsuleCenter(this.tmpVec3);
+      const ray = new THREE.Ray(center, new THREE.Vector3(0, -1, 0));
+      const hit = collider.boundsTree ? collider.boundsTree.raycastFirst(ray) : null;
+
+      let groundDistance = Infinity;
+      if (hit) {
+        groundDistance = center.y - hit.point.y;
+      }
+
       for (let i = 0; i < 3; i++) {
         const result = collider.capsuleIntersect(this.capsule);
         if (!result) break;
@@ -390,6 +401,12 @@ export class PlayerController {
           }
         }
       }
+
+      // If the raycast found ground nearby, and we're not flying, consider us grounded.
+      if (groundDistance < (this.height * 0.5 + 0.1) && allowGrounding) {
+        this.grounded = true;
+      }
+
     } else {
       const center = this.getCapsuleCenter(this.tmpVec3);
       const minY = this.height * 0.5;
