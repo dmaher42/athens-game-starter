@@ -724,46 +724,17 @@ export class Application {
     });
     worldRoot.add(player.object);
 
-    const spawnClearance = 0.2;
     const spawnPosition = findSafePlayerSpawn({
       envCollider,
       terrain,
       searchCenter: AGORA_CENTER_3D,
-      fallback: {
-        x: AGORA_CENTER_3D.x - (AGORA_RADIUS + 6),
-        y: 0,
-        z: AGORA_CENTER_3D.z - 6,
-      },
+      fallback: AGORA_CENTER_3D,
       playerHeight: player.height,
       playerRadius: player.radius,
-      verticalClearance: spawnClearance,
-      horizontalClearance: 0.4,
-      innerRadius: AGORA_RADIUS + 6,
-      searchRadius: AGORA_RADIUS + 60,
-      radialStep: 4,
-      arcLength: 6,
+      verticalClearance: 0.2,
       seaLevel: resolvedSeaLevel,
-      minAboveSea: 0.25,
     });
-    player.object.position.set(
-      spawnPosition.x,
-      spawnPosition.y,
-      spawnPosition.z,
-    );
-    const spawnOffset = player.height * 0.5 + spawnClearance;
-    snapAboveGround(
-      player.object,
-      terrain,
-      player.object.position.x,
-      player.object.position.z,
-      spawnOffset,
-      {
-        clampToSea: true,
-        seaLevel: resolvedSeaLevel,
-        minAboveSea: 0.25,
-      },
-    );
-    spawnPosition.copy(player.object.position);
+    player.object.position.copy(spawnPosition);
     player.syncCapsuleToObject();
 
     let interactor = null;
