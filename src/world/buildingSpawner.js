@@ -19,8 +19,14 @@ async function headOk(url) {
     const response = await fetch(url, { method: "HEAD" });
     if (!response.ok) return false;
     const contentType = response.headers?.get?.("content-type") || "";
-    return !contentType.toLowerCase().includes("text/html");
-  } catch {
+    const isHtml = contentType.toLowerCase().includes("text/html");
+    if (isHtml) {
+      console.warn(`[headOk] detected HTML response for ${url} (missing file served as SPA fallback?)`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn(`[headOk] fetch failed for ${url}`, err);
     return false;
   }
 }
