@@ -64,7 +64,8 @@ export interface LookDelta {
 }
 
 type KeyHandler = (event: KeyboardEvent) => void;
-type BlurHandler = (event: FocusEvent) => void;
+type MouseHandler = (event: MouseEvent) => void;
+type FocusHandler = (event: FocusEvent) => void;
 
 export class InputMap {
   private readonly keys: Set<string> = new Set();
@@ -72,9 +73,15 @@ export class InputMap {
   private flyToggleQueued = false;
   private cameraSettings: CameraSettings | null;
   private unsubscribeCameraSettings: (() => void) | null = null;
+
+  private readonly mouseDelta = { x: 0, y: 0 };
+  private mouseSensitivity = 0.002;
+
   private readonly keyDownHandler: KeyHandler;
   private readonly keyUpHandler: KeyHandler;
-  private readonly blurHandler: BlurHandler;
+  private readonly blurHandler: FocusHandler;
+  private readonly mouseMoveHandler: MouseHandler;
+  private readonly clickHandler: MouseHandler;
 
   constructor(canvas: HTMLCanvasElement | null = null) {
     this.canvas = canvas;
@@ -111,12 +118,32 @@ export class InputMap {
     this.blurHandler = () => {
       this.resetKeys();
       this.flyToggleQueued = false;
+      this.mouseDelta.x = 0;
+      this.mouseDelta.y = 0;
+    };
+
+    this.mouseMoveHandler = (event: MouseEvent) => {
+      if (document.pointerLockElement === this.canvas) {
+        this.mouseDelta.x += event.movementX;
+        this.mouseDelta.y += event.movementY;
+      }
+    };
+
+    this.clickHandler = () => {
+      if (this.canvas && document.pointerLockElement !== this.canvas) {
+        this.canvas.requestPointerLock();
+      }
     };
 
     window.addEventListener("keydown", this.keyDownHandler);
     window.addEventListener("keyup", this.keyUpHandler);
     window.addEventListener("blur", this.blurHandler);
     window.addEventListener("focus", this.blurHandler);
+    window.addEventListener("mousemove", this.mouseMoveHandler);
+
+    if (this.canvas) {
+      this.canvas.addEventListener("click", this.clickHandler);
+    }
   }
 
   dispose(): void {
@@ -124,16 +151,20 @@ export class InputMap {
     window.removeEventListener("keyup", this.keyUpHandler);
     window.removeEventListener("blur", this.blurHandler);
     window.removeEventListener("focus", this.blurHandler);
+    window.removeEventListener("mousemove", this.mouseMoveHandler);
+
+    if (this.canvas) {
+      this.canvas.removeEventListener("click", this.clickHandler);
+    }
+
     this.unsubscribeCameraSettings?.();
     this.unsubscribeCameraSettings = null;
   }
 
   consumeLookDelta(dt = 0): LookDelta {
     const settings = this.cameraSettings || defaultCameraSettings;
-    if (!settings.enableArrowOrbit) {
-      return { yaw: 0, pitch: 0 };
-    }
 
+    // Keyboard Input
     const yawInput = (this.lookRight ? 1 : 0) - (this.lookLeft ? 1 : 0);
     const pitchInput = (this.lookDown ? 1 : 0) - (this.lookUp ? 1 : 0);
     const yawSpeed = Number.isFinite(settings.yawSpeed)
@@ -145,8 +176,40 @@ export class InputMap {
     const invert = settings.invertPitch ? -1 : 1;
     const dtSafe = Number.isFinite(dt) ? Math.max(0, dt) : 0;
 
-    const yawDelta = yawInput * yawSpeed * dtSafe;
-    const pitchDelta = pitchInput * pitchSpeed * dtSafe * invert;
+    let yawDelta = 0;
+    let pitchDelta = 0;
+
+    if (settings.enableArrowOrbit) {
+        yawDelta += yawInput * yawSpeed * dtSafe;
+        pitchDelta += pitchInput * pitchSpeed * dtSafe * invert;
+    }
+
+    // Mouse Input
+    // Yaw: moving mouse right (positive X) -> turn right (positive yaw delta)
+    // Pitch: moving mouse down (positive Y) -> look down (positive pitch delta when NOT inverted?)
+    // Wait, pitch behavior depends on invert setting.
+    // In PlayerController:
+    // cameraPitch -= lookDelta.pitch
+    // If I move mouse DOWN (+Y), I want to look down (camera pitch DECREASES, towards -90 or similar).
+    // So lookDelta.pitch should be POSITIVE.
+    // +Y * sensitivity = +pitchDelta.
+    // If Inverted:
+    // Move mouse DOWN (+Y) -> Look UP (camera pitch INCREASES).
+    // So lookDelta.pitch should be NEGATIVE.
+    // So pitchDelta = mouseDelta.y * sensitivity * invert?
+    // Let's check:
+    // Normal (invert=1): +Y -> +pitchDelta -> cameraPitch -= +pitchDelta (DECREASES). Correct.
+    // Inverted (invert=-1): +Y -> -pitchDelta -> cameraPitch -= -pitchDelta (INCREASES). Correct.
+
+    const mouseYawDelta = this.mouseDelta.x * this.mouseSensitivity;
+    const mousePitchDelta = this.mouseDelta.y * this.mouseSensitivity * invert;
+
+    yawDelta += mouseYawDelta;
+    pitchDelta += mousePitchDelta;
+
+    // Reset accumulated mouse delta
+    this.mouseDelta.x = 0;
+    this.mouseDelta.y = 0;
 
     return {
       yaw: yawDelta,
