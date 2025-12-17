@@ -296,68 +296,6 @@ export function createCityPlanImplementation(scene, options = {}) {
     group.add(marker);
   }
 
-  const billboardData = [
-    {
-      title: 'Civic Core',
-      body: [
-        'Central intermodal hub with light-rail platforms, civic plaza, and cultural anchors.',
-        'Flexible programming supports markets, festivals, and daily public life.',
-      ],
-      accent: 0xffc046,
-      pos: new THREE.Vector3(center.x - 18, 0, center.z + 20),
-    },
-    {
-      title: 'Innovation Corridor',
-      body: [
-        'Adaptive reuse of industrial parcels into research labs, incubators, and mixed housing.',
-        'District energy spine delivers low-carbon heating, cooling, and logistics.',
-      ],
-      accent: 0x42a5f5,
-      pos: new THREE.Vector3(center.x + 70, 0, center.z + 10),
-    },
-    {
-      title: 'Neighborhood Rings',
-      body: [
-        'Concentric complete streets place schools, clinics, and grocers within a 5-minute walk.',
-        'Traffic-calmed interiors feature community courtyards and stormwater gardens.',
-      ],
-      accent: 0x66bb6a,
-      pos: new THREE.Vector3(center.x, 0, center.z - 60),
-    },
-    {
-      title: 'Green & Blue Belt',
-      body: [
-        'Continuous parks stitch wetlands, riparian buffers, and cycling greenways.',
-        'Nature-based infrastructure manages floods and expands biodiversity corridors.',
-      ],
-      accent: 0x26c6da,
-      pos: new THREE.Vector3(center.x - 70, 0, center.z - 20),
-    },
-    {
-      title: 'Gateway Districts',
-      body: [
-        'Mobility hubs welcome visitors with park-and-ride decks, EV charging, and bike share.',
-        'Signature architecture and wayfinding announce arrival to the reimagined city.',
-      ],
-      accent: 0x90caf9,
-      pos: new THREE.Vector3(center.x, 0, center.z + 110),
-    },
-  ];
-
-  for (const entry of billboardData) {
-    const board = createBillboard({
-      title: entry.title,
-      bodyLines: entry.body,
-      accentColor: entry.accent,
-      backgroundColor: 0x111418,
-      width: 18,
-      height: 9,
-    });
-    const targetY = sample(entry.pos.x - center.x, entry.pos.z - center.z, 0);
-    board.position.set(entry.pos.x, targetY, entry.pos.z);
-    board.lookAt(new THREE.Vector3(center.x, targetY, center.z));
-    group.add(board);
-  }
 
   group.userData = {
     ...group.userData,
