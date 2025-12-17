@@ -1,5 +1,5 @@
 // ---- src/features/roads-gravel.js ----
-import { makeTiledPBR } from "../materials/pbr-utils.js";
+import * as THREE from "three";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 /**
@@ -13,13 +13,26 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {
   const defaultBase = resolveBaseUrl();
   const resolvedBase = typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : defaultBase;
 
-  // pbr-utils automatically prepends the default base URL for relative paths.
-  // If our resolvedBase is effectively the same as the default, we pass a relative path
-  // to avoid duplication (e.g. /base/base/textures...).
-  const useRelative = resolvedBase === defaultBase || resolvedBase === "/";
-  const basePath = useRelative ? "textures/gravel" : joinPath(resolvedBase, "textures/gravel");
+  // Manual fallback because gravel textures are missing and pbr-utils is strict
+  const tl = new THREE.TextureLoader();
+  const base = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
+  base.wrapS = base.wrapT = THREE.RepeatWrapping;
+  base.repeat.set(repeat[0], repeat[1]);
+  base.colorSpace = THREE.SRGBColorSpace;
 
-  const mat = await makeTiledPBR(basePath, repeat);
+  const normal = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
+  normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
+  normal.repeat.set(repeat[0], repeat[1]);
+
+  const mat = new THREE.MeshStandardMaterial({
+    map: base,
+    normalMap: normal,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+    roughness: 0.8,
+  });
+
   if (!mat) return; // textures not uploaded yet
 
   const pickRoad = (o) => {

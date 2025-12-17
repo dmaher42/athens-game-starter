@@ -511,8 +511,8 @@ const Prefabs = {
 // Map allowedTypes → prefab id and optional GLB path
 const TYPE_MAP = {
   house:     { prefab: "house",     glb: "models/buildings/house.glb" },
-  shop:      { prefab: "shop",      glb: "models/buildings/shop.glb" },
-  workshop:  { prefab: "workshop",  glb: "models/buildings/workshop.glb" },
+  shop:      { prefab: "shop",      glb: "models/buildings/house.glb" },
+  workshop:  { prefab: "workshop",  glb: "models/buildings/house.glb" },
   warehouse: { prefab: "warehouse", glb: "models/buildings/warehouse.glb" },
   stoa:      { prefab: "stoa",      glb: "models/landmarks/stoa_attalos.glb" },
   fountain:  { prefab: "fountain",  glb: "models/props/fountain.glb" },

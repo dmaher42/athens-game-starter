@@ -457,7 +457,6 @@ export function injectGroundTextureShader(shader, state) {
 
   const commonInjection = [
     "#include <common>",
-    "varying float vGroundHeight;",
     ...(hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"]),
     ...header,
   ].join("\n");
