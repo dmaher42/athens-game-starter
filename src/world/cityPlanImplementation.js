@@ -62,6 +62,9 @@ function createCorridor(length, width, color, options = {}) {
     metalness: 0.05,
     emissive: new THREE.Color(options.emissive ?? 0x000000),
     emissiveIntensity: options.emissiveIntensity ?? 0,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    polygonOffsetUnits: -4,
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.castShadow = false;
@@ -214,7 +217,7 @@ export function createCityPlanImplementation(scene, options = {}) {
   const center = ensureVector3(options.center, ensureVector3(AGORA_CENTER_3D));
   const sampler =
     options.heightSampler ?? options.terrainSampler ?? options.terrain?.userData?.getHeightAt ?? null;
-  const surfaceOffset = options.surfaceOffset ?? 0.4;
+  const surfaceOffset = options.surfaceOffset ?? 0.8;
 
   const sample = (offsetX, offsetZ, fallback = 0) => {
     if (!sampler) {
