@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from './locations.js';
+import { makeTiledPBR } from '../materials/pbr-utils.js';
 
 /* PATCH: Harbor zone params */
 export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.25 };
@@ -15,6 +16,20 @@ export function inHarborBand(
   const d = Math.sqrt(dx * dx + dz * dz);
   const band = Number.isFinite(HARBOR_ZONE?.bandWidth) ? HARBOR_ZONE.bandWidth : 35;
   return d <= band + 12;
+}
+
+function createPavedStrip(width, length, color = 0x888888) {
+  // Use a thin BoxGeometry as suggested for better shadow reception
+  const geometry = new THREE.BoxGeometry(width, 0.1, length);
+  const material = new THREE.MeshStandardMaterial({
+    color: color,
+    roughness: 0.8,
+    metalness: 0.1
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.receiveShadow = true;
+  mesh.castShadow = false;
+  return mesh;
 }
 
 function createCivicBuilding(options) {
@@ -192,7 +207,7 @@ function createTorchStand() {
   return group;
 }
 
-export function createCivicDistrict(scene, options = {}) {
+export async function createCivicDistrict(scene, options = {}) {
   const group = new THREE.Group();
   group.name = 'CivicDistrict';
   scene.add(group);
@@ -235,6 +250,17 @@ export function createCivicDistrict(scene, options = {}) {
     }
     return fallback + surfaceOffset;
   };
+
+  // Create promenade floor
+  const promenade = createPavedStrip(promenadeWidth, plazaLength, 0xaaaaaa);
+  promenade.position.y = surfaceOffset; // Slightly above base
+  group.add(promenade);
+
+  // Apply custom texture
+  const plazaMat = await makeTiledPBR("textures/plaza", [4, 4]);
+  if (plazaMat) {
+    promenade.material = plazaMat;
+  }
 
   const shrine = createHermaShrine();
   shrine.position.set(0, sampleLocalHeight(0, 0, shrine.position.y ?? 0), 0);
