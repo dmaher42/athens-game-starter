@@ -374,6 +374,22 @@ export function injectGroundTextureShader(shader, state) {
     );
   }
 
+  // Ensure varying float vGroundHeight is declared in vertex shader
+  if (!shader.vertexShader.includes("varying float vGroundHeight;")) {
+    shader.vertexShader = shader.vertexShader.replace(
+      "void main() {",
+      `varying float vGroundHeight;\nvoid main() {`,
+    );
+  }
+
+  // Calculate vGroundHeight in vertex shader
+  if (!shader.vertexShader.includes("vGroundHeight =")) {
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <project_vertex>",
+      `vGroundHeight = (modelMatrix * vec4(position, 1.0)).y;\n#include <project_vertex>`,
+    );
+  }
+
   if (!shader.vertexShader.includes("#include <uv_vertex>")) {
     shader.vertexShader = shader.vertexShader.replace(
       "#include <project_vertex>",
@@ -441,6 +457,7 @@ export function injectGroundTextureShader(shader, state) {
 
   const commonInjection = [
     "#include <common>",
+    "varying float vGroundHeight;",
     ...(hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"]),
     ...header,
   ].join("\n");
