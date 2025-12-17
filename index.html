@@ -42,18 +42,27 @@
         );
       }
 
-      const shouldRedirectToDocs =
-        !isViteDevServer && window.location.protocol !== "file:";
+      // In production builds (Vite), the entry point is injected automatically.
+      // We only manually inject the entry point for dev server or bundleless execution.
+      // We also removed the auto-redirect to docs/ to prevent infinite loops on GitHub Pages.
 
-      if (shouldRedirectToDocs) {
-        const docsUrl = new URL("./docs/", window.location.href);
-        window.location.replace(docsUrl);
-      } else {
-        const moduleScript = document.createElement("script");
-        moduleScript.type = "module";
-        moduleScript.src = isViteDevServer
-          ? "./src/main.ts"
-          : "./src/main.bundleless.js";
+      const moduleScript = document.createElement("script");
+      moduleScript.type = "module";
+
+      // If we are in a Vite dev server, load main.ts.
+      // If we are file protocol, we might be testing bundleless, load main.bundleless.js.
+      // If we are neither (e.g. deployed but this script is still here because it wasn't stripped),
+      // we assume the build injected its own script, OR we are trying to run bundleless hosted.
+      // However, for the starter kit, we prioritize the dev server flow.
+
+      if (isViteDevServer) {
+        moduleScript.src = "./src/main.ts";
+        document.currentScript?.parentNode?.insertBefore(
+          moduleScript,
+          document.currentScript.nextSibling,
+        );
+      } else if (isFileProtocol) {
+        moduleScript.src = "./src/main.bundleless.js";
         document.currentScript?.parentNode?.insertBefore(
           moduleScript,
           document.currentScript.nextSibling,

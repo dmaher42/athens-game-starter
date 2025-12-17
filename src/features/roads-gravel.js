@@ -10,8 +10,15 @@ import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {}) {
   if (!scene) return;
 
-  const resolvedBase = typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : resolveBaseUrl();
-  const basePath = joinPath(resolvedBase, "textures/gravel");
+  const defaultBase = resolveBaseUrl();
+  const resolvedBase = typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : defaultBase;
+
+  // pbr-utils automatically prepends the default base URL for relative paths.
+  // If our resolvedBase is effectively the same as the default, we pass a relative path
+  // to avoid duplication (e.g. /base/base/textures...).
+  const useRelative = resolvedBase === defaultBase || resolvedBase === "/";
+  const basePath = useRelative ? "textures/gravel" : joinPath(resolvedBase, "textures/gravel");
+
   const mat = await makeTiledPBR(basePath, repeat);
   if (!mat) return; // textures not uploaded yet
 
