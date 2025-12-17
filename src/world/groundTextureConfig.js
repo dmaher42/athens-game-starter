@@ -50,7 +50,7 @@ export const GROUND_TEXTURE_CONFIG = {
      * values or setting preserveFallbackTint to true when authoring new
      * textures.
      */
-    preserveFallbackTint: false,
+    preserveFallbackTint: true,
     baseColor: [...NEUTRAL_GROUND_FALLBACK_TINT.baseColor],
     shadowColor: [...NEUTRAL_GROUND_FALLBACK_TINT.shadowColor],
     highlightColor: [...NEUTRAL_GROUND_FALLBACK_TINT.highlightColor],
@@ -59,7 +59,7 @@ export const GROUND_TEXTURE_CONFIG = {
     contrast: NEUTRAL_GROUND_FALLBACK_TINT.contrast,
     /** Repeat count for the base texture across the terrain. */
     // de-tiling: lower repeats + anisotropy + slight rotation
-    repeat: [18, 18],
+    repeat: [128, 128],
     anisotropy: 8,
     /** Rotate the texture in radians if you need to align features. */
     rotation: 0,
