@@ -3,11 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="favicon.ico" />
+    <link rel="icon" href="/athens-game-starter/assets/favicon-9j6xx7HW.ico" />
     <title>Athens Game Starter</title>
+    <script type="module" crossorigin src="/athens-game-starter/assets/index-CSSAbq-q.js"></script>
   </head>
   <body>
     <div id="app"></div>
+    <!-- Explicitly inject the entry point so Vite detects it during build -->
     <script>
       // Provide bare module fallbacks when running without a bundler.
       const isFileProtocol = window.location.protocol === "file:";
@@ -42,15 +44,21 @@
         );
       }
 
+      // In production builds (Vite), the entry point is injected automatically.
+      // We only manually inject the entry point for bundleless execution.
+
       const moduleScript = document.createElement("script");
       moduleScript.type = "module";
-      moduleScript.src = isViteDevServer
-        ? "./src/main.ts"
-        : "./src/main.bundleless.js";
-      document.currentScript?.parentNode?.insertBefore(
-        moduleScript,
-        document.currentScript.nextSibling,
-      );
+
+      // If we are file protocol, we might be testing bundleless, load main.bundleless.js.
+
+      if (isFileProtocol) {
+        moduleScript.src = "./src/main.bundleless.js";
+        document.currentScript?.parentNode?.insertBefore(
+          moduleScript,
+          document.currentScript.nextSibling,
+        );
+      }
     </script>
   </body>
 </html>
