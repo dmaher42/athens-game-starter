@@ -25,7 +25,7 @@ export function createLighting(scene) {
   const sunLight = new DirectionalLight(0xffb37f, 1.4);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
-  sunLight.shadow.radius = 3;
+  sunLight.shadow.radius = 4;
   sunLight.shadow.bias = -0.0005;
   const sunElevation = MathUtils.degToRad(35);
   const sunAzimuth = Math.PI / 4;
@@ -42,13 +42,13 @@ export function createLighting(scene) {
   cam.far = 300;
   cam.left = -120; cam.right = 120;
   cam.top  = 120;  cam.bottom = -120;
-  sunLight.shadow.normalBias = 0.02;
+  sunLight.shadow.normalBias = 0.05;
   sunLight.shadow.camera.updateProjectionMatrix();
   scene.add(sunLight);
   scene.add(sunLight.target);
 
   // Add a hemisphere light to simulate ambient sky/ground bounce.
-  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.4);
+  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.8);
   scene.add(hemiLight);
 
   return { sunLight, hemiLight, nightFactor: 0 };
@@ -82,7 +82,7 @@ export function updateLighting(lights, sunDir) {
   sunLight.color.copy(sunColor);
 
   // Hemisphere ambient blending (cooler and dimmer at night).
-  const hemiTarget = MathUtils.lerp(0.08, 0.4, dayFactor);
+  const hemiTarget = MathUtils.lerp(0.2, 0.8, dayFactor);
   hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
   lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
