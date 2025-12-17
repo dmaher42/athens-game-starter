@@ -48,7 +48,7 @@ export function createLighting(scene) {
   scene.add(sunLight.target);
 
   // Add a hemisphere light to simulate ambient sky/ground bounce.
-  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.8);
+  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.6);
   scene.add(hemiLight);
 
   return { sunLight, hemiLight, nightFactor: 0 };
@@ -82,7 +82,7 @@ export function updateLighting(lights, sunDir) {
   sunLight.color.copy(sunColor);
 
   // Hemisphere ambient blending (cooler and dimmer at night).
-  const hemiTarget = MathUtils.lerp(0.2, 0.8, dayFactor);
+  const hemiTarget = MathUtils.lerp(0.2, 0.6, dayFactor);
   hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
   lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
