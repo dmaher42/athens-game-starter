@@ -85,7 +85,7 @@ export const GROUND_TEXTURE_CONFIG = {
       maxHeight: 32,
       fade: 16, // Encourage softer transitions for photo textures
       slopeMax: 0.33, // Favor broad, low-slope coverage
-      mode: "mix",
+      mode: "mix", // Corresponds to uGroundDetailMode = 1 (mix blend)
       seed: 404,
       tintAttenuation: 0.42,
     }
