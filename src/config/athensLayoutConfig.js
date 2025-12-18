@@ -17,7 +17,7 @@
 // terrain that already exists inside the scene graph.
 // -----------------------------------------------------------------------------
 
-import districtRulesManifest from "../../config/districts.json";
+import districtRulesManifest from "../../public/config/districts.json";
 import { deepFreeze, mergeDeep, getRuntimeEnvironment, assert } from "./utils.js";
 
 import {
