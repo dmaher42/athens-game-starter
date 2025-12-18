@@ -5,7 +5,7 @@ import { Vector3, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpac
 // Map presets to texture filenames
 const SKY_PRESETS = {
   dawn: "dawn.jpg",
-  noon: "high_noon.jpg",
+  noon: "day.jpg",
   dusk: "dusk.jpg",
   night: "night.jpg",
 };
