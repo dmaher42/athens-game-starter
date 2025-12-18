@@ -6,7 +6,7 @@ import {
   MathUtils,
   Vector3
 } from 'three';
-import { DEFAULT_LIGHTING_CONFIG } from '../config/LightingConfig.js';
+import { lightingConfig as DEFAULT_LIGHTING_CONFIG } from '../config/LightingConfig.js';
 import { updateSky } from './sky.js';
 
 // Configuration constants - TWEAK THESE FOR "GREEK" FEEL
