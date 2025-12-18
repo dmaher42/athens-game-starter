@@ -17,10 +17,7 @@ import {
   getHarborShoreBlendProfile,
 } from "./harborTerrainConfig.js";
 
-// Utility: basic pseudo-random gradient noise using deterministic hashing so we can
-// produce repeatable rolling hills without pulling in an additional dependency.
-// This gives us smooth height transitions similar to Perlin noise by interpolating
-// the dot product of gradients at the corners of a grid cell.
+// Utility: basic pseudo-random gradient noise using deterministic hashing
 function gradientNoise(x, z) {
   const x0 = Math.floor(x);
   const z0 = Math.floor(z);
@@ -54,9 +51,6 @@ function gradientNoise(x, z) {
   return lerp(nx0, nx1, v);
 }
 
-// Helper for fractal Brownian motion: summing several octaves of the base noise
-// lets us control amplitude (height) and frequency (feature size). Increase
-// frequency for craggier mountains, increase amplitude for taller peaks.
 function fbm(x, z, octaves, persistence, lacunarity) {
   let amplitude = 1;
   let frequency = 1;
@@ -87,14 +81,10 @@ const {
 } = HARBOR_SHORE_PROFILE;
 
 export function createTerrain(scene) {
-  // A large subdivided plane gives us enough vertices to push around and create
-  // rolling hills. More segments = smoother displacement at the cost of perf.
   const size = 500;
   const segments = 256;
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
-  // MeshStandardMaterial's AO map expects a second UV set. Reuse the existing
-  // layout so ambient occlusion textures line up with the base color map.
   if (geometry.attributes.uv && !geometry.attributes.uv2) {
     geometry.setAttribute(
       "uv2",
@@ -107,129 +97,91 @@ export function createTerrain(scene) {
 
   const positionAttribute = geometry.attributes.position;
   const vertexCount = positionAttribute.count;
-
-  // Store the unanimated base heights so our update loop can add gentle motion
-  // on top without permanently altering the terrain.
   const baseHeights = new Float32Array(vertexCount);
-
-  // Optional vertex colors: we will paint grass/dirt/rock based on height to
-  // make the surface readable even without texture maps.
   const colors = new Float32Array(vertexCount * 3);
   const colorAttribute = new THREE.BufferAttribute(colors, 3);
   geometry.setAttribute("color", colorAttribute);
 
   const color = new THREE.Color();
-  const heightScale = 25; // Raise this for taller peaks, lower for gentle plains.
-  const baseFrequency = 0.01; // Higher frequency = more, smaller details.
+  const heightScale = 25;
+  const baseFrequency = 0.01;
 
-  // --- City plateau targets (slightly wider + slightly flatter)
-  // Keep the same approach (flat inner, smooth falloff to natural terrain),
-  // but expand the inner zone and soften the blend so the city core looks
-  // more like an urban plain and less like rolling countryside.
-  const CITY_CENTER_XZ = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
-  const CITY_INNER = Math.max(48, CITY_AREA_RADIUS * 0.65); // (CPU + GPU agree)
-  const CITY_OUTER = Math.max(CITY_INNER + 32, CITY_AREA_RADIUS * 1.05); // (CPU + GPU agree)
-  const CITY_TARGET_Y = AGORA_CENTER_3D.y; // same target elevation as before
+  const ACROPOLIS_CENTER = new THREE.Vector2(0, 0); // Acropolis at (0,0)
+  const PLATEAU_RADIUS = 80;
+  const RAMP_END_RADIUS = 120;
+  const PLATEAU_HEIGHT = 30;
 
   for (let i = 0; i < vertexCount; i++) {
-    // PlaneGeometry is built on the XY plane. We'll treat x as east-west and
-    // y as north-south; z will become height once we rotate the mesh.
     const x = positionAttribute.getX(i);
     const z = positionAttribute.getY(i);
 
-    // Fractal noise builds interesting shapes while remaining deterministic.
+    // Default terrain noise
     let height = fbm(x * baseFrequency, z * baseFrequency, 5, 0.5, 2.1) * heightScale;
 
-    const dx = x - HARBOR_CENTER.x;
-    const dz = z - HARBOR_CENTER.y;
-    const distance = Math.hypot(dx, dz);
-    if (distance < HARBOR_BLEND_OUTER_RADIUS) {
-      const flatten = 1 - THREE.MathUtils.smoothstep(
-        distance,
+    // ACROPOLIS PLATEAU LOGIC
+    const dx = x - ACROPOLIS_CENTER.x;
+    const dz = z - ACROPOLIS_CENTER.y;
+    const dist = Math.hypot(dx, dz);
+
+    if (dist < PLATEAU_RADIUS) {
+      height = PLATEAU_HEIGHT; // Flat plateau
+    } else if (dist < RAMP_END_RADIUS) {
+      // Smooth ramp down
+      const t = (dist - PLATEAU_RADIUS) / (RAMP_END_RADIUS - PLATEAU_RADIUS);
+      // Use smoothstep for nicer transition
+      const smoothT = t * t * (3 - 2 * t);
+      // Interpolate between plateau height and natural terrain height
+      // Wait, "natural terrain height" might be higher than 0?
+      // User says "down to the lower city level". Let's assume lower level is the generated noise or near 0.
+      // Let's blend from PLATEAU_HEIGHT to 'height' (noise).
+      height = THREE.MathUtils.lerp(PLATEAU_HEIGHT, height, smoothT);
+    }
+    // else height remains as noise
+
+    // Harbor blending (preserve existing harbor logic if needed, or adjust?)
+    // User instructions focused on Acropolis. I will keep harbor logic but ensure Acropolis takes precedence if overlapping (unlikely given distances).
+    const dxHarbor = x - HARBOR_CENTER.x;
+    const dzHarbor = z - HARBOR_CENTER.y;
+    const distHarbor = Math.hypot(dxHarbor, dzHarbor);
+
+    // Only apply harbor logic if far enough from Acropolis to avoid conflict
+    if (dist > RAMP_END_RADIUS && distHarbor < HARBOR_BLEND_OUTER_RADIUS) {
+         const flatten = 1 - THREE.MathUtils.smoothstep(
+        distHarbor,
         HARBOR_BLEND_INNER_RADIUS,
         HARBOR_BLEND_OUTER_RADIUS,
       );
       if (flatten > 0) {
         const runtimeSeaLevel = getHarborSeaLevel();
-        const harborShorelineSurface = runtimeSeaLevel - 0.02; // tiny offset so shoreline doesn’t occlude water
+        const harborShorelineSurface = runtimeSeaLevel - 0.02;
         const harborFloorHeight = runtimeSeaLevel - HARBOR_FLOOR_DEPTH;
         const harborShelfHeight = runtimeSeaLevel - HARBOR_SHORE_SHELF_DEPTH;
-        const firstStageSpan = Math.max(
-          1e-3,
-          HARBOR_BLEND_SHELF_RADIUS - HARBOR_BLEND_INNER_RADIUS,
-        );
-        const secondStageSpan = Math.max(
-          1e-3,
-          HARBOR_BLEND_OUTER_RADIUS - HARBOR_BLEND_SHELF_RADIUS,
-        );
-        const distanceIntoBlend = distance - HARBOR_BLEND_INNER_RADIUS;
-        const shelfStageT = THREE.MathUtils.clamp(
-          distanceIntoBlend / firstStageSpan,
-          0,
-          1,
-        );
-        const shorelineStageT = THREE.MathUtils.clamp(
-          (distance - HARBOR_BLEND_SHELF_RADIUS) / secondStageSpan,
-          0,
-          1,
-        );
+        const firstStageSpan = Math.max(1e-3, HARBOR_BLEND_SHELF_RADIUS - HARBOR_BLEND_INNER_RADIUS);
+        const secondStageSpan = Math.max(1e-3, HARBOR_BLEND_OUTER_RADIUS - HARBOR_BLEND_SHELF_RADIUS);
+        const distanceIntoBlend = distHarbor - HARBOR_BLEND_INNER_RADIUS;
+        const shelfStageT = THREE.MathUtils.clamp(distanceIntoBlend / firstStageSpan, 0, 1);
+        const shorelineStageT = THREE.MathUtils.clamp((distHarbor - HARBOR_BLEND_SHELF_RADIUS) / secondStageSpan, 0, 1);
         let harborTargetHeight = harborFloorHeight;
-        if (distance <= HARBOR_BLEND_SHELF_RADIUS) {
+        if (distHarbor <= HARBOR_BLEND_SHELF_RADIUS) {
           const easedShelf = shelfStageT * shelfStageT;
-          harborTargetHeight = THREE.MathUtils.lerp(
-            harborFloorHeight,
-            harborShelfHeight,
-            easedShelf,
-          );
+          harborTargetHeight = THREE.MathUtils.lerp(harborFloorHeight, harborShelfHeight, easedShelf);
         } else {
-          const easedFalloff = 1 - Math.pow(
-            1 - shorelineStageT,
-            HARBOR_SHORE_TAPER_FALLOFF,
-          );
-          harborTargetHeight = THREE.MathUtils.lerp(
-            harborShelfHeight,
-            harborShorelineSurface,
-            easedFalloff,
-          );
+          const easedFalloff = 1 - Math.pow(1 - shorelineStageT, HARBOR_SHORE_TAPER_FALLOFF);
+          harborTargetHeight = THREE.MathUtils.lerp(harborShelfHeight, harborShorelineSurface, easedFalloff);
         }
         height = THREE.MathUtils.lerp(height, harborTargetHeight, flatten);
       }
     }
 
-    // --- City plateau flattening (softly level the urban core; wider + flatter)
-    {
-      const dxCity = x - CITY_CENTER_XZ.x;
-      const dzCity = z - CITY_CENTER_XZ.y;
-      const dCity = Math.hypot(dxCity, dzCity);
-      if (dCity < CITY_OUTER) {
-        // 0 in inner ring (full flatten), 1 outside the outer ring (no change).
-        // Use a gentler S-curve for the blend (easeInOut-ish), which keeps more
-        // area near the core close to CITY_TARGET_Y without a hard edge.
-        const tLin = THREE.MathUtils.clamp(
-          (dCity - CITY_INNER) / Math.max(1e-3, CITY_OUTER - CITY_INNER),
-          0,
-          1,
-        );
-        const t = tLin * tLin * (3.0 - 2.0 * tLin); // smoothstep curve without extra overhead
-        // Blend original 'height' toward city target elevation.
-        height = THREE.MathUtils.lerp(CITY_TARGET_Y, height, t);
-      }
-    }
     positionAttribute.setZ(i, height);
     baseHeights[i] = height;
 
-    // Blend colors based on altitude. Low areas get lush greens, mid elevations
-    // expose soil, and high peaks fade into cold rock tones.
     const normalized = THREE.MathUtils.clamp((height + heightScale) / (heightScale * 2), 0, 1);
-    // richer grass/dirt/rock palette
     if (normalized < 0.42) {
-      // richer, Mediterranean grass (was 0.24,0.42,0.17)
       color.setRGB(0.30, 0.55, 0.22);
     } else if (normalized < 0.72) {
-      // warmer soil (was 0.38,0.27,0.16)
       color.setRGB(0.43, 0.31, 0.18);
     } else {
-      // slightly brighter rock (was 0.6,0.6,0.6)
       color.setRGB(0.62, 0.62, 0.62);
     }
     colorAttribute.setXYZ(i, color.r, color.g, color.b);
@@ -239,13 +191,10 @@ export function createTerrain(scene) {
   colorAttribute.needsUpdate = true;
   geometry.computeVertexNormals();
 
-  // Pack info we need later for animation and sampling.
   geometry.userData.baseHeights = baseHeights;
   geometry.userData.segmentCount = segments;
   geometry.userData.size = size;
 
-  // --- GPU sway setup: capture the original positions so the shader can gently
-  // displace them at runtime without mutating the CPU-side buffers.
   if (!geometry.getAttribute("basePos")) {
     const basePos = new THREE.BufferAttribute(
       new Float32Array(positionAttribute.array),
@@ -258,7 +207,7 @@ export function createTerrain(scene) {
     color: 0xffffff,
     roughness: 0.90,
     metalness: 0.0,
-    vertexColors: true, // Re-enable vertex colors so the shader can use them
+    vertexColors: true,
   });
 
   terrainMaterial.userData.textureBudget = "skip";
@@ -272,15 +221,11 @@ export function createTerrain(scene) {
 
   const swayUniforms = {
     uTime: { value: 0 },
-    // softer ground sway
     uWindStrength: { value: 0.18 },
     uWindFreq: { value: 0.15 },
-    uCityCenter: {
-      value: new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z),
-    },
-    // Use the SAME values as CPU flattening above so the shader & geometry match.
-    uCityInner: { value: CITY_INNER },
-    uCityOuter: { value: CITY_OUTER },
+    uCityCenter: { value: new THREE.Vector2(0, 0) }, // Updated to Acropolis center
+    uCityInner: { value: PLATEAU_RADIUS },
+    uCityOuter: { value: RAMP_END_RADIUS },
   };
 
   terrainMaterial.onBeforeCompile = (shader) => {
@@ -305,11 +250,9 @@ export function createTerrain(scene) {
     shader.vertexShader = shader.vertexShader.replace(
       "#include <begin_vertex>",
       `
-        // Start from the stored base position. PlaneGeometry is XY with height in Z.
         vec3 transformed = basePos;
-${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
+        ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
 
-        // Measure distance to the city center in the ground plane (object-space XY).
         float dx = basePos.x - uCityCenter.x;
         float dz = basePos.y - uCityCenter.y;
         float dCity = sqrt(dx * dx + dz * dz);
@@ -332,7 +275,6 @@ ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
       if (!shader.fragmentShader.includes("varying float vGroundHeight")) {
         shader.fragmentShader = `varying float vGroundHeight;\n${shader.fragmentShader}`;
       }
-
       injectGroundTextureShader(shader, groundTextureState);
     }
   };
@@ -342,13 +284,11 @@ ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
   });
 
   const terrain = new THREE.Mesh(geometry, terrainMaterial);
-  terrain.rotation.x = -Math.PI / 2; // Rotate so the plane lies flat on the XZ axis.
+  terrain.rotation.x = -Math.PI / 2;
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
   scene.add(terrain);
 
-  // Static terrain would only run the block above. Because we also animate,
-  // attach helpers for dynamic behaviour and runtime height queries.
   const stride = segments + 1;
   terrain.userData.getHeightAt = (worldX, worldZ) => {
     _scratchVec.set(worldX, 0, worldZ);
@@ -380,19 +320,16 @@ ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
     const index01 = z1 * stride + x0;
     const index11 = z1 * stride + x1;
 
+    // We can skip sway sampling on CPU for height queries to save perf, or keep it for accuracy.
+    // Keeping it for consistency.
     const uniforms = terrain.userData.swayUniforms;
-
     const sampleSway = (vertexIndex) => {
       if (!uniforms) return 0;
-
       const windStrength = uniforms.uWindStrength?.value ?? 0;
-      if (windStrength === 0) {
-        return 0;
-      }
+      if (windStrength === 0) return 0;
 
       const planarX = basePosAttr.getX(vertexIndex);
       const planarY = basePosAttr.getY(vertexIndex);
-
       const cityCenter = uniforms.uCityCenter?.value;
       const cityInner = uniforms.uCityInner?.value ?? 0;
       const cityOuter = uniforms.uCityOuter?.value ?? cityInner;
@@ -402,19 +339,14 @@ ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
         const dx = planarX - cityCenter.x;
         const dz = planarY - cityCenter.y;
         const distance = Math.hypot(dx, dz);
-
         if (distance <= cityInner) {
           cityFactor = 0;
         } else if (distance < cityOuter) {
-          const range = Math.max(0.0001, cityOuter - cityInner);
-          const t = (distance - cityInner) / range;
+          const t = (distance - cityInner) / Math.max(0.0001, cityOuter - cityInner);
           cityFactor = THREE.MathUtils.clamp(t, 0, 1);
         }
       }
-
-      if (cityFactor === 0) {
-        return 0;
-      }
+      if (cityFactor === 0) return 0;
 
       const windFreq = uniforms.uWindFreq?.value ?? 0;
       const time = uniforms.uTime?.value ?? 0;
