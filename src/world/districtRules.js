@@ -42,11 +42,9 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
 
     if (isLocalhost) {
       push("/public/config/districts.json");
-      push("/docs/config/districts.json");
     }
   } else {
     push("/public/config/districts.json");
-    push("/docs/config/districts.json");
   }
 
   return Array.from(urls);
