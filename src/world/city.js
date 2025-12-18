@@ -23,7 +23,6 @@ import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
 import { spawnBuildingsFromPads } from "./buildingSpawner.js";
 import { placeHarborLandmarks } from "./landmarks.js";
-import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { DEBUG_FLAGS } from "../debug/flags.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildHouseBlock } from "../features/blocks.js";
@@ -1588,12 +1587,10 @@ export async function createCity(scene, terrain, options = {}) {
 
   const lotPadGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.08, 10);
   const lotPadMaterial =
-    (await makeTiledPBR("textures/plaza/lot-pads", [2.4, 2.4])) ??
     new THREE.MeshStandardMaterial({ color: 0xb7b3a7, roughness: 1, metalness: 0 });
   lotPadMaterial.depthWrite = true;
   lotPadMaterial.transparent = false;
   const foundationPadMaterial =
-    (await makeTiledPBR("textures/plaza/foundation-pads", [2.4, 2.4])) ??
     new THREE.MeshStandardMaterial({ color: 0xbdb8ac, roughness: 0.95, metalness: 0 });
   foundationPadMaterial.depthWrite = true;
   foundationPadMaterial.transparent = false;
