@@ -278,7 +278,7 @@ function addEntrySteps(group, width, rng) {
 }
 
 // Parametric “prefabs” (fast + zero textures). All return a Group.
-const Prefabs = {
+export const Prefabs = {
   house({ w = 5, d = 7, h = 3.8, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralHouse";
