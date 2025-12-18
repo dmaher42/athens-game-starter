@@ -225,10 +225,11 @@ export class Application {
       exposureOverlayConfig,
     );
 
+    let exposureSlider = null;
     if (shouldMountExposureSlider) {
       const exposureSettings = lightingConfig.exposure || {};
       // Mount the exposure control (F9 toggles visibility)
-      mountExposureSlider(renderer, {
+      exposureSlider = mountExposureSlider(renderer, {
         min: Number.isFinite(exposureSettings.min) ? exposureSettings.min : 0.2,
         max: Number.isFinite(exposureSettings.max) ? exposureSettings.max : 2.0,
         step: Number.isFinite(exposureSettings.step) ? exposureSettings.step : 0.01,
@@ -1612,6 +1613,9 @@ export class Application {
 
       const phase = setTimeOfDayPhase(timeOfDayState, preset.phase);
       renderer.toneMappingExposure = preset.exposure;
+      if (exposureSlider) {
+        exposureSlider.value = preset.exposure;
+      }
       console.log(`[HUD] preset: ${presetName}`);
 
       const sunDir = getSunDirection(timeOfDayState);
@@ -1709,6 +1713,10 @@ export class Application {
     };
 
     loop.onUpdate(onFrame);
+
+    // Apply initial lighting preset (Night/Phase 0) to ensure correct exposure/atmosphere on startup
+    applyLightingPreset("night");
+
     loop.start();
     updateLoadingStatus("Opening the gates to ancient Athens...");
     hideLoadingScreen();

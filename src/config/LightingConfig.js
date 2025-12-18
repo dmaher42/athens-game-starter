@@ -10,7 +10,7 @@ const DEFAULT_LIGHTING_CONFIG = {
     radius: 0.85,
   },
   exposure: {
-    min: 0.2,
+    min: 0.5,
     max: 2.0,
     step: 0.01,
   },
@@ -18,7 +18,7 @@ const DEFAULT_LIGHTING_CONFIG = {
     dawn: { phase: 0.25, exposure: 1.1, label: "Dawn", hotkey: "1" },
     noon: { phase: 0.5, exposure: 1.0, label: "High Noon", hotkey: "2" },
     dusk: { phase: 0.75, exposure: 1.1, label: "Dusk", hotkey: "3" },
-    night: { phase: 0.0, exposure: 0.6, label: "Night", hotkey: "4" },
+    night: { phase: 0.0, exposure: 1.5, label: "Night", hotkey: "4" },
   },
 };
 

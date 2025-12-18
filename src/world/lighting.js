@@ -8,12 +8,13 @@ const SUN_COLOR_DAWN = new Color("#ffb37f");
 const SUN_COLOR_NOON = new Color("#fffaf0");
 const SUN_COLOR_DUSK = new Color("#ff9f76");
 
-const SKY_COLOR_NIGHT = new Color("#0b1d51");
+// Boosted Night Colors for visibility
+const SKY_COLOR_NIGHT = new Color("#555555");
 const SKY_COLOR_DAY = new Color("#ffffff");
-const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
+const GROUND_COLOR_NIGHT = new Color("#333333");
 const GROUND_COLOR_DAY = new Color("#b97a20");
 
-const FOG_COLOR_NIGHT = new Color("#050510");
+const FOG_COLOR_NIGHT = new Color("#333333");
 const FOG_COLOR_DAWN = new Color("#ffaa80");
 const FOG_COLOR_NOON = new Color("#fdf6e3");
 const FOG_COLOR_DUSK = new Color("#ff8855");
@@ -71,8 +72,9 @@ export function updateLighting(lights, sunDir) {
   if (sunHeight < -0.05) {
     // Moon Mode (Night)
     sunLight.position.copy(norm).negate().multiplyScalar(100);
-    sunLight.intensity = MathUtils.lerp(sunLight.intensity, 0.5, 0.1);
-    sunLight.color.setHex(0x223344);
+    // Increased moon intensity and neutral color
+    sunLight.intensity = MathUtils.lerp(sunLight.intensity, 0.6, 0.1);
+    sunLight.color.setHex(0xdddddd);
   } else {
     // Sun Mode (Day)
     sunLight.position.copy(norm).multiplyScalar(100);
@@ -91,7 +93,8 @@ export function updateLighting(lights, sunDir) {
   sunLight.target.updateMatrixWorld();
 
   // Hemisphere ambient blending (cooler and dimmer at night).
-  const hemiTarget = MathUtils.lerp(0.3, 0.6, dayFactor);
+  // Kept night ambient intensity similar to day to ensure visibility
+  const hemiTarget = MathUtils.lerp(0.6, 0.6, dayFactor);
   hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
   lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
