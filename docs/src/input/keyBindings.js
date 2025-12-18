@@ -11,16 +11,16 @@ function createKeyGroups(groups) {
     return Object.freeze(frozen);
 }
 export const MOVEMENT_KEYS = createKeyGroups({
-    forward: ["KeyW", "ArrowUp"],
-    back: ["KeyS", "ArrowDown"],
-    left: ["KeyA", "ArrowLeft"],
-    right: ["KeyD", "ArrowRight"],
+    forward: ["KeyW"],
+    back: ["KeyS"],
+    left: ["KeyA"],
+    right: ["KeyD"],
 });
 export const LOOK_KEYS = createKeyGroups({
-    left: ["KeyQ", "Comma"],
-    right: ["KeyE", "Period"],
-    up: ["KeyR"],
-    down: ["KeyX"],
+    left: ["ArrowLeft", "KeyQ", "Comma"],
+    right: ["ArrowRight", "KeyE", "Period"],
+    up: ["ArrowUp", "KeyR"],
+    down: ["ArrowDown", "KeyX"],
 });
 export const ALT_LOOK_KEYS = createKeyGroups({
     left: ["KeyJ"],

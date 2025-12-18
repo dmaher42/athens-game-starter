@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { Soundscape } from "../audio/soundscape.js";
 import { mountAudioMixer } from "../ui/audioMixer.js";
-import { createSky, updateSky, setTimeOfDayPhase } from "../world/sky.js";
+import { createSky, updateSky, getSunDirection, setTimeOfDayPhase } from "../world/sky.js";
 import { createLighting, updateLighting } from "../world/lighting.js";
 import {
   createInteractor,
@@ -689,7 +689,7 @@ export class Application {
     // Lay out a formal civic district with a central promenade, symmetrical
     // civic buildings, and decorative lighting to give the city a planned
     // character rather than scattered props.
-    const civicDistrict = createCivicDistrict(worldRoot, {
+    const civicDistrict = await createCivicDistrict(worldRoot, {
       plazaLength: 90,
       promenadeWidth: 16,
       greensWidth: 9,
@@ -1614,8 +1614,12 @@ export class Application {
       renderer.toneMappingExposure = preset.exposure;
       console.log(`[HUD] preset: ${presetName}`);
 
-      const sunDir = updateSky(skyObj, timeOfDayState);
+      const sunDir = getSunDirection(timeOfDayState);
       updateLighting(lights, sunDir);
+
+      // Explicitly update sky preset on manual change
+      updateSky(scene, presetName);
+
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
         timeOfDayPhase: phase,
@@ -1650,7 +1654,7 @@ export class Application {
 
       const phase = timeOfDayState.timeOfDayPhase ?? 0;
       timeOfDayState.elapsedSeconds = elapsed;
-      const sunDir = updateSky(skyObj, timeOfDayState);
+      const sunDir = getSunDirection(timeOfDayState);
 
       // Update sky dome and atmospheric lighting each frame.
       updateLighting(lights, sunDir);

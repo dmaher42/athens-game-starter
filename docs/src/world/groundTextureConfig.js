@@ -50,7 +50,7 @@ export const GROUND_TEXTURE_CONFIG = {
      * values or setting preserveFallbackTint to true when authoring new
      * textures.
      */
-    preserveFallbackTint: false,
+    preserveFallbackTint: true,
     baseColor: [...NEUTRAL_GROUND_FALLBACK_TINT.baseColor],
     shadowColor: [...NEUTRAL_GROUND_FALLBACK_TINT.shadowColor],
     highlightColor: [...NEUTRAL_GROUND_FALLBACK_TINT.highlightColor],
@@ -59,7 +59,7 @@ export const GROUND_TEXTURE_CONFIG = {
     contrast: NEUTRAL_GROUND_FALLBACK_TINT.contrast,
     /** Repeat count for the base texture across the terrain. */
     // de-tiling: lower repeats + anisotropy + slight rotation
-    repeat: [18, 18],
+    repeat: [64, 64],
     anisotropy: 8,
     /** Rotate the texture in radians if you need to align features. */
     rotation: 0,
@@ -75,17 +75,17 @@ export const GROUND_TEXTURE_CONFIG = {
     // Set tintMultiplier: false on any entry to bypass tinting when relying on
     // baked-in color work.
     {
-      generator: "lush-grass-detail",
+      url: textureUrl("dirt-albedo.jpg"),
       repeat: [36, 36],
       rotation: 0.23,
       anisotropy: 8,
-      strength: 0.4, // Enable detail layer tinting
-      tint: [1.0, 1.0, 1.0], // Neutral tint
+      strength: 0.55, // Enable detail layer tinting
+      tint: [1.0, 1.0, 1.0], // Neutral tint (texture provides color)
       minHeight: -15,
       maxHeight: 32,
       fade: 16, // Encourage softer transitions for photo textures
       slopeMax: 0.33, // Favor broad, low-slope coverage
-      mode: "mix",
+      mode: "mix", // Corresponds to uGroundDetailMode = 1 (mix blend)
       seed: 404,
       tintAttenuation: 0.42,
     }

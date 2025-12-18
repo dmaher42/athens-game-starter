@@ -61,7 +61,16 @@ function hasRepoSegment(path) {
 
 function normalizeBase(path) {
   if (!path) return "/";
-  return path.endsWith("/") ? path : path + "/";
+  // If it's a full URL, just ensure trailing slash
+  if (/^(?:[a-z]+:)?\/\//i.test(path)) {
+    return path.endsWith("/") ? path : path + "/";
+  }
+
+  let p = path;
+  if (!p.startsWith("/")) {
+    p = "/" + p;
+  }
+  return p.endsWith("/") ? p : p + "/";
 }
 
 function deriveBaseFromPath(path) {

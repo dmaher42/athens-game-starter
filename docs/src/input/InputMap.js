@@ -94,9 +94,7 @@ export class InputMap {
     }
     consumeLookDelta(dt = 0) {
         const settings = this.cameraSettings || defaultCameraSettings;
-        if (!settings.enableArrowOrbit) {
-            return { yaw: 0, pitch: 0 };
-        }
+        // Keyboard Input
         const yawInput = (this.lookRight ? 1 : 0) - (this.lookLeft ? 1 : 0);
         const pitchInput = (this.lookDown ? 1 : 0) - (this.lookUp ? 1 : 0);
         const yawSpeed = Number.isFinite(settings.yawSpeed)
@@ -107,11 +105,13 @@ export class InputMap {
             : defaultCameraSettings.pitchSpeed;
         const invert = settings.invertPitch ? -1 : 1;
         const dtSafe = Number.isFinite(dt) ? Math.max(0, dt) : 0;
-        const yawDelta = yawInput * yawSpeed * dtSafe;
-        const pitchDelta = pitchInput * pitchSpeed * dtSafe * invert;
+        // 1. Calculate Key Look (scaled by dt)
+        const yawKeyDelta = yawInput * yawSpeed * dtSafe;
+        const pitchKeyDelta = pitchInput * pitchSpeed * dtSafe * invert;
+        // 2. Return Combined
         return {
-            yaw: yawDelta,
-            pitch: pitchDelta,
+            yaw: yawKeyDelta,
+            pitch: pitchKeyDelta,
         };
     }
     isDown(code) {
