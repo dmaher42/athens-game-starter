@@ -8,6 +8,10 @@ const SKY_PRESETS = {
   noon: "day.jpg",
   dusk: "dusk.jpg",
   night: "night.jpg",
+  blue_hour: "blue_hour.jpg",
+  golden_hour: "golden_hour.jpg",
+  high_noon: "high_noon.jpg",
+  night_sky: "night_sky.jpg",
 };
 
 const loadedTextures = {};
