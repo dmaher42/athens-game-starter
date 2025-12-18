@@ -120,3 +120,5 @@ export function updateLighting(scene, timeOfDay, config = DEFAULT_LIGHTING_CONFI
     ambientLight.color.setHex(SKY_COLOR_DAY);
     
     scene.fog.color.setHex(FOG_COLOR_DAY);
+  }
+}

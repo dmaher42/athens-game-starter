@@ -6,13 +6,31 @@
   "densitySpacingMeters": { "high": 11, "medium": 16, "low": 22 },
   "districts": [
     {
-      "id": "default",
-      "label": "Default Plateau",
+      "id": "civic",
+      "label": "Civic District",
       "heightRange": [-999, 999],
       "buildingDensity": "medium",
-      "minSeparation": 16,
-      "allowedTypes": ["house", "shop"],
-      "road": { "width": 3.2, "color": 3355443 }
+      "minSeparation": 20,
+      "allowedTypes": ["monument", "temple", "stoa", "plaza"],
+      "road": { "width": 4.0, "color": 14540253 }
+    },
+    {
+      "id": "commercial",
+      "label": "Market District",
+      "heightRange": [-999, 999],
+      "buildingDensity": "high",
+      "minSeparation": 12,
+      "allowedTypes": ["shop", "market", "workshop"],
+      "road": { "width": 3.2, "color": 12632256 }
+    },
+    {
+      "id": "residential",
+      "label": "Residential",
+      "heightRange": [-999, 999],
+      "buildingDensity": "medium",
+      "minSeparation": 15,
+      "allowedTypes": ["house", "courtyard"],
+      "road": { "width": 2.8, "color": 10066329 }
     }
   ]
 }

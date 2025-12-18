@@ -129,9 +129,9 @@ export class MainCharacter {
     this.handleBlur = this.handleBlur.bind(this);
 
     // Listen for WASD keys to move our placeholder character.
-    window.addEventListener("keydown", this.handleKeyDown);
-    window.addEventListener("keyup", this.handleKeyUp);
-    window.addEventListener("blur", this.handleBlur);
+    // window.addEventListener("keydown", this.handleKeyDown);
+    // window.addEventListener("keyup", this.handleKeyUp);
+    // window.addEventListener("blur", this.handleBlur);
 
     // Camera orbit configuration.
     this.cameraDistance = Math.max(

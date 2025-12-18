@@ -167,7 +167,7 @@ export class EnvironmentCollider {
 
     if (this.positionAttr && this.positionAttr.count > 0) {
       try {
-        this.boundsTree = new MeshBVH(merged, { lazyGeneration: false });
+        this.boundsTree = new MeshBVH(merged, { lazyGeneration: false, maxDepth: 64 });
       } catch (err) {
         console.warn('Failed to build environment bounds tree', err);
         this.boundsTree = null;

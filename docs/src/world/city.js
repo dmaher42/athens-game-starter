@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import {
   CITY_CHUNK_CENTER,
   CITY_CHUNK_SIZE,
@@ -23,7 +24,6 @@ import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
 import { spawnBuildingsFromPads } from "./buildingSpawner.js";
 import { placeHarborLandmarks } from "./landmarks.js";
-import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { DEBUG_FLAGS } from "../debug/flags.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildHouseBlock } from "../features/blocks.js";
@@ -1587,13 +1587,35 @@ export async function createCity(scene, terrain, options = {}) {
   city.add(lotPads);
 
   const lotPadGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.08, 10);
-  const lotPadMaterial =
-    (await makeTiledPBR("textures/plaza/lot-pads", [2.4, 2.4])) ??
-    new THREE.MeshStandardMaterial({ color: 0xb7b3a7, roughness: 1, metalness: 0 });
+
+  // Load plaza textures for lot pads
+  const tl = new THREE.TextureLoader();
+  let lotPadMap, lotPadNormal;
+  try {
+      // Use marble as fallback for plaza since plaza textures are missing
+      lotPadMap = await tl.loadAsync(joinPath(baseUrl, "textures/marble_base.jpg"));
+      lotPadMap.wrapS = lotPadMap.wrapT = THREE.RepeatWrapping;
+      lotPadMap.repeat.set(2, 2);
+      lotPadMap.colorSpace = THREE.SRGBColorSpace;
+
+      lotPadNormal = await tl.loadAsync(joinPath(baseUrl, "textures/marble_normal-dx.jpg"));
+      lotPadNormal.wrapS = lotPadNormal.wrapT = THREE.RepeatWrapping;
+      lotPadNormal.repeat.set(2, 2);
+
+  } catch (err) {
+      console.warn("Plaza textures missing for lot pads.");
+  }
+
+  const lotPadMaterial = new THREE.MeshStandardMaterial({
+      color: lotPadMap ? 0xffffff : 0xb7b3a7,
+      map: lotPadMap || null,
+      normalMap: lotPadNormal || null,
+      roughness: 1,
+      metalness: 0
+  });
   lotPadMaterial.depthWrite = true;
   lotPadMaterial.transparent = false;
   const foundationPadMaterial =
-    (await makeTiledPBR("textures/plaza/foundation-pads", [2.4, 2.4])) ??
     new THREE.MeshStandardMaterial({ color: 0xbdb8ac, roughness: 0.95, metalness: 0 });
   foundationPadMaterial.depthWrite = true;
   foundationPadMaterial.transparent = false;

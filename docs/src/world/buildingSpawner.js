@@ -1,116 +1,13 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
 import { getSeaLevelY, HARBOR_WATER_EAST_LIMIT } from "./locations.js";
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
-function sanitizeRelativePath(value) {
-  if (typeof value !== "string") return "";
-  return value
-    .trim()
-    .replace(/^public\//i, "")
-    .replace(/^docs\//i, "")
-    .replace(/^\.\//, "")
-    .replace(/^\/+/, "");
-}
+// Procedural generation logic only - GLB loading removed as per user request.
 
-async function headOk(url) {
-  if (!url) return false;
-  try {
-    const response = await fetch(url, { method: "HEAD" });
-    if (!response.ok) return false;
-    const contentType = response.headers?.get?.("content-type") || "";
-    return !contentType.toLowerCase().includes("text/html");
-  } catch {
-    return false;
-  }
-}
-
-const glbAvailability = new Map();
-const onceFlags = new Set();
-const scratchBox = new THREE.Box3();
-const scratchSize = new THREE.Vector3();
 const ROUGHNESS_BASE_KEY = Symbol("buildingBaseRoughness");
 const BUILDING_ROUGHNESS_VARIATION = 0.1;
-
-function once(key, fn) {
-  if (onceFlags.has(key)) return;
-  onceFlags.add(key);
-  try {
-    fn();
-  } catch (error) {
-    console.warn("[buildingSpawner] once handler failed", error);
-  }
-}
-
-async function findAvailableBuildingUrl(relativePath, candidates) {
-  if (glbAvailability.has(relativePath)) {
-    return glbAvailability.get(relativePath);
-  }
-
-  let resolved = null;
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    try {
-      const ok = await headOk(candidate);
-      if (ok) {
-        resolved = candidate;
-        break;
-      }
-    } catch (error) {
-      if (typeof console !== "undefined" && console.debug) {
-        console.debug("[buildingSpawner] HEAD failed for", candidate, error);
-      }
-    }
-  }
-
-  glbAvailability.set(relativePath, resolved);
-  return resolved;
-}
-
-// Optional: if your repo already has a safe GLB loader, plug it here.
-// Otherwise this shim returns null so we fall back to parametric meshes.
-async function tryLoadGLB(urls) {
-  const candidates = Array.isArray(urls)
-    ? urls.filter((value) => typeof value === "string" && value.length > 0)
-    : typeof urls === "string" && urls.length > 0
-    ? [urls]
-    : [];
-
-  if (!candidates.length) return null;
-
-  let loader = null;
-  const baseUrl = resolveBaseUrl();
-  for (const url of candidates) {
-    try {
-      if (!loader) {
-        // Lazy import to avoid bundling issues if loader doesn't exist
-        const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
-        loader = new GLTFLoader();
-      }
-
-      const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(url);
-      const normalized = sanitizeRelativePath(url);
-      if (!isAbsolute && !normalized) {
-        continue;
-      }
-      const resolved = isAbsolute ? url : joinPath(baseUrl, normalized);
-
-      const glb = await new Promise((resolve, reject) => {
-        loader.load(resolved, (gltf) => resolve(gltf.scene || gltf.scenes?.[0] || null), undefined, reject);
-      });
-
-      if (glb) {
-        return glb;
-      }
-    } catch (error) {
-      if (typeof console !== "undefined" && console.debug) {
-        console.debug("[buildingSpawner] Failed to load GLB candidate", url, error);
-      }
-    }
-  }
-
-  return null;
-}
+const scratchBox = new THREE.Box3();
+const scratchSize = new THREE.Vector3();
 
 const MATERIAL_BASE = {
   stone: { color: 0xded6c0, roughness: 0.9, metalness: 0.02 },
@@ -278,7 +175,7 @@ function addEntrySteps(group, width, rng) {
 }
 
 // Parametric “prefabs” (fast + zero textures). All return a Group.
-const Prefabs = {
+export const Prefabs = {
   house({ w = 5, d = 7, h = 3.8, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralHouse";
@@ -508,20 +405,20 @@ const Prefabs = {
   monument() { return Prefabs.fountain(); }
 };
 
-// Map allowedTypes → prefab id and optional GLB path
+// Map allowedTypes → prefab id (GLB fallback removed)
 const TYPE_MAP = {
-  house:     { prefab: "house",     glb: "models/buildings/house.glb" },
-  shop:      { prefab: "shop",      glb: "models/buildings/shop.glb" },
-  workshop:  { prefab: "workshop",  glb: "models/buildings/workshop.glb" },
-  warehouse: { prefab: "warehouse", glb: "models/buildings/warehouse.glb" },
-  stoa:      { prefab: "stoa",      glb: "models/landmarks/stoa_attalos.glb" },
-  fountain:  { prefab: "fountain",  glb: "models/props/fountain.glb" },
-  plaza:     { prefab: "plaza",     glb: "models/props/plaza.glb" },
-  temple:    { prefab: "temple",    glb: "models/landmarks/temple_hephaestus.glb" },
-  pier:      { prefab: "pier",      glb: "models/harbor/pier.glb" },
-  market:    { prefab: "market",    glb: "models/props/market_stall.glb" },
-  monument:  { prefab: "monument",  glb: "models/landmarks/monument.glb" },
-  garden:    { prefab: "courtyard", glb: "" },
+  house:     { prefab: "house" },
+  shop:      { prefab: "shop" },
+  workshop:  { prefab: "workshop" },
+  warehouse: { prefab: "warehouse" },
+  stoa:      { prefab: "stoa" },
+  fountain:  { prefab: "fountain" },
+  plaza:     { prefab: "plaza" },
+  temple:    { prefab: "temple" },
+  pier:      { prefab: "pier" },
+  market:    { prefab: "market" },
+  monument:  { prefab: "monument" },
+  garden:    { prefab: "courtyard" },
 };
 
 function pick(arr, rnd) { return arr[Math.floor(rnd() * arr.length)]; }
@@ -532,6 +429,28 @@ function mulberry32(a) { return function() { let t=(a+=0x6D2B79F5); t=Math.imul(
  * @param {THREE.Group} worldRoot - parent group (e.g., your "city" or "WorldRoot")
  * @param {object} options { seed, leavePadsVisible }
  */
+export function spawnBuilding(options = {}) {
+  const { district = 'residential', rng = Math.random } = options;
+
+  let allowed = ['house'];
+  if (district === 'sacred') {
+    allowed = ['temple', 'monument', 'stoa'];
+  } else if (district === 'commercial') {
+    allowed = ['shop', 'market', 'fountain', 'stoa'];
+  } else if (district === 'residential') {
+    allowed = ['house', 'courtyard', 'workshop'];
+  } else if (district === 'harbor') {
+    allowed = ['warehouse', 'market', 'workshop'];
+  }
+
+  const type = allowed[Math.floor(rng() * allowed.length)];
+  const spawner = Prefabs[type] || Prefabs.house;
+
+  const building = spawner({ rng, ...options });
+  building.userData = { ...building.userData, district, type };
+  return building;
+}
+
 export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   const seed = Number.isFinite(options.seed) ? options.seed : 12345;
   const rng = mulberry32(seed);
@@ -573,69 +492,14 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     const typeKey = pick(allowedGuess, rng);
     const map = TYPE_MAP[typeKey] || TYPE_MAP.house;
 
-    // 1) Try GLB (if present in public/…)
+    // Force Procedural: always use prefab
     let built = null;
-    if (map.glb) {
-      const baseUrl = resolveBaseUrl();
-      const trimmedGlb = typeof map.glb === "string" ? map.glb.trim() : "";
-
-      if (trimmedGlb.length > 0) {
-        const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(trimmedGlb);
-        const normalizedPath = sanitizeRelativePath(trimmedGlb);
-        const legacyRelative = isAbsolute ? null : trimmedGlb.replace(/^\/+/, "");
-        const cacheKey = isAbsolute ? trimmedGlb : normalizedPath || legacyRelative;
-        const candidateUrls = Array.from(
-          new Set(
-            isAbsolute
-              ? [trimmedGlb]
-              : [
-                  joinPath(baseUrl, normalizedPath),
-                  normalizedPath,
-                  legacyRelative,
-                ].filter(Boolean)
-          )
-        );
-
-        const availableUrl = cacheKey
-          ? await findAvailableBuildingUrl(cacheKey, candidateUrls)
-          : null;
-
-        if (!availableUrl) {
-          once(`buildings-missing:${typeKey}`, () =>
-            console.warn(
-              `[buildings] Missing GLB for ${typeKey}; using procedural fallback.`
-            )
-          );
-        } else {
-          const prioritized = [
-            availableUrl,
-            ...candidateUrls.filter((candidate) => candidate !== availableUrl),
-          ];
-
-          const glb = await tryLoadGLB(prioritized);
-          if (glb) {
-            built = glb;
-            // Normalize scale so GLBs feel consistent
-            scratchBox.setFromObject(glb);
-            scratchBox.getSize(scratchSize);
-            const targetY = clamp(scratchSize.y, 3.5, 8.0);
-            const scale = scratchSize.y > 0 ? targetY / scratchSize.y : 1.0;
-            glb.scale.setScalar(scale);
-            tintGlbMaterials(glb, rng);
-          }
-        }
-      }
+    let prefabKey = map.prefab;
+    if (prefabKey === "house" && rng() < 0.35) {
+      prefabKey = "courtyard";
     }
-
-    // 2) Fallback to a parametric prefab (always works)
-    if (!built) {
-      let prefabKey = map.prefab;
-      if (prefabKey === "house" && rng() < 0.35) {
-        prefabKey = "courtyard";
-      }
-      const prefab = Prefabs[prefabKey] || Prefabs.house;
-      built = prefab({ rng, district: districtId });
-    }
+    const prefab = Prefabs[prefabKey] || Prefabs.house;
+    built = prefab({ rng, district: districtId });
 
     applyBuildingRoughnessVariance(built, rng);
 
@@ -723,41 +587,6 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
 }
 
 function clamp(v, a, b) { return Math.min(Math.max(v, a), b); }
-
-function tintGlbMaterials(glb, rng) {
-  const random = typeof rng === "function" ? rng : Math.random;
-  const palette = [
-    ...(MATERIAL_VARIANTS.stone || []),
-    ...(MATERIAL_VARIANTS.trim || []),
-    ...(MATERIAL_VARIANTS.marble || []),
-  ].filter((color) => typeof color === "number");
-
-  glb.traverse((child) => {
-    if (!child.isMesh) return;
-    child.castShadow = true;
-    child.receiveShadow = true;
-
-    const material = child.material;
-    if (!material) return;
-
-    const color = material.color;
-    const current = color?.getHex?.();
-    const isNeutral = current === 0xffffff || current === 0xfefefe || current === 0xe5e5e5;
-    const noMap = !material.map && !material.emissiveMap && !material.roughnessMap;
-
-    if ((isNeutral || noMap) && palette.length > 0) {
-      const tint = pick(palette, random);
-      const clone = typeof material.clone === "function" ? material.clone() : material;
-      if (!clone.color) {
-        clone.color = new THREE.Color(tint);
-      } else {
-        clone.color.setHex(tint);
-      }
-      clone.needsUpdate = true;
-      child.material = clone;
-    }
-  });
-}
 
 function guessAllowedTypes(districtId) {
   switch (districtId) {

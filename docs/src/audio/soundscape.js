@@ -77,6 +77,10 @@ export class Soundscape {
 
   async loadBuffer(name, url) {
     if (!url) return null;
+    // Skip problematic audio file to prevent console errors
+    if (name === "agora" || url.includes("ambience_agora.mp3")) {
+      return null;
+    }
     const existing = this.buffers.get(name);
     if (existing) return existing;
     try {
@@ -86,6 +90,8 @@ export class Soundscape {
       this.buffers.set(name, buf);
       return buf;
     } catch {
+      // User request: disable track without crashing or excessive spam
+      // logMissing is already non-intrusive (console.info)
       this.logMissing(name, url);
       return null;
     }

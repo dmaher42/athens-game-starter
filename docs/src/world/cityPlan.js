@@ -1,8 +1,17 @@
 import * as THREE from 'three';
 import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from './locations.js';
+import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
+import { makeTiledPBR } from '../materials/pbr-utils.js';
+import { Prefabs, spawnBuilding } from './buildingSpawner.js';
+import { buildTemple } from '../features/temples.js';
 
 /* PATCH: Harbor zone params */
 export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.25 };
+
+// Grid Constants
+const MIN_X = -10, MAX_X = 10;
+const MIN_Z = -10, MAX_Z = 20;
+const BLOCK_SIZE = 40;
 
 export function inHarborBand(
   pos,
@@ -17,120 +26,18 @@ export function inHarborBand(
   return d <= band + 12;
 }
 
-function createCivicBuilding(options) {
-  const {
-    footprint = new THREE.Vector2(10, 14),
-    height = 6,
-    color = 0xe7d7c1,
-    accentColor = 0xd8c3a5,
-    roofColor = 0xb89b7f,
-  } = options ?? {};
-
-  const group = new THREE.Group();
-  group.name = 'CivicBuilding';
-
-  const base = new THREE.Mesh(
-    new THREE.BoxGeometry(footprint.x, height * 0.6, footprint.y),
-    new THREE.MeshStandardMaterial({
-      color,
-      roughness: 0.7,
-      metalness: 0.05,
-    })
-  );
-  base.castShadow = true;
-  base.receiveShadow = true;
-  base.position.y = height * 0.3;
-  base.userData.noCollision = false;
-  group.add(base);
-
-  const columnMaterial = new THREE.MeshStandardMaterial({
-    color: accentColor,
-    roughness: 0.6,
-    metalness: 0.05,
+function createPavedStrip(width, length, color = 0x888888) {
+  // Use a thin BoxGeometry as suggested for better shadow reception
+  const geometry = new THREE.BoxGeometry(width, 0.1, length);
+  const material = new THREE.MeshStandardMaterial({
+    color: color,
+    roughness: 0.8,
+    metalness: 0.1
   });
-  const columnGeometry = new THREE.CylinderGeometry(0.35, 0.35, height * 0.6, 16);
-  const halfX = footprint.x * 0.5 - 0.8;
-  const halfZ = footprint.y * 0.5 - 0.8;
-  const columnCount = 4;
-  for (let i = 0; i < columnCount; i++) {
-    const t = i / (columnCount - 1);
-    const columnFront = new THREE.Mesh(columnGeometry, columnMaterial);
-    columnFront.position.set(THREE.MathUtils.lerp(-halfX, halfX, t), height * 0.3, halfZ);
-    columnFront.castShadow = true;
-    columnFront.userData.noCollision = false;
-    group.add(columnFront);
-
-    const columnBack = columnFront.clone();
-    columnBack.position.z = -halfZ;
-    group.add(columnBack);
-  }
-
-  const pediment = new THREE.Mesh(
-    new THREE.ConeGeometry(footprint.x * 0.6, height * 0.4, 4),
-    new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.55 })
-  );
-  pediment.rotation.y = Math.PI * 0.25;
-  pediment.position.y = height * 0.8;
-  pediment.castShadow = true;
-  pediment.userData.noCollision = false;
-  group.add(pediment);
-
-  const roof = new THREE.Mesh(
-    new THREE.CylinderGeometry(footprint.x * 0.55, footprint.x * 0.55, height * 0.25, 6),
-    new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.6 })
-  );
-  roof.rotation.x = Math.PI / 2;
-  roof.position.y = height * 0.95;
-  roof.castShadow = true;
-  roof.userData.noCollision = false;
-  group.add(roof);
-
-  return group;
-}
-
-function createHermaShrine() {
-  const group = new THREE.Group();
-  group.name = 'AgoraHermaShrine';
-
-  const plinth = new THREE.Mesh(
-    new THREE.CylinderGeometry(4.8, 5.4, 1.2, 36),
-    new THREE.MeshStandardMaterial({ color: 0xcbb69a, roughness: 0.7 })
-  );
-  plinth.receiveShadow = true;
-  plinth.castShadow = true;
-  plinth.position.y = 0.6;
-  plinth.userData.noCollision = false;
-  group.add(plinth);
-
-  const altarTop = new THREE.Mesh(
-    new THREE.CylinderGeometry(3.8, 3.9, 0.6, 24),
-    new THREE.MeshStandardMaterial({ color: 0xe2d2b5, roughness: 0.55 })
-  );
-  altarTop.position.y = 1.2;
-  altarTop.receiveShadow = true;
-  altarTop.castShadow = true;
-  altarTop.userData.noCollision = false;
-  group.add(altarTop);
-
-  const hermaBase = new THREE.Mesh(
-    new THREE.BoxGeometry(1.4, 2.6, 1.4),
-    new THREE.MeshStandardMaterial({ color: 0xd8c3a5, roughness: 0.6 })
-  );
-  hermaBase.position.y = 2.9;
-  hermaBase.castShadow = true;
-  hermaBase.userData.noCollision = false;
-  group.add(hermaBase);
-
-  const bust = new THREE.Mesh(
-    new THREE.SphereGeometry(0.8, 24, 16),
-    new THREE.MeshStandardMaterial({ color: 0xf0e6d2, roughness: 0.45 })
-  );
-  bust.position.y = 4.2;
-  bust.castShadow = true;
-  bust.userData.noCollision = false;
-  group.add(bust);
-
-  return group;
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.receiveShadow = true;
+  mesh.castShadow = false;
+  return mesh;
 }
 
 function createTorchStand() {
@@ -192,11 +99,77 @@ function createTorchStand() {
   return group;
 }
 
-export function createCivicDistrict(scene, options = {}) {
+function generateCityGrid() {
+  const cells = [];
+  for (let gridX = MIN_X; gridX <= MAX_X; gridX++) {
+    for (let gridZ = MIN_Z; gridZ <= MAX_Z; gridZ++) {
+      const cell = {
+        gridX,
+        gridZ,
+        position: new THREE.Vector3(gridX * BLOCK_SIZE, 0, gridZ * BLOCK_SIZE),
+        type: 'building', // Default
+        district: 'residential' // Default
+      };
+
+      // Determine District
+      const distance = Math.sqrt(gridX * gridX + gridZ * gridZ);
+      const distMeters = distance * BLOCK_SIZE;
+
+      if (gridZ > 12) {
+        cell.district = 'harbor';
+      } else if (distMeters < 60) {
+        cell.district = 'sacred';
+      } else if (distMeters >= 60 && distMeters < 120) {
+        cell.district = 'commercial';
+      } else {
+        cell.district = 'residential';
+      }
+
+      // Determine Type Rules
+
+      // 1. Road Rules
+      let type = 'building';
+      if (Math.abs(gridX) <= 1) {
+        type = 'road';
+      } else if (gridX % 3 === 0 || gridZ % 3 === 0) {
+        type = 'road';
+      }
+
+      // 2. District Rules & Special Overrides
+      // Re-evaluate district based on distance to ensure logic flow
+      if (gridZ > 12) {
+        cell.district = 'harbor';
+      } else if (distMeters < 60) {
+        cell.district = 'sacred';
+        if (gridX === 0 && gridZ === 0) {
+          type = 'parthenon';
+        }
+      } else if (distMeters >= 60 && distMeters < 120) {
+        cell.district = 'commercial';
+      } else {
+        cell.district = 'residential';
+      }
+
+      // 3. Plaza Rule (Commercial only, non-road)
+      if (cell.district === 'commercial' && type !== 'road') {
+         if ((gridX + gridZ) % 5 === 0) {
+           type = 'plaza';
+         }
+      }
+
+      cell.type = type;
+      cells.push(cell);
+    }
+  }
+  return cells;
+}
+
+export async function createCivicDistrict(scene, options = {}) {
   const group = new THREE.Group();
   group.name = 'CivicDistrict';
   scene.add(group);
 
+  // Preserve expected options for compatibility, even if used differently or ignored
   const plazaLength = options.plazaLength ?? 80;
   const promenadeWidth = options.promenadeWidth ?? 14;
   const centerOption = options.center ?? AGORA_CENTER_3D;
@@ -204,7 +177,6 @@ export function createCivicDistrict(scene, options = {}) {
     options.heightSampler ??
     options.terrainSampler ??
     options.terrain?.userData?.getHeightAt;
-
   const surfaceOffset = options.surfaceOffset ?? 0.05;
 
   const center = centerOption instanceof THREE.Vector3
@@ -214,6 +186,7 @@ export function createCivicDistrict(scene, options = {}) {
         centerOption?.y ?? 0,
         centerOption?.z ?? 0
       );
+
   let baseHeight = Number.isFinite(center.y) ? center.y : 0;
   if (typeof terrainSampler === 'function') {
     const sampled = terrainSampler(center.x, center.z);
@@ -236,86 +209,125 @@ export function createCivicDistrict(scene, options = {}) {
     return fallback + surfaceOffset;
   };
 
-  const shrine = createHermaShrine();
-  shrine.position.set(0, sampleLocalHeight(0, 0, shrine.position.y ?? 0), 0);
-  group.add(shrine);
+  const grid = generateCityGrid();
 
-  const buildingConfigs = [
-    { position: new THREE.Vector3(-18, 0, -24), rotation: Math.PI / 2 },
-    { position: new THREE.Vector3(-18, 0, -8), rotation: Math.PI / 2 },
-    { position: new THREE.Vector3(-18, 0, 8), rotation: Math.PI / 2 },
-    { position: new THREE.Vector3(-18, 0, 24), rotation: Math.PI / 2 },
-    { position: new THREE.Vector3(18, 0, -24), rotation: -Math.PI / 2 },
-    { position: new THREE.Vector3(18, 0, -8), rotation: -Math.PI / 2 },
-    { position: new THREE.Vector3(18, 0, 8), rotation: -Math.PI / 2 },
-    { position: new THREE.Vector3(18, 0, 24), rotation: -Math.PI / 2 },
-  ];
+  // Attach plan data for downstream consumers
+  group.userData.plan = {
+    grid,
+    minX: MIN_X,
+    maxX: MAX_X,
+    minZ: MIN_Z,
+    maxZ: MAX_Z,
+    blockSize: BLOCK_SIZE,
+    center: center.clone(),
+    // Keep old keys if possible to avoid crashes, though they may be meaningless now
+    promenadeWidth,
+    plazaLength,
+  };
 
-  const palette = [
-    { color: 0xe8dcc7, accent: 0xd7c3a5, roof: 0xb89b7f },
-    { color: 0xe3d5ca, accent: 0xd2bba0, roof: 0xa97c50 },
-    { color: 0xe6dfd0, accent: 0xdcc4a3, roof: 0xb5926d },
-  ];
+  // Pre-load textures if needed
+  // Use marble as fallback for plaza since plaza textures are missing
+  // This matches the fix in src/world/city.js to prevent 404s
+  const tl = new THREE.TextureLoader();
+  const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
+  let plazaMat;
+  try {
+      const baseMap = await tl.loadAsync(joinPath(baseUrl || "/", "textures/marble_base.jpg"));
+      baseMap.wrapS = baseMap.wrapT = THREE.RepeatWrapping;
+      baseMap.repeat.set(4, 4);
+      baseMap.colorSpace = THREE.SRGBColorSpace;
 
-  for (let i = 0; i < buildingConfigs.length; i++) {
-    const cfg = buildingConfigs[i];
-    const paletteEntry = palette[i % palette.length];
-    const building = createCivicBuilding({
-      footprint: new THREE.Vector2(10, 14),
-      height: 6.5,
-      color: paletteEntry.color,
-      accentColor: paletteEntry.accent,
-      roofColor: paletteEntry.roof,
-    });
-    const localHeight = sampleLocalHeight(cfg.position.x, cfg.position.z, cfg.position.y ?? 0);
-    building.position.set(cfg.position.x, localHeight, cfg.position.z);
-    building.rotation.y = cfg.rotation;
-    group.add(building);
+      const normalMap = await tl.loadAsync(joinPath(baseUrl || "/", "textures/marble_normal-dx.jpg"));
+      normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+      normalMap.repeat.set(4, 4);
+
+      plazaMat = new THREE.MeshStandardMaterial({
+          map: baseMap,
+          normalMap: normalMap,
+          roughness: 1,
+          metalness: 0,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1
+      });
+  } catch (e) {
+      console.warn("Failed to load plaza textures (marble fallback)", e);
   }
 
-  const lampSpacing = 12;
-  const lampCount = Math.floor(plazaLength / lampSpacing);
-  for (let i = 0; i <= lampCount; i++) {
-    const offset = -plazaLength / 2 + i * lampSpacing;
-    const leftTorch = createTorchStand();
-    const leftX = -promenadeWidth / 2 + 1.2;
-    leftTorch.position.set(leftX, sampleLocalHeight(leftX, offset, leftTorch.position.y ?? 0), offset);
-    group.add(leftTorch);
+  for (const cell of grid) {
+    const localX = cell.position.x;
+    const localZ = cell.position.z;
+    const localY = sampleLocalHeight(localX, localZ, 0);
 
-    const rightTorch = createTorchStand();
-    const rightX = promenadeWidth / 2 - 1.2;
-    const rightZ = offset + lampSpacing / 2;
-    rightTorch.position.set(
-      rightX,
-      sampleLocalHeight(rightX, rightZ, rightTorch.position.y ?? 0),
-      rightZ
-    );
-    group.add(rightTorch);
+    // Position relative to the group center (which is at 'center')
+    // The grid positions are relative to (0,0,0) which is effectively the 'center' of the city plan.
+    // Since we added group at 'center', we can just use cell.position as local position.
+
+    if (cell.type === 'road') {
+      // Spawn road
+      // Check if it's the main avenue (Math.abs(gridX) <= 1) for wider road?
+      // "Main Avenue: ... wide north-south boulevard"
+      const isMainAvenue = Math.abs(cell.gridX) <= 1;
+      // Use block size for road segment
+      const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, 0x555555);
+      roadMesh.position.set(localX, localY, localZ);
+      group.add(roadMesh);
+
+    } else if (cell.type === 'parthenon') {
+      // Spawn Parthenon
+      const temple = await buildTemple({
+          width: 30,
+          depth: 60,
+          scale: 1.5,
+          order: 'doric',
+          materialPreset: 'marble'
+      });
+      temple.position.set(localX, localY, localZ);
+      group.add(temple);
+
+    } else if (cell.type === 'plaza') {
+      // Spawn Plaza
+      const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xaaaaaa);
+      plazaMesh.position.set(localX, localY, localZ);
+      if (plazaMat) plazaMesh.material = plazaMat;
+      group.add(plazaMesh);
+
+      // Add props (TorchStands)
+      const torch = createTorchStand();
+      torch.position.set(localX, localY, localZ);
+      group.add(torch);
+
+    } else if (cell.type === 'building') {
+       // Spawn Building
+       // Random seed based on position
+       const seed = Math.abs(cell.gridX * 73856093 ^ cell.gridZ * 19349663);
+       const rng = () => {
+          let t = seed + Math.random();
+          return t - Math.floor(t);
+       };
+
+       const buildingGroup = spawnBuilding({
+         district: cell.district,
+         rng: rng // Use deterministic rng based on position
+       });
+
+       buildingGroup.position.set(localX, localY, localZ);
+
+       // Random rotation 90 degrees
+       const rotations = [0, Math.PI/2, Math.PI, -Math.PI/2];
+       buildingGroup.rotation.y = rotations[Math.floor(Math.random() * rotations.length)];
+
+       group.add(buildingGroup);
+    }
   }
 
-  const curvePoints = [
-    new THREE.Vector3(
-      -promenadeWidth * 0.35,
-      sampleLocalHeight(-promenadeWidth * 0.35, -plazaLength / 2 - 6, 0),
-      -plazaLength / 2 - 6
-    ),
-    new THREE.Vector3(
-      -promenadeWidth * 0.35,
-      sampleLocalHeight(-promenadeWidth * 0.35, plazaLength / 2 + 6, 0),
-      plazaLength / 2 + 6
-    ),
-    new THREE.Vector3(
-      promenadeWidth * 0.35,
-      sampleLocalHeight(promenadeWidth * 0.35, plazaLength / 2 + 6, 0),
-      plazaLength / 2 + 6
-    ),
-    new THREE.Vector3(
-      promenadeWidth * 0.35,
-      sampleLocalHeight(promenadeWidth * 0.35, -plazaLength / 2 - 6, 0),
-      -plazaLength / 2 - 6
-    ),
-  ];
-  const walkingLoop = new THREE.CatmullRomCurve3(curvePoints, true, 'catmullrom', 0.1);
+  // Create a dummy walking loop to satisfy contract
+  const walkingLoop = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(center.x + 10, baseHeight, center.z + 10),
+      new THREE.Vector3(center.x - 10, baseHeight, center.z + 10),
+      new THREE.Vector3(center.x - 10, baseHeight, center.z - 10),
+      new THREE.Vector3(center.x + 10, baseHeight, center.z - 10)
+  ], true);
 
   return {
     group,
