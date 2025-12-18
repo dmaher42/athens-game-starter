@@ -14,6 +14,7 @@ import { createTerrain, updateTerrain } from "../world/terrain.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
 import { createHarbor, updateHarborLighting } from "../world/harbor.js";
 import { createHarborDecorations } from "../world/decoration.js";
+import { createVegetationSystem } from "../world/vegetation.js";
 import {
   createMainHillRoad,
   updateMainHillRoadLighting,
@@ -702,6 +703,8 @@ export class Application {
       terrain,
       seaLevel: resolvedSeaLevel,
     });
+
+    createVegetationSystem(worldRoot, terrain, harborCity);
 
     // Overlay the modern planning strategy as a holographic layer so players can
     // understand how each district connects to the wider mobility, housing, and

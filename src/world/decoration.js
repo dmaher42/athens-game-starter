@@ -40,7 +40,16 @@ UMBRELLA_CANOPY_GEOMETRY.translate(0, 0.35, 0);
 const UMBRELLA_BASE_GEOMETRY = new THREE.CylinderGeometry(0.22, 0.26, 0.12, 12);
 UMBRELLA_BASE_GEOMETRY.translate(0, 0.06, 0);
 
+const AMPHORA_BODY = new THREE.CylinderGeometry(0.2, 0.1, 0.8, 12);
+AMPHORA_BODY.translate(0, 0.4, 0);
+const AMPHORA_NECK = new THREE.CylinderGeometry(0.08, 0.08, 0.3, 12);
+AMPHORA_NECK.translate(0, 0.95, 0);
+const AMPHORA_RIM = new THREE.TorusGeometry(0.08, 0.02, 8, 16);
+AMPHORA_RIM.rotateX(Math.PI / 2);
+AMPHORA_RIM.translate(0, 1.1, 0);
+
 let potMaterial = null;
+let amphoraMaterial = null;
 let crateMaterial = null;
 let umbrellaPoleMaterial = null;
 let umbrellaCanopyBase = null;
@@ -283,6 +292,87 @@ function createUmbrella() {
   return markNoCollision(group);
 }
 
+function getAmphoraMaterial() {
+  if (!amphoraMaterial) {
+    amphoraMaterial = new THREE.MeshStandardMaterial({
+      color: 0xc98d72,
+      roughness: 0.6,
+      metalness: 0.1,
+    });
+  }
+  return amphoraMaterial;
+}
+
+function createAmphoraStack() {
+  const group = new THREE.Group();
+  group.name = "AmphoraStack";
+  const count = Math.floor(THREE.MathUtils.randFloat(3, 5));
+  const mat = getAmphoraMaterial().clone();
+  jitterMaterialColor(mat, 0.08);
+
+  for (let i = 0; i < count; i++) {
+     const mesh = new THREE.Mesh(AMPHORA_BODY, mat);
+     const neck = new THREE.Mesh(AMPHORA_NECK, mat);
+     const rim = new THREE.Mesh(AMPHORA_RIM, mat);
+     mesh.add(neck);
+     mesh.add(rim);
+
+     const scale = THREE.MathUtils.randFloat(0.8, 1.1);
+     mesh.scale.setScalar(scale);
+
+     mesh.position.set(
+       THREE.MathUtils.randFloatSpread(0.8),
+       0,
+       THREE.MathUtils.randFloatSpread(0.8)
+     );
+     mesh.rotation.z = THREE.MathUtils.randFloatSpread(0.3);
+     group.add(mesh);
+  }
+  return markNoCollision(group);
+}
+
+function createTorch() {
+  const group = new THREE.Group();
+  group.name = "SacredTorch";
+
+  // Brazier stand
+  const stand = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.1, 0.2, 1.2, 6),
+      new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.4 })
+  );
+  stand.position.y = 0.6;
+  group.add(stand);
+
+  const bowl = new THREE.Mesh(
+      new THREE.ConeGeometry(0.3, 0.3, 8, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.6, roughness: 0.7 })
+  );
+  bowl.position.y = 1.35;
+  bowl.rotation.x = Math.PI;
+  group.add(bowl);
+
+  // Flame light
+  const light = new THREE.PointLight(0xffaa00, 2, 8, 2);
+  light.position.y = 1.5;
+  group.add(light);
+
+  // Simple flame mesh
+  const flame = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.15, 0),
+      new THREE.MeshBasicMaterial({ color: 0xff4400 })
+  );
+  flame.position.y = 1.4;
+  flame.userData.pulse = Math.random() * 10;
+  flame.onBeforeRender = (renderer, scene, camera, geometry, material, group) => {
+      const time = performance.now() * 0.005;
+      const s = 1.0 + Math.sin(time + flame.userData.pulse) * 0.2;
+      flame.scale.setScalar(s);
+  };
+  group.add(flame);
+
+  return markNoCollision(group);
+}
+
 function pickHarborPrefab(treeMaterials) {
   const roll = Math.random();
   if (roll < 0.4) return createOliveTree(treeMaterials);
@@ -292,7 +382,15 @@ function pickHarborPrefab(treeMaterials) {
   return createUmbrella();
 }
 
-function pickAlleyPrefab(treeMaterials) {
+function pickAlleyPrefab(treeMaterials, districtType) {
+  if (districtType === 'commercial') {
+     if (Math.random() < 0.4) return createAmphoraStack();
+     return createCrateStack();
+  }
+  if (districtType === 'sacred') {
+     return createTorch();
+  }
+
   const roll = Math.random();
   if (roll < 0.5) return createPottedPlant(treeMaterials);
   if (roll < 0.75) return createCrateStack();
@@ -395,7 +493,11 @@ function scatterBetweenBuildings(group, options) {
     const ground = sampleHeight(terrain, _tempVecC.x, _tempVecC.z, resolvedSeaLevel);
     if (!Number.isFinite(ground) || ground < resolvedSeaLevel - 0.05) continue;
 
-    const object = pickAlleyPrefab(treeMaterials);
+    // Determine district type from nearest building if possible
+    let districtType = 'residential';
+    if (current.node.userData?.district) districtType = current.node.userData.district;
+
+    const object = pickAlleyPrefab(treeMaterials, districtType);
     object.position.set(_tempVecC.x, ground + 0.015, _tempVecC.z);
     object.rotation.y = Math.random() * Math.PI * 2;
     object.userData = { ...object.userData, category: "alley-decoration" };
