@@ -10,7 +10,7 @@ const SUN_COLOR_DUSK = new Color("#ff9f76");
 
 const SKY_COLOR_NIGHT = new Color("#0b1d51");
 const SKY_COLOR_DAY = new Color("#ffffff");
-const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
+const GROUND_COLOR_NIGHT = new Color(0x8d7e71); // Warm Earth
 const GROUND_COLOR_DAY = new Color("#b97a20");
 
 const FOG_COLOR_NIGHT = new Color("#050510");
@@ -91,7 +91,7 @@ export function updateLighting(lights, sunDir) {
   sunLight.target.updateMatrixWorld();
 
   // Hemisphere ambient blending (cooler and dimmer at night).
-  const hemiTarget = MathUtils.lerp(0.3, 0.6, dayFactor);
+  const hemiTarget = MathUtils.lerp(0.4, 0.6, dayFactor);
   hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
   lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
