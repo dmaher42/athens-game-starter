@@ -23,6 +23,7 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {
       base.repeat.set(repeat[0], repeat[1]);
       base.colorSpace = THREE.SRGBColorSpace;
 
+      // Keep marble normal or skip if preferred. Using marble normal for some texture detail.
       normal = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
       normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
       normal.repeat.set(repeat[0], repeat[1]);
