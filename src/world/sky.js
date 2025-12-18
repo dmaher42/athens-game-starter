@@ -2,28 +2,42 @@
 
 import { Vector3, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace } from "three";
 
-export function createSky(scene) {
-  // The user requested a skybox implementation.
-  // The repository contains equirectangular images in public/assets/sky/ (e.g. high_noon.jpg).
-  // It does NOT contain 6-sided cube map textures (px.jpg, etc).
-  // Therefore, we use TextureLoader with EquirectangularReflectionMapping.
+// Map presets to texture filenames
+const SKY_PRESETS = {
+  dawn: "dawn.jpg",
+  noon: "high_noon.jpg",
+  dusk: "dusk.jpg",
+  night: "night.jpg",
+};
 
-  const loader = new TextureLoader();
-  // Using high_noon.jpg as it corresponds to the 'noon' lighting preset usage.
-  const skyTexture = loader.load("assets/sky/high_noon.jpg");
-  skyTexture.mapping = EquirectangularReflectionMapping;
-  skyTexture.colorSpace = SRGBColorSpace;
+const loadedTextures = {};
+const textureLoader = new TextureLoader();
+const TEXTURE_PATH = "assets/sky/";
 
-  // Set the scene's background and environment to the loaded texture
-  scene.background = skyTexture;
-  scene.environment = skyTexture;
-
-  // Return a compatibility object.
-  // Previous implementation returned { sky: SkyMesh }.
-  // We return the texture so it can be debugged or disposed if needed.
-  return { skyTexture };
+// Preload textures
+for (const [preset, filename] of Object.entries(SKY_PRESETS)) {
+  const url = TEXTURE_PATH + filename;
+  const texture = textureLoader.load(url);
+  texture.mapping = EquirectangularReflectionMapping;
+  texture.colorSpace = SRGBColorSpace;
+  loadedTextures[preset] = texture;
 }
 
+export function createSky(scene) {
+  // Initialize with 'noon' (default)
+  updateSky(scene, "noon");
+  return { }; // Return empty object for compatibility
+}
+
+export function updateSky(scene, presetName) {
+  const texture = loadedTextures[presetName];
+  if (texture && scene) {
+    scene.background = texture;
+    scene.environment = texture;
+  }
+}
+
+// Scratch vector for sun direction calculation
 const scratchSunDirection = new Vector3(0, 1, 0);
 
 function clamp01(value) {
@@ -47,13 +61,14 @@ export function getSunDirectionFromPhase(phase01, target = scratchSunDirection) 
   return target.normalize();
 }
 
-export function updateSky(skyObj, state) {
-  // We still calculate sun direction for lighting purposes
+/**
+ * Calculates sun direction from state.
+ * Replaces the old updateSky(skyObj, state) for sun calculation.
+ */
+export function getSunDirection(state) {
   const phase = state?.timeOfDayPhase ?? 0;
-  const sunDir = getSunDirectionFromPhase(phase, scratchSunDirection);
-
-  // Note: We are no longer updating sky shader uniforms since we use a static texture.
-  // The skyObj passed here is what we returned from createSky.
-
-  return sunDir;
+  return getSunDirectionFromPhase(phase, scratchSunDirection);
 }
+
+// Backwards compatibility alias if needed, but we will update consumers.
+// export const updateSkyLegacy = getSunDirection;
