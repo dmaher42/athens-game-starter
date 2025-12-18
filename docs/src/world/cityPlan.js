@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
-import { makeTiledPBR } from '../materials/pbr-utils.js';
 import { Prefabs, spawnBuilding } from './buildingSpawner.js';
 import { buildTemple } from '../features/temples.js';
 
@@ -27,7 +26,6 @@ export function inHarborBand(
 }
 
 function createPavedStrip(width, length, color = 0x888888) {
-  // Use a thin BoxGeometry as suggested for better shadow reception
   const geometry = new THREE.BoxGeometry(width, 0.1, length);
   const material = new THREE.MeshStandardMaterial({
     color: color,
@@ -107,57 +105,54 @@ function generateCityGrid() {
         gridX,
         gridZ,
         position: new THREE.Vector3(gridX * BLOCK_SIZE, 0, gridZ * BLOCK_SIZE),
-        type: 'building', // Default
-        district: 'residential' // Default
+        type: 'building',
+        district: 'residential'
       };
 
-      // Determine District
-      const distance = Math.sqrt(gridX * gridX + gridZ * gridZ);
-      const distMeters = distance * BLOCK_SIZE;
+      const distance = Math.sqrt((gridX * BLOCK_SIZE) ** 2 + (gridZ * BLOCK_SIZE) ** 2);
 
+      // District Logic (Radius)
       if (gridZ > 12) {
         cell.district = 'harbor';
-      } else if (distMeters < 60) {
+      } else if (distance < 60) {
         cell.district = 'sacred';
-      } else if (distMeters >= 60 && distMeters < 120) {
+      } else if (distance >= 60 && distance < 140) {
+        // Corrected radius to 140 per user instructions (was 120 in my head/previous draft?)
+        // Instructions: "Radius 60 - 140m: district: 'commercial'"
         cell.district = 'commercial';
       } else {
         cell.district = 'residential';
       }
 
-      // Determine Type Rules
-
-      // 1. Road Rules
-      let type = 'building';
+      // Main Avenue Logic
+      // "Main Avenue: Create a wide road (width 2 or 3 cells) running from the Harbor (High Z) straight to the Acropolis (0,0)."
+      // Assuming Harbor is at +Z (High Z). The loop goes MIN_Z to MAX_Z.
+      // So Avenue is around gridX = 0, maybe -1, 0, 1?
+      // Let's say width 3: -1, 0, 1.
       if (Math.abs(gridX) <= 1) {
-        type = 'road';
-      } else if (gridX % 3 === 0 || gridZ % 3 === 0) {
-        type = 'road';
-      }
-
-      // 2. District Rules & Special Overrides
-      // Re-evaluate district based on distance to ensure logic flow
-      if (gridZ > 12) {
-        cell.district = 'harbor';
-      } else if (distMeters < 60) {
-        cell.district = 'sacred';
-        if (gridX === 0 && gridZ === 0) {
-          type = 'parthenon';
-        }
-      } else if (distMeters >= 60 && distMeters < 120) {
-        cell.district = 'commercial';
+        cell.type = 'road';
+      } else if (cell.district === 'sacred') {
+          // In sacred district (Acropolis), maybe cleaner?
+          // "If 'sacred': ONLY spawn createTemple or large monuments... Place the main Parthenon at (0,0)."
+          if (gridX === 0 && gridZ === 0) {
+              cell.type = 'parthenon';
+          } else {
+              // Maybe some paths or just open?
+              // Let's leave as 'building' which will spawn temples/monuments via spawner.
+              cell.type = 'building';
+          }
+      } else if (cell.district === 'commercial') {
+          // Grid pattern roads in Agora?
+          if (gridX % 3 === 0 || gridZ % 3 === 0) {
+             cell.type = 'road';
+          }
       } else {
-        cell.district = 'residential';
+          // Residential roads
+          if (gridX % 3 === 0 || gridZ % 3 === 0) {
+             cell.type = 'road';
+          }
       }
 
-      // 3. Plaza Rule (Commercial only, non-road)
-      if (cell.district === 'commercial' && type !== 'road') {
-         if ((gridX + gridZ) % 5 === 0) {
-           type = 'plaza';
-         }
-      }
-
-      cell.type = type;
       cells.push(cell);
     }
   }
@@ -169,9 +164,6 @@ export async function createCivicDistrict(scene, options = {}) {
   group.name = 'CivicDistrict';
   scene.add(group);
 
-  // Preserve expected options for compatibility, even if used differently or ignored
-  const plazaLength = options.plazaLength ?? 80;
-  const promenadeWidth = options.promenadeWidth ?? 14;
   const centerOption = options.center ?? AGORA_CENTER_3D;
   const terrainSampler =
     options.heightSampler ??
@@ -181,11 +173,7 @@ export async function createCivicDistrict(scene, options = {}) {
 
   const center = centerOption instanceof THREE.Vector3
     ? centerOption.clone()
-    : new THREE.Vector3(
-        centerOption?.x ?? 0,
-        centerOption?.y ?? 0,
-        centerOption?.z ?? 0
-      );
+    : new THREE.Vector3(centerOption?.x ?? 0, centerOption?.y ?? 0, centerOption?.z ?? 0);
 
   let baseHeight = Number.isFinite(center.y) ? center.y : 0;
   if (typeof terrainSampler === 'function') {
@@ -211,7 +199,6 @@ export async function createCivicDistrict(scene, options = {}) {
 
   const grid = generateCityGrid();
 
-  // Attach plan data for downstream consumers
   group.userData.plan = {
     grid,
     minX: MIN_X,
@@ -219,15 +206,10 @@ export async function createCivicDistrict(scene, options = {}) {
     minZ: MIN_Z,
     maxZ: MAX_Z,
     blockSize: BLOCK_SIZE,
-    center: center.clone(),
-    // Keep old keys if possible to avoid crashes, though they may be meaningless now
-    promenadeWidth,
-    plazaLength,
+    center: center.clone()
   };
 
-  // Pre-load textures if needed
-  // Use marble as fallback for plaza since plaza textures are missing
-  // This matches the fix in src/world/city.js to prevent 404s
+  // Pre-load textures for roads/plazas
   const tl = new THREE.TextureLoader();
   const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
   let plazaMat;
@@ -259,22 +241,12 @@ export async function createCivicDistrict(scene, options = {}) {
     const localZ = cell.position.z;
     const localY = sampleLocalHeight(localX, localZ, 0);
 
-    // Position relative to the group center (which is at 'center')
-    // The grid positions are relative to (0,0,0) which is effectively the 'center' of the city plan.
-    // Since we added group at 'center', we can just use cell.position as local position.
-
     if (cell.type === 'road') {
-      // Spawn road
-      // Check if it's the main avenue (Math.abs(gridX) <= 1) for wider road?
-      // "Main Avenue: ... wide north-south boulevard"
       const isMainAvenue = Math.abs(cell.gridX) <= 1;
-      // Use block size for road segment
-      const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, 0x555555);
+      const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0x887766 : 0x666666);
       roadMesh.position.set(localX, localY, localZ);
       group.add(roadMesh);
-
     } else if (cell.type === 'parthenon') {
-      // Spawn Parthenon
       const temple = await buildTemple({
           width: 30,
           depth: 60,
@@ -284,44 +256,34 @@ export async function createCivicDistrict(scene, options = {}) {
       });
       temple.position.set(localX, localY, localZ);
       group.add(temple);
-
     } else if (cell.type === 'plaza') {
-      // Spawn Plaza
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xaaaaaa);
       plazaMesh.position.set(localX, localY, localZ);
       if (plazaMat) plazaMesh.material = plazaMat;
       group.add(plazaMesh);
-
-      // Add props (TorchStands)
-      const torch = createTorchStand();
-      torch.position.set(localX, localY, localZ);
-      group.add(torch);
-
     } else if (cell.type === 'building') {
-       // Spawn Building
-       // Random seed based on position
+       // Deterministic RNG
        const seed = Math.abs(cell.gridX * 73856093 ^ cell.gridZ * 19349663);
        const rng = () => {
-          let t = seed + Math.random();
+          let t = seed + Math.sin(seed * 12.9898) * 43758.5453;
           return t - Math.floor(t);
        };
 
        const buildingGroup = spawnBuilding({
          district: cell.district,
-         rng: rng // Use deterministic rng based on position
+         rng: rng
        });
 
-       buildingGroup.position.set(localX, localY, localZ);
-
-       // Random rotation 90 degrees
-       const rotations = [0, Math.PI/2, Math.PI, -Math.PI/2];
-       buildingGroup.rotation.y = rotations[Math.floor(Math.random() * rotations.length)];
-
-       group.add(buildingGroup);
+       if (buildingGroup) {
+           buildingGroup.position.set(localX, localY, localZ);
+           // Random 90 degree rotation
+           const rot = Math.floor(rng() * 4) * (Math.PI / 2);
+           buildingGroup.rotation.y = rot;
+           group.add(buildingGroup);
+       }
     }
   }
 
-  // Create a dummy walking loop to satisfy contract
   const walkingLoop = new THREE.CatmullRomCurve3([
       new THREE.Vector3(center.x + 10, baseHeight, center.z + 10),
       new THREE.Vector3(center.x - 10, baseHeight, center.z + 10),
@@ -332,8 +294,8 @@ export async function createCivicDistrict(scene, options = {}) {
   return {
     group,
     walkingLoop,
-    plazaLength,
-    promenadeWidth,
+    plazaLength: 80, // Legacy support
+    promenadeWidth: 14 // Legacy support
   };
 }
 

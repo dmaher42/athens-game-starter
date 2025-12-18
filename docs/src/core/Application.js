@@ -14,6 +14,7 @@ import { createTerrain, updateTerrain } from "../world/terrain.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
 import { createHarbor, updateHarborLighting } from "../world/harbor.js";
 import { createHarborDecorations } from "../world/decoration.js";
+import { createVegetationSystem } from "../world/vegetation.js";
 import {
   createMainHillRoad,
   updateMainHillRoadLighting,
@@ -702,6 +703,8 @@ export class Application {
       terrain,
       seaLevel: resolvedSeaLevel,
     });
+
+    createVegetationSystem(worldRoot, terrain, harborCity);
 
     // Overlay the modern planning strategy as a holographic layer so players can
     // understand how each district connects to the wider mobility, housing, and
@@ -1615,7 +1618,8 @@ export class Application {
       console.log(`[HUD] preset: ${presetName}`);
 
       const sunDir = getSunDirection(timeOfDayState);
-      updateLighting(lights, sunDir);
+      const { nightFactor } = updateLighting(scene, preset.phase);
+      lights.nightFactor = nightFactor;
 
       // Explicitly update sky preset on manual change
       updateSky(scene, presetName);
@@ -1657,7 +1661,9 @@ export class Application {
       const sunDir = getSunDirection(timeOfDayState);
 
       // Update sky dome and atmospheric lighting each frame.
-      updateLighting(lights, sunDir);
+      const { nightFactor } = updateLighting(scene, phase);
+      lights.nightFactor = nightFactor;
+
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
         timeOfDayPhase: phase,

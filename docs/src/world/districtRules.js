@@ -5,6 +5,9 @@ import {
 } from "../utils/baseUrl.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 
+// Helper requested by user to simplify path resolution
+const baseUrl = (path) => joinPath(resolveBaseUrl(), path);
+
 export function buildDistrictRuleUrlCandidates(resolvedBase) {
   const urls = new Set();
   const push = (value) => {
@@ -16,9 +19,11 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
     push(joinPath(base, rel));
   };
 
-  push("config/districts.json");
+  // Priority #1: Ensure the repo base (resolvedBase) is used first
   pushJoined(resolvedBase, "config/districts.json");
-  pushJoined("/", "config/districts.json");
+
+  // Use the helper as requested to ensure explicit alignment with instructions
+  push(baseUrl("config/districts.json"));
 
   if (REPO_BASE_PATH && (!resolvedBase || !resolvedBase.includes(REPO_BASE_PATH))) {
     pushJoined(REPO_BASE_PATH, "config/districts.json");
@@ -41,20 +46,18 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
 
     if (isLocalhost) {
       push("/public/config/districts.json");
-      push("/docs/config/districts.json");
     }
   } else {
     push("/public/config/districts.json");
-    push("/docs/config/districts.json");
   }
 
   return Array.from(urls);
 }
 
 /** Load district rules from /config/districts.json with safe fallbacks. */
-export async function loadDistrictRules(baseUrl = "") {
+export async function loadDistrictRules(baseUrlStr = "") {
   const resolvedBase =
-    typeof baseUrl === "string" && baseUrl.length > 0 ? baseUrl : resolveBaseUrl();
+    typeof baseUrlStr === "string" && baseUrlStr.length > 0 ? baseUrlStr : resolveBaseUrl();
 
   const tried = [];
   for (const url of buildDistrictRuleUrlCandidates(resolvedBase)) {

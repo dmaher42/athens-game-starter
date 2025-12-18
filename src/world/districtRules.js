@@ -25,8 +25,6 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
   // Use the helper as requested to ensure explicit alignment with instructions
   push(baseUrl("config/districts.json"));
 
-  pushJoined("/", "config/districts.json");
-
   if (REPO_BASE_PATH && (!resolvedBase || !resolvedBase.includes(REPO_BASE_PATH))) {
     pushJoined(REPO_BASE_PATH, "config/districts.json");
   }
