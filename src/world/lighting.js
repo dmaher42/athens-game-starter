@@ -5,17 +5,17 @@ import { updateSky } from "./sky.js";
 
 // Predefined colors
 const SUN_COLOR_DAWN = new Color("#ffb37f");
-const SUN_COLOR_NOON = new Color("#ffb37f");
+const SUN_COLOR_NOON = new Color("#fffaf0");
 const SUN_COLOR_DUSK = new Color("#ff9f76");
 
 const SKY_COLOR_NIGHT = new Color("#0b1d51");
-const SKY_COLOR_DAY = new Color("#87CEEB");
+const SKY_COLOR_DAY = new Color("#ffffff");
 const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
-const GROUND_COLOR_DAY = new Color("#E6C288");
+const GROUND_COLOR_DAY = new Color("#b97a20");
 
 const FOG_COLOR_NIGHT = new Color("#050510");
 const FOG_COLOR_DAWN = new Color("#ffaa80");
-const FOG_COLOR_NOON = new Color("#FFF8E7");
+const FOG_COLOR_NOON = new Color("#fdf6e3");
 const FOG_COLOR_DUSK = new Color("#ff8855");
 
 const scratchColor = new Color();
@@ -28,7 +28,7 @@ function lerpColor(target, c0, c1, t) {
 
 export function createLighting(scene) {
   // Create the primary sunlight directional light.
-  const sunLight = new DirectionalLight(0xffb37f, 1.2);
+  const sunLight = new DirectionalLight(0xfffaf0, 1.2);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(4096, 4096);
   sunLight.shadow.radius = 4;
@@ -50,7 +50,7 @@ export function createLighting(scene) {
   const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.6);
   scene.add(hemiLight);
 
-  scene.fog = new FogExp2(0xffffff, 0.0005);
+  scene.fog = new FogExp2(0xfdf6e3, 0.00025);
 
   return { sunLight, hemiLight, nightFactor: 0, currentPreset: null };
 }
@@ -71,7 +71,7 @@ export function updateLighting(lights, sunDir) {
   if (sunHeight < -0.05) {
     // Moon Mode (Night)
     sunLight.position.copy(norm).negate().multiplyScalar(100);
-    sunLight.intensity = MathUtils.lerp(sunLight.intensity, 0.3, 0.1);
+    sunLight.intensity = MathUtils.lerp(sunLight.intensity, 0.5, 0.1);
     sunLight.color.setHex(0x223344);
   } else {
     // Sun Mode (Day)
@@ -91,7 +91,7 @@ export function updateLighting(lights, sunDir) {
   sunLight.target.updateMatrixWorld();
 
   // Hemisphere ambient blending (cooler and dimmer at night).
-  const hemiTarget = MathUtils.lerp(0.2, 0.6, dayFactor);
+  const hemiTarget = MathUtils.lerp(0.3, 0.6, dayFactor);
   hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
   lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
