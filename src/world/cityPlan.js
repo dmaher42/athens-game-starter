@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { makeTiledPBR } from '../materials/pbr-utils.js';
-import { Prefabs } from './buildingSpawner.js';
+import { Prefabs, spawnBuilding } from './buildingSpawner.js';
 import { buildTemple } from '../features/temples.js';
 
 /* PATCH: Harbor zone params */
@@ -113,12 +113,13 @@ function generateCityGrid() {
 
       // Determine District
       const distance = Math.sqrt(gridX * gridX + gridZ * gridZ);
+      const distMeters = distance * BLOCK_SIZE;
 
       if (gridZ > 12) {
         cell.district = 'harbor';
-      } else if (distance < 5) {
-        cell.district = 'civic';
-      } else if (distance >= 5 && distance < 10) {
+      } else if (distMeters < 60) {
+        cell.district = 'sacred';
+      } else if (distMeters >= 60 && distMeters < 120) {
         cell.district = 'commercial';
       } else {
         cell.district = 'residential';
@@ -138,12 +139,12 @@ function generateCityGrid() {
       // Re-evaluate district based on distance to ensure logic flow
       if (gridZ > 12) {
         cell.district = 'harbor';
-      } else if (distance < 5) {
-        cell.district = 'civic';
+      } else if (distMeters < 60) {
+        cell.district = 'sacred';
         if (gridX === 0 && gridZ === 0) {
           type = 'parthenon';
         }
-      } else if (distance >= 5 && distance < 10) {
+      } else if (distMeters >= 60 && distMeters < 120) {
         cell.district = 'commercial';
       } else {
         cell.district = 'residential';
@@ -298,26 +299,18 @@ export async function createCivicDistrict(scene, options = {}) {
 
     } else if (cell.type === 'building') {
        // Spawn Building
-       let spawnerType = 'house';
-       switch (cell.district) {
-         case 'civic': spawnerType = 'monument'; break; // or temple?
-         case 'commercial': spawnerType = 'shop'; break; // or market
-         case 'harbor': spawnerType = 'warehouse'; break; // or pier?
-         case 'residential':
-         default:
-            spawnerType = 'house'; break;
-       }
-
-       const spawner = Prefabs[spawnerType] || Prefabs.house;
        // Random seed based on position
        const seed = Math.abs(cell.gridX * 73856093 ^ cell.gridZ * 19349663);
        const rng = () => {
           let t = seed + Math.random();
           return t - Math.floor(t);
-       }; // Simple deterministic-ish rng or just Math.random
+       };
 
-       // Use a simple random for variety
-       const buildingGroup = spawner({ rng: Math.random });
+       const buildingGroup = spawnBuilding({
+         district: cell.district,
+         rng: rng // Use deterministic rng based on position
+       });
+
        buildingGroup.position.set(localX, localY, localZ);
 
        // Random rotation 90 degrees
