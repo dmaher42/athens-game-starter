@@ -1,6 +1,6 @@
 import { deepFreeze, getRuntimeEnvironment, mergeDeep, assert } from "./utils.js";
 
-const DEFAULT_LIGHTING_CONFIG = {
+export const DEFAULT_LIGHTING_CONFIG = {
   cycle: {
     minutesPerDay: 20,
   },
