@@ -19,6 +19,10 @@ export const DEFAULT_LIGHTING_CONFIG = {
     noon: { phase: 0.5, exposure: 1.0, label: "High Noon", hotkey: "2" },
     dusk: { phase: 0.75, exposure: 1.1, label: "Dusk", hotkey: "3" },
     night: { phase: 0.0, exposure: 0.6, label: "Night", hotkey: "4" },
+    blue_hour: { phase: 0.2, exposure: 0.7, label: "Blue Hour" },
+    golden_hour: { phase: 0.7, exposure: 0.9, label: "Golden Hour" },
+    high_noon: { phase: 0.45, exposure: 1.2, label: "Bright Noon" },
+    night_sky: { phase: 0.9, exposure: 0.5, label: "Deep Night" },
   },
 };
 
