@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from './locations.js';
+import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { makeTiledPBR } from '../materials/pbr-utils.js';
 import { Prefabs } from './buildingSpawner.js';
 import { buildTemple } from '../features/temples.js';
@@ -224,7 +225,33 @@ export async function createCivicDistrict(scene, options = {}) {
   };
 
   // Pre-load textures if needed
-  const plazaMat = await makeTiledPBR("textures/plaza", [4, 4]);
+  // Use marble as fallback for plaza since plaza textures are missing
+  // This matches the fix in src/world/city.js to prevent 404s
+  const tl = new THREE.TextureLoader();
+  const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
+  let plazaMat;
+  try {
+      const baseMap = await tl.loadAsync(joinPath(baseUrl || "/", "textures/marble_base.jpg"));
+      baseMap.wrapS = baseMap.wrapT = THREE.RepeatWrapping;
+      baseMap.repeat.set(4, 4);
+      baseMap.colorSpace = THREE.SRGBColorSpace;
+
+      const normalMap = await tl.loadAsync(joinPath(baseUrl || "/", "textures/marble_normal-dx.jpg"));
+      normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+      normalMap.repeat.set(4, 4);
+
+      plazaMat = new THREE.MeshStandardMaterial({
+          map: baseMap,
+          normalMap: normalMap,
+          roughness: 1,
+          metalness: 0,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1
+      });
+  } catch (e) {
+      console.warn("Failed to load plaza textures (marble fallback)", e);
+  }
 
   for (const cell of grid) {
     const localX = cell.position.x;
