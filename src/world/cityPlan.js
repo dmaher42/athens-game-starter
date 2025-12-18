@@ -12,6 +12,8 @@ const MIN_X = -10, MAX_X = 10;
 const MIN_Z = -10, MAX_Z = 20;
 const BLOCK_SIZE = 40;
 
+export const agoraRadius = 22; // Preserved legacy constant
+
 export function inHarborBand(
   pos,
   shorelineCenter = { x: HARBOR_CENTER_3D.x, z: HARBOR_CENTER_3D.z }
@@ -133,26 +135,19 @@ function generateCityGrid() {
         type = 'road';
       }
 
-      // 2. District Rules & Special Overrides
-      // Re-evaluate district based on distance to ensure logic flow
-      if (gridZ > 12) {
-        cell.district = 'harbor';
-      } else if (distance < 5) {
-        cell.district = 'civic';
-        if (gridX === 0 && gridZ === 0) {
-          type = 'parthenon';
-        }
-      } else if (distance >= 5 && distance < 10) {
-        cell.district = 'commercial';
-      } else {
-        cell.district = 'residential';
-      }
-
-      // 3. Plaza Rule (Commercial only, non-road)
+      // 2. Plaza Rule (Commercial only, non-road)
       if (cell.district === 'commercial' && type !== 'road') {
          if ((gridX + gridZ) % 5 === 0) {
            type = 'plaza';
          }
+      }
+
+      // 3. Special Overrides (Parthenon at 0,0)
+      if (gridX === 0 && gridZ === 0) {
+        // Force Parthenon even if it was a road
+        type = 'parthenon';
+        // Ensure it's in civic district if not already (it should be as distance is 0)
+        cell.district = 'civic';
       }
 
       cell.type = type;
@@ -231,16 +226,8 @@ export async function createCivicDistrict(scene, options = {}) {
     const localZ = cell.position.z;
     const localY = sampleLocalHeight(localX, localZ, 0);
 
-    // Position relative to the group center (which is at 'center')
-    // The grid positions are relative to (0,0,0) which is effectively the 'center' of the city plan.
-    // Since we added group at 'center', we can just use cell.position as local position.
-
     if (cell.type === 'road') {
       // Spawn road
-      // Check if it's the main avenue (Math.abs(gridX) <= 1) for wider road?
-      // "Main Avenue: ... wide north-south boulevard"
-      const isMainAvenue = Math.abs(cell.gridX) <= 1;
-      // Use block size for road segment
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, 0x555555);
       roadMesh.position.set(localX, localY, localZ);
       group.add(roadMesh);
@@ -273,27 +260,26 @@ export async function createCivicDistrict(scene, options = {}) {
        // Spawn Building
        let spawnerType = 'house';
        switch (cell.district) {
-         case 'civic': spawnerType = 'monument'; break; // or temple?
-         case 'commercial': spawnerType = 'shop'; break; // or market
-         case 'harbor': spawnerType = 'warehouse'; break; // or pier?
+         case 'civic': spawnerType = 'monument'; break;
+         case 'commercial': spawnerType = 'shop'; break;
+         case 'harbor': spawnerType = 'warehouse'; break;
          case 'residential':
          default:
             spawnerType = 'house'; break;
        }
 
        const spawner = Prefabs[spawnerType] || Prefabs.house;
-       // Random seed based on position
+
+       // Use a simple deterministic RNG based on position
        const seed = Math.abs(cell.gridX * 73856093 ^ cell.gridZ * 19349663);
        const rng = () => {
           let t = seed + Math.random();
           return t - Math.floor(t);
-       }; // Simple deterministic-ish rng or just Math.random
+       };
 
-       // Use a simple random for variety
        const buildingGroup = spawner({ rng: Math.random });
        buildingGroup.position.set(localX, localY, localZ);
 
-       // Random rotation 90 degrees
        const rotations = [0, Math.PI/2, Math.PI, -Math.PI/2];
        buildingGroup.rotation.y = rotations[Math.floor(Math.random() * rotations.length)];
 
