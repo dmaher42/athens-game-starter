@@ -429,6 +429,28 @@ function mulberry32(a) { return function() { let t=(a+=0x6D2B79F5); t=Math.imul(
  * @param {THREE.Group} worldRoot - parent group (e.g., your "city" or "WorldRoot")
  * @param {object} options { seed, leavePadsVisible }
  */
+export function spawnBuilding(options = {}) {
+  const { district = 'residential', rng = Math.random } = options;
+
+  let allowed = ['house'];
+  if (district === 'sacred') {
+    allowed = ['temple', 'monument', 'stoa'];
+  } else if (district === 'commercial') {
+    allowed = ['shop', 'market', 'fountain', 'stoa'];
+  } else if (district === 'residential') {
+    allowed = ['house', 'courtyard', 'workshop'];
+  } else if (district === 'harbor') {
+    allowed = ['warehouse', 'market', 'workshop'];
+  }
+
+  const type = allowed[Math.floor(rng() * allowed.length)];
+  const spawner = Prefabs[type] || Prefabs.house;
+
+  const building = spawner({ rng, ...options });
+  building.userData = { ...building.userData, district, type };
+  return building;
+}
+
 export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   const seed = Number.isFinite(options.seed) ? options.seed : 12345;
   const rng = mulberry32(seed);
