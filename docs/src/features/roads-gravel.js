@@ -7,7 +7,7 @@ import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
  * - Safe if textures missing (no-op).
  * - Idempotent: re-running won’t double-apply.
  */
-export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {}) {
+export async function applyGravelToRoads({ scene, baseUrl, repeat = [24, 24] } = {}) {
   if (!scene) return;
 
   const defaultBase = resolveBaseUrl();
@@ -37,7 +37,7 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
-    roughness: 0.8,
+    roughness: 0.9,
   });
 
   if (!mat) return; // textures not uploaded yet

@@ -60,7 +60,7 @@ export const GROUND_TEXTURE_CONFIG = {
     /** Repeat count for the base texture across the terrain. */
     // de-tiling: lower repeats + anisotropy + slight rotation
     repeat: [64, 64],
-    anisotropy: 8,
+    anisotropy: 16,
     /** Rotate the texture in radians if you need to align features. */
     rotation: 0,
     /** Optional seed to tweak the procedural noise. */
@@ -78,7 +78,7 @@ export const GROUND_TEXTURE_CONFIG = {
       url: textureUrl("dirt-albedo.jpg"),
       repeat: [36, 36],
       rotation: 0.23,
-      anisotropy: 8,
+      anisotropy: 16,
       strength: 0.55, // Enable detail layer tinting
       tint: [1.0, 1.0, 1.0], // Neutral tint (texture provides color)
       minHeight: -15,

@@ -52,7 +52,6 @@ const ENVIRONMENT_OVERRIDES = {
       { label: "Aristotle Tomb", candidateKey: "aristotle" },
       { label: "District Rules", path: "config/districts.json" },
       { label: "Water Normals", path: "textures/ground/water_normals.png" },
-      { label: "Docs District Rules", path: "docs/config/districts.json" },
     ],
   },
 };
