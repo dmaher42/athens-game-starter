@@ -51,7 +51,7 @@ export class Character extends THREE.Object3D {
       }
     });
 
-    this.model.rotation.y = Math.PI;
+    this.model.rotation.y = 0;
     this.add(this.model);
 
     this.mixer = new THREE.AnimationMixer(this.model);
