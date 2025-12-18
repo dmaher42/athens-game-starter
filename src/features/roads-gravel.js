@@ -15,14 +15,27 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {
 
   // Manual fallback because gravel textures are missing and pbr-utils is strict
   const tl = new THREE.TextureLoader();
-  const base = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
-  base.wrapS = base.wrapT = THREE.RepeatWrapping;
-  base.repeat.set(repeat[0], repeat[1]);
-  base.colorSpace = THREE.SRGBColorSpace;
+  let base, normal;
+  try {
+      base = await tl.loadAsync(joinPath(resolvedBase, "textures/gravel/basecolor.jpg"));
+      base.wrapS = base.wrapT = THREE.RepeatWrapping;
+      base.repeat.set(repeat[0], repeat[1]);
+      base.colorSpace = THREE.SRGBColorSpace;
 
-  const normal = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
-  normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
-  normal.repeat.set(repeat[0], repeat[1]);
+      normal = await tl.loadAsync(joinPath(resolvedBase, "textures/gravel/normal.jpg"));
+      normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
+      normal.repeat.set(repeat[0], repeat[1]);
+  } catch (err) {
+      console.warn("Gravel textures missing, falling back to marble.");
+      base = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
+      base.wrapS = base.wrapT = THREE.RepeatWrapping;
+      base.repeat.set(repeat[0], repeat[1]);
+      base.colorSpace = THREE.SRGBColorSpace;
+
+      normal = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
+      normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
+      normal.repeat.set(repeat[0], repeat[1]);
+  }
 
   const mat = new THREE.MeshStandardMaterial({
     map: base,
