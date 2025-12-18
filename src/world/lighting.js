@@ -1,6 +1,6 @@
 // src/world/lighting.js
 
-import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils } from "three";
+import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils, FogExp2 } from "three";
 
 // Predefined colors
 const SUN_COLOR_DAWN = new Color("#ffb37f");
@@ -51,6 +51,8 @@ export function createLighting(scene) {
   const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.6);
   scene.add(hemiLight);
 
+  scene.fog = new FogExp2(0xffffff, 0.002);
+
   return { sunLight, hemiLight, nightFactor: 0 };
 }
 
@@ -90,4 +92,3 @@ export function updateLighting(lights, sunDir) {
   // Expose the night factor for consumers like the moon/stars.
   lights.nightFactor = nightFactor;
 }
-
