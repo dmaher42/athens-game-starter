@@ -1,134 +1,141 @@
-// src/world/lighting.js
+import {
+  DirectionalLight,
+  HemisphereLight,
+  Color,
+  FogExp2,
+  MathUtils,
+  Vector3
+} from 'three';
+import { DEFAULT_LIGHTING_CONFIG } from '../config/LightingConfig.js';
+import { updateSky } from './sky.js';
 
-import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils, FogExp2 } from "three";
-import { updateSky } from "./sky.js";
+// Configuration constants - TWEAK THESE FOR "GREEK" FEEL
+const SKY_COLOR_DAY = 0x87CEEB; // Soft Blue
+const GROUND_COLOR_DAY = 0x8d7e71; // Warm Earth (Fixes Blue Shadows)
+const SUN_COLOR = 0xfffaf0; // Warm White Sun
+const MOON_COLOR = 0x223344; // Deep Blue-Grey Moon
+const FOG_COLOR_DAY = 0xeecfa1; // Warm Haze (Greek Summer)
+const FOG_COLOR_NIGHT = 0x050510; // Deep Navy Night
 
-// Predefined colors
-const SUN_COLOR_DAWN = new Color("#ffb37f");
-const SUN_COLOR_NOON = new Color("#fffaf0");
-const SUN_COLOR_DUSK = new Color("#ff9f76");
+let sunLight;
+let ambientLight;
+let moonLight;
+let sceneRef;
+let currentPresetName = 'noon';
 
-const SKY_COLOR_NIGHT = new Color("#0b1d51");
-const SKY_COLOR_DAY = new Color("#ffffff");
-const GROUND_COLOR_NIGHT = new Color(0x8d7e71); // Warm Earth
-const GROUND_COLOR_DAY = new Color("#b97a20");
+export function createLighting(scene, config = DEFAULT_LIGHTING_CONFIG) {
+  sceneRef = scene;
 
-const FOG_COLOR_NIGHT = new Color("#050510");
-const FOG_COLOR_DAWN = new Color("#ffaa80");
-const FOG_COLOR_NOON = new Color("#fdf6e3");
-const FOG_COLOR_DUSK = new Color("#ff8855");
+  // 1. Hemisphere Light (Ambient) - Fixes Blue Shadows
+  // Ground color changed from blue to warm earth to prevent underwater look
+  ambientLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.6);
+  scene.add(ambientLight);
 
-const scratchColor = new Color();
-const scratchDir = new Vector3();
-
-function lerpColor(target, c0, c1, t) {
-  target.copy(c0).lerp(c1, t);
-  return target;
-}
-
-export function createLighting(scene) {
-  // Create the primary sunlight directional light.
-  const sunLight = new DirectionalLight(0xfffaf0, 1.2);
-  sunLight.castShadow = true;
-  sunLight.shadow.mapSize.set(4096, 4096);
-  sunLight.shadow.radius = 4;
-  sunLight.shadow.bias = -0.0001;
+  // 2. Sun Light (Directional)
+  sunLight = new DirectionalLight(SUN_COLOR, 1.2);
   sunLight.position.set(50, 100, 50);
-  sunLight.target.position.set(0, 0, 0);
-  sunLight.target.updateMatrixWorld();
-  const cam = sunLight.shadow.camera;
-  cam.near = 1;
-  cam.far = 300;
-  cam.left = -120; cam.right = 120;
-  cam.top  = 120;  cam.bottom = -120;
-  sunLight.shadow.normalBias = 0.05;
-  sunLight.shadow.camera.updateProjectionMatrix();
+  sunLight.castShadow = true;
+  
+  // High Quality Shadows
+  sunLight.shadow.mapSize.width = 4096;
+  sunLight.shadow.mapSize.height = 4096;
+  sunLight.shadow.camera.near = 0.5;
+  sunLight.shadow.camera.far = 500;
+  sunLight.shadow.camera.left = -100;
+  sunLight.shadow.camera.right = 100;
+  sunLight.shadow.camera.top = 100;
+  sunLight.shadow.camera.bottom = -100;
+  sunLight.shadow.bias = -0.0005; // Fix shadow acne
+  sunLight.shadow.normalBias = 0.05; // Fix self-shadowing
+  sunLight.shadow.radius = 2; // Soft edges
+  
   scene.add(sunLight);
-  scene.add(sunLight.target);
 
-  // Add a hemisphere light to simulate ambient sky/ground bounce.
-  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.6);
-  scene.add(hemiLight);
+  // 3. Moon Light (Directional) - Fixes Black Night
+  // Initially invisible, enabled during night cycle
+  moonLight = new DirectionalLight(MOON_COLOR, 0.0);
+  moonLight.position.set(-50, 100, -50);
+  moonLight.castShadow = true; // Moon shadows!
+  // Share shadow properties or set simpler ones for performance
+  moonLight.shadow.mapSize.width = 2048;
+  moonLight.shadow.mapSize.height = 2048;
+  moonLight.shadow.camera.far = 500;
+  moonLight.shadow.bias = -0.0005;
+  
+  scene.add(moonLight);
 
-  scene.fog = new FogExp2(0xfdf6e3, 0.00025);
+  // 4. Fog
+  scene.fog = new FogExp2(FOG_COLOR_DAY, 0.0025); // Reduced density for clarity
 
-  return { sunLight, hemiLight, nightFactor: 0, currentPreset: null };
+  return { sunLight, ambientLight, moonLight };
 }
 
-export function updateLighting(lights, sunDir) {
-  // Validate the light container before attempting to update state.
-  if (!lights || !lights.sunLight || !lights.hemiLight) return;
-  const { sunLight, hemiLight } = lights;
+export function updateLighting(scene, timeOfDay, config = DEFAULT_LIGHTING_CONFIG) {
+  if (!sunLight || !ambientLight) return;
 
-  // Normalize the provided sun direction so derived math stays correct.
-  const norm = scratchDir.copy(sunDir).normalize();
-  const sunHeight = norm.y;
+  // Find the current preset based on phase
+  let activePreset = 'noon';
+  let minDiff = 100;
+  
+  // Simple phase matching
+  for (const [key, preset] of Object.entries(config.presets)) {
+    const diff = Math.abs(preset.phase - timeOfDay);
+    if (diff < minDiff) {
+      minDiff = diff;
+      activePreset = key;
+    }
+  }
 
-  // dayFactor describes how close we are to midday (1) vs midnight (0).
-  const dayFactor = MathUtils.clamp(MathUtils.smoothstep(sunHeight, -0.15, 0.1), 0, 1);
-  const nightFactor = 1 - dayFactor;
+  // Handle Skybox switching if preset changed
+  if (activePreset !== currentPresetName) {
+    currentPresetName = activePreset;
+    console.log(`[Lighting] Switching to preset: ${activePreset}`);
+    if (typeof updateSky === 'function') {
+      updateSky(scene, activePreset);
+    }
+  }
 
-  if (sunHeight < -0.05) {
-    // Moon Mode (Night)
-    sunLight.position.copy(norm).negate().multiplyScalar(100);
-    sunLight.intensity = MathUtils.lerp(sunLight.intensity, 0.5, 0.1);
-    sunLight.color.setHex(0x223344);
+  // Calculate generic Day/Night factor (0 to 1)
+  // Noon = 1, Night = 0
+  const dayFactor = Math.max(0, Math.sin(timeOfDay * Math.PI)); 
+
+  // --- Dynamic Lighting Logic ---
+
+  // 1. Sun Movement
+  const r = 100;
+  const sunX = Math.cos(timeOfDay * Math.PI * 2 + Math.PI / 2) * r;
+  const sunY = Math.sin(timeOfDay * Math.PI * 2 + Math.PI / 2) * r;
+  sunLight.position.set(sunX, sunY, 50);
+  sunLight.updateMatrixWorld();
+
+  // 2. Sun Intensity
+  // Peak at noon, off at night
+  sunLight.intensity = MathUtils.lerp(0, 1.3, dayFactor);
+
+  // 3. Moon Logic (Fixes Dark Night)
+  if (dayFactor < 0.1) {
+    // It's Night
+    moonLight.intensity = MathUtils.lerp(moonLight.intensity, 0.5, 0.05);
+    ambientLight.intensity = MathUtils.lerp(ambientLight.intensity, 0.4, 0.05); // Minimum brightness
+    
+    // Night Fog/Ambient Colors
+    ambientLight.groundColor.setHex(0x111122); // Cool dark ground at night
+    ambientLight.color.setHex(0x223355); // Cool night sky light
+    scene.fog.color.setHex(FOG_COLOR_NIGHT);
+
   } else {
-    // Sun Mode (Day)
-    sunLight.position.copy(norm).multiplyScalar(100);
-
-    // Smoothly fade the sun intensity below the horizon so the moon can take over.
-    const targetSunIntensity = MathUtils.lerp(0.0, 1.2, dayFactor);
-    sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
-
-    // Sun color blending: Dawn → Noon, with a nudge toward Dusk as night approaches.
-    const c0 = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, dayFactor);
-    const sunColor = c0.lerp(SUN_COLOR_DUSK, nightFactor * 0.55);
-    sunLight.color.copy(sunColor);
-  }
-
-  sunLight.target.position.set(0, 0, 0);
-  sunLight.target.updateMatrixWorld();
-
-  // Hemisphere ambient blending (cooler and dimmer at night).
-  const hemiTarget = MathUtils.lerp(0.4, 0.6, dayFactor);
-  hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
-  lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
-  lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
-
-  // Expose the night factor for consumers like the moon/stars.
-  lights.nightFactor = nightFactor;
-
-  // Determine preset for Sky Manager
-  let nextPreset = 'noon';
-  let targetFog = FOG_COLOR_NOON;
-
-  if (sunHeight < -0.1) {
-    nextPreset = 'night';
-    targetFog = FOG_COLOR_NIGHT;
-  } else if (sunHeight < 0.2) {
-    // Transition zone: rising or setting?
-    if (sunDir.x > 0) {
-      nextPreset = 'dawn';
-      targetFog = FOG_COLOR_DAWN;
-    } else {
-      nextPreset = 'dusk';
-      targetFog = FOG_COLOR_DUSK;
-    }
-  }
-
-  // Update sky if preset changes
-  if (lights.currentPreset !== nextPreset) {
-    lights.currentPreset = nextPreset;
-    const scene = sunLight.parent;
-    if (scene) {
-      updateSky(scene, nextPreset);
-    }
-  }
-
-  // Update fog color
-  const scene = sunLight.parent;
-  if (scene && scene.fog) {
-     scene.fog.color.lerp(targetFog, 0.05);
+    // It's Day
+    moonLight.intensity = MathUtils.lerp(moonLight.intensity, 0.0, 0.1);
+    
+    // Day Fog/Ambient Colors
+    // Lerp ambient intensity between 0.4 (dawn/dusk) and 0.8 (noon)
+    const targetAmbient = MathUtils.lerp(0.4, 0.8, dayFactor);
+    ambientLight.intensity = MathUtils.lerp(ambientLight.intensity, targetAmbient, 0.05);
+    
+    ambientLight.groundColor.setHex(GROUND_COLOR_DAY);
+    ambientLight.color.setHex(SKY_COLOR_DAY);
+    
+    // Warm fog for day
+    scene.fog.color.setHex(FOG_COLOR_DAY);
   }
 }
