@@ -21,7 +21,7 @@ export function createRenderer({ antialias = true } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.0;
   renderer.useLegacyLights = false;
   renderer.localClippingEnabled = true;
   configureRendererShadows(renderer);
