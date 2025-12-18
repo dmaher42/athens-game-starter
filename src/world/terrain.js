@@ -298,7 +298,7 @@ export function createTerrain(scene) {
       uniform vec2 uCityCenter;
       uniform float uCityInner;
       uniform float uCityOuter;
-      ${shouldTrackGroundHeight ? "varying float vGroundHeight;" : ""}
+      ${shouldTrackGroundHeight && !shader.vertexShader.includes("varying float vGroundHeight;") ? "varying float vGroundHeight;" : ""}
       attribute vec3 basePos;
     ` + shader.vertexShader;
 

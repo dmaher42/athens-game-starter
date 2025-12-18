@@ -50,6 +50,10 @@ async function loadAny(loader, stem, { isSRGB = false } = {}) {
         trimmedStem
           .replace("basecolor", "albedo")
           .replace("gravel/", "gravel_path-"),
+        // Fallback for missing gravel textures: reuse marble_base
+        trimmedStem.includes("textures/gravel")
+          ? "textures/marble_base"
+          : null,
       ].filter(Boolean)
     )
   );
