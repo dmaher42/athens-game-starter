@@ -1,30 +1,27 @@
 // src/world/sky.js
 
-import { Sky } from "three/examples/jsm/objects/Sky.js";
-import { Vector3 } from "three";
+import { Vector3, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpace } from "three";
 
 export function createSky(scene) {
-  // Build and configure the sky dome shader.
-  const sky = new Sky();
-  sky.scale.setScalar(450000); // make it very big
-  // Mark the sky dome as non-collidable so it is ignored when building
-  // the environment collider. Otherwise the huge sphere would be merged
-  // into the collision geometry and the player capsule would constantly
-  // intersect it, preventing movement.
-  sky.userData.noCollision = true;
+  // The user requested a skybox implementation.
+  // The repository contains equirectangular images in public/assets/sky/ (e.g. high_noon.jpg).
+  // It does NOT contain 6-sided cube map textures (px.jpg, etc).
+  // Therefore, we use TextureLoader with EquirectangularReflectionMapping.
 
-  const uniforms = sky.material.uniforms;
-  uniforms.turbidity.value = 4;
-  uniforms.rayleigh.value = 2.8;
-  uniforms.mieCoefficient.value = 0.0045;
-  uniforms.mieDirectionalG.value = 0.7;
+  const loader = new TextureLoader();
+  // Using high_noon.jpg as it corresponds to the 'noon' lighting preset usage.
+  const skyTexture = loader.load("assets/sky/high_noon.jpg");
+  skyTexture.mapping = EquirectangularReflectionMapping;
+  skyTexture.colorSpace = SRGBColorSpace;
 
-  // initialize sunPosition so shader is defined
-  uniforms.sunPosition.value.set(0, 1, 0);
+  // Set the scene's background and environment to the loaded texture
+  scene.background = skyTexture;
+  scene.environment = skyTexture;
 
-  scene.add(sky);
-
-  return { sky };
+  // Return a compatibility object.
+  // Previous implementation returned { sky: SkyMesh }.
+  // We return the texture so it can be debugged or disposed if needed.
+  return { skyTexture };
 }
 
 const scratchSunDirection = new Vector3(0, 1, 0);
@@ -51,20 +48,12 @@ export function getSunDirectionFromPhase(phase01, target = scratchSunDirection) 
 }
 
 export function updateSky(skyObj, state) {
-  // Guard against missing uniforms or objects so runtime stays safe.
-  const { sky } = skyObj || {};
-  if (
-    !sky ||
-    !sky.material ||
-    !sky.material.uniforms ||
-    !sky.material.uniforms.sunPosition
-  ) {
-    return;
-  }
-  // Copy normalized sun direction into the shader uniform
+  // We still calculate sun direction for lighting purposes
   const phase = state?.timeOfDayPhase ?? 0;
   const sunDir = getSunDirectionFromPhase(phase, scratchSunDirection);
-  sky.material.uniforms.sunPosition.value.copy(sunDir).normalize();
+
+  // Note: We are no longer updating sky shader uniforms since we use a static texture.
+  // The skyObj passed here is what we returned from createSky.
 
   return sunDir;
 }
