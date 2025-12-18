@@ -264,7 +264,48 @@ export async function createOcean(scene, options = {}) {
     }
   });
 
-  return null;
+  const waterNormals = await resolveWaterNormalsTexture(
+    options.waterNormalsCandidates || HARBOR_WATER_NORMAL_CANDIDATES
+  );
+
+  const seaLevel = Number.isFinite(options.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
+  const bounds = options.bounds || HARBOR_WATER_BOUNDS;
+  const width = Math.abs(bounds.east - bounds.west);
+  const height = Math.abs(bounds.south - bounds.north);
+  const centerX = (bounds.west + bounds.east) / 2;
+  const centerZ = (bounds.north + bounds.south) / 2;
+
+  const geometry = new THREE.PlaneGeometry(width, height);
+  const water = new Water(geometry, {
+    textureWidth: 512,
+    textureHeight: 512,
+    waterNormals: waterNormals,
+    sunDirection: new THREE.Vector3(),
+    sunColor: 0xffffff,
+    waterColor: 0x001e0f,
+    distortionScale: 3.7,
+    fog: scene.fog !== undefined,
+  });
+
+  water.rotation.x = -Math.PI / 2;
+  water.position.set(centerX, seaLevel, centerZ);
+  water.name = "AegeanOcean";
+  water.userData.isWater = true;
+
+  // Custom wave scale fix
+  if (waterNormals) {
+     waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping;
+     // The internal Water shader logic uses texture coord scaling, but we can pre-set
+     // repeat here if needed, or rely on distortionScale.
+     // Let's set a higher repeat for finer waves
+     waterNormals.repeat.set(4, 4);
+  }
+
+  scene.add(water);
+
+  return water;
 }
 
 function createBoundsLoop(bounds, color, yOffset) {
