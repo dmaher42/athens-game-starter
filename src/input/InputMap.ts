@@ -33,8 +33,6 @@ const NON_TYPING_INPUT_TYPES = new Set<string>([
   "image",
 ]);
 
-const MOUSE_SENSITIVITY = 0.002;
-
 function isEditableTarget(target: EventTarget | null): target is HTMLElement {
   if (!target || typeof target !== "object") {
     return false;
@@ -66,7 +64,6 @@ export interface LookDelta {
 }
 
 type KeyHandler = (event: KeyboardEvent) => void;
-type MouseHandler = (event: MouseEvent) => void;
 type FocusHandler = (event: FocusEvent) => void;
 
 export class InputMap {
@@ -76,15 +73,9 @@ export class InputMap {
   private cameraSettings: CameraSettings | null;
   private unsubscribeCameraSettings: (() => void) | null = null;
 
-  private isLocked = false;
-  private readonly mouseDelta = { x: 0, y: 0 };
-
   private readonly keyDownHandler: KeyHandler;
   private readonly keyUpHandler: KeyHandler;
   private readonly blurHandler: FocusHandler;
-  private readonly mouseMoveHandler: MouseHandler;
-  private readonly clickHandler: MouseHandler;
-  private readonly pointerLockChangeHandler: () => void;
 
   constructor(canvas: HTMLCanvasElement | null = null) {
     this.canvas = canvas;
@@ -121,37 +112,12 @@ export class InputMap {
     this.blurHandler = () => {
       this.resetKeys();
       this.flyToggleQueued = false;
-      this.mouseDelta.x = 0;
-      this.mouseDelta.y = 0;
-    };
-
-    this.mouseMoveHandler = (event: MouseEvent) => {
-      if (this.isLocked) {
-        this.mouseDelta.x += event.movementX;
-        this.mouseDelta.y += event.movementY;
-      }
-    };
-
-    this.clickHandler = () => {
-      if (this.canvas) {
-        this.canvas.requestPointerLock();
-      }
-    };
-
-    this.pointerLockChangeHandler = () => {
-      this.isLocked = document.pointerLockElement === this.canvas;
     };
 
     window.addEventListener("keydown", this.keyDownHandler);
     window.addEventListener("keyup", this.keyUpHandler);
     window.addEventListener("blur", this.blurHandler);
     window.addEventListener("focus", this.blurHandler);
-    window.addEventListener("mousemove", this.mouseMoveHandler);
-    document.addEventListener("pointerlockchange", this.pointerLockChangeHandler);
-
-    if (this.canvas) {
-      this.canvas.addEventListener("click", this.clickHandler);
-    }
   }
 
   dispose(): void {
@@ -159,12 +125,6 @@ export class InputMap {
     window.removeEventListener("keyup", this.keyUpHandler);
     window.removeEventListener("blur", this.blurHandler);
     window.removeEventListener("focus", this.blurHandler);
-    window.removeEventListener("mousemove", this.mouseMoveHandler);
-    document.removeEventListener("pointerlockchange", this.pointerLockChangeHandler);
-
-    if (this.canvas) {
-      this.canvas.removeEventListener("click", this.clickHandler);
-    }
 
     this.unsubscribeCameraSettings?.();
     this.unsubscribeCameraSettings = null;
@@ -189,18 +149,10 @@ export class InputMap {
     const yawKeyDelta = yawInput * yawSpeed * dtSafe;
     const pitchKeyDelta = pitchInput * pitchSpeed * dtSafe * invert;
 
-    // 2. Calculate Mouse Look (raw delta scaled by sensitivity)
-    const yawMouse = this.mouseDelta.x * MOUSE_SENSITIVITY;
-    const pitchMouse = this.mouseDelta.y * MOUSE_SENSITIVITY * invert;
-
-    // 3. Clear Mouse Delta
-    this.mouseDelta.x = 0;
-    this.mouseDelta.y = 0;
-
-    // 4. Return Combined
+    // 2. Return Combined
     return {
-      yaw: yawKeyDelta + yawMouse,
-      pitch: pitchKeyDelta + pitchMouse,
+      yaw: yawKeyDelta,
+      pitch: pitchKeyDelta,
     };
   }
 
