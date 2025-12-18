@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import {
   CITY_CHUNK_CENTER,
   CITY_CHUNK_SIZE,
@@ -1586,8 +1587,34 @@ export async function createCity(scene, terrain, options = {}) {
   city.add(lotPads);
 
   const lotPadGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.08, 10);
-  const lotPadMaterial =
-    new THREE.MeshStandardMaterial({ color: 0xb7b3a7, roughness: 1, metalness: 0 });
+
+  // Load plaza textures for lot pads
+  const tl = new THREE.TextureLoader();
+  let lotPadMap, lotPadNormal;
+  try {
+      lotPadMap = await tl.loadAsync(joinPath(baseUrl, "textures/plaza/basecolor.jpg"));
+      lotPadMap.wrapS = lotPadMap.wrapT = THREE.RepeatWrapping;
+      lotPadMap.repeat.set(2, 2);
+      lotPadMap.colorSpace = THREE.SRGBColorSpace;
+
+      // Attempt to load normal if it exists, otherwise skip (or use fallback)
+      try {
+        lotPadNormal = await tl.loadAsync(joinPath(baseUrl, "textures/plaza/normal.jpg"));
+        lotPadNormal.wrapS = lotPadNormal.wrapT = THREE.RepeatWrapping;
+        lotPadNormal.repeat.set(2, 2);
+      } catch (e) { /* ignore missing normal */ }
+
+  } catch (err) {
+      console.warn("Plaza textures missing for lot pads.");
+  }
+
+  const lotPadMaterial = new THREE.MeshStandardMaterial({
+      color: lotPadMap ? 0xffffff : 0xb7b3a7,
+      map: lotPadMap || null,
+      normalMap: lotPadNormal || null,
+      roughness: 1,
+      metalness: 0
+  });
   lotPadMaterial.depthWrite = true;
   lotPadMaterial.transparent = false;
   const foundationPadMaterial =
