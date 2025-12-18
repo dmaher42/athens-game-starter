@@ -15,7 +15,7 @@ const DEFAULT_ROTATION_LERP = 0.15;
 const DEFAULT_YAW_SENSITIVITY = 0.0024;
 const DEFAULT_PITCH_SENSITIVITY = 0.0021;
 const DEFAULT_KEY_ORBIT = {
-  enabled: true,
+  enabled: false,
   yawSpeed: 0.9,
   pitchSpeed: 0.9,
   minPitch: -0.6,
