@@ -18,7 +18,7 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {
   let base, normal;
   try {
       // Directly load marble textures as gravel fallback to avoid 404s
-      base = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
+      base = await tl.loadAsync(joinPath(resolvedBase, "textures/ground/dirt-albedo.jpg"));
       base.wrapS = base.wrapT = THREE.RepeatWrapping;
       base.repeat.set(repeat[0], repeat[1]);
       base.colorSpace = THREE.SRGBColorSpace;
