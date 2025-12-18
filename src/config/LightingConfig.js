@@ -16,7 +16,7 @@ const DEFAULT_LIGHTING_CONFIG = {
   },
   presets: {
     dawn: { phase: 0.25, exposure: 1.1, label: "Dawn", hotkey: "1" },
-    noon: { phase: 0.5, exposure: 1.25, label: "High Noon", hotkey: "2" },
+    noon: { phase: 0.5, exposure: 1.0, label: "High Noon", hotkey: "2" },
     dusk: { phase: 0.75, exposure: 1.1, label: "Dusk", hotkey: "3" },
     night: { phase: 0.0, exposure: 0.6, label: "Night", hotkey: "4" },
   },

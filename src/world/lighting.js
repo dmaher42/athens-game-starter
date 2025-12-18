@@ -8,9 +8,9 @@ const SUN_COLOR_NOON = new Color("#ffb37f");
 const SUN_COLOR_DUSK = new Color("#ff9f76");
 
 const SKY_COLOR_NIGHT = new Color("#0b1d51");
-const SKY_COLOR_DAY = new Color("#cde6ff");
+const SKY_COLOR_DAY = new Color("#B1E1FF");
 const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
-const GROUND_COLOR_DAY = new Color("#f0d2a8");
+const GROUND_COLOR_DAY = new Color("#B97A20");
 
 const scratchColor = new Color();
 const scratchDir = new Vector3();
@@ -22,19 +22,12 @@ function lerpColor(target, c0, c1, t) {
 
 export function createLighting(scene) {
   // Create the primary sunlight directional light.
-  const sunLight = new DirectionalLight(0xffb37f, 1.4);
+  const sunLight = new DirectionalLight(0xffb37f, 1.2);
   sunLight.castShadow = true;
-  sunLight.shadow.mapSize.set(2048, 2048);
+  sunLight.shadow.mapSize.set(4096, 4096);
   sunLight.shadow.radius = 4;
-  sunLight.shadow.bias = -0.0005;
-  const sunElevation = MathUtils.degToRad(35);
-  const sunAzimuth = Math.PI / 4;
-  const sunDirection = new Vector3(
-    Math.cos(sunElevation) * Math.cos(sunAzimuth),
-    Math.sin(sunElevation),
-    Math.cos(sunElevation) * Math.sin(sunAzimuth)
-  ).normalize();
-  sunLight.position.copy(sunDirection).multiplyScalar(150);
+  sunLight.shadow.bias = -0.0001;
+  sunLight.position.set(50, 100, 50);
   sunLight.target.position.set(0, 0, 0);
   sunLight.target.updateMatrixWorld();
   const cam = sunLight.shadow.camera;
@@ -73,7 +66,7 @@ export function updateLighting(lights, sunDir) {
   sunLight.target.updateMatrixWorld();
 
   // Smoothly fade the sun intensity below the horizon so the moon can take over.
-  const targetSunIntensity = MathUtils.lerp(0.05, 1.4, dayFactor);
+  const targetSunIntensity = MathUtils.lerp(0.05, 1.2, dayFactor);
   sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
 
   // Sun color blending: Dawn → Noon, with a nudge toward Dusk as night approaches.
