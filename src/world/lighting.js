@@ -32,12 +32,15 @@ export function createLighting(scene, config = DEFAULT_LIGHTING_CONFIG) {
 }
 
 export function updateLighting(scene, timeOfDay, config = DEFAULT_LIGHTING_CONFIG) {
-  if (!sunLight || !ambientLight) return;
+  if (!sunLight || !ambientLight) return { dayFactor: 1, nightFactor: 0 };
 
   let activePreset = 'noon';
   let minDiff = 100;
+  // Fallback if timeOfDay is passed as Vector3 or non-number (prevents NaN crash)
+  const phase = typeof timeOfDay === 'number' ? timeOfDay : 0.5;
+
   for (const [key, preset] of Object.entries(config.presets)) {
-    const diff = Math.abs(preset.phase - timeOfDay);
+    const diff = Math.abs(preset.phase - phase);
     if (diff < minDiff) {
       minDiff = diff;
       activePreset = key;
@@ -49,8 +52,8 @@ export function updateLighting(scene, timeOfDay, config = DEFAULT_LIGHTING_CONFI
     if (typeof updateSky === 'function') updateSky(scene, activePreset);
   }
 
-  const dayFactor = Math.max(0, Math.sin(timeOfDay * Math.PI));
-  sunLight.position.set(Math.cos(timeOfDay * Math.PI * 2 + Math.PI / 2) * 100, Math.sin(timeOfDay * Math.PI * 2 + Math.PI / 2) * 100, 50);
+  const dayFactor = Math.max(0, Math.sin(phase * Math.PI));
+  sunLight.position.set(Math.cos(phase * Math.PI * 2 + Math.PI / 2) * 100, Math.sin(phase * Math.PI * 2 + Math.PI / 2) * 100, 50);
   sunLight.updateMatrixWorld();
   sunLight.intensity = MathUtils.lerp(0, 1.3, dayFactor);
 
@@ -59,7 +62,7 @@ export function updateLighting(scene, timeOfDay, config = DEFAULT_LIGHTING_CONFI
     ambientLight.intensity = MathUtils.lerp(ambientLight.intensity, 0.4, 0.05);
     ambientLight.groundColor.setHex(0x111122);
     ambientLight.color.setHex(0x223355);
-    if (scene.fog) {
+    if (scene && scene.fog) {
       scene.fog.color.setHex(FOG_COLOR_NIGHT);
     }
   } else {
@@ -67,8 +70,11 @@ export function updateLighting(scene, timeOfDay, config = DEFAULT_LIGHTING_CONFI
     ambientLight.intensity = MathUtils.lerp(ambientLight.intensity, MathUtils.lerp(0.4, 0.8, dayFactor), 0.05);
     ambientLight.groundColor.setHex(GROUND_COLOR_DAY);
     ambientLight.color.setHex(SKY_COLOR_DAY);
-    if (scene.fog) {
+    if (scene && scene.fog) {
       scene.fog.color.setHex(FOG_COLOR_DAY);
     }
   }
+
+  const nightFactor = Math.max(0, 1 - dayFactor);
+  return { dayFactor, nightFactor };
 }
