@@ -77,6 +77,10 @@ export class Soundscape {
 
   async loadBuffer(name, url) {
     if (!url) return null;
+    // Skip problematic audio file to prevent console errors
+    if (url.includes("ambience_agora.mp3")) {
+      return null;
+    }
     const existing = this.buffers.get(name);
     if (existing) return existing;
     try {

@@ -1592,17 +1592,15 @@ export async function createCity(scene, terrain, options = {}) {
   const tl = new THREE.TextureLoader();
   let lotPadMap, lotPadNormal;
   try {
-      lotPadMap = await tl.loadAsync(joinPath(baseUrl, "textures/plaza/basecolor.jpg"));
+      // Use marble as fallback for plaza since plaza textures are missing
+      lotPadMap = await tl.loadAsync(joinPath(baseUrl, "textures/marble_base.jpg"));
       lotPadMap.wrapS = lotPadMap.wrapT = THREE.RepeatWrapping;
       lotPadMap.repeat.set(2, 2);
       lotPadMap.colorSpace = THREE.SRGBColorSpace;
 
-      // Attempt to load normal if it exists, otherwise skip (or use fallback)
-      try {
-        lotPadNormal = await tl.loadAsync(joinPath(baseUrl, "textures/plaza/normal.jpg"));
-        lotPadNormal.wrapS = lotPadNormal.wrapT = THREE.RepeatWrapping;
-        lotPadNormal.repeat.set(2, 2);
-      } catch (e) { /* ignore missing normal */ }
+      lotPadNormal = await tl.loadAsync(joinPath(baseUrl, "textures/marble_normal-dx.jpg"));
+      lotPadNormal.wrapS = lotPadNormal.wrapT = THREE.RepeatWrapping;
+      lotPadNormal.repeat.set(2, 2);
 
   } catch (err) {
       console.warn("Plaza textures missing for lot pads.");

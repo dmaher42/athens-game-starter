@@ -17,16 +17,7 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {
   const tl = new THREE.TextureLoader();
   let base, normal;
   try {
-      base = await tl.loadAsync(joinPath(resolvedBase, "textures/gravel/basecolor.jpg"));
-      base.wrapS = base.wrapT = THREE.RepeatWrapping;
-      base.repeat.set(repeat[0], repeat[1]);
-      base.colorSpace = THREE.SRGBColorSpace;
-
-      normal = await tl.loadAsync(joinPath(resolvedBase, "textures/gravel/normal.jpg"));
-      normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
-      normal.repeat.set(repeat[0], repeat[1]);
-  } catch (err) {
-      console.warn("Gravel textures missing, falling back to marble.");
+      // Directly load marble textures as gravel fallback to avoid 404s
       base = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
       base.wrapS = base.wrapT = THREE.RepeatWrapping;
       base.repeat.set(repeat[0], repeat[1]);
@@ -35,6 +26,8 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [6, 6] } = {
       normal = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
       normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
       normal.repeat.set(repeat[0], repeat[1]);
+  } catch (err) {
+      console.warn("Texture loading failed in applyGravelToRoads", err);
   }
 
   const mat = new THREE.MeshStandardMaterial({
