@@ -200,6 +200,23 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     return lightingPresets[name] != null;
   });
 
+  const applyButtonStyles = (button: HTMLButtonElement, active: boolean) => {
+    if (active) {
+      button.style.background = "rgba(255,255,255,0.18)";
+      button.style.borderColor = "rgba(255,255,255,0.55)";
+    } else {
+      button.style.background = "rgba(0,0,0,0.35)";
+      button.style.borderColor = "rgba(255,255,255,0.35)";
+    }
+  };
+
+  const makeInteractiveButton = (button: HTMLButtonElement) => {
+    button.addEventListener("mouseenter", () => applyButtonStyles(button, true));
+    button.addEventListener("mouseleave", () => applyButtonStyles(button, false));
+    button.addEventListener("focus", () => applyButtonStyles(button, true));
+    button.addEventListener("blur", () => applyButtonStyles(button, false));
+  };
+
   let fogButton: HTMLButtonElement | null = null;
   const updateFogControls = (state?: boolean | null) => {
     if (!fogButton) return;
@@ -212,6 +229,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       enabled = false;
     }
     fogButton.textContent = enabled ? "Disable Fog" : "Enable Fog";
+    fogButton.setAttribute("aria-pressed", String(enabled));
     fogButton.title = enabled
       ? "Disable atmospheric fog (Hotkey F)"
       : "Enable atmospheric fog (Hotkey F)";
@@ -271,18 +289,13 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
         pointerEvents: "auto",
         transition: "background 0.2s ease, border-color 0.2s ease",
       });
-      button.addEventListener("mouseenter", () => {
-        button.style.background = "rgba(255,255,255,0.18)";
-        button.style.borderColor = "rgba(255,255,255,0.55)";
-      });
-      button.addEventListener("mouseleave", () => {
-        button.style.background = "rgba(0,0,0,0.35)";
-        button.style.borderColor = "rgba(255,255,255,0.35)";
-      });
+
+      makeInteractiveButton(button);
 
       const hotkeyLabel = presetMeta.hotkey || "";
       if (hotkeyLabel) {
         button.title = `Set ${displayLabel} lighting (Hotkey ${hotkeyLabel})`;
+        button.setAttribute("aria-keyshortcuts", hotkeyLabel);
       } else {
         button.title = `Set ${displayLabel} lighting`;
       }
@@ -356,14 +369,9 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       pointerEvents: "auto",
       transition: "background 0.2s ease, border-color 0.2s ease",
     });
-    buttonElement.addEventListener("mouseenter", () => {
-      buttonElement.style.background = "rgba(255,255,255,0.18)";
-      buttonElement.style.borderColor = "rgba(255,255,255,0.55)";
-    });
-    buttonElement.addEventListener("mouseleave", () => {
-      buttonElement.style.background = "rgba(0,0,0,0.35)";
-      buttonElement.style.borderColor = "rgba(255,255,255,0.35)";
-    });
+
+    makeInteractiveButton(buttonElement);
+
     buttonElement.addEventListener("click", (event) => {
       event.preventDefault();
       onToggleFog();
