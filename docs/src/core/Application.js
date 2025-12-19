@@ -218,13 +218,8 @@ export class Application {
     this.renderer = createRenderer();
     const renderer = this.renderer;
 
-    // --- OPTIMIZATION START: CAP PIXEL RATIO ---
-    // Prevents rendering at native 4x resolution on Retina/High-DPI displays.
-    // This significantly reduces VRAM usage and GPU load.
-    const maxPixelRatio = 1.5;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
-    // --- OPTIMIZATION END ---
-
+    // Cap pixel ratio to 1.5 to save massive amounts of VRAM on Retina screens
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     const exposureOverlayConfig =
