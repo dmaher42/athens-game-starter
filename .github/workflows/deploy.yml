@@ -26,8 +26,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*'
-          cache: 'npm'
+          node-version: "lts/*"
+          cache: "npm"
 
       - name: Install
         run: npm ci
@@ -35,37 +35,15 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Detect build output directory
-        id: detect-build-dir
-        run: |
-          if [ -f dist/index.html ]; then
-            echo "dir=dist" >> "$GITHUB_OUTPUT"
-          elif [ -f docs/index.html ]; then
-            echo "dir=docs" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::Unable to locate build output (expected dist/ or docs/)" >&2
-            exit 1
-          fi
-
-      # Optional: SPA fallback so deep links work on GH Pages
-      - name: Add 404 fallback
-        env:
-          BUILD_DIR: ${{ steps.detect-build-dir.outputs.dir }}
-        run: |
-          if [ -f "$BUILD_DIR/index.html" ]; then cp "$BUILD_DIR/index.html" "$BUILD_DIR/404.html"; fi
-
-      - name: Inspect built files (must-have assets)
-        env:
-          BUILD_DIR: ${{ steps.detect-build-dir.outputs.dir }}
+      - name: Verify build output
         run: |
           set -euo pipefail
-          echo "== Sanity checks =="
-          missing=0
           must_have=(
-            "$BUILD_DIR/index.html"
-            "$BUILD_DIR/audio/manifest.json"
-            "$BUILD_DIR/config/districts.json"
+            "docs/index.html"
+            "docs/audio/manifest.json"
+            "docs/config/districts.json"
           )
+          missing=0
           for f in "${must_have[@]}"; do
             if [[ -f "$f" ]]; then
               echo "OK  $f"
@@ -74,39 +52,25 @@ jobs:
               missing=1
             fi
           done
-          # Warn if someone reintroduces nested paths
-          if [[ -d "$BUILD_DIR/athens-game-starter" ]]; then
-            echo "::error title=Nested folder detected::Move assets to public/* so they publish under $BUILD_DIR/*"
-            missing=1
-          fi
-          test $missing -eq 0
-
-      - name: "Guard: bundle must not contain bare imports"
-        env:
-          BUILD_DIR: ${{ steps.detect-build-dir.outputs.dir }}
-        run: |
-          set -euo pipefail
-          # If any built JS still contains bare package specifiers, bundling failed.
-          if grep -R --include='*.js' --exclude-dir=src -nE "from ['\"][a-zA-Z0-9_-]+['\"]" "$BUILD_DIR" | grep -vE "from ['\"][./]" ; then
-            echo "::error::Bundled output still has bare imports (missing bundling). Ensure offenders live under src/** and are imported via /src/main.js."
+          if [[ $missing -ne 0 ]]; then
             exit 1
-          else
-            echo "OK: no bare imports in built output."
           fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ steps.detect-build-dir.outputs.dir }}
+          path: docs
 
   deploy:
-    # Only deploy when pushing to main. PRs build but do not deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

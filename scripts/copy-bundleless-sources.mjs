@@ -32,6 +32,14 @@ async function findBuildDir() {
 async function copyBundlelessSources() {
   const buildDir = await findBuildDir();
   const destination = join(buildDir, 'src');
+
+  // Do not ship source code inside the published docs/ directory.
+  if (buildDir.endsWith('docs')) {
+    await rm(destination, { recursive: true, force: true });
+    console.log(`Skipped copying bundleless sources into ${buildDir}.`);
+    return;
+  }
+
   const compiledSource = join(process.cwd(), '.bundleless');
   const source = join(process.cwd(), 'src');
 
