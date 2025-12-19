@@ -1,4 +1,4 @@
-const DEFAULT_SEA_LEVEL_Y = 4.5;
+export const DEFAULT_SEA_LEVEL_Y = 4.5;
 
 const parseValidNumber = (value) => {
   const parsed = Number(value);
@@ -39,8 +39,10 @@ const detectExistingSeaLevel = () => {
 
 const listeners = new Set();
 const existing = detectExistingSeaLevel();
-let seaLevelY =
+export const SEA_LEVEL_Y =
   typeof existing !== "undefined" ? existing : DEFAULT_SEA_LEVEL_Y;
+
+let seaLevelY = SEA_LEVEL_Y;
 
 if (typeof globalThis !== "undefined") {
   globalThis.SEA_LEVEL_Y = seaLevelY;

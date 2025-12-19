@@ -1,6 +1,11 @@
 import * as THREE from "three";
 import { queueSceneInteractable } from "./interactions.js";
-import { HARBOR_CENTER_3D, getSeaLevelY, getHarborSeaLevel } from "./locations.js";
+import {
+  HARBOR_CENTER_3D,
+  SEA_LEVEL_Y,
+  getSeaLevelY,
+  getHarborSeaLevel,
+} from "./locations.js";
 import {
   HARBOR_FLOOR_DEPTH,
   getHarborShoreBlendProfile,
@@ -131,7 +136,9 @@ function buildPostMesh(name, positions, { defaultHeight, radiusTop, radiusBottom
 export function createHarbor(scene, options = {}) {
   const seaLevel = Number.isFinite(options?.seaLevel)
     ? options.seaLevel
-    : getSeaLevelY();
+    : Number.isFinite(getSeaLevelY())
+      ? getSeaLevelY()
+      : SEA_LEVEL_Y;
   const harborProfile = getHarborShoreBlendProfile();
   const center = options.center ? options.center.clone() : HARBOR_CENTER_3D.clone();
   if (!Number.isFinite(options?.center?.y)) {
@@ -156,6 +163,8 @@ export function createHarbor(scene, options = {}) {
       }
     }
   }
+
+  center.y = Math.max(center.y, seaLevel);
 
   const deckMaterial = createWoodMaterial(0x7b5b3f);
   const postMaterial = createWoodMaterial(0x4a3a27);
