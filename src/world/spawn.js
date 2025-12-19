@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { Capsule } from "three/examples/jsm/math/Capsule.js";
+import { AGORA_CENTER_3D } from "./locations.js";
 
 const DEFAULT_SEARCH_RADIUS = 80;
 const DEFAULT_INNER_RADIUS = 10;
@@ -12,6 +13,10 @@ const _workVec = new THREE.Vector3();
 const _fallbackVec = new THREE.Vector3();
 const _centerVec = new THREE.Vector3();
 const _capsule = new Capsule();
+
+export function getDefaultRespawnPoint() {
+  return AGORA_CENTER_3D.clone();
+}
 
 const toVector3 = (value, target = new THREE.Vector3()) => {
   if (value instanceof THREE.Vector3) {

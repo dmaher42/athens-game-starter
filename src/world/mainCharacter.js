@@ -12,6 +12,8 @@ import {
   MathUtils,
 } from "three";
 import { LOOK_KEYS, MOVEMENT_ONLY_KEYS } from "../input/keyBindings";
+import { getSeaLevelY } from "./locations.js";
+import { getDefaultRespawnPoint } from "./spawn.js";
 
 // Reuse the same vectors every frame so we avoid creating garbage objects.
 const moveDirection = new Vector3();
@@ -110,6 +112,7 @@ export class MainCharacter {
     this.velocityY = 0; // Current vertical speed in meters per second.
     this.isGrounded = false; // True once a raycast says our feet touch a surface.
     this.jumpRequested = false; // Set when the player taps the jump button.
+    this.hasSafeLanded = false; // Tracks if we've successfully landed on terrain once.
 
     // Movement flags are toggled when the player presses keyboard keys.
     this.moveForward = false;
@@ -211,6 +214,32 @@ export class MainCharacter {
   update(deltaTime, colliders = [], terrain = null) {
     if (!this.mesh) return;
 
+    // --- Safe Spawn Logic ---
+    // If we haven't safely landed on valid terrain yet, verify if the terrain is ready.
+    if (!this.hasSafeLanded) {
+      // First, check if terrain is available and has a height sampler.
+      const sampler = terrain?.userData?.getHeightAt;
+      if (typeof sampler === "function") {
+        const height = sampler(this.mesh.position.x, this.mesh.position.z);
+
+        if (Number.isFinite(height)) {
+          // Terrain is ready! Snap the player to the ground.
+          this.mesh.position.y = height + this.halfHeight + 0.5;
+          this.velocityY = 0;
+          this.hasSafeLanded = true;
+          this.isGrounded = true;
+        } else {
+          // Terrain not ready yet (height is null/undefined).
+          // Freeze gravity so we don't fall into the void.
+          this.velocityY = 0;
+        }
+      } else {
+        // Fallback: If no sampler, rely on raycasting below or just freeze.
+        // For safety, let's freeze gravity until we hit something via raycast.
+        this.velocityY = 0;
+      }
+    }
+
     // ---------------------------------------------------------------------
     // Movement: determine which direction we want to travel on the XZ plane.
     moveDirection.set(0, 0, 0);
@@ -288,12 +317,15 @@ export class MainCharacter {
     }
 
     // ---------------------------------------------------------------------
-    // Gravity constantly pulls us toward the terrain like a magnet.
-    this.velocityY -= this.gravity * deltaTime;
-    this.velocityY = Math.max(this.velocityY, this.terminalVelocity);
+    // Gravity application (only if we have landed or are falling naturally)
+    // If we haven't safely landed yet, we skip gravity to prevent falling through empty terrain.
+    if (this.hasSafeLanded) {
+      this.velocityY -= this.gravity * deltaTime;
+      this.velocityY = Math.max(this.velocityY, this.terminalVelocity);
 
-    // Integrate vertical velocity so the mesh actually moves up or down.
-    this.mesh.position.y += this.velocityY * deltaTime;
+      // Integrate vertical velocity so the mesh actually moves up or down.
+      this.mesh.position.y += this.velocityY * deltaTime;
+    }
 
     // ---------------------------------------------------------------------
     // Ground detection: cast a ray straight down to see how far the floor is.
@@ -315,12 +347,29 @@ export class MainCharacter {
           this.isGrounded = true;
           this.mesh.position.y = hit.point.y + this.halfHeight;
           this.velocityY = 0;
+
+          // If we hit ground via raycast, we can consider it a safe landing too.
+          if (!this.hasSafeLanded) {
+             this.hasSafeLanded = true;
+          }
         } else {
           this.isGrounded = false;
         }
       } else {
         this.isGrounded = false;
       }
+    }
+
+    // --- Retry Spawn Check ---
+    // If the player somehow fell through the world (below sea level - 10m), reset them.
+    const seaLevel = getSeaLevelY();
+    const respawnThreshold = seaLevel - 10;
+
+    if (this.mesh.position.y < respawnThreshold) {
+      const respawnPoint = getDefaultRespawnPoint();
+      this.mesh.position.copy(respawnPoint);
+      this.velocityY = 0;
+      this.hasSafeLanded = false; // Reset this so we snap to terrain again at the new spot
     }
 
     // Refresh the collider with the final world position after all adjustments.
