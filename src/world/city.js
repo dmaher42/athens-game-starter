@@ -228,15 +228,10 @@ function getDistrictCenter(id) {
   return { x: 0, z: 0 };
 }
 
-// Create a short "ribbon" road between two points. The ribbon is draped to terrain
-// by sampling height along the segment, including both left/right edges so it
-// tilts with local slope. Uses only built-in materials (no textures).
-// If options.collectGeometries is an array, we push geometry there (for a later merge)
-// and DO NOT add a standalone mesh. Otherwise, we add the mesh directly to `scene`.
 function createVisibleRoad(start, end, scene, terrain, options = {}) {
   const width = options.width ?? 2.8;
-  const yOffset = options.yOffset ?? 0.05; // sit slightly above terrain
-  const color = options.color ?? 0x2f2f2f; // dark gray
+  const yOffset = options.yOffset ?? 0.05; 
+  const color = options.color ?? 0x2f2f2f; 
   const collect = Array.isArray(options.collectGeometries) ? options.collectGeometries : null;
 
   const length = start.distanceTo(end);
@@ -314,7 +309,6 @@ function createVisibleRoad(start, end, scene, terrain, options = {}) {
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeVertexNormals();
 
-  // If we’re collecting, return geometry for a later merge (no per-segment mesh).
   if (collect) {
     collect.push(geometry);
     return null;
@@ -324,7 +318,7 @@ function createVisibleRoad(start, end, scene, terrain, options = {}) {
   mesh.name = "CityRoadSegment";
   mesh.castShadow = false;
   mesh.receiveShadow = true;
-  mesh.userData.noCollision = true; // visual only; terrain handles collision
+  mesh.userData.noCollision = true; 
   mesh.renderOrder = 1;
   scene.add(mesh);
   return mesh;
@@ -554,8 +548,6 @@ function getCurveProjection2D(curve, samples, targetX, targetZ) {
 }
 
 export async function createCity(scene, terrain, options = {}) {
-  // Toggle to show/hide plaza “foundation pads” (the visible discs).
-  // Default false so the two large discs disappear on the live build.
   const showFoundationPads = options.showFoundationPads === true;
   const useProceduralBlocks = options.useProceduralBlocks === true;
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
@@ -580,7 +572,6 @@ export async function createCity(scene, terrain, options = {}) {
   const roadSetback = Number.isFinite(districtRules.roadSetbackMeters)
     ? districtRules.roadSetbackMeters
     : 4;
-  // Pier no-build mask
   const pierRect = {
     west: HARBOR_WATER_BOUNDS.west,
     east: HARBOR_WATER_EAST_LIMIT + 3,
@@ -590,7 +581,6 @@ export async function createCity(scene, terrain, options = {}) {
   function inRect(x, z, r) {
     return x >= r.west && x <= r.east && z >= r.north && z <= r.south;
   }
-  // Waterfront frontage band
   const quayBand = {
     minX: HARBOR_WATER_EAST_LIMIT + 3,
     maxX: HARBOR_WATER_EAST_LIMIT + 24,
@@ -618,7 +608,6 @@ export async function createCity(scene, terrain, options = {}) {
   harborCore.spacingX *= harborSpacingScale;
   harborCore.spacingZ *= harborSpacingScale;
   harborCore.skipProbability = Math.max(0, harborCore.skipProbability - harborDensityBoost);
-  // Pier Plaza
   const pierPlazaCenter = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(10, 0, 0));
   const pierPlazaTarget = pierPlazaCenter.clone();
   const waterfrontPlazaMask = {
@@ -632,13 +621,14 @@ export async function createCity(scene, terrain, options = {}) {
     minZ: -18,
     maxZ: -4,
   };
-  // --- Updated defaults for a more "city-like" layout -----------------------
-  // Goal: straighter blocks, clearer grid, fewer awkward placements. Callers
-  // can still override any of these via `options`.
-  const spacingX = options.spacingX ?? 18; // was 14
-  const spacingZ = options.spacingZ ?? 18; // was 14
-  const jitter = options.jitter ?? 1.6; // was 1.2
-  const maxSlope = options.maxSlope ?? 0.18; // was 0.2
+  
+  // --- DENSITY FIX: Reduce spacing to pack the city tighter ---
+  const spacingX = options.spacingX ?? 11; // Reduced from 18 to 11
+  const spacingZ = options.spacingZ ?? 11; // Reduced from 18 to 11
+  const jitter = options.jitter ?? 1.0; // Reduced spread randomness
+  // -----------------------------------------------------------
+  
+  const maxSlope = options.maxSlope ?? 0.18;
   const roadsVisible = options.roadsVisible == null ? true : Boolean(options.roadsVisible);
   const followPromenade = options.followPromenade !== false;
 
@@ -1215,7 +1205,6 @@ export async function createCity(scene, terrain, options = {}) {
       const z = zBase + nodeWarp.z;
       const height = sampleHeight(terrain, x, z, null);
       if (!Number.isFinite(height) || height < MIN_CITY_GRADE) {
-        // below-sea cells
         row.push(null);
         continue;
       }
@@ -1237,7 +1226,6 @@ export async function createCity(scene, terrain, options = {}) {
     gz: spacingZ !== 0 ? (worldZ - roadStartZ) / spacingZ : 0,
   });
 
-  // --- Collect all road segment geometries for one merged mesh (perf + fewer draw calls)
   const roadGeometries = [];
   const roadCenterSegments = [];
   const recordRoadSegment = (a, b) => {
@@ -1267,7 +1255,6 @@ export async function createCity(scene, terrain, options = {}) {
   });
   const streetlightPoleHeight = 3.4;
 
-  // Secondary boulevards
   const secondaryRowStep = 3;
   const secondaryColStep = 4;
   const secondaryWidth = 3.4;
@@ -1351,10 +1338,8 @@ export async function createCity(scene, terrain, options = {}) {
     streetlightsRegistry.meshes.push(lamps);
   };
 
-  // Define avenueRowIndex for the main avenue aligned with the central row
   const avenueRowIndex = Math.floor(roadGrid.length / 2);
 
-  // Wider grid roads
   for (let iz = 0; iz < roadGrid.length; iz++) {
     const row = roadGrid[iz];
     if (!row) continue;
@@ -1478,7 +1463,6 @@ export async function createCity(scene, terrain, options = {}) {
     }
   }
 
-  // Quay Promenade
   const quayX = HARBOR_WATER_EAST_LIMIT + 1.5;
   const quayStartZ = roadStartZ;
   const quayEndZ = roadStartZ + spacingZ * countZ;
@@ -1506,8 +1490,6 @@ export async function createCity(scene, terrain, options = {}) {
     promenadeGeometry.name = "QuayPromenade";
   }
 
-  // --- Add a wide east-west main avenue through the city center --------------
-  // Replace the center row with a single wide avenue spanning the full width
   const mainAvenueWidth = 3.8;
   const mainAvenueColor = 0x2f2f2f;
   const lightSpacing = 9;
@@ -1561,50 +1543,35 @@ export async function createCity(scene, terrain, options = {}) {
     }
   }
 
-  // Merge all ribbon pieces into a single, draped road mesh
   if (roadGeometries.length > 0) {
     const merged = mergeGeometries(roadGeometries, false) || new THREE.BufferGeometry();
-    // dispose the temp pieces
     for (const g of roadGeometries) g.dispose();
     const roadMaterial =
       createVisibleRoad._material ||
       new THREE.MeshStandardMaterial({ color: 0x2f2f2f, roughness: 1.0, metalness: 0.0, side: THREE.DoubleSide });
     const roadsMesh = new THREE.Mesh(merged, roadMaterial);
     roadsMesh.name = "CityRoads";
-    roadsMesh.renderOrder = 1;        // win depth vs semi-transparent water
-    roadsMesh.userData.noCollision = true; // visual only
+    roadsMesh.renderOrder = 1;        
+    roadsMesh.userData.noCollision = true; 
     roadsMesh.castShadow = false;
     roadsMesh.receiveShadow = true;
     roadsMesh.visible = roadsVisible;
     city.add(roadsMesh);
   }
 
-  // Data-driven "lot pads" to visualize district density and reserve space
-  // for future building placement.
   const lotPads = new THREE.Group();
   lotPads.name = "LotPads";
   lotPads.userData.noCollision = true;
   city.add(lotPads);
 
   const lotPadGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.08, 10);
-
-  // --- FIX START: Disable texture probe to stop 404 errors ---
-  // The 'makeTiledPBR' call probes for files that don't exist yet.
-  // We use the fallback material directly to keep the console clean.
-
-  // const lotPadMaterial =
-  //   (await makeTiledPBR("textures/plaza/lot-pads", [2.4, 2.4])) ??
+  
   const lotPadMaterial = new THREE.MeshStandardMaterial({ color: 0xb7b3a7, roughness: 1, metalness: 0 });
-
   lotPadMaterial.depthWrite = true;
   lotPadMaterial.transparent = false;
 
-  // const foundationPadMaterial =
-  //   (await makeTiledPBR("textures/plaza/foundation-pads", [2.4, 2.4])) ??
   const foundationPadMaterial = new THREE.MeshStandardMaterial({ color: 0xbdb8ac, roughness: 0.95, metalness: 0 });
-
-  // --- FIX END ---
-
+  
   foundationPadMaterial.depthWrite = true;
   foundationPadMaterial.transparent = false;
   city.userData.foundationPadMaterial = foundationPadMaterial;
@@ -1948,7 +1915,6 @@ export async function createCity(scene, terrain, options = {}) {
     city.add(greenery);
   }
 
-  // Main-Avenue Streetlights
   if (mainAvenueLightPositions.length > 0) {
     instantiateStreetlights(mainAvenueLightPositions, {
       polesName: "MainAvenueStreetlightPoles",
@@ -1963,7 +1929,6 @@ export async function createCity(scene, terrain, options = {}) {
     });
   }
 
-  // Pier Plaza
   if (showFoundationPads) {
     const plazaHeightSample = sampleHeight(
       terrain,
@@ -1986,7 +1951,6 @@ export async function createCity(scene, terrain, options = {}) {
   let frontAisleRange = null;
   let rearAisleRange = null;
 
-  // Market Stalls
   {
     const stallsPerRow = 4;
     const stallRows = 2;
@@ -2031,7 +1995,6 @@ export async function createCity(scene, terrain, options = {}) {
         roughness: 0.72,
         metalness: 0.08,
       });
-      // Canopy physical material
       const canopyMaterial = new THREE.MeshPhysicalMaterial({
         color: 0xb7c4cf,
         metalness: 0,
@@ -2123,7 +2086,6 @@ export async function createCity(scene, terrain, options = {}) {
           _matrix.compose(_position, _quaternion, _scale);
           canopies.setMatrixAt(stallIndex, _matrix);
 
-          // Canopy color tints
           const baseColor = canopyPalette[stallIndex % canopyPalette.length];
           _color.copy(baseColor);
           _color.getHSL(_hsl);
@@ -2160,7 +2122,6 @@ export async function createCity(scene, terrain, options = {}) {
     }
   }
 
-  // Crates
   {
     const crateCount = 24;
     if (crateCount > 0) {
@@ -2249,7 +2210,6 @@ export async function createCity(scene, terrain, options = {}) {
     }
   }
 
-  // Plaza Lamps
   {
     const lampPositions = [];
     const lampRadius = 2.6;
@@ -2354,7 +2314,6 @@ export async function createCity(scene, terrain, options = {}) {
     bulb.castShadow = false;
     lampGroup.add(bulb);
 
-    // Lamp glass bulb
     const bulbGlassMaterial = new THREE.MeshPhysicalMaterial({
       color: 0xffffff,
       metalness: 0,
@@ -2430,7 +2389,6 @@ export async function createCity(scene, terrain, options = {}) {
     }
   }
 
-  // Spawn simple buildings on top of the lot pads (safe + fast)
   const buildingSpawn = await spawnBuildingsFromPads(city, {
     seed: options.seed ?? 12345,
     leavePadsVisible: false,
@@ -2491,11 +2449,8 @@ export async function createCity(scene, terrain, options = {}) {
   walls.castShadow = true;
   walls.receiveShadow = true;
   
-  // --- OPTIMIZATION: Disable shadows on roofs ---
-  // Roofs are generally high up and self-shadowing them is expensive and rarely noticed.
   roofs.castShadow = false;
   roofs.receiveShadow = false;
-  // ----------------------------------------------
 
   for (let i = 0; i < instancedPlacements.length; i++) {
     const placement = instancedPlacements[i];
@@ -2596,7 +2551,6 @@ export function updateCityLighting(city, nightFactor = 0, opts = {}) {
       }
 
       if (factor > 0 && intensity > 0 && Number.isFinite(lampState.flickerPhase)) {
-        // Warm flicker on special lamp
         const flickerStrength = factor;
         const flicker =
           1 +
@@ -2689,7 +2643,7 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
   const rng = makeRng(seed);
   const lots = [];
   const getH = terrain?.userData?.getHeightAt?.bind(terrain?.userData);
-  const cell = (spacing || 6) * 0.8; // slightly tighter than visual spacing
+  const cell = (spacing || 6) * 0.8;
   const hash = new Map();
   const keyFrom = (x, z) => `${Math.round(x / cell)}_${Math.round(z / cell)}`;
   const center2 = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
@@ -2711,7 +2665,6 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       const x = center2.x + Math.cos(t) * r;
       const z = center2.y + Math.sin(t) * r;
 
-      // keep shoreline clear (radius-aware)
       const distHarbor = tmp2
         .set(x, z)
         .distanceTo(new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z));
@@ -2723,9 +2676,8 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       if (h < getSeaLevelY() + MIN_ABOVE_SEA) continue;
 
       const k = keyFrom(x, z);
-      if (hash.has(k)) continue; // avoid duplicates early
+      if (hash.has(k)) continue; 
 
-      // slope check (1m samples)
       const hX = getH ? getH(x + 1.2, z) : h;
       const hZ = getH ? getH(x, z + 1.2) : h;
       if (!Number.isFinite(hX) || !Number.isFinite(hZ)) continue;
@@ -2738,7 +2690,6 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
     }
   }
 
-  // Instantiate using your existing instanced meshes (reuse materials/geometry)
   const { group, walls, roofs, dummy } = ensureInstancedSets(scene);
 
   const tangent = new THREE.Vector3();
@@ -2746,7 +2697,6 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
   let i = 0;
 
   for (const p of lots) {
-    // orientation by road tangent if nearby, else face downhill
     let yaw = 0;
     if (curve) {
       const t = nearestTOnCurve(curve, p, 180);
@@ -2758,7 +2708,6 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       yaw = Math.atan2(down.x, down.z);
     }
 
-    // foundation: clamp EVERY placement to terrain sample AFTER any nudges
     const ySample = getH ? getH(p.x, p.z) : p.y;
     const liftedSample = Number.isFinite(ySample)
       ? ySample + SURFACE_OFFSET
@@ -2771,14 +2720,12 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
       addFoundationPad(scene, p.x, baseY, p.z, padRadius, hillFoundationMaterial);
     }
 
-    // walls
     dummy.position.set(p.x, baseY + 1.0, p.z);
     dummy.rotation.set(0, yaw, 0);
     dummy.scale.setScalar(buildingScale);
     dummy.updateMatrix();
     walls.setMatrixAt(i, dummy.matrix);
 
-    // roof
     dummy.position.set(p.x, baseY + 2.0, p.z);
     dummy.rotation.set(0, yaw, 0);
     dummy.updateMatrix();
@@ -2878,10 +2825,8 @@ function __ensureInstancedSets(scene, capacity = DEFAULT_CAPACITY) {
   walls.castShadow = true;
   walls.receiveShadow = true;
   
-  // --- OPTIMIZATION: Disable shadows on roofs ---
   roofs.castShadow = false;
   roofs.receiveShadow = false;
-  // ----------------------------------------------
 
   const group = new THREE.Group();
   group.name = "HillCity";
