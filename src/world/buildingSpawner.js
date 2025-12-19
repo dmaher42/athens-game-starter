@@ -8,6 +8,7 @@ const ROUGHNESS_BASE_KEY = Symbol("buildingBaseRoughness");
 const BUILDING_ROUGHNESS_VARIATION = 0.1;
 const scratchBox = new THREE.Box3();
 const scratchSize = new THREE.Vector3();
+const scratchCenter = new THREE.Vector3();
 
 const MATERIAL_BASE = {
   stone: { color: 0xded6c0, roughness: 0.9, metalness: 0.02 },
@@ -424,6 +425,29 @@ const TYPE_MAP = {
 function pick(arr, rnd) { return arr[Math.floor(rnd() * arr.length)]; }
 function mulberry32(a) { return function() { let t=(a+=0x6D2B79F5); t=Math.imul(t^(t>>>15), t|1); t^=t+Math.imul(t^(t>>>7), t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
 
+function hashCombine(a, b) {
+  let h = Math.imul(a ^ b, 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+function getPadSeed(pad, baseSeed = 0) {
+  const lotId = pad?.userData?.lotId ?? pad?.userData?.id ?? pad?.name ?? 0;
+  const pos = pad?.position || scratchCenter.setScalar(0);
+  let seed = hashCombine(baseSeed >>> 0, Math.floor(pos.x * 1000));
+  seed = hashCombine(seed, Math.floor(pos.z * 1000));
+
+  if (typeof lotId === "string") {
+    for (let i = 0; i < lotId.length; i++) {
+      seed = hashCombine(seed, lotId.charCodeAt(i));
+    }
+  } else if (Number.isFinite(lotId)) {
+    seed = hashCombine(seed, Math.floor(lotId));
+  }
+
+  return seed >>> 0;
+}
+
 /**
  * Replace or augment LotPads with buildings.
  * @param {THREE.Group} worldRoot - parent group (e.g., your "city" or "WorldRoot")
@@ -482,6 +506,7 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   let count = 0;
 
   for (const pad of padsGroup.children.slice()) {
+    const padRng = mulberry32(getPadSeed(pad, seed) || seed);
     if (pad.blocked || pad.userData?.blocked) {
       // reserved by landmarks/plaza — skip building creation on this pad
       continue;
@@ -505,14 +530,19 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
 
     scratchBox.setFromObject(pad);
     scratchBox.getSize(scratchSize);
-    const jitterScaleX = Number.isFinite(scratchSize.x) ? scratchSize.x * 0.35 : 1.0;
-    const jitterScaleZ = Number.isFinite(scratchSize.z) ? scratchSize.z * 0.35 : 1.0;
-    const jitterX = clamp((rng() - 0.5) * jitterScaleX, -2.4, 2.4);
-    const jitterZ = clamp((rng() - 0.5) * jitterScaleZ, -2.4, 2.4);
+    scratchBox.getCenter(scratchCenter);
+
+    const jitterScaleX = Number.isFinite(scratchSize.x) ? scratchSize.x * 0.15 : 0;
+    const jitterScaleZ = Number.isFinite(scratchSize.z) ? scratchSize.z * 0.15 : 0;
+    const jitterX = clamp((padRng() - 0.5) * 2 * jitterScaleX, -jitterScaleX, jitterScaleX);
+    const jitterZ = clamp((padRng() - 0.5) * 2 * jitterScaleZ, -jitterScaleZ, jitterScaleZ);
 
     built.position.copy(pad.position);
     built.position.x += Number.isFinite(jitterX) ? jitterX : 0;
     built.position.z += Number.isFinite(jitterZ) ? jitterZ : 0;
+
+    const scaleJitter = THREE.MathUtils.lerp(0.85, 1.15, padRng());
+    built.scale.multiplyScalar(scaleJitter);
 
     if (districtId === "harbor") {
       const pierClearanceX = HARBOR_WATER_EAST_LIMIT + 3.25; // keep procedural lots off the physical pier deck
@@ -541,8 +571,8 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
         : pad.rotation?.y ?? 0;
     const rotationJitter = Number.isFinite(pad.userData?.rotationJitter)
       ? Math.max(0, pad.userData.rotationJitter)
-      : THREE.MathUtils.degToRad(2);
-    const jitter = rotationJitter > 0 ? THREE.MathUtils.lerp(-rotationJitter, rotationJitter, rng()) : 0;
+      : THREE.MathUtils.degToRad(12);
+    const jitter = rotationJitter > 0 ? THREE.MathUtils.lerp(-rotationJitter, rotationJitter, padRng()) : 0;
     built.rotation.y = baseRotation + jitter;
     built.userData = { ...built.userData, district: districtId, type: typeKey };
     buildingsGroup.add(built);
