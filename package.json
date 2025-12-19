@@ -11,7 +11,7 @@
     "generate:favicon": "node scripts/generate-favicon.mjs",
     "download:aristotle": "node scripts/download-aristotle-tomb.mjs",
     "download:draco": "node scripts/download-draco-decoder.mjs",
-    "compress:assets": "gltf-transform optimize public/models/landmarks/*.glb public/models/landmarks/ --texture-compress ktx2 --compress draco",
+    "compress:assets": "node scripts/compress-assets.mjs",
     "postinstall": "npm run download:draco && npm run generate:favicon",
     "verification": "playwright test"
   },
