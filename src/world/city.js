@@ -2502,7 +2502,7 @@ export async function createCity(scene, terrain, options = {}) {
   roofs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   walls.castShadow = true;
   walls.receiveShadow = true;
-  roofs.castShadow = true;
+  roofs.castShadow = false;
   roofs.receiveShadow = false;
 
   for (let i = 0; i < instancedPlacements.length; i++) {
@@ -2885,7 +2885,7 @@ function __ensureInstancedSets(scene, capacity = DEFAULT_CAPACITY) {
   roofs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   walls.castShadow = true;
   walls.receiveShadow = true;
-  roofs.castShadow = true;
+  roofs.castShadow = false;
   roofs.receiveShadow = false;
 
   const group = new THREE.Group();
