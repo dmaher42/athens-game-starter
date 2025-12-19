@@ -11,8 +11,8 @@ export const HARBOR_CENTER_3D = new THREE.Vector3(
   resolveSeaLevelY(),
   80,
 );
-export const AGORA_CENTER_3D = new THREE.Vector3(-80, 8, 40); // slightly higher than sea
-export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, 14, 10); // hill crown
+export const AGORA_CENTER_3D = new THREE.Vector3(-50, 30, 20); // relocated to plateau to avoid steep ramp
+export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, 34, 10); // hill crown
 
 // Zones
 export const HARBOR_EXCLUDE_RADIUS = 110; // keep shoreline clear
