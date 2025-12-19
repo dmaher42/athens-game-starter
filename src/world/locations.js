@@ -5,22 +5,27 @@ export { getSeaLevelY, setSeaLevelY } from "./seaLevelState.js";
 
 const resolveSeaLevelY = () => getSeaLevelY();
 
+// --- UNIFORM HEIGHT FIX ---
+// Define a single consistent ground elevation for the entire city.
+// 2.5m is a safe height above water (Dry but close to sea level).
+const getCityGroundY = () => resolveSeaLevelY() + 2.5;
+// --------------------------
+
 export const HARBOR_CENTER_3D = new THREE.Vector3(
   -120,
   resolveSeaLevelY(),
   80,
 );
-export const AGORA_CENTER_3D = new THREE.Vector3(-80, resolveSeaLevelY() + 8, 40);
-export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, resolveSeaLevelY() + 14, 10);
 
-export const HARBOR_EXCLUDE_RADIUS = 110; 
+// All districts now sit on the same flat plane
+export const AGORA_CENTER_3D = new THREE.Vector3(-80, getCityGroundY(), 40);
+export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, getCityGroundY(), 10);
+
+// Shrink exclusion zones to fit the tighter map
+export const HARBOR_EXCLUDE_RADIUS = 90;
 export const AGORA_RADIUS = 22;
 export const ACROPOLIS_RADIUS = 18;
-
-// --- SIZE FIX: Shrink the city boundaries drastically ---
-// Reduced from 160 to 90 to contain the procedural spread
 export const CITY_AREA_RADIUS = 90;
-// --------------------------------------------------------
 
 export const MIN_ABOVE_SEA = 2.0; 
 export const MAX_SLOPE_DELTA = 0.35; 
@@ -32,12 +37,9 @@ export function getHarborSeaLevel() {
   return getSeaLevelY();
 }
 
-// --- SIZE FIX: Shrink the main grid block ---
-export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, resolveSeaLevelY() + 1.5, 25);
-// Reduced from 90x80 to 50x50 for a compact village feel
+// Ensure the main city chunk grid aligns perfectly with the Agora/Acropolis height
+export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, getCityGroundY(), 25);
 export const CITY_CHUNK_SIZE = new THREE.Vector2(50, 50);
-// --------------------------------------------
-
 export const CITY_SEED = 0x4d534349;
 
 export const HARBOR_WATER_RADIUS = 70; 
@@ -89,10 +91,13 @@ export const HARBOR_WATER_CENTER = new THREE.Vector3(
   HARBOR_CENTER_3D.z + HARBOR_WATER_OFFSET.y
 );
 
+// Sync updates
 subscribeSeaLevelChange((seaLevelY) => {
   HARBOR_CENTER_3D.y = seaLevelY;
   HARBOR_WATER_CENTER.y = seaLevelY;
-  AGORA_CENTER_3D.y = seaLevelY + 8;
-  ACROPOLIS_PEAK_3D.y = seaLevelY + 14;
-  CITY_CHUNK_CENTER.y = seaLevelY + 1.5;
+
+  const newGroundY = seaLevelY + 2.5;
+  AGORA_CENTER_3D.y = newGroundY;
+  ACROPOLIS_PEAK_3D.y = newGroundY;
+  CITY_CHUNK_CENTER.y = newGroundY;
 });

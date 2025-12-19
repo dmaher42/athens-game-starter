@@ -17,7 +17,7 @@ import {
   getHarborShoreBlendProfile,
 } from "./harborTerrainConfig.js";
 
-// Utility: gradient noise (kept for compatibility, but unused for height now)
+// Utility: gradient noise (kept for compatibility)
 function gradientNoise(x, z) {
   const x0 = Math.floor(x);
   const z0 = Math.floor(z);
@@ -84,11 +84,8 @@ export function createTerrain(scene) {
 
   const color = new THREE.Color();
   
-  // --- FLATTENING FIX START ---
-  // We use the Agora's Y level as the universal ground height.
-  // This ensures the city sits on a flat plain.
+  // Use the new synchronized ground level (Sea + 2.5m)
   const FLAT_GROUND_LEVEL = AGORA_CENTER_3D.y;
-  // --- FLATTENING FIX END ---
 
   const CITY_CENTER_XZ = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
   const CITY_INNER = Math.max(48, CITY_AREA_RADIUS * 0.65);
@@ -98,7 +95,6 @@ export function createTerrain(scene) {
     const x = positionAttribute.getX(i);
     const z = positionAttribute.getY(i);
 
-    // Start with perfectly flat ground instead of noise
     let height = FLAT_GROUND_LEVEL;
 
     // Apply Harbor Depression (Cut out the bay)
@@ -161,9 +157,9 @@ export function createTerrain(scene) {
     positionAttribute.setZ(i, height);
     baseHeights[i] = height;
 
-    // Simple coloring: Sand near water, Grass everywhere else
+    // Color Logic: Sandy shores vs Inland Dirt/Grass
     if (height < getSeaLevelY() + 1.2) {
-       color.setRGB(0.55, 0.48, 0.35); // Sand/Dirt
+       color.setRGB(0.55, 0.48, 0.35); // Sand
     } else {
        color.setRGB(0.35, 0.50, 0.25); // Grass
     }
@@ -238,7 +234,6 @@ export function createTerrain(scene) {
         vec3 transformed = basePos;
 ${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
 
-        // Subtle wind sway only
         float swayPhase = (basePos.x + basePos.y) * uWindFreq + uTime * 0.5;
         float sway = sin(swayPhase) * 0.3;
         transformed.z += sway * uWindStrength;
