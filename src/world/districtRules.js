@@ -1,7 +1,7 @@
 import {
   resolveBaseUrl,
   joinPath,
-  REPO_SEGMENT_PATH as REPO_BASE_PATH,
+  REPO_BASE_PATH,
 } from "../utils/baseUrl.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 
