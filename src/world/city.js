@@ -4,6 +4,7 @@ import {
   CITY_CHUNK_CENTER,
   CITY_CHUNK_SIZE,
   CITY_SEED,
+  SEA_LEVEL_Y,
   getSeaLevelY,
   MIN_ABOVE_SEA,
   MAX_SLOPE_DELTA,
@@ -39,6 +40,23 @@ function sampleHeight(terrain, x, z, fallback) {
     if (Number.isFinite(height)) return height;
   }
   return fallback;
+}
+
+function isWithinHarborWater(x, z, buffer = 0) {
+  const { west, east, north, south } = HARBOR_WATER_BOUNDS || {};
+  if (![west, east, north, south].every(Number.isFinite)) return false;
+
+  const bufferedWest = west - buffer;
+  const bufferedEast = east + buffer;
+  const bufferedNorth = north - buffer;
+  const bufferedSouth = south + buffer;
+
+  return (
+    x >= bufferedWest &&
+    x <= bufferedEast &&
+    z >= bufferedNorth &&
+    z <= bufferedSouth
+  );
 }
 
 // Draw a visible road mesh along a curve segment
@@ -84,6 +102,14 @@ export async function createCity(scene, terrain, options = {}) {
   const SCATTER_ATTEMPTS = 3000; // High count to fill gaps
   const MIN_DIST_FROM_ROAD = 3.5; // Don't block street
   const MAX_DIST_FROM_ROAD = 12.0; // Don't build in middle of nowhere
+  const SHORELINE_BUFFER_METERS = 6;
+
+  const isDevEnvironment =
+    (typeof import.meta !== "undefined" && Boolean(import.meta.env?.DEV)) ||
+    (typeof process !== "undefined" && process.env?.NODE_ENV !== "production");
+
+  let underwaterSkipLogCount = 0;
+  const UNDERWATER_LOG_LIMIT = 5;
 
   // 1. Generate Organic Roads (The "Spine")
   const roadCurves = [];
@@ -186,8 +212,23 @@ export async function createCity(scene, terrain, options = {}) {
     if (overlap) continue;
 
     // E. Terrain Check
-    const y = sampleHeight(terrain, x, z, -999);
-    if (y < seaLevel + 1.2) continue; // Underwater
+    const fallbackHeight =
+      (Number.isFinite(seaLevel) ? seaLevel : SEA_LEVEL_Y) + MIN_ABOVE_SEA;
+    const y = sampleHeight(terrain, x, z, fallbackHeight);
+    const seaBaseline = Number.isFinite(SEA_LEVEL_Y) ? SEA_LEVEL_Y : seaLevel;
+    const underwaterThreshold = (Number.isFinite(seaBaseline) ? seaBaseline : 0) + 0.05;
+
+    if (!Number.isFinite(y) || y <= underwaterThreshold) {
+      if (isDevEnvironment && underwaterSkipLogCount < UNDERWATER_LOG_LIMIT) {
+        console.info("[city] skipped lot: underwater", { x, z, y });
+        underwaterSkipLogCount++;
+      }
+      continue; // Underwater or sampler missing
+    }
+
+    const inHarborBuffer = isWithinHarborWater(x, z, SHORELINE_BUFFER_METERS);
+    const isWaterfrontTagged = options?.lotTag === "harbor" || options?.lotTag === "pier";
+    if (inHarborBuffer && !isWaterfrontTagged) continue;
 
     // F. Success - Place it
     // Align rotation to road tangent (or perpendicular to it)
