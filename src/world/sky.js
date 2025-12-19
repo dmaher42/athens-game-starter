@@ -4,10 +4,6 @@ import { Vector3, TextureLoader, EquirectangularReflectionMapping, SRGBColorSpac
 
 // Map presets to texture filenames
 const SKY_PRESETS = {
-  dawn: "dawn.jpg",
-  noon: "day.jpg",
-  dusk: "dusk.jpg",
-  night: "night.jpg",
   blue_hour: "blue_hour.jpg",
   golden_hour: "golden_hour.jpg",
   high_noon: "high_noon.jpg",
@@ -28,8 +24,8 @@ for (const [preset, filename] of Object.entries(SKY_PRESETS)) {
 }
 
 export function createSky(scene) {
-  // Initialize with 'noon' (default)
-  updateSky(scene, "noon");
+  // Initialize with 'high_noon' (default)
+  updateSky(scene, "high_noon");
   return { }; // Return empty object for compatibility
 }
 
