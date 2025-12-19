@@ -5,7 +5,6 @@ export { getSeaLevelY, setSeaLevelY } from "./seaLevelState.js";
 
 const resolveSeaLevelY = () => getSeaLevelY();
 
-// Key anchors (coastal → uphill)
 export const HARBOR_CENTER_3D = new THREE.Vector3(
   -120,
   resolveSeaLevelY(),
@@ -14,21 +13,18 @@ export const HARBOR_CENTER_3D = new THREE.Vector3(
 export const AGORA_CENTER_3D = new THREE.Vector3(-80, resolveSeaLevelY() + 8, 40);
 export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, resolveSeaLevelY() + 14, 10);
 
-// Zones
 export const HARBOR_EXCLUDE_RADIUS = 110; 
 export const AGORA_RADIUS = 22;
 export const ACROPOLIS_RADIUS = 18;
 
-// --- DENSITY FIX: Shrink the city footprint ---
-// Reduced from 260 to 160 to prevent things being too far away
-export const CITY_AREA_RADIUS = 160; 
-// ----------------------------------------------
+// --- SIZE FIX: Shrink the city boundaries drastically ---
+// Reduced from 160 to 90 to contain the procedural spread
+export const CITY_AREA_RADIUS = 90;
+// --------------------------------------------------------
 
-// Placement safety
 export const MIN_ABOVE_SEA = 2.0; 
 export const MAX_SLOPE_DELTA = 0.35; 
 
-// Road
 export const MAIN_ROAD_WIDTH = 3.2;
 
 export const HARBOR_CENTER = new THREE.Vector2(-120, 80);
@@ -36,14 +32,14 @@ export function getHarborSeaLevel() {
   return getSeaLevelY();
 }
 
-// --- DENSITY FIX: Shrink grid size ---
+// --- SIZE FIX: Shrink the main grid block ---
 export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, resolveSeaLevelY() + 1.5, 25);
-// Reduced from 140x110 to 90x80
-export const CITY_CHUNK_SIZE = new THREE.Vector2(90, 80); 
-export const CITY_SEED = 0x4d534349;
-// -------------------------------------
+// Reduced from 90x80 to 50x50 for a compact village feel
+export const CITY_CHUNK_SIZE = new THREE.Vector2(50, 50);
+// --------------------------------------------
 
-// Harbor water extents
+export const CITY_SEED = 0x4d534349;
+
 export const HARBOR_WATER_RADIUS = 70; 
 export const HARBOR_WATER_SIZE = new THREE.Vector2(140, 120); 
 export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, 0); 
@@ -54,7 +50,6 @@ export const HARBOR_WATER_BACK = 0;
 const HARBOR_WATER_HALF_WIDTH = 70; 
 const HARBOR_WATER_HALF_DEPTH = 60; 
 
-// Explicitly export this to fix build error
 export const HARBOR_WATER_BOUNDS = {
   west: HARBOR_CENTER_3D.x - HARBOR_WATER_HALF_WIDTH,
   east: HARBOR_WATER_EAST_LIMIT,
