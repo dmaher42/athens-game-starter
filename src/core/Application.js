@@ -1618,8 +1618,8 @@ export class Application {
       console.log(`[HUD] preset: ${presetName}`);
 
       const sunDir = getSunDirection(timeOfDayState);
-      const { nightFactor } = updateLighting(scene, phase);
-      lights.nightFactor = nightFactor;
+      updateLighting(lights, sunDir);
+      updateSky(scene, presetName);
 
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
@@ -1658,8 +1658,7 @@ export class Application {
       const sunDir = getSunDirection(timeOfDayState);
 
       // Update sky dome and atmospheric lighting each frame.
-      const { nightFactor } = updateLighting(scene, phase);
-      lights.nightFactor = nightFactor;
+      updateLighting(lights, sunDir);
 
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
