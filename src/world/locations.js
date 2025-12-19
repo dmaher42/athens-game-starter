@@ -1,123 +1,367 @@
 import * as THREE from "three";
-import { getSeaLevelY, setSeaLevelY, subscribeSeaLevelChange } from "./seaLevelState.js";
+import {
+  HARBOR_CENTER,
+  AGORA_CENTER_3D,
+  CITY_AREA_RADIUS,
+  getSeaLevelY,
+  getHarborSeaLevel,
+} from "./locations.js";
+import {
+  createGroundTextureState,
+  injectGroundTextureShader,
+} from "./groundTextures.js";
+import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
+import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
+import {
+  HARBOR_FLOOR_DEPTH,
+  getHarborShoreBlendProfile,
+} from "./harborTerrainConfig.js";
 
-export { getSeaLevelY, setSeaLevelY } from "./seaLevelState.js";
+// Utility: basic pseudo-random gradient noise using deterministic hashing.
+// (Kept in case you want to restore hills later, but currently unused for height).
+function gradientNoise(x, z) {
+  const x0 = Math.floor(x);
+  const z0 = Math.floor(z);
+  const xf = x - x0;
+  const zf = z - z0;
 
-const resolveSeaLevelY = () => getSeaLevelY();
+  const gradients = new Array(4);
+  for (let i = 0; i < 4; i++) {
+    const ix = x0 + (i & 1);
+    const iz = z0 + (i >> 1);
+    const seed = Math.sin(ix * 374761393 + iz * 668265263) * 43758.5453;
+    const angle = seed - Math.floor(seed);
+    gradients[i] = {
+      x: Math.cos(angle * Math.PI * 2),
+      z: Math.sin(angle * Math.PI * 2),
+    };
+  }
 
-// Key anchors (coastal → uphill)
-// FIXED: All heights are now relative to sea level to prevent desync
-export const HARBOR_CENTER_3D = new THREE.Vector3(
-  -120,
-  resolveSeaLevelY(),
-  80,
-);
+  const dot00 = gradients[0].x * (xf) + gradients[0].z * (zf);
+  const dot10 = gradients[1].x * (xf - 1) + gradients[1].z * (zf);
+  const dot01 = gradients[2].x * (xf) + gradients[2].z * (zf - 1);
+  const dot11 = gradients[3].x * (xf - 1) + gradients[3].z * (zf - 1);
 
-// Agora was hardcoded to 8; now relative (Sea + 8)
-export const AGORA_CENTER_3D = new THREE.Vector3(
-  -80, 
-  resolveSeaLevelY() + 8, 
-  40
-); 
+  const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+  const u = fade(xf);
+  const v = fade(zf);
 
-// Acropolis was hardcoded to 14; now relative (Sea + 14)
-export const ACROPOLIS_PEAK_3D = new THREE.Vector3(
-  -40, 
-  resolveSeaLevelY() + 14, 
-  10
-);
-
-// Zones
-export const HARBOR_EXCLUDE_RADIUS = 110; // keep shoreline clear
-export const AGORA_RADIUS = 22;
-export const ACROPOLIS_RADIUS = 18;
-// Expanded city footprint
-export const CITY_AREA_RADIUS = 260; // expand urban plateau & HillCity sampling
-
-// Placement safety
-export const MIN_ABOVE_SEA = 2.0; // minimum building base above water
-export const MAX_SLOPE_DELTA = 0.35; // 1m sample slope threshold
-
-// Road
-export const MAIN_ROAD_WIDTH = 3.2;
-
-export const HARBOR_CENTER = new THREE.Vector2(-120, 80);
-export function getHarborSeaLevel() {
-  return getSeaLevelY();
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const nx0 = lerp(dot00, dot10, u);
+  const nx1 = lerp(dot01, dot11, u);
+  return lerp(nx0, nx1, v);
 }
 
-// FIXED: City chunk now respects sea level base (Sea + 1.5m) to stay dry
-export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, resolveSeaLevelY() + 1.5, 25);
-export const CITY_CHUNK_SIZE = new THREE.Vector2(140, 110); // city grid footprint
-export const CITY_SEED = 0x4d534349;
+function fbm(x, z, octaves, persistence, lacunarity) {
+  let amplitude = 1;
+  let frequency = 1;
+  let sum = 0;
+  let max = 0;
 
-// Harbor water extents (limit the ocean to the bay only)
-export const HARBOR_WATER_RADIUS = 70; // if using circular water
+  for (let i = 0; i < octaves; i++) {
+    sum += gradientNoise(x * frequency, z * frequency) * amplitude;
+    max += amplitude;
+    amplitude *= persistence;
+    frequency *= lacunarity;
+  }
 
-// Harbor water extents (rectangle) and seaward offset
-export const HARBOR_WATER_SIZE = new THREE.Vector2(140, 120); // confine water footprint to the harbor basin
-export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, 0); // center the water plane on the harbor location
-// Keep the harbor water strictly on the seaward (western) side of the pier
-export const PIER_EDGE_OFFSET = 4.5; // distance from harbor center to pier edge
-export const HARBOR_WATER_EAST_LIMIT =
-  HARBOR_CENTER_3D.x - PIER_EDGE_OFFSET + 3; // align with western (seaward) edge of pier
-// extend water slightly under pier for visual continuity
-export const HARBOR_WATER_BACK = 0; // max inland distance allowed (in Z half-extent)
+  return sum / max;
+}
 
-const HARBOR_WATER_HALF_WIDTH = 70; // meters west of the pier (keeps water inside the harbor)
-const HARBOR_WATER_HALF_DEPTH = 60; // meters north/south from harbor center
-
-export const HARBOR_WATER_BOUNDS = {
-  west: HARBOR_CENTER_3D.x - HARBOR_WATER_HALF_WIDTH,
-  east: HARBOR_WATER_EAST_LIMIT,
-  north: HARBOR_CENTER_3D.z - HARBOR_WATER_HALF_DEPTH,
-  south: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH,
-};
-
-// Harbor water normal maps live in public/textures/ground/. Keep the list in
-// priority order (highest quality first) so the ocean helper can try each one
-// until it finds an asset that loads successfully at runtime.
-export const HARBOR_WATER_NORMAL_CANDIDATES = [
-  "textures/ground/water_normals.png",
-  "textures/ground/water_normals.jpg",
-  "textures/ground/waternormals.jpg",
-  "textures/ground/shader.png",
-  "textures/ground/step_sea.gif",
-];
-
-// Keep procedural buildings off the pier deck and pedestrian walkway.
-const HARBOR_WALKWAY_EAST = HARBOR_CENTER_3D.x + 42;
-const HARBOR_WALKWAY_HALF_WIDTH = 9;
-
-export const HARBOR_SETBACKS = [
-  {
-    west: HARBOR_WATER_BOUNDS.west,
-    east: HARBOR_WATER_EAST_LIMIT + 3,
-    north: HARBOR_WATER_BOUNDS.north,
-    south: HARBOR_WATER_BOUNDS.south,
+const _scratchVec = new THREE.Vector3();
+const HARBOR_SHORE_PROFILE = getHarborShoreBlendProfile();
+const {
+  radii: {
+    inner: HARBOR_BLEND_INNER_RADIUS,
+    shelf: HARBOR_BLEND_SHELF_RADIUS,
+    outer: HARBOR_BLEND_OUTER_RADIUS,
   },
-  {
-    west: HARBOR_WATER_EAST_LIMIT + 3,
-    east: HARBOR_WALKWAY_EAST,
-    north: HARBOR_CENTER_3D.z - HARBOR_WALKWAY_HALF_WIDTH,
-    south: HARBOR_CENTER_3D.z + HARBOR_WALKWAY_HALF_WIDTH,
-  },
-];
+  shoreShelfDepth: HARBOR_SHORE_SHELF_DEPTH,
+  taperFalloff: HARBOR_SHORE_TAPER_FALLOFF,
+} = HARBOR_SHORE_PROFILE;
 
-// Convenience centers
-export const HARBOR_WATER_CENTER = new THREE.Vector3(
-  HARBOR_CENTER_3D.x + HARBOR_WATER_OFFSET.x,
-  resolveSeaLevelY(),
-  HARBOR_CENTER_3D.z + HARBOR_WATER_OFFSET.y
-);
+export function createTerrain(scene) {
+  const size = 500;
+  const segments = 256;
+  const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
-// Subscribe to changes so the whole city lifts/drops with the tide configuration
-subscribeSeaLevelChange((seaLevelY) => {
-  HARBOR_CENTER_3D.y = seaLevelY;
-  HARBOR_WATER_CENTER.y = seaLevelY;
+  if (geometry.attributes.uv && !geometry.attributes.uv2) {
+    geometry.setAttribute(
+      "uv2",
+      new THREE.BufferAttribute(
+        new Float32Array(geometry.attributes.uv.array),
+        2,
+      ),
+    );
+  }
+
+  const positionAttribute = geometry.attributes.position;
+  const vertexCount = positionAttribute.count;
+  const baseHeights = new Float32Array(vertexCount);
+
+  const colors = new Float32Array(vertexCount * 3);
+  const colorAttribute = new THREE.BufferAttribute(colors, 3);
+  geometry.setAttribute("color", colorAttribute);
+
+  const color = new THREE.Color();
+  const heightScale = 25; 
+
+  const CITY_CENTER_XZ = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
+  const CITY_INNER = Math.max(48, CITY_AREA_RADIUS * 0.65);
+  const CITY_OUTER = Math.max(CITY_INNER + 32, CITY_AREA_RADIUS * 1.05);
   
-  // Update city districts relative to new sea level
-  AGORA_CENTER_3D.y = seaLevelY + 8;
-  ACROPOLIS_PEAK_3D.y = seaLevelY + 14;
-  CITY_CHUNK_CENTER.y = seaLevelY + 1.5;
-});
+  // --- FLATTENING FIX START ---
+  // Use the Agora's height as the universal ground level.
+  const FLAT_GROUND_LEVEL = AGORA_CENTER_3D.y;
+  // --- FLATTENING FIX END ---
+
+  for (let i = 0; i < vertexCount; i++) {
+    const x = positionAttribute.getX(i);
+    const z = positionAttribute.getY(i);
+
+    // --- FLATTENING FIX START ---
+    // Instead of fractal noise, we start with a perfectly flat plane.
+    // let height = fbm(x * baseFrequency, z * baseFrequency, 5, 0.5, 2.1) * heightScale;
+    let height = FLAT_GROUND_LEVEL;
+    // --- FLATTENING FIX END ---
+
+    // Apply the Harbor cut-out so the ocean bay still exists.
+    const dx = x - HARBOR_CENTER.x;
+    const dz = z - HARBOR_CENTER.y;
+    const distance = Math.hypot(dx, dz);
+    if (distance < HARBOR_BLEND_OUTER_RADIUS) {
+      const flatten = 1 - THREE.MathUtils.smoothstep(
+        distance,
+        HARBOR_BLEND_INNER_RADIUS,
+        HARBOR_BLEND_OUTER_RADIUS,
+      );
+      if (flatten > 0) {
+        const runtimeSeaLevel = getHarborSeaLevel();
+        const harborShorelineSurface = runtimeSeaLevel - 0.02;
+        const harborFloorHeight = runtimeSeaLevel - HARBOR_FLOOR_DEPTH;
+        const harborShelfHeight = runtimeSeaLevel - HARBOR_SHORE_SHELF_DEPTH;
+        const firstStageSpan = Math.max(
+          1e-3,
+          HARBOR_BLEND_SHELF_RADIUS - HARBOR_BLEND_INNER_RADIUS,
+        );
+        const secondStageSpan = Math.max(
+          1e-3,
+          HARBOR_BLEND_OUTER_RADIUS - HARBOR_BLEND_SHELF_RADIUS,
+        );
+        const distanceIntoBlend = distance - HARBOR_BLEND_INNER_RADIUS;
+        const shelfStageT = THREE.MathUtils.clamp(
+          distanceIntoBlend / firstStageSpan,
+          0,
+          1,
+        );
+        const shorelineStageT = THREE.MathUtils.clamp(
+          (distance - HARBOR_BLEND_SHELF_RADIUS) / secondStageSpan,
+          0,
+          1,
+        );
+        let harborTargetHeight = harborFloorHeight;
+        if (distance <= HARBOR_BLEND_SHELF_RADIUS) {
+          const easedShelf = shelfStageT * shelfStageT;
+          harborTargetHeight = THREE.MathUtils.lerp(
+            harborFloorHeight,
+            harborShelfHeight,
+            easedShelf,
+          );
+        } else {
+          const easedFalloff = 1 - Math.pow(
+            1 - shorelineStageT,
+            HARBOR_SHORE_TAPER_FALLOFF,
+          );
+          harborTargetHeight = THREE.MathUtils.lerp(
+            harborShelfHeight,
+            harborShorelineSurface,
+            easedFalloff,
+          );
+        }
+        height = THREE.MathUtils.lerp(height, harborTargetHeight, flatten);
+      }
+    }
+
+    // (City flattening logic removed as it's now redundant on a flat map)
+
+    positionAttribute.setZ(i, height);
+    baseHeights[i] = height;
+
+    // Simplified coloring for flat terrain
+    // Default to "Soil" color, but use "Green" if it's high enough to be safe from water
+    if (height < getSeaLevelY() + 1.0) {
+       // Sandy/Wet soil near water
+       color.setRGB(0.55, 0.48, 0.35);
+    } else {
+       // Mediterranean grass/soil everywhere else
+       color.setRGB(0.35, 0.50, 0.25);
+    }
+    colorAttribute.setXYZ(i, color.r, color.g, color.b);
+  }
+
+  positionAttribute.needsUpdate = true;
+  colorAttribute.needsUpdate = true;
+  geometry.computeVertexNormals();
+
+  geometry.userData.baseHeights = baseHeights;
+  geometry.userData.segmentCount = segments;
+  geometry.userData.size = size;
+
+  if (!geometry.getAttribute("basePos")) {
+    const basePos = new THREE.BufferAttribute(
+      new Float32Array(positionAttribute.array),
+      3,
+    );
+    geometry.setAttribute("basePos", basePos);
+  }
+
+  let terrainMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.90,
+    metalness: 0.0,
+    vertexColors: true,
+  });
+
+  terrainMaterial.userData.textureBudget = "skip";
+
+  const groundTextureState = createGroundTextureState(
+    terrainMaterial,
+    GROUND_TEXTURE_CONFIG,
+  );
+  const shouldTrackGroundHeight = groundTextureState.detailLayers.length > 0;
+  const basePosAttr = geometry.getAttribute("basePos");
+
+  const swayUniforms = {
+    uTime: { value: 0 },
+    uWindStrength: { value: 0.18 },
+    uWindFreq: { value: 0.15 },
+    uCityCenter: {
+      value: new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z),
+    },
+    uCityInner: { value: CITY_INNER },
+    uCityOuter: { value: CITY_OUTER },
+  };
+
+  terrainMaterial.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = swayUniforms.uTime;
+    shader.uniforms.uWindStrength = swayUniforms.uWindStrength;
+    shader.uniforms.uWindFreq = swayUniforms.uWindFreq;
+    shader.uniforms.uCityCenter = swayUniforms.uCityCenter;
+    shader.uniforms.uCityInner = swayUniforms.uCityInner;
+    shader.uniforms.uCityOuter = swayUniforms.uCityOuter;
+
+    shader.vertexShader = `
+      uniform float uTime;
+      uniform float uWindStrength;
+      uniform float uWindFreq;
+      uniform vec2 uCityCenter;
+      uniform float uCityInner;
+      uniform float uCityOuter;
+      ${shouldTrackGroundHeight ? "varying float vGroundHeight;" : ""}
+      attribute vec3 basePos;
+    ` + shader.vertexShader;
+
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <begin_vertex>",
+      `
+        vec3 transformed = basePos;
+${shouldTrackGroundHeight ? "\n        vGroundHeight = basePos.z;" : ""}
+
+        // (Previous city flattening logic removed from shader as basePos is already flat)
+
+        float swayPhase = (basePos.x + basePos.y) * uWindFreq + uTime * 0.5;
+        float sway = sin(swayPhase) * 0.3;
+        
+        // Apply wind sway only
+        transformed.z += sway * uWindStrength;
+      `,
+    );
+
+    if (shouldTrackGroundHeight) {
+      if (!shader.fragmentShader.includes("varying float vGroundHeight")) {
+        shader.fragmentShader = `varying float vGroundHeight;\n${shader.fragmentShader}`;
+      }
+
+      injectGroundTextureShader(shader, groundTextureState);
+    }
+  };
+
+  terrainMaterial = applyTextureBudgetToMaterial(terrainMaterial, {
+    renderer: scene?.userData?.renderer ?? null,
+  });
+
+  const terrain = new THREE.Mesh(geometry, terrainMaterial);
+  terrain.rotation.x = -Math.PI / 2;
+  terrain.receiveShadow = true;
+  terrain.name = "Terrain";
+  scene.add(terrain);
+
+  const stride = segments + 1;
+  terrain.userData.getHeightAt = (worldX, worldZ) => {
+    _scratchVec.set(worldX, 0, worldZ);
+    terrain.worldToLocal(_scratchVec);
+
+    const halfSize = size / 2;
+    const localX = _scratchVec.x + halfSize;
+    const localZ = _scratchVec.z + halfSize;
+
+    if (localX < 0 || localX > size || localZ < 0 || localZ > size) {
+      return null;
+    }
+
+    const percentX = localX / size;
+    const percentZ = localZ / size;
+    const gridX = percentX * segments;
+    const gridZ = percentZ * segments;
+
+    const x0 = Math.floor(gridX);
+    const x1 = Math.min(x0 + 1, segments);
+    const z0 = Math.floor(gridZ);
+    const z1 = Math.min(z0 + 1, segments);
+
+    const sx = gridX - x0;
+    const sz = gridZ - z0;
+
+    const index00 = z0 * stride + x0;
+    const index10 = z0 * stride + x1;
+    const index01 = z1 * stride + x0;
+    const index11 = z1 * stride + x1;
+
+    const uniforms = terrain.userData.swayUniforms;
+
+    const sampleSway = (vertexIndex) => {
+      if (!uniforms) return 0;
+      const windStrength = uniforms.uWindStrength?.value ?? 0;
+      if (windStrength === 0) return 0;
+
+      const planarX = basePosAttr.getX(vertexIndex);
+      const planarY = basePosAttr.getY(vertexIndex);
+      const windFreq = uniforms.uWindFreq?.value ?? 0;
+      const time = uniforms.uTime?.value ?? 0;
+      const swayPhase = (planarX + planarY) * windFreq + time * 0.5;
+      return Math.sin(swayPhase) * 0.3 * windStrength;
+    };
+
+    const h00 = baseHeights[index00] + sampleSway(index00);
+    const h10 = baseHeights[index10] + sampleSway(index10);
+    const h01 = baseHeights[index01] + sampleSway(index01);
+    const h11 = baseHeights[index11] + sampleSway(index11);
+
+    const h0 = h00 + (h10 - h00) * sx;
+    const h1 = h01 + (h11 - h01) * sx;
+    return h0 + (h1 - h0) * sz;
+  };
+
+  terrain.userData.swayUniforms = swayUniforms;
+  terrain.userData.groundTextureState = groundTextureState;
+
+  return terrain;
+}
+
+export function updateTerrain(terrain, time) {
+  if (!terrain) return;
+  const uniforms = terrain.userData.swayUniforms;
+  if (uniforms) {
+    uniforms.uTime.value = time;
+  }
+}
