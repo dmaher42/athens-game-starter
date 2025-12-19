@@ -64,14 +64,18 @@ export function updateLighting(scene, timeOfDay, config = DEFAULT_LIGHTING_CONFI
     ambientLight.intensity = MathUtils.lerp(ambientLight.intensity, 0.4, 0.05); // Min floor 0.4
     ambientLight.groundColor.setHex(0x111122);
     ambientLight.color.setHex(0x223355);
-    scene.fog.color.setHex(FOG_COLOR_NIGHT);
+    if (scene.fog) {
+      scene.fog.color.setHex(FOG_COLOR_NIGHT);
+    }
   } else {
     // Day Logic
     moonLight.intensity = MathUtils.lerp(moonLight.intensity, 0.0, 0.1);
     ambientLight.intensity = MathUtils.lerp(ambientLight.intensity, MathUtils.lerp(0.4, 0.8, dayFactor), 0.05);
     ambientLight.groundColor.setHex(GROUND_COLOR_DAY); // Applies Warm Earth
     ambientLight.color.setHex(SKY_COLOR_DAY);
-    scene.fog.color.setHex(FOG_COLOR_DAY);
+    if (scene.fog) {
+      scene.fog.color.setHex(FOG_COLOR_DAY);
+    }
   }
 
   // Calculate night factor (0 = full day, 1 = full night)
