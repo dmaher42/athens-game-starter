@@ -1587,14 +1587,24 @@ export async function createCity(scene, terrain, options = {}) {
   city.add(lotPads);
 
   const lotPadGeometry = new THREE.CylinderGeometry(0.8, 0.8, 0.08, 10);
-  const lotPadMaterial =
-    (await makeTiledPBR("textures/plaza/lot-pads", [2.4, 2.4])) ??
-    new THREE.MeshStandardMaterial({ color: 0xb7b3a7, roughness: 1, metalness: 0 });
+
+  // --- FIX START: Disable texture probe to stop 404 errors ---
+  // The 'makeTiledPBR' call probes for files that don't exist yet.
+  // We use the fallback material directly to keep the console clean.
+
+  // const lotPadMaterial =
+  //   (await makeTiledPBR("textures/plaza/lot-pads", [2.4, 2.4])) ??
+  const lotPadMaterial = new THREE.MeshStandardMaterial({ color: 0xb7b3a7, roughness: 1, metalness: 0 });
+
   lotPadMaterial.depthWrite = true;
   lotPadMaterial.transparent = false;
-  const foundationPadMaterial =
-    (await makeTiledPBR("textures/plaza/foundation-pads", [2.4, 2.4])) ??
-    new THREE.MeshStandardMaterial({ color: 0xbdb8ac, roughness: 0.95, metalness: 0 });
+
+  // const foundationPadMaterial =
+  //   (await makeTiledPBR("textures/plaza/foundation-pads", [2.4, 2.4])) ??
+  const foundationPadMaterial = new THREE.MeshStandardMaterial({ color: 0xbdb8ac, roughness: 0.95, metalness: 0 });
+
+  // --- FIX END ---
+
   foundationPadMaterial.depthWrite = true;
   foundationPadMaterial.transparent = false;
   city.userData.foundationPadMaterial = foundationPadMaterial;
