@@ -15,10 +15,6 @@ export const DEFAULT_LIGHTING_CONFIG = {
     step: 0.01,
   },
   presets: {
-    dawn: { phase: 0.25, exposure: 1.1, label: "Dawn", hotkey: "1" },
-    noon: { phase: 0.5, exposure: 1.0, label: "High Noon", hotkey: "2" },
-    dusk: { phase: 0.75, exposure: 1.1, label: "Dusk", hotkey: "3" },
-    night: { phase: 0.0, exposure: 0.6, label: "Night", hotkey: "4" },
     blue_hour: { phase: 0.2, exposure: 0.7, label: "Blue Hour" },
     golden_hour: { phase: 0.7, exposure: 0.9, label: "Golden Hour" },
     high_noon: { phase: 0.45, exposure: 1.2, label: "Bright Noon" },

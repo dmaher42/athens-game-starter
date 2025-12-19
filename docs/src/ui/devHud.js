@@ -119,10 +119,6 @@ export function mountDevHUD(options = {}) {
         setStatusLine("sea", message);
     };
     const defaultPresetOrder = [
-        { name: "dawn", label: "Dawn" },
-        { name: "noon", label: "High Noon" },
-        { name: "dusk", label: "Dusk" },
-        { name: "night", label: "Night" },
         { name: "blue_hour", label: "Blue Hour" },
         { name: "golden_hour", label: "Golden Hour" },
         { name: "high_noon", label: "Bright Noon" },
@@ -178,12 +174,7 @@ export function mountDevHUD(options = {}) {
             gap: "6px",
             marginTop: "6px",
         });
-        const presetHotkeyConfig = [
-            { name: "dawn", codes: ["Digit1", "Numpad1"], keys: ["1"] },
-            { name: "noon", codes: ["Digit2", "Numpad2"], keys: ["2"] },
-            { name: "dusk", codes: ["Digit3", "Numpad3"], keys: ["3"] },
-            { name: "night", codes: ["Digit4", "Numpad4"], keys: ["4"] },
-        ];
+        const presetHotkeyConfig = [];
         const activePresetNames = new Set(availablePresets.map((preset) => preset.name));
         const presetKeyBindings = new Map();
         for (const preset of availablePresets) {

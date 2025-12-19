@@ -20,10 +20,8 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
   };
 
   // Priority #1: Ensure the repo base (resolvedBase) is used first
-  pushJoined(resolvedBase, "config/districts.json");
-
-  // Use the helper as requested to ensure explicit alignment with instructions
   push(baseUrl("config/districts.json"));
+  pushJoined(resolvedBase, "config/districts.json");
 
   if (REPO_BASE_PATH && (!resolvedBase || !resolvedBase.includes(REPO_BASE_PATH))) {
     pushJoined(REPO_BASE_PATH, "config/districts.json");
