@@ -6,13 +6,26 @@ export { getSeaLevelY, setSeaLevelY } from "./seaLevelState.js";
 const resolveSeaLevelY = () => getSeaLevelY();
 
 // Key anchors (coastal → uphill)
+// FIXED: All heights are now relative to sea level to prevent desync
 export const HARBOR_CENTER_3D = new THREE.Vector3(
   -120,
   resolveSeaLevelY(),
   80,
 );
-export const AGORA_CENTER_3D = new THREE.Vector3(-50, 30, 20); // relocated to plateau to avoid steep ramp
-export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, 34, 10); // hill crown
+
+// Agora was hardcoded to 8; now relative (Sea + 8)
+export const AGORA_CENTER_3D = new THREE.Vector3(
+  -80, 
+  resolveSeaLevelY() + 8, 
+  40
+); 
+
+// Acropolis was hardcoded to 14; now relative (Sea + 14)
+export const ACROPOLIS_PEAK_3D = new THREE.Vector3(
+  -40, 
+  resolveSeaLevelY() + 14, 
+  10
+);
 
 // Zones
 export const HARBOR_EXCLUDE_RADIUS = 110; // keep shoreline clear
@@ -33,7 +46,8 @@ export function getHarborSeaLevel() {
   return getSeaLevelY();
 }
 
-export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, 0, 25);
+// FIXED: City chunk now respects sea level base (Sea + 1.5m) to stay dry
+export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, resolveSeaLevelY() + 1.5, 25);
 export const CITY_CHUNK_SIZE = new THREE.Vector2(140, 110); // city grid footprint
 export const CITY_SEED = 0x4d534349;
 
@@ -97,7 +111,13 @@ export const HARBOR_WATER_CENTER = new THREE.Vector3(
   HARBOR_CENTER_3D.z + HARBOR_WATER_OFFSET.y
 );
 
+// Subscribe to changes so the whole city lifts/drops with the tide configuration
 subscribeSeaLevelChange((seaLevelY) => {
   HARBOR_CENTER_3D.y = seaLevelY;
   HARBOR_WATER_CENTER.y = seaLevelY;
+  
+  // Update city districts relative to new sea level
+  AGORA_CENTER_3D.y = seaLevelY + 8;
+  ACROPOLIS_PEAK_3D.y = seaLevelY + 14;
+  CITY_CHUNK_CENTER.y = seaLevelY + 1.5;
 });
