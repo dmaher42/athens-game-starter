@@ -2,7 +2,8 @@
 
 import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils } from "three";
 
-// Predefined colors
+// --- COLORS CONFIGURATION ---
+
 const SUN_COLOR_DAWN = new Color("#ffb37f");
 const SUN_COLOR_NOON = new Color("#ffffff");
 const SUN_COLOR_DUSK = new Color("#ff9f76");
@@ -29,6 +30,8 @@ export function createLighting(scene) {
   sunLight.shadow.mapSize.set(2048, 2048);
   sunLight.shadow.radius = 2;
   sunLight.shadow.bias = -0.0005;
+
+  // Setup initial sun position
   const sunElevation = MathUtils.degToRad(35);
   const sunAzimuth = Math.PI / 4;
   const sunDirection = new Vector3(
@@ -39,6 +42,7 @@ export function createLighting(scene) {
   sunLight.position.copy(sunDirection).multiplyScalar(150);
   sunLight.target.position.set(0, 0, 0);
   sunLight.target.updateMatrixWorld();
+
   const cam = sunLight.shadow.camera;
   cam.near = 1;
   cam.far = 300;
