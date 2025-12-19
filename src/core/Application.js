@@ -86,6 +86,7 @@ import {
   parseBooleanQuery,
 } from "../config/EngineConfig.js";
 import { lightingConfig } from "../config/LightingConfig.js";
+import { CollectiblesManager } from "../world/collectibles.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "../features/aristotle-texture.js";
 import { applyGravelToRoads } from "../features/roads-gravel.js";
@@ -719,6 +720,52 @@ export class Application {
     // Rebuild the collider again now that the civic district geometry exists so the
     // player can stand on the new plazas instead of falling through them.
     envCollider.refresh();
+
+    // 1. Setup UI for Score
+    const scoreContainer = document.createElement("div");
+    Object.assign(scoreContainer.style, {
+      position: "fixed",
+      top: "20px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: "rgba(0, 0, 0, 0.6)",
+      color: "#ffd700", // Gold text
+      padding: "10px 20px",
+      borderRadius: "20px",
+      fontFamily: "serif",
+      fontSize: "24px",
+      fontWeight: "bold",
+      border: "2px solid #ffd700",
+      pointerEvents: "none",
+      textShadow: "0px 2px 4px black",
+    });
+    scoreContainer.innerText = "Scrolls Found: 0 / 0";
+    document.body.appendChild(scoreContainer);
+
+    // 2. Initialize Collectibles
+    const collectibles = new CollectiblesManager(worldRoot);
+
+    // Update UI callback
+    collectibles.onScoreChange = (score, total) => {
+      scoreContainer.innerText = `Scrolls Found: ${score} / ${total}`;
+      if (score === total) {
+        scoreContainer.innerText = "ALL WISDOM COLLECTED!";
+        scoreContainer.style.color = "#aaffaa"; // Green
+        scoreContainer.style.borderColor = "#aaffaa";
+      }
+    };
+
+    // 3. Spawn Scrolls at Landmarks (Guaranteed finds)
+    collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z);
+    collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z);
+    collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z);
+
+    // 4. Spawn Random Scrolls around the city
+    // Use the city radius we defined in locations.js
+    collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);
+
+    // Trigger initial UI update
+    collectibles.onScoreChange(0, collectibles.total);
 
     const input = new InputMap(renderer.domElement);
     const player = new PlayerController(input, envCollider, {
@@ -1679,6 +1726,10 @@ export class Application {
 
       // Update soundscape once per frame (player position optional)
       soundscape.update(player?.position);
+
+      if (collectibles && player?.object) {
+        collectibles.update(deltaTime, player.object.position);
+      }
 
       if (thirdPersonCamera && thirdPersonEnabled) {
         player.cameraYaw = thirdPersonCamera.getYaw();
