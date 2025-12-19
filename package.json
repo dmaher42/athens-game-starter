@@ -11,6 +11,7 @@
     "generate:favicon": "node scripts/generate-favicon.mjs",
     "download:aristotle": "node scripts/download-aristotle-tomb.mjs",
     "download:draco": "node scripts/download-draco-decoder.mjs",
+    "compress:assets": "gltf-transform optimize public/models/landmarks/*.glb public/models/landmarks/ --texture-compress ktx2 --compress draco",
     "postinstall": "npm run download:draco && npm run generate:favicon",
     "verification": "playwright test"
   },
@@ -20,6 +21,7 @@
     "tslib": "^2.8.1"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.2.1",
     "@playwright/test": "^1.46.0",
     "@types/node": "^24.7.2",
     "@types/three": "^0.180.0",
