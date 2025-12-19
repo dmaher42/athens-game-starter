@@ -134,7 +134,6 @@ export async function createCity(scene, terrain, options = {}) {
     const mesh = new THREE.Mesh(merged, material);
     mesh.receiveShadow = true;
     mesh.userData.noCollision = true; // Terrain handles collision
-    // mesh.renderOrder = 1; // Removed to let Z-buffer handle it
     city.add(mesh);
   }
 
@@ -155,14 +154,12 @@ export async function createCity(scene, terrain, options = {}) {
     
     for (const road of roadCurves) {
         // Approximate closest point on curve
-        // (For true precision we'd search t=0..1, but sampling is fast enough here)
         const samples = road.getSpacedPoints(10);
         for (let k=0; k<samples.length; k++) {
             const pt = samples[k];
             const d = Math.hypot(x - pt.x, z - pt.z);
             if (d < bestDist) {
                 bestDist = d;
-                // Get tangent at this point (approximate)
                 const tVal = k / (samples.length - 1);
                 bestTangent = road.getTangentAt(tVal);
             }
@@ -237,7 +234,6 @@ export async function createCity(scene, terrain, options = {}) {
     roofs.castShadow = true; roofs.receiveShadow = true;
 
     const dummy = new THREE.Object3D();
-    const _color = new THREE.Color();
 
     buildingPlacements.forEach((b, i) => {
         // Wall
@@ -301,7 +297,6 @@ export async function createCity(scene, terrain, options = {}) {
           if (!clear) continue;
           
           // Check road distance (keep trees off the road)
-          // Simple check: too close to center = bad
           if (Math.hypot(tx-origin.x, tz-origin.z) < 5.0) continue; 
 
           const y = sampleHeight(terrain, tx, tz, -999);
@@ -328,4 +323,15 @@ export async function createCity(scene, terrain, options = {}) {
 
   applyTextureBudgetToObject(city, scene?.userData?.renderer);
   return city;
+}
+
+export function updateCityLighting(city, nightFactor = 0, opts = {}) {
+  if (!city) return;
+}
+
+export function createHillCity(scene, terrain, curve, opts = {}) {
+  const group = new THREE.Group();
+  group.name = "HillCity";
+  scene.add(group);
+  return group;
 }
