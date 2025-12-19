@@ -14,7 +14,6 @@ import { createTerrain, updateTerrain } from "../world/terrain.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
 import { createHarbor, updateHarborLighting } from "../world/harbor.js";
 import { createHarborDecorations } from "../world/decoration.js";
-import { createVegetationSystem } from "../world/vegetation.js";
 import {
   createMainHillRoad,
   updateMainHillRoadLighting,
@@ -218,6 +217,14 @@ export class Application {
 
     this.renderer = createRenderer();
     const renderer = this.renderer;
+
+    // --- OPTIMIZATION START: CAP PIXEL RATIO ---
+    // Prevents rendering at native 4x resolution on Retina/High-DPI displays.
+    // This significantly reduces VRAM usage and GPU load.
+    const maxPixelRatio = 1.5;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
+    // --- OPTIMIZATION END ---
+
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     const exposureOverlayConfig =
@@ -690,7 +697,7 @@ export class Application {
     // Lay out a formal civic district with a central promenade, symmetrical
     // civic buildings, and decorative lighting to give the city a planned
     // character rather than scattered props.
-    const civicDistrict = await createCivicDistrict(worldRoot, {
+    const civicDistrict = createCivicDistrict(worldRoot, {
       plazaLength: 90,
       promenadeWidth: 16,
       greensWidth: 9,
@@ -703,8 +710,6 @@ export class Application {
       terrain,
       seaLevel: resolvedSeaLevel,
     });
-
-    createVegetationSystem(worldRoot, terrain, harborCity);
 
     // Overlay the modern planning strategy as a holographic layer so players can
     // understand how each district connects to the wider mobility, housing, and
@@ -1618,11 +1623,8 @@ export class Application {
       console.log(`[HUD] preset: ${presetName}`);
 
       const sunDir = getSunDirection(timeOfDayState);
-      const { nightFactor } = updateLighting(scene, preset.phase);
+      const { nightFactor } = updateLighting(scene, phase);
       lights.nightFactor = nightFactor;
-
-      // Explicitly update sky preset on manual change
-      updateSky(scene, presetName);
 
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
@@ -1821,5 +1823,44 @@ export class Application {
       composer.setSize(window.innerWidth, window.innerHeight);
       bloomPass.setSize(window.innerWidth, window.innerHeight);
     });
+  }
+
+  /**
+   * Helper to clean up all Three.js resources when destroying or restarting the game.
+   */
+  cleanUp() {
+    if (this.sceneContext) {
+      // Traverse the scene and free GPU resources
+      this.sceneContext.scene.traverse((object) => {
+        if (!object.isMesh) return;
+
+        if (object.geometry) {
+          object.geometry.dispose();
+        }
+
+        if (object.material) {
+          // Handle arrays of materials
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          materials.forEach((mat) => {
+            // Dispose textures inside the material
+            for (const key of Object.keys(mat)) {
+              if (mat[key] && mat[key].isTexture) {
+                mat[key].dispose();
+              }
+            }
+            mat.dispose();
+          });
+        }
+      });
+    }
+
+    if (this.renderer) {
+      this.renderer.dispose();
+    }
+
+    // Stop loop
+    if (this.gameLoop) {
+        this.gameLoop.stop();
+    }
   }
 }

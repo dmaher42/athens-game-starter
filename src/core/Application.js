@@ -3,7 +3,7 @@
 import * as THREE from "three";
 import { Soundscape } from "../audio/soundscape.js";
 import { mountAudioMixer } from "../ui/audioMixer.ts";
-import { createSky, updateSky, setTimeOfDayPhase } from "../world/sky.js";
+import { createSky, updateSky, getSunDirection, setTimeOfDayPhase } from "../world/sky.js";
 import { createLighting, updateLighting } from "../world/lighting.js";
 import {
   createInteractor,
@@ -1622,8 +1622,10 @@ export class Application {
       renderer.toneMappingExposure = preset.exposure;
       console.log(`[HUD] preset: ${presetName}`);
 
-      const sunDir = updateSky(skyObj, timeOfDayState);
-      updateLighting(lights, sunDir);
+      const sunDir = getSunDirection(timeOfDayState);
+      const { nightFactor } = updateLighting(scene, phase);
+      lights.nightFactor = nightFactor;
+
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
         timeOfDayPhase: phase,
@@ -1658,10 +1660,12 @@ export class Application {
 
       const phase = timeOfDayState.timeOfDayPhase ?? 0;
       timeOfDayState.elapsedSeconds = elapsed;
-      const sunDir = updateSky(skyObj, timeOfDayState);
+      const sunDir = getSunDirection(timeOfDayState);
 
       // Update sky dome and atmospheric lighting each frame.
-      updateLighting(lights, sunDir);
+      const { nightFactor } = updateLighting(scene, phase);
+      lights.nightFactor = nightFactor;
+
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
         timeOfDayPhase: phase,
