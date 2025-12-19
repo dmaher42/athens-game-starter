@@ -13,7 +13,7 @@ let sunLight;
 let ambientLight;
 let moonLight;
 let sceneRef;
-let currentPresetName = 'noon';
+let currentPresetName = 'high_noon';
 
 export function createLighting(scene, config = DEFAULT_LIGHTING_CONFIG) {
     sceneRef = scene;
@@ -42,7 +42,7 @@ export function updateLighting(scene, timeOfDay, config = DEFAULT_LIGHTING_CONFI
         return { dayFactor: 1, nightFactor: 0 };
     }
 
-    let activePreset = 'noon';
+    let activePreset = 'high_noon';
     let minDiff = 100;
     for (const [key, preset] of Object.entries(config.presets)) {
         const diff = Math.abs(preset.phase - timeOfDay);
