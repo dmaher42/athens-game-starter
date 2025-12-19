@@ -50,7 +50,7 @@ function cloneTexture(texture, options = {}) {
 
 const MARBLE_TEXTURE_DEFAULTS = {
   map: "textures/marble_base.jpg",
-  normal: "textures/marble_normal-dx.jpg",
+  normal: "textures/marble_normal-dx.jpg", // Updated to -dx per instructions
   rough: "textures/marble_rough.jpg",
   ao: "textures/marble_ao.jpg",
 };

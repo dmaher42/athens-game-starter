@@ -118,7 +118,26 @@ export function createVegetationSystem(scene, terrain, cityGroup) {
         });
     }
 
-    // 3. Terrain Shrubs on Slopes
+    // 3. Acropolis Context (Central Hill)
+    // Place cypress on the central hill (Radius < 80m) to give context
+    const centralCount = 40;
+    for (let i = 0; i < centralCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * 80;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+
+        const y = sampleHeight(terrain, x, z);
+        if (y !== null && y > 10) { // Ensure it's not underwater or too low
+             const cypress = createCypress(materials);
+             cypress.position.set(x, y, z);
+             // Random scale variation
+             cypress.scale.multiplyScalar(THREE.MathUtils.randFloat(0.8, 1.4));
+             vegetationGroup.add(cypress);
+        }
+    }
+
+    // 4. Terrain Shrubs on Slopes
     // We can sample terrain at random points
     const scatterCount = 400;
 
