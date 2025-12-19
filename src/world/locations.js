@@ -1,7 +1,12 @@
 import * as THREE from "three";
-import { getSeaLevelY, setSeaLevelY, subscribeSeaLevelChange } from "./seaLevelState.js";
+import {
+  getSeaLevelY,
+  setSeaLevelY,
+  subscribeSeaLevelChange,
+  SEA_LEVEL_Y,
+} from "./seaLevelState.js";
 
-export { getSeaLevelY, setSeaLevelY } from "./seaLevelState.js";
+export { getSeaLevelY, setSeaLevelY, SEA_LEVEL_Y } from "./seaLevelState.js";
 
 const resolveSeaLevelY = () => getSeaLevelY();
 

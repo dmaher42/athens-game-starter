@@ -8,6 +8,7 @@ import {
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_NORMAL_CANDIDATES,
   getSeaLevelY,
+  SEA_LEVEL_Y,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
 
@@ -256,6 +257,35 @@ function parseClipPadding(padding) {
   return resolved;
 }
 
+function sampleTerrainCeiling(bounds, sampler) {
+  if (!bounds || typeof sampler !== "function") {
+    return null;
+  }
+
+  const { west, east, north, south } = bounds;
+  const samples = [];
+
+  for (const fraction of SHORE_PROBE_X_FRACTIONS) {
+    const x = THREE.MathUtils.lerp(west, east, fraction);
+    samples.push(sampler(x, north));
+    samples.push(sampler(x, south));
+  }
+
+  for (const fraction of SHORE_PROBE_Z_FRACTIONS) {
+    const z = THREE.MathUtils.lerp(north, south, fraction);
+    samples.push(sampler(west, z));
+    samples.push(sampler(east, z));
+  }
+
+  const finiteSamples = samples.filter(Number.isFinite);
+  if (finiteSamples.length === 0) {
+    return null;
+  }
+
+  const minHeight = Math.min(...finiteSamples);
+  return minHeight - TERRAIN_CLEARANCE_EPSILON;
+}
+
 export async function createOcean(scene, options = {}) {
   // remove prior water meshes if any
   scene.traverse((o) => {
@@ -268,16 +298,26 @@ export async function createOcean(scene, options = {}) {
     options.waterNormalsCandidates || HARBOR_WATER_NORMAL_CANDIDATES
   );
 
+  const heightSampler = resolveHeightSampler(scene, options);
   const seaLevel = Number.isFinite(options.seaLevel)
     ? options.seaLevel
-    : getSeaLevelY();
+    : Number.isFinite(getSeaLevelY())
+      ? getSeaLevelY()
+      : SEA_LEVEL_Y;
   const bounds = options.bounds || HARBOR_WATER_BOUNDS;
   const width = Math.abs(bounds.east - bounds.west);
   const height = Math.abs(bounds.south - bounds.north);
   const centerX = (bounds.west + bounds.east) / 2;
   const centerZ = (bounds.north + bounds.south) / 2;
 
-  const geometry = new THREE.PlaneGeometry(width, height);
+  const paddedWidth = Math.max(width, (HARBOR_WATER_SIZE?.x ?? width) + 4);
+  const paddedHeight = Math.max(height, (HARBOR_WATER_SIZE?.y ?? height) + 4);
+  const terrainCeiling = sampleTerrainCeiling(bounds, heightSampler);
+  const resolvedSeaLevel = Number.isFinite(terrainCeiling)
+    ? Math.min(seaLevel, terrainCeiling)
+    : seaLevel;
+
+  const geometry = new THREE.PlaneGeometry(paddedWidth, paddedHeight);
   const water = new Water(geometry, {
     textureWidth: 512,
     textureHeight: 512,
@@ -290,9 +330,10 @@ export async function createOcean(scene, options = {}) {
   });
 
   water.rotation.x = -Math.PI / 2;
-  water.position.set(centerX, seaLevel, centerZ);
+  water.position.set(centerX, resolvedSeaLevel, centerZ);
   water.name = "AegeanOcean";
   water.userData.isWater = true;
+  water.userData.seaLevel = resolvedSeaLevel;
 
   // Custom wave scale fix
   if (waterNormals) {
@@ -304,6 +345,33 @@ export async function createOcean(scene, options = {}) {
   }
 
   scene.add(water);
+
+  if (heightSampler) {
+    const harborTerrainHeight = heightSampler(
+      HARBOR_WATER_CENTER.x,
+      HARBOR_WATER_CENTER.z,
+    );
+    if (water.material) {
+      water.material.depthTest = true;
+    }
+
+    if (import.meta.env?.DEV) {
+      console.info("[ocean] SEA_LEVEL_Y", SEA_LEVEL_Y.toFixed(3));
+      console.info("[ocean] ocean.y", water.position.y.toFixed(3));
+      if (Number.isFinite(harborTerrainHeight)) {
+        console.info(
+          "[ocean] terrain@harbor",
+          harborTerrainHeight.toFixed(3),
+        );
+      } else {
+        console.info("[ocean] terrain@harbor unavailable");
+      }
+    }
+  } else if (import.meta.env?.DEV) {
+    console.info("[ocean] SEA_LEVEL_Y", SEA_LEVEL_Y.toFixed(3));
+    console.info("[ocean] ocean.y", water.position.y.toFixed(3));
+    console.info("[ocean] terrain@harbor unavailable");
+  }
 
   return water;
 }
