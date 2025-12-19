@@ -672,7 +672,7 @@ export class Application {
     });
 
     // Hill-city buildings (uses terrain sampler + road curve)
-    const hillCity = createHillCity(worldRoot, terrain, mainRoad, {
+    const hillCity = await createHillCity(worldRoot, terrain, mainRoad, {
       seed: 42,
       buildingCount: 140,
       foundationPadMaterial:
