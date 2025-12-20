@@ -2,7 +2,6 @@ node_modules/
 dist/
 .bundleless/
 # Build output is docs/. It is published by Pages via CI.
-/docs/
 !/docs/.gitkeep
 # Local development files
 *.log
