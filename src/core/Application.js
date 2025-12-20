@@ -8,7 +8,11 @@ import {
   queueSceneInteractable,
 } from "../world/interactions.js";
 import { attachCrosshair } from "../world/ui/crosshair.js";
-import { createTerrain, updateTerrain } from "../world/terrain.js";
+import {
+  createTerrain,
+  updateTerrain,
+  updateTerrainCoverageMask,
+} from "../world/terrain.js";
 import { createHorizon } from "../world/horizon.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
 import { createHarbor, updateHarborLighting } from "../world/harbor.js";
@@ -37,6 +41,7 @@ import {
   ACROPOLIS_PEAK_3D,
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_NORMAL_CANDIDATES,
+  MAIN_ROAD_WIDTH,
   getSeaLevelY,
   setSeaLevelY,
 } from "../world/locations.js";
@@ -100,6 +105,7 @@ import {
 import { GameLoop } from "./GameLoop.js";
 import { VillagerSystem } from "../world/traffic.js";
 import { createAtmosphericParticles } from "../world/particles.js";
+import { scatterGroundProps } from "../world/groundProps.js";
 
 console.info("[build]", engineConfig.build || {});
 
@@ -778,6 +784,22 @@ export class Application {
     } catch (e) {
       console.warn("Gravel roads hook skipped:", e);
     }
+
+    updateTerrainCoverageMask(terrain, {
+      buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
+      roadCurves: roadCurves ?? [],
+      mainRoadCurve: mainRoad ?? null,
+      mainRoadWidth: MAIN_ROAD_WIDTH,
+      roadWidth: 3.2,
+    });
+
+    scatterGroundProps(worldRoot, terrain, {
+      buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
+      roadCurves: roadCurves ?? [],
+      mainRoadCurve: mainRoad ?? null,
+      roadPadding: MAIN_ROAD_WIDTH * 0.7,
+      seaLevel: resolvedSeaLevel,
+    });
 
     // Rebuild the static environment collider once after placing roads, plazas,
     // and the hill city so the player can't walk through them.

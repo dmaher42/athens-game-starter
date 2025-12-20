@@ -728,6 +728,7 @@ export async function createCity(scene, terrain, options = {}) {
   applyTextureBudgetToObject(city, scene?.userData?.renderer);
   city.userData = city.userData || {};
   city.userData.roadCurves = roadCurves;
+  city.userData.buildingPlacements = buildingPlacements;
   return { city, roadCurves };
 }
 
