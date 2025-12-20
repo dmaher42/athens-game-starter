@@ -808,7 +808,7 @@ export class Application {
     // Lay out a formal civic district with a central promenade, symmetrical
     // civic buildings, and decorative lighting to give the city a planned
     // character rather than scattered props.
-    const civicDistrict = createCivicDistrict(worldRoot, {
+    const civicDistrict = await createCivicDistrict(worldRoot, {
       plazaLength: 90,
       promenadeWidth: 16,
       greensWidth: 9,

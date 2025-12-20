@@ -1,5 +1,10 @@
 import * as THREE from "three";
-import { getSeaLevelY, HARBOR_WATER_BOUNDS, HARBOR_WATER_EAST_LIMIT } from "./locations.js";
+import {
+  getSeaLevelY,
+  HARBOR_WATER_BOUNDS,
+  HARBOR_WATER_EAST_LIMIT,
+  AGORA_CENTER_3D,
+} from "./locations.js";
 import {
   createGroundTextureState,
   injectGroundTextureShader,
@@ -100,6 +105,41 @@ function getElevation(x, z, seaLevel) {
 
   // Harbor band flattening & sand pad for warehouses/docks
   height = clampHarborBandHeight(x, z, seaLevel, height);
+
+  // Agora flattening:
+  // Flatten a circular region around the Agora center to support the large civic district grid tiles.
+  // This prevents z-fighting where 40m wide road tiles intersect with noisy terrain.
+  const agoraDist = Math.hypot(x - AGORA_CENTER_3D.x, z - AGORA_CENTER_3D.z);
+  const AGORA_FLAT_RADIUS = 80;
+  const AGORA_BLEND_RADIUS = 120;
+  if (agoraDist < AGORA_BLEND_RADIUS) {
+    const targetY = AGORA_CENTER_3D.y;
+    let blend = 1.0;
+    if (agoraDist > AGORA_FLAT_RADIUS) {
+      blend = 1.0 - (agoraDist - AGORA_FLAT_RADIUS) / (AGORA_BLEND_RADIUS - AGORA_FLAT_RADIUS);
+      blend = THREE.MathUtils.smoothstep(blend, 0, 1);
+    }
+    height = THREE.MathUtils.lerp(height, targetY, blend);
+  }
+
+  // Also flatten along the main north-south avenue (GridX ~ 0, which is X ~ -80)
+  // The avenue is ~120m wide (3 blocks), so we need a strip from Z-10 to Z+20 blocks.
+  // X range: -80 +/- 60m.
+  const distFromAxis = Math.abs(x - AGORA_CENTER_3D.x);
+  const AVENUE_FLAT_WIDTH = 50;
+  const AVENUE_BLEND_WIDTH = 80;
+  // Restrict to the city grid Z-range roughly (-360 to +800 relative to Agora? No, grid is relative).
+  // Let's just flatten the strip near the city center to avoid affecting distant hills too much.
+  if (z > -200 && z < 200 && distFromAxis < AVENUE_BLEND_WIDTH) {
+     const targetY = AGORA_CENTER_3D.y;
+     let blend = 1.0;
+     if (distFromAxis > AVENUE_FLAT_WIDTH) {
+        blend = 1.0 - (distFromAxis - AVENUE_FLAT_WIDTH) / (AVENUE_BLEND_WIDTH - AVENUE_FLAT_WIDTH);
+        blend = THREE.MathUtils.smoothstep(blend, 0, 1);
+     }
+     // Blend current height (which might already be modified by Agora circle) with target
+     height = THREE.MathUtils.lerp(height, targetY, blend);
+  }
 
   if (z > CITY_BOUNDARY_Z && height < seaLevel + CITY_MIN_HEIGHT) {
     height = seaLevel + CITY_MIN_HEIGHT;
