@@ -381,7 +381,25 @@ export function injectGroundTextureShader(shader, state) {
     );
   }
 
-  const header = [];
+  const groundHeightVarying = "varying float vGroundHeight;";
+
+  if (!shader.vertexShader.includes(groundHeightVarying)) {
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <uv_pars_vertex>",
+      `#include <uv_pars_vertex>\n${groundHeightVarying}`,
+    );
+  }
+
+  if (!shader.vertexShader.includes("vGroundHeight = position.z;")) {
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <begin_vertex>",
+      "#include <begin_vertex>\n  vGroundHeight = position.z;",
+    );
+  }
+
+  const header = shader.fragmentShader.includes(groundHeightVarying)
+    ? []
+    : [groundHeightVarying];
   const mixCode = [];
 
   state.detailLayers.forEach((layer, index) => {
