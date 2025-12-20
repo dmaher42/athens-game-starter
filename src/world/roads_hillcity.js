@@ -5,6 +5,7 @@ import {
   AGORA_CENTER_3D,
   ACROPOLIS_PEAK_3D,
 } from "./locations.js";
+import { roadNoise } from "../utils/noise.js";
 
 const SURFACE_OFFSET = 0.05;
 
@@ -26,8 +27,8 @@ export function createMainHillRoad(scene, terrain) {
 
   // Road ribbon geometry in WORLD space (XZ follows curve; Y sampled from terrain)
   const segments = 180;
-  const width = MAIN_ROAD_WIDTH;
-  const geo = new THREE.PlaneGeometry(width, 1, 1, segments);
+  const baseWidth = MAIN_ROAD_WIDTH;
+  const geo = new THREE.PlaneGeometry(baseWidth, 1, 1, segments);
   const pos = geo.attributes.position;
   const tangent = new THREE.Vector3();
   const dir = new THREE.Vector3();
@@ -40,13 +41,40 @@ export function createMainHillRoad(scene, terrain) {
     const p = curve.getPoint(t);
     const next = curve.getPoint(Math.min(1, t + 1 / segments));
     tangent.subVectors(next, p).normalize();
+
+    // Calculate perpendicular offset logic:
+    // We want a vector perpendicular to tangent (x, z).
+    // Perp is (-z, x).
+    // angle = atan2(tangent.x, tangent.z) is the bearing.
+    // cos(angle) ~ z, sin(angle) ~ x.
+    // So tangent ~ (sin(angle), cos(angle)).
+    // Perp ~ (cos(angle), -sin(angle)).
+    // Check: dot product = sin*cos - cos*sin = 0. Correct.
+
     const angle = Math.atan2(tangent.x, tangent.z);
+
+    // Apply lateral noise
+    const lateralOffset = roadNoise(t * 12, 999) * 0.6; // +/- 0.6m
+    // Move P perpendicular to tangent
+    p.x += Math.cos(angle) * lateralOffset;
+    p.z += -Math.sin(angle) * lateralOffset;
+
+    // Apply width noise
+    const widthNoise = roadNoise(t * 8 + 50, 888) * 0.15; // +/- 15%
+    const currentWidth = baseWidth * (1 + widthNoise);
+
     for (let j = 0; j < 2; j++) {
       const vertexIndex = i * 2 + j;
       const side = j === 0 ? -0.5 : 0.5;
-      dir.set(Math.sin(angle) * side * width, 0, Math.cos(angle) * side * width);
+
+      // Calculate vertex position relative to center P
+      // dir vector should be perpendicular to tangent
+      dir.set(Math.cos(angle) * side * currentWidth, 0, -Math.sin(angle) * side * currentWidth);
+
       const x = p.x + dir.x;
       const z = p.z + dir.z;
+
+      // Sample height at the specific vertex position
       let y = getH ? getH(x, z) : p.y;
       if (!Number.isFinite(y)) y = p.y;
       y += 0.08; // increased lift to avoid z-fighting with ground
