@@ -1,4 +1,26 @@
 // Application.js
+// 1. Add these imports at the top
+import { createHorizon } from "../world/horizon.js";
+import { createOcean } from "../world/ocean.js";
+
+// 2. Find your _createWorld or init function
+async _createWorld() {
+    // ... (Your existing city/terrain code) ...
+
+    // --- ADD THIS BLOCK ---
+    console.log("Generating Horizon...");
+    this.horizon = createHorizon(this.scene);
+    
+    // Ensure Ocean exists (Horizon is just the floor, Ocean is the water surface)
+    if (!this.ocean) {
+        this.ocean = createOcean(this.scene);
+    }
+    // Scale ocean to touch the mountains
+    if (this.ocean) {
+         this.ocean.scale.set(100, 1, 100); 
+    }
+    // ----------------------
+}
 
 import * as THREE from "three";
 import { Soundscape } from "../audio/soundscape.js";
