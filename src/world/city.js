@@ -72,6 +72,21 @@ function pointToSegmentDistance(px, pz, p1x, p1z, p2x, p2z) {
   return Math.hypot(px - cx, pz - cz);
 }
 
+function isPointNearRoad(x, z, segments, buffer = 0) {
+  for (const segment of segments) {
+    const dist = pointToSegmentDistance(
+      x,
+      z,
+      segment.p1.x,
+      segment.p1.z,
+      segment.p2.x,
+      segment.p2.z,
+    );
+    if (dist <= segment.radius + buffer) return true;
+  }
+  return false;
+}
+
 // Draw a visible road mesh along a curve segment
 function createVisibleRoadSegment(p1, p2, w1, w2, collect) {
   const half1 = w1 * 0.5;
@@ -680,49 +695,92 @@ export async function createCity(scene, terrain, options = {}) {
       trunkGeo.translate(0, 0.75, 0);
       const leafGeo = new THREE.DodecahedronGeometry(1.0);
       leafGeo.translate(0, 2.0, 0);
-      
-      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
-      const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 });
-      
+
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5d4037, vertexColors: true });
+      const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, vertexColors: true });
+
       const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
       const leaves = new THREE.InstancedMesh(leafGeo, leafMat, treeCount);
       trunks.castShadow = true; leaves.castShadow = true;
-      
+
       let tIdx = 0;
       const dummyT = new THREE.Object3D();
-      
-      for(let i=0; i < SCATTER_ATTEMPTS && tIdx < treeCount; i++) {
+
+      const baseTrunkColor = new THREE.Color(0x5d4037);
+      const baseLeafColor = new THREE.Color(0x2e7d32);
+      const clusterCount = Math.max(3, Math.floor(treeCount / 10));
+      const clusters = [];
+      const roadBuffer = 1.0;
+      const civicRadius = (typeof AGORA_CENTER_3D?.x === "number") ? 28 : 0;
+
+      for (let i = 0; i < clusterCount * 5 && clusters.length < clusterCount; i++) {
           const r = Math.sqrt(random()) * CITY_AREA_RADIUS;
           const th = random() * Math.PI * 2;
-          const tx = origin.x + r * Math.cos(th);
-          const tz = origin.z + r * Math.sin(th);
-          
+          const cx = origin.x + r * Math.cos(th);
+          const cz = origin.z + r * Math.sin(th);
+
+          if (isPointNearRoad(cx, cz, roadSegments, roadBuffer)) continue;
+
           let clear = true;
           for (const p of placedPoints) {
-              if (Math.hypot(tx-p.x, tz-p.z) < p.radius + 1.5) { clear = false; break; }
+              if (Math.hypot(cx - p.x, cz - p.z) < p.radius + 1.5) { clear = false; break; }
           }
           if (!clear) continue;
-          
-          if (Math.hypot(tx-origin.x, tz-origin.z) < 5.0) continue; 
 
-          const y = sampleHeight(terrain, tx, tz, -999);
-          if (y > seaLevel + 1.5) {
-              dummyT.position.set(tx, y, tz);
-              dummyT.rotation.y = random() * Math.PI;
-              const s = 0.7 + random() * 0.6;
-              dummyT.scale.set(s,s,s);
-              dummyT.updateMatrix();
-              
-              trunks.setMatrixAt(tIdx, dummyT.matrix);
-              leaves.setMatrixAt(tIdx, dummyT.matrix);
-              tIdx++;
+          clusters.push({ x: cx, z: cz });
+      }
+
+      const treesPerCluster = Math.max(3, Math.floor(treeCount / Math.max(clusters.length, 1)));
+
+      for (const cluster of clusters) {
+          for (let i = 0; i < treesPerCluster && tIdx < treeCount; i++) {
+              const jitterAngle = random() * Math.PI * 2;
+              const jitterRadius = 1.5 + random() * 4.0;
+              const tx = cluster.x + Math.cos(jitterAngle) * jitterRadius;
+              const tz = cluster.z + Math.sin(jitterAngle) * jitterRadius;
+
+              if (Math.hypot(tx - origin.x, tz - origin.z) < 5.0) continue;
+              if (isPointNearRoad(tx, tz, roadSegments, roadBuffer)) continue;
+
+              let clear = true;
+              for (const p of placedPoints) {
+                  if (Math.hypot(tx - p.x, tz - p.z) < p.radius + 1.5) { clear = false; break; }
+              }
+              if (!clear) continue;
+
+              if (civicRadius > 0) {
+                  const distAgora = Math.hypot(tx - AGORA_CENTER_3D.x, tz - AGORA_CENTER_3D.z);
+                  if (distAgora < civicRadius && random() < 0.6) continue;
+              }
+
+              const y = sampleHeight(terrain, tx, tz, -999);
+              if (y > seaLevel + 1.5) {
+                  dummyT.position.set(tx, y, tz);
+                  dummyT.rotation.y = random() * Math.PI;
+                  const s = 0.7 + random() * 0.9;
+                  dummyT.scale.set(s,s,s);
+                  dummyT.updateMatrix();
+
+                  const trunkColor = baseTrunkColor.clone();
+                  trunkColor.offsetHSL((random() - 0.5) * 0.05, 0, (random() - 0.5) * 0.12);
+                  const leafColor = baseLeafColor.clone();
+                  leafColor.offsetHSL((random() - 0.5) * 0.08, 0, (random() - 0.5) * 0.1);
+
+                  trunks.setMatrixAt(tIdx, dummyT.matrix);
+                  leaves.setMatrixAt(tIdx, dummyT.matrix);
+                  trunks.setColorAt(tIdx, trunkColor);
+                  leaves.setColorAt(tIdx, leafColor);
+                  tIdx++;
+              }
           }
       }
-      
+
       trunks.count = tIdx;
       leaves.count = tIdx;
       trunks.instanceMatrix.needsUpdate = true;
       leaves.instanceMatrix.needsUpdate = true;
+      if (trunks.instanceColor) trunks.instanceColor.needsUpdate = true;
+      if (leaves.instanceColor) leaves.instanceColor.needsUpdate = true;
       city.add(trunks);
       city.add(leaves);
   }
