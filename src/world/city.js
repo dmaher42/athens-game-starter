@@ -114,6 +114,8 @@ export async function createCity(scene, terrain, options = {}) {
   let underwaterSkipLogCount = 0;
   const UNDERWATER_LOG_LIMIT = 5;
 
+  const districtRules = await loadDistrictRules();
+
   // 1. Generate Organic Roads (The "Spine")
   const roadCurves = [];
   const roadGeometries = [];
@@ -261,14 +263,26 @@ export async function createCity(scene, terrain, options = {}) {
     // Randomly face road (0) or side (90) or random jitter
     const rotation = roadAngle + (random() > 0.5 ? Math.PI/2 : 0) + (random()-0.5)*0.2;
 
+    // Resolve district for this specific location
+    const distRule = resolveDistrictAt(terrain, districtRules, x, z, 'residential');
+
+    // Pick roof color from district palette if available
+    const roofPalette = (Array.isArray(distRule.roofColors) && distRule.roofColors.length > 0)
+        ? distRule.roofColors
+        : ROOF_COLOR_PRESETS;
+
+    // Determine heights
+    const [minH, maxH] = Array.isArray(distRule.heightRange) ? distRule.heightRange : [3, 4.5];
+    const wH = minH + random() * (maxH - minH);
+
     buildingPlacements.push({
         x, y: y + 0.05, z,
         rotation,
         width, depth,
-        wallHeight: 3 + random() * 1.5,
+        wallHeight: wH,
         roofHeight: 1.2,
         color: new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random)),
-        roofColor: new THREE.Color(pickRandom(ROOF_COLOR_PRESETS, random))
+        roofColor: new THREE.Color(pickRandom(roofPalette, random))
     });
 
     placedPoints.push({ x, z, radius });

@@ -37,9 +37,17 @@ const MATERIAL_VARIANTS = {
 function createMaterial(key, rng, overrides = {}) {
   const base = MATERIAL_BASE[key] || MATERIAL_BASE.stone;
   const variant = MATERIAL_VARIANTS[key];
-  const color = Array.isArray(variant) && variant.length > 0 && typeof rng === "function"
+  let color = Array.isArray(variant) && variant.length > 0 && typeof rng === "function"
     ? pick(variant, rng)
     : base.color;
+
+  if (overrides.color !== undefined) {
+      color = overrides.color;
+      // We don't want to pass color in overrides to the constructor if we set it here,
+      // but overrides spreads last so it handles itself.
+      // However, we want to support color being passed as hex or string.
+  }
+
   return new THREE.MeshStandardMaterial({ ...base, ...overrides, color });
 }
 
@@ -82,10 +90,11 @@ function makeBox(w, h, d, material) {
   mesh.castShadow = mesh.receiveShadow = true;
   return mesh;
 }
-function makeGableRoof(w, d, h = 1.2, rng) {
+function makeGableRoof(w, d, h = 1.2, rng, colorOverride = null) {
   const geom = new THREE.ConeGeometry(Math.max(w, d) * 0.62, h, 4);
   geom.rotateY(Math.PI / 4); // align to X/Z
-  const mesh = new THREE.Mesh(geom, createMaterial("roof", rng));
+  const matOpts = colorOverride ? { color: colorOverride } : {};
+  const mesh = new THREE.Mesh(geom, createMaterial("roof", rng, matOpts));
   mesh.castShadow = mesh.receiveShadow = true;
   return mesh;
 }
@@ -177,7 +186,7 @@ function addEntrySteps(group, width, rng) {
 
 // Parametric “prefabs” (fast + zero textures). All return a Group.
 export const Prefabs = {
-  house({ w = 5, d = 7, h = 3.8, rng = Math.random } = {}) {
+  house({ w = 5, d = 7, h = 3.8, rng = Math.random, roofColor = null } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralHouse";
 
@@ -194,7 +203,7 @@ export const Prefabs = {
     }
 
     const roofHeight = 0.9 + rng() * 0.6;
-    const roof = makeGableRoof(w * (1.05 + rng() * 0.04), d * (1.05 + rng() * 0.04), roofHeight, rng);
+    const roof = makeGableRoof(w * (1.05 + rng() * 0.04), d * (1.05 + rng() * 0.04), roofHeight, rng, roofColor);
     roof.position.y = baseHeight + roofHeight * 0.5 + 0.1;
     g.add(roof);
 
@@ -253,14 +262,16 @@ export const Prefabs = {
 
     return g;
   },
-  courtyard({ rng = Math.random } = {}) {
+  courtyard({ rng = Math.random, roofColor = null, h = 4.4 } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralCourtyard";
     const scale = 0.8 + rng() * 0.3;
-    const main = Prefabs.house({ w: 6 * scale, d: 7.5 * scale, h: 4.4 * scale, rng });
+    // Scale h relative to 4.4 base
+    const mainH = h * scale;
+    const main = Prefabs.house({ w: 6 * scale, d: 7.5 * scale, h: mainH, rng, roofColor });
     g.add(main);
 
-    const side = Prefabs.house({ w: 4.5 * scale, d: 5.2 * scale, h: 3.6 * scale, rng });
+    const side = Prefabs.house({ w: 4.5 * scale, d: 5.2 * scale, h: mainH * 0.8, rng, roofColor });
     side.position.set(0, 0, -6 * scale);
     side.rotation.y = Math.PI / 2;
     g.add(side);
@@ -292,12 +303,12 @@ export const Prefabs = {
   },
   shop(opts) { return Prefabs.house({ ...opts, w: 6, d: 6, h: 3.4 }); },
   workshop(opts) { return Prefabs.house({ ...opts, w: 6, d: 8, h: 4.0 }); },
-  warehouse({ w = 9, d = 12, h = 5.2, rng = Math.random } = {}) {
+  warehouse({ w = 9, d = 12, h = 5.2, rng = Math.random, roofColor = null } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralWarehouse";
     const base = makeBox(w, h, d, createMaterial("wood", rng));
     base.position.y = h * 0.5; g.add(base);
-    const roof = makeGableRoof(w * 1.05, d * 1.05, 1.4, rng);
+    const roof = makeGableRoof(w * 1.05, d * 1.05, 1.4, rng, roofColor);
     roof.position.y = h + 0.7; g.add(roof);
 
     if (rng() < 0.5) {
@@ -314,14 +325,14 @@ export const Prefabs = {
 
     return g;
   },
-  stoa({ w = 10, d = 6, h = 4.5, rng = Math.random } = {}) {
+  stoa({ w = 10, d = 6, h = 4.5, rng = Math.random, roofColor = null } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralStoa";
     const plinth = makeBox(w, 0.6, d, createMaterial("marble", rng));
     plinth.position.y = 0.3; g.add(plinth);
     const hall = makeBox(w * 0.96, h, d * 0.9, createMaterial("stone", rng));
     hall.position.y = h * 0.5 + 0.6; g.add(hall);
-    const roof = makeGableRoof(w * 1.02, d * 1.02, 1.4, rng);
+    const roof = makeGableRoof(w * 1.02, d * 1.02, 1.4, rng, roofColor);
     roof.position.y = 0.6 + h + 0.7; g.add(roof);
 
     const colCount = 6;
@@ -356,14 +367,14 @@ export const Prefabs = {
     base.position.y = 0.1; g.add(base);
     return g;
   },
-  temple({ w = 12, d = 18, h = 6, rng = Math.random } = {}) {
+  temple({ w = 12, d = 18, h = 6, rng = Math.random, roofColor = null } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralTemple";
     const stylobate = makeBox(w, 1.0, d, createMaterial("marble", rng));
     stylobate.position.y = 0.5; g.add(stylobate);
     const cella = makeBox(w * 0.7, h, d * 0.6, createMaterial("stone", rng));
     cella.position.y = 1.0 + h * 0.5; g.add(cella);
-    const roof = makeGableRoof(w * 0.9, d * 0.9, 1.8, rng);
+    const roof = makeGableRoof(w * 0.9, d * 0.9, 1.8, rng, roofColor);
     roof.position.y = 1.0 + h + 0.9; g.add(roof);
 
     const colGeom = new THREE.CylinderGeometry(0.45, 0.45, h * 0.9, 24);
@@ -454,29 +465,51 @@ function getPadSeed(pad, baseSeed = 0) {
  * @param {object} options { seed, leavePadsVisible }
  */
 export function spawnBuilding(options = {}) {
-  const { district = 'residential', rng = Math.random } = options;
+  const { district = 'residential', rng = Math.random, districtRules } = options;
 
   let allowed = ['house'];
-  if (district === 'sacred') {
-    allowed = ['temple', 'monument', 'stoa'];
-  } else if (district === 'commercial') {
-    allowed = ['shop', 'market', 'fountain', 'stoa'];
-  } else if (district === 'residential') {
-    allowed = ['house', 'courtyard', 'workshop'];
-  } else if (district === 'harbor') {
-    allowed = ['warehouse', 'market', 'workshop'];
+  let roofColor = null;
+  let courtyardChance = 0.35;
+
+  if (districtRules) {
+     // If explicit rule object provided (even if partial)
+     if (Array.isArray(districtRules.allowedTypes) && districtRules.allowedTypes.length > 0) {
+       allowed = districtRules.allowedTypes;
+     }
+     if (Array.isArray(districtRules.roofColors) && districtRules.roofColors.length > 0) {
+       roofColor = pick(districtRules.roofColors, rng);
+     }
+     if (Number.isFinite(districtRules.courtyardChance)) {
+       courtyardChance = districtRules.courtyardChance;
+     }
+  } else {
+    // Legacy / Fallback mapping if no rule object passed
+    if (district === 'sacred') {
+      allowed = ['temple', 'monument', 'stoa'];
+    } else if (district === 'commercial') {
+      allowed = ['shop', 'market', 'fountain', 'stoa'];
+    } else if (district === 'residential') {
+      allowed = ['house', 'courtyard', 'workshop'];
+    } else if (district === 'harbor') {
+      allowed = ['warehouse', 'market', 'workshop'];
+    }
   }
 
   const type = allowed[Math.floor(rng() * allowed.length)];
   const spawner = Prefabs[type] || Prefabs.house;
 
-  const building = spawner({ rng, ...options });
+  // Override roof color in options if valid
+  const spawnOpts = { rng, ...options };
+  if (roofColor) spawnOpts.roofColor = roofColor;
+
+  const building = spawner(spawnOpts);
   building.userData = { ...building.userData, district, type };
   return building;
 }
 
 export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   const seed = Number.isFinite(options.seed) ? options.seed : 12345;
+  const districtRules = options.districtRules || { districts: [] };
   const rng = mulberry32(seed);
   const glowRng = mulberry32(seed ^ 0x9e3779b9);
   const seaLevel = Number.isFinite(options.seaLevel)
@@ -512,19 +545,53 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
       continue;
     }
     const districtId = pad.userData?.district || "default";
-    // Decide a type — ideally you stashed allowedTypes on the pad; if not, pick by districtId heuristic
-    const allowedGuess = guessAllowedTypes(districtId);
-    const typeKey = pick(allowedGuess, rng);
+
+    // Find matching rule
+    const rule = districtRules.districts.find(d => d.id === districtId) ||
+                 districtRules.districts.find(d => d.id === 'default') || {};
+
+    // Decide type
+    const allowed = (Array.isArray(rule.allowedTypes) && rule.allowedTypes.length > 0)
+        ? rule.allowedTypes
+        : guessAllowedTypes(districtId);
+
+    const typeKey = pick(allowed, rng);
     const map = TYPE_MAP[typeKey] || TYPE_MAP.house;
 
-    // Force Procedural: always use prefab
+    // Prefab selection
     let built = null;
     let prefabKey = map.prefab;
-    if (prefabKey === "house" && rng() < 0.35) {
+    const courtyardChance = Number.isFinite(rule.courtyardChance) ? rule.courtyardChance : 0.35;
+
+    if (prefabKey === "house" && rng() < courtyardChance) {
       prefabKey = "courtyard";
     }
+
     const prefab = Prefabs[prefabKey] || Prefabs.house;
-    built = prefab({ rng, district: districtId });
+
+    // Config extraction
+    const roofColor = (Array.isArray(rule.roofColors) && rule.roofColors.length > 0)
+        ? pick(rule.roofColors, rng)
+        : null;
+
+    // Height range
+    let heightOverride = undefined;
+    if (Array.isArray(rule.heightRange) && rule.heightRange.length === 2) {
+       // Just pass it into options if prefabs support it,
+       // or we can synthesize 'h' here.
+       // Most prefabs accept 'h' as explicit height.
+       const [minH, maxH] = rule.heightRange;
+       if (minH > 0 && maxH >= minH) {
+         heightOverride = minH + rng() * (maxH - minH);
+       }
+    }
+
+    built = prefab({
+        rng,
+        district: districtId,
+        roofColor,
+        h: heightOverride
+    });
 
     applyBuildingRoughnessVariance(built, rng);
 
