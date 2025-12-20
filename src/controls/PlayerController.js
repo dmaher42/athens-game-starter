@@ -81,7 +81,7 @@ export class PlayerController {
     this.grounded = false;
     this.jumpLocked = false;
 
-    this.flying = false;
+    this.flying = true;
     this.flySpeed = 8.0;
     this.flyIdleDecay = 0.9;
 

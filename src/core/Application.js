@@ -857,7 +857,7 @@ export class Application {
       fallback: AGORA_CENTER_3D,
       playerHeight: player.height,
       playerRadius: player.radius,
-      verticalClearance: 0.2,
+      verticalClearance: 3.0,
       seaLevel: resolvedSeaLevel,
     });
     player.object.position.copy(spawnPosition);

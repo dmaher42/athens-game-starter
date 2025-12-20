@@ -263,7 +263,9 @@ export function findSafePlayerSpawn(options = {}) {
     );
   }
 
-  return fallbackPosition.clone();
+  const finalFallback = fallbackPosition.clone();
+  finalFallback.y += config.halfHeight + config.baseClearance;
+  return finalFallback;
 }
 
 export default findSafePlayerSpawn;
