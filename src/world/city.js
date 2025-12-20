@@ -41,188 +41,156 @@ function applyVertexColor(geometry, color) {
   return geom;
 }
 
-function populateCityDetails(scene, terrain, buildingPlacements, roadCurves) {
-  if (!scene) return;
+function populateCityDetails(cityGroup, terrain, buildingPlacements, roadCurves) {
+  if (!cityGroup) return;
 
   const detailGroup = new THREE.Group();
   detailGroup.name = "CityDetails";
 
-  const areaCenter = buildingPlacements.length
-    ? buildingPlacements.reduce(
-        (acc, p) => {
-          acc.x += p.x;
-          acc.z += p.z;
-          return acc;
-        },
-        new THREE.Vector3(0, 0, 0)
-      ).divideScalar(buildingPlacements.length)
-    : CITY_CHUNK_CENTER.clone();
+  const up = new THREE.Vector3(0, 1, 0);
+  const tempMatrix = new THREE.Matrix4();
 
-  const urnGeometry = new THREE.SphereGeometry(0.25, 12, 12);
-  urnGeometry.scale(0.8, 1.4, 0.8);
+  // Domestic Clutter (Pots & Crates)
+  const amphoraGeometry = new THREE.SphereGeometry(1, 14, 10);
+  amphoraGeometry.scale(0.3, 0.6, 0.3);
   const crateGeometry = new THREE.BoxGeometry(0.4, 0.35, 0.4);
 
-  const potColor = new THREE.Color("#c17347");
-  const crateColor = new THREE.Color("#8b6746");
+  const amphoraMaterial = new THREE.MeshStandardMaterial({ color: "#c05621", roughness: 0.75 });
+  const crateMaterial = new THREE.MeshStandardMaterial({ color: "#8f6b45", roughness: 0.9 });
 
-  const potMatrices = [];
-  const potColors = [];
+  const amphoraMatrices = [];
   const crateMatrices = [];
-  const crateColors = [];
-
-  const tempMatrix = new THREE.Matrix4();
-  const up = new THREE.Vector3(0, 1, 0);
 
   buildingPlacements.forEach((placement) => {
     const { x, z, rotation = 0, width = 1, depth = 1 } = placement;
     const base = new THREE.Vector3(x, 0, z);
-    const front = new THREE.Vector3(0, 0, 1).applyAxisAngle(up, rotation);
+    const forward = new THREE.Vector3(0, 0, 1).applyAxisAngle(up, rotation);
     const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(up, rotation);
+
+    const walls = [
+      { normal: forward, span: width, offset: depth * 0.5 },
+      { normal: forward.clone().multiplyScalar(-1), span: width, offset: depth * 0.5 },
+      { normal: right, span: depth, offset: width * 0.5 },
+      { normal: right.clone().multiplyScalar(-1), span: depth, offset: width * 0.5 },
+    ];
 
     const propCount = 1 + Math.floor(Math.random() * 3);
     for (let i = 0; i < propCount; i++) {
-      const useFront = Math.random() > 0.35;
-      const alongFront = (Math.random() - 0.5) * width * 0.4;
-      const alongSide = (Math.random() - 0.5) * depth * 0.4;
-
-      const offset = base.clone();
-      if (useFront) {
-        offset.add(front.clone().multiplyScalar(depth * 0.5 + 0.6));
-        offset.add(right.clone().multiplyScalar(alongFront));
-      } else {
-        const sideDir = Math.random() > 0.5 ? right : right.clone().multiplyScalar(-1);
-        offset.add(sideDir.clone().multiplyScalar(width * 0.5 + 0.6));
-        offset.add(front.clone().multiplyScalar(alongSide));
-      }
+      const wall = walls[Math.floor(Math.random() * walls.length)];
+      const tangent = new THREE.Vector3().crossVectors(up, wall.normal).normalize();
+      const alongWall = (Math.random() - 0.5) * wall.span * 0.8;
+      const offset = base
+        .clone()
+        .add(wall.normal.clone().setLength(wall.offset + 0.6 + Math.random() * 0.2))
+        .add(tangent.multiplyScalar(alongWall));
 
       const y = sampleHeight(terrain, offset.x, offset.z, base.y);
       offset.y = y;
 
-      const isPot = Math.random() > 0.4;
-      const scale = 0.8 + Math.random() * 0.4;
-      const rot = Math.random() * Math.PI * 2;
+      const scale = 0.9 + Math.random() * 0.25;
+      const rotationY = Math.random() * Math.PI * 2;
       tempMatrix.compose(
         offset,
-        new THREE.Quaternion().setFromAxisAngle(up, rot),
+        new THREE.Quaternion().setFromAxisAngle(up, rotationY),
         new THREE.Vector3(scale, scale, scale)
       );
 
-      if (isPot) {
-        potMatrices.push(tempMatrix.clone());
-        potColors.push(potColor.clone());
+      if (Math.random() > 0.4) {
+        amphoraMatrices.push(tempMatrix.clone());
       } else {
         crateMatrices.push(tempMatrix.clone());
-        crateColors.push(crateColor.clone());
       }
     }
   });
 
-  if (potMatrices.length > 0) {
-    const mesh = new THREE.InstancedMesh(
-      urnGeometry,
-      new THREE.MeshStandardMaterial({ color: potColor, roughness: 0.7 }),
-      potMatrices.length
-    );
-    mesh.castShadow = true;
-    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    potMatrices.forEach((m, i) => {
-      mesh.setMatrixAt(i, m);
-      mesh.setColorAt(i, potColors[i]);
+  if (amphoraMatrices.length > 0) {
+    const amphoraMesh = new THREE.InstancedMesh(amphoraGeometry, amphoraMaterial, amphoraMatrices.length);
+    amphoraMesh.castShadow = true;
+    amphoraMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    amphoraMatrices.forEach((matrix, idx) => {
+      amphoraMesh.setMatrixAt(idx, matrix);
     });
-    mesh.instanceColor.needsUpdate = true;
-    detailGroup.add(mesh);
+    detailGroup.add(amphoraMesh);
   }
 
   if (crateMatrices.length > 0) {
-    const mesh = new THREE.InstancedMesh(
-      crateGeometry,
-      new THREE.MeshStandardMaterial({ color: crateColor, roughness: 0.9 }),
-      crateMatrices.length
-    );
-    mesh.castShadow = true;
-    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    crateMatrices.forEach((m, i) => {
-      mesh.setMatrixAt(i, m);
-      mesh.setColorAt(i, crateColors[i]);
+    const crateMesh = new THREE.InstancedMesh(crateGeometry, crateMaterial, crateMatrices.length);
+    crateMesh.castShadow = true;
+    crateMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    crateMatrices.forEach((matrix, idx) => {
+      crateMesh.setMatrixAt(idx, matrix);
     });
-    mesh.instanceColor.needsUpdate = true;
-    detailGroup.add(mesh);
+    detailGroup.add(crateMesh);
   }
 
-  const grassColorA = new THREE.Color("#5d6e52");
-  const grassColorB = new THREE.Color("#c2b280");
-  const vegetationGeometry = new THREE.DodecahedronGeometry(0.35, 0);
-  const vegetationMaterial = new THREE.MeshStandardMaterial({ color: grassColorA, roughness: 1.0 });
+  // Wild Vegetation (Bushes)
+  const bushGeometry = new THREE.DodecahedronGeometry(0.6, 0);
+  const bushMaterial = new THREE.MeshStandardMaterial({ color: "#5d6e52", roughness: 1.0 });
+  const bushMatrices = [];
+  const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(80));
 
-  const vegetationMatrices = [];
-  const vegetationColors = [];
-  const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(60));
-
-  let vegetationCount = 0;
+  const targetBushes = 1500;
   let attempts = 0;
-  while (vegetationCount < 2000 && attempts < 8000) {
+  while (bushMatrices.length < targetBushes && attempts < targetBushes * 8) {
     attempts++;
     const r = Math.sqrt(Math.random()) * CITY_AREA_RADIUS;
     const theta = Math.random() * Math.PI * 2;
-    const x = r * Math.cos(theta) + areaCenter.x;
-    const z = r * Math.sin(theta) + areaCenter.z;
+    const x = CITY_CHUNK_CENTER.x + r * Math.cos(theta);
+    const z = CITY_CHUNK_CENTER.z + r * Math.sin(theta);
 
-    let nearRoad = false;
-    for (let i = 0; i < roadCurves.length && !nearRoad; i++) {
+    let tooCloseToRoad = false;
+    for (let i = 0; i < roadCurves.length && !tooCloseToRoad; i++) {
       const points = roadSamples[i];
       for (let p = 0; p < points.length; p++) {
         const pt = points[p];
-        const dist = Math.hypot(x - pt.x, z - pt.z);
-        if (dist < 2) {
-          nearRoad = true;
+        if (Math.hypot(x - pt.x, z - pt.z) < 2.5) {
+          tooCloseToRoad = true;
           break;
         }
       }
     }
-    if (nearRoad) continue;
+    if (tooCloseToRoad) continue;
 
     let insideBuilding = false;
     for (const placement of buildingPlacements) {
-      const radius = Math.max(placement.width, placement.depth) * 0.5 + 0.2;
-      const dist = Math.hypot(x - placement.x, z - placement.z);
-      if (dist < radius) {
+      const buildingRadius = Math.max(placement.width, placement.depth) * 0.5;
+      if (Math.hypot(x - placement.x, z - placement.z) < buildingRadius) {
         insideBuilding = true;
         break;
       }
     }
     if (insideBuilding) continue;
 
-    const y = sampleHeight(terrain, x, z, areaCenter.y);
-    const pos = new THREE.Vector3(x, y, z);
-    const scale = 0.5 + Math.random() * 0.7;
-    const rot = Math.random() * Math.PI * 2;
+    const y = sampleHeight(terrain, x, z, CITY_CHUNK_CENTER.y);
+    const position = new THREE.Vector3(x, y, z);
+    const bushScale = 0.8 + Math.random() * 0.6;
+    const rotationY = Math.random() * Math.PI * 2;
+    const colorMix = Math.random();
+    const bushColor = new THREE.Color("#5d6e52").lerp(new THREE.Color("#556b2f"), colorMix);
+
     tempMatrix.compose(
-      pos,
-      new THREE.Quaternion().setFromAxisAngle(up, rot),
-      new THREE.Vector3(scale, scale * 1.2, scale)
+      position,
+      new THREE.Quaternion().setFromAxisAngle(up, rotationY),
+      new THREE.Vector3(bushScale, bushScale * 1.1, bushScale)
     );
-    vegetationMatrices.push(tempMatrix.clone());
 
-    const mix = 0.4 + Math.random() * 0.6;
-    const color = grassColorA.clone().lerp(grassColorB, mix + (Math.random() - 0.5) * 0.1);
-    vegetationColors.push(color);
-    vegetationCount++;
+    bushMatrices.push({ matrix: tempMatrix.clone(), color: bushColor });
   }
 
-  if (vegetationMatrices.length > 0) {
-    const mesh = new THREE.InstancedMesh(vegetationGeometry, vegetationMaterial, vegetationMatrices.length);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    vegetationMatrices.forEach((m, i) => {
-      mesh.setMatrixAt(i, m);
-      mesh.setColorAt(i, vegetationColors[i]);
+  if (bushMatrices.length > 0) {
+    const bushMesh = new THREE.InstancedMesh(bushGeometry, bushMaterial, bushMatrices.length);
+    bushMesh.castShadow = true;
+    bushMesh.receiveShadow = true;
+    bushMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    bushMatrices.forEach((entry, idx) => {
+      bushMesh.setMatrixAt(idx, entry.matrix);
+      bushMesh.setColorAt(idx, entry.color);
     });
-    mesh.instanceColor.needsUpdate = true;
-    detailGroup.add(mesh);
+    bushMesh.instanceColor.needsUpdate = true;
+    detailGroup.add(bushMesh);
   }
 
-  scene.add(detailGroup);
+  cityGroup.add(detailGroup);
 }
 
 export function generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor) {
