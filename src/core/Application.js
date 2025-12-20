@@ -1919,6 +1919,36 @@ export class Application {
 
       // Update player movement and drive the attached character animation.
       player.update(deltaTime);
+      const playerRoot = player?.object;
+      const terrainSize = terrain?.geometry?.userData?.size;
+      if (playerRoot && Number.isFinite(terrainSize)) {
+        const halfSize = terrainSize * 0.5;
+        const margin = 2.0;
+        const minBound = -halfSize + margin;
+        const maxBound = halfSize - margin;
+        const pos = playerRoot.position;
+
+        const clampedX = THREE.MathUtils.clamp(pos.x, minBound, maxBound);
+        const clampedZ = THREE.MathUtils.clamp(pos.z, minBound, maxBound);
+        const clamped = clampedX !== pos.x || clampedZ !== pos.z;
+        if (clamped) {
+          pos.x = clampedX;
+          pos.z = clampedZ;
+
+          const sampler =
+            typeof scene?.userData?.getHeightAt === "function"
+              ? scene.userData.getHeightAt
+              : typeof terrain?.userData?.getHeightAt === "function"
+              ? terrain.userData.getHeightAt
+              : null;
+          if (sampler) {
+            const groundHeight = sampler(pos.x, pos.z);
+            if (Number.isFinite(groundHeight)) {
+              pos.y = Math.max(pos.y, groundHeight + 0.1);
+            }
+          }
+        }
+      }
       if (thirdPersonCamera && thirdPersonEnabled) {
         player.cameraYaw = thirdPersonCamera.getYaw();
         player.cameraPitch = thirdPersonCamera.getPitch();
