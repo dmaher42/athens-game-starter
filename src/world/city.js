@@ -41,6 +41,190 @@ function applyVertexColor(geometry, color) {
   return geom;
 }
 
+function populateCityDetails(scene, terrain, buildingPlacements, roadCurves) {
+  if (!scene) return;
+
+  const detailGroup = new THREE.Group();
+  detailGroup.name = "CityDetails";
+
+  const areaCenter = buildingPlacements.length
+    ? buildingPlacements.reduce(
+        (acc, p) => {
+          acc.x += p.x;
+          acc.z += p.z;
+          return acc;
+        },
+        new THREE.Vector3(0, 0, 0)
+      ).divideScalar(buildingPlacements.length)
+    : CITY_CHUNK_CENTER.clone();
+
+  const urnGeometry = new THREE.SphereGeometry(0.25, 12, 12);
+  urnGeometry.scale(0.8, 1.4, 0.8);
+  const crateGeometry = new THREE.BoxGeometry(0.4, 0.35, 0.4);
+
+  const potColor = new THREE.Color("#c17347");
+  const crateColor = new THREE.Color("#8b6746");
+
+  const potMatrices = [];
+  const potColors = [];
+  const crateMatrices = [];
+  const crateColors = [];
+
+  const tempMatrix = new THREE.Matrix4();
+  const up = new THREE.Vector3(0, 1, 0);
+
+  buildingPlacements.forEach((placement) => {
+    const { x, z, rotation = 0, width = 1, depth = 1 } = placement;
+    const base = new THREE.Vector3(x, 0, z);
+    const front = new THREE.Vector3(0, 0, 1).applyAxisAngle(up, rotation);
+    const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(up, rotation);
+
+    const propCount = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < propCount; i++) {
+      const useFront = Math.random() > 0.35;
+      const alongFront = (Math.random() - 0.5) * width * 0.4;
+      const alongSide = (Math.random() - 0.5) * depth * 0.4;
+
+      const offset = base.clone();
+      if (useFront) {
+        offset.add(front.clone().multiplyScalar(depth * 0.5 + 0.6));
+        offset.add(right.clone().multiplyScalar(alongFront));
+      } else {
+        const sideDir = Math.random() > 0.5 ? right : right.clone().multiplyScalar(-1);
+        offset.add(sideDir.clone().multiplyScalar(width * 0.5 + 0.6));
+        offset.add(front.clone().multiplyScalar(alongSide));
+      }
+
+      const y = sampleHeight(terrain, offset.x, offset.z, base.y);
+      offset.y = y;
+
+      const isPot = Math.random() > 0.4;
+      const scale = 0.8 + Math.random() * 0.4;
+      const rot = Math.random() * Math.PI * 2;
+      tempMatrix.compose(
+        offset,
+        new THREE.Quaternion().setFromAxisAngle(up, rot),
+        new THREE.Vector3(scale, scale, scale)
+      );
+
+      if (isPot) {
+        potMatrices.push(tempMatrix.clone());
+        potColors.push(potColor.clone());
+      } else {
+        crateMatrices.push(tempMatrix.clone());
+        crateColors.push(crateColor.clone());
+      }
+    }
+  });
+
+  if (potMatrices.length > 0) {
+    const mesh = new THREE.InstancedMesh(
+      urnGeometry,
+      new THREE.MeshStandardMaterial({ color: potColor, roughness: 0.7 }),
+      potMatrices.length
+    );
+    mesh.castShadow = true;
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    potMatrices.forEach((m, i) => {
+      mesh.setMatrixAt(i, m);
+      mesh.setColorAt(i, potColors[i]);
+    });
+    mesh.instanceColor.needsUpdate = true;
+    detailGroup.add(mesh);
+  }
+
+  if (crateMatrices.length > 0) {
+    const mesh = new THREE.InstancedMesh(
+      crateGeometry,
+      new THREE.MeshStandardMaterial({ color: crateColor, roughness: 0.9 }),
+      crateMatrices.length
+    );
+    mesh.castShadow = true;
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    crateMatrices.forEach((m, i) => {
+      mesh.setMatrixAt(i, m);
+      mesh.setColorAt(i, crateColors[i]);
+    });
+    mesh.instanceColor.needsUpdate = true;
+    detailGroup.add(mesh);
+  }
+
+  const grassColorA = new THREE.Color("#5d6e52");
+  const grassColorB = new THREE.Color("#c2b280");
+  const vegetationGeometry = new THREE.DodecahedronGeometry(0.35, 0);
+  const vegetationMaterial = new THREE.MeshStandardMaterial({ color: grassColorA, roughness: 1.0 });
+
+  const vegetationMatrices = [];
+  const vegetationColors = [];
+  const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(60));
+
+  let vegetationCount = 0;
+  let attempts = 0;
+  while (vegetationCount < 2000 && attempts < 8000) {
+    attempts++;
+    const r = Math.sqrt(Math.random()) * CITY_AREA_RADIUS;
+    const theta = Math.random() * Math.PI * 2;
+    const x = r * Math.cos(theta) + areaCenter.x;
+    const z = r * Math.sin(theta) + areaCenter.z;
+
+    let nearRoad = false;
+    for (let i = 0; i < roadCurves.length && !nearRoad; i++) {
+      const points = roadSamples[i];
+      for (let p = 0; p < points.length; p++) {
+        const pt = points[p];
+        const dist = Math.hypot(x - pt.x, z - pt.z);
+        if (dist < 2) {
+          nearRoad = true;
+          break;
+        }
+      }
+    }
+    if (nearRoad) continue;
+
+    let insideBuilding = false;
+    for (const placement of buildingPlacements) {
+      const radius = Math.max(placement.width, placement.depth) * 0.5 + 0.2;
+      const dist = Math.hypot(x - placement.x, z - placement.z);
+      if (dist < radius) {
+        insideBuilding = true;
+        break;
+      }
+    }
+    if (insideBuilding) continue;
+
+    const y = sampleHeight(terrain, x, z, areaCenter.y);
+    const pos = new THREE.Vector3(x, y, z);
+    const scale = 0.5 + Math.random() * 0.7;
+    const rot = Math.random() * Math.PI * 2;
+    tempMatrix.compose(
+      pos,
+      new THREE.Quaternion().setFromAxisAngle(up, rot),
+      new THREE.Vector3(scale, scale * 1.2, scale)
+    );
+    vegetationMatrices.push(tempMatrix.clone());
+
+    const mix = 0.4 + Math.random() * 0.6;
+    const color = grassColorA.clone().lerp(grassColorB, mix + (Math.random() - 0.5) * 0.1);
+    vegetationColors.push(color);
+    vegetationCount++;
+  }
+
+  if (vegetationMatrices.length > 0) {
+    const mesh = new THREE.InstancedMesh(vegetationGeometry, vegetationMaterial, vegetationMatrices.length);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    vegetationMatrices.forEach((m, i) => {
+      mesh.setMatrixAt(i, m);
+      mesh.setColorAt(i, vegetationColors[i]);
+    });
+    mesh.instanceColor.needsUpdate = true;
+    detailGroup.add(mesh);
+  }
+
+  scene.add(detailGroup);
+}
+
 export function generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor) {
   const geometries = [];
   const porchInset = 1.0;
@@ -138,6 +322,7 @@ export async function createCity(scene, terrain, options = {}) {
 
   const cityGeometries = [];
   const placedHouses = [];
+  const buildingPlacements = [];
   const scatterAttempts = 2500;
 
   for (let i = 0; i < scatterAttempts; i++) {
@@ -189,15 +374,17 @@ export async function createCity(scene, terrain, options = {}) {
 
     const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
 
+    let angle = 0;
     if (bestCurve) {
       const tangent = bestCurve.getTangent(bestT);
-      const angle = Math.atan2(tangent.x, tangent.z);
+      angle = Math.atan2(tangent.x, tangent.z);
       houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
     }
 
     houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
     cityGeometries.push(houseGeo);
     placedHouses.push({ x, z, radius: neighborRadius });
+    buildingPlacements.push({ x, z, rotation: angle, width, depth });
   }
 
   if (cityGeometries.length > 0) {
@@ -211,6 +398,8 @@ export async function createCity(scene, terrain, options = {}) {
     cityMesh.receiveShadow = true;
     city.add(cityMesh);
   }
+
+  populateCityDetails(city, terrain, buildingPlacements, roadCurves);
 
   applyTextureBudgetToObject(city, scene?.userData?.renderer);
   return city;
