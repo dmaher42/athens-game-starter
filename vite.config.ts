@@ -18,6 +18,7 @@ export default defineConfig({
   build: {
     outDir: "docs",
     emptyOutDir: true,
+    sourcemap: true,
     rollupOptions: {
       // Ensure no externals that would leave bare imports at runtime
       external: [], // keep empty unless you have a good reason
