@@ -64,6 +64,8 @@ import { mountHotkeyOverlay } from "../ui/hotkeyOverlay.ts";
 import { mountDevHUD } from "../ui/devHud.ts";
 import { mountMiniMap } from "../ui/miniMap.ts";
 import { mount as mountHUDCameraSettings } from "../ui/HUDCameraSettings.ts";
+import { QuestHud } from "../ui/questHud.ts";
+import { InteractionHud } from "../ui/interactionHud.ts";
 import {
   showLoadingScreen,
   updateLoadingStatus,
@@ -92,6 +94,8 @@ import {
 import { lightingConfig } from "../config/LightingConfig.js";
 import { skyboxLightingConfig } from "../config/skyboxLightingConfig.js";
 import { CollectiblesManager } from "../world/collectibles.js";
+import { QuestManager } from "../state/QuestManager.js";
+import { InteractionSystem } from "../interactions/InteractionSystem.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "../features/aristotle-texture.js";
 import { applyGravelToRoads } from "../features/roads-gravel.js";
