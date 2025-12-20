@@ -91,11 +91,23 @@ export function createTerrain(scene) {
   const CITY_INNER = Math.max(48, CITY_AREA_RADIUS * 0.65);
   const CITY_OUTER = Math.max(CITY_INNER + 32, CITY_AREA_RADIUS * 1.05);
 
+  const HILL_FREQ = 0.015;
+  const HILL_AMPLITUDE = 2.4;
+  const MICRO_FREQ = 0.18;
+  const MICRO_AMPLITUDE = 0.12;
+
   for (let i = 0; i < vertexCount; i++) {
     const x = positionAttribute.getX(i);
     const z = positionAttribute.getY(i);
 
     let height = FLAT_GROUND_LEVEL;
+
+    const distToCity = Math.hypot(x - CITY_CENTER_XZ.x, z - CITY_CENTER_XZ.y);
+    const hillBlend = THREE.MathUtils.smoothstep(distToCity, CITY_INNER, CITY_OUTER);
+
+    const gentleHills = gradientNoise(x * HILL_FREQ, z * HILL_FREQ) * HILL_AMPLITUDE;
+    const microVariation = gradientNoise(x * MICRO_FREQ, z * MICRO_FREQ) * MICRO_AMPLITUDE;
+    height += gentleHills * hillBlend + microVariation;
 
     // Apply Harbor Depression (Cut out the bay)
     const dx = x - HARBOR_CENTER.x;
