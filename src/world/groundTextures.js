@@ -11,6 +11,15 @@ import {
 } from "./grassTextureGenerator.js";
 
 const textureLoader = new THREE.TextureLoader();
+const DEFAULT_MASK_RESOLUTION = 128;
+
+const fallbackMask = (() => {
+  const data = new Uint8Array([0]);
+  const tex = new THREE.DataTexture(data, 1, 1, THREE.LuminanceFormat);
+  tex.needsUpdate = true;
+  tex.colorSpace = THREE.LinearSRGBColorSpace;
+  return tex;
+})();
 
 const PROCEDURAL_GENERATORS = {
   "lush-grass": (config) =>
@@ -238,6 +247,7 @@ export function createGroundTextureState(
   if (!material) return { detailLayers: [] };
   const state = {
     detailLayers: [],
+    baseBlend: null,
   };
 
   const baseConfig = config?.base;
@@ -355,11 +365,55 @@ export function createGroundTextureState(
     if (layer) state.detailLayers.push(layer);
   }
 
+  const blendConfig = config?.blend;
+  const blendEnabled = blendConfig?.enabled !== false;
+  if (blendEnabled && (blendConfig?.dirt?.url || blendConfig?.dirt?.generator)) {
+    const grassTex = blendConfig.grass?.url
+      ? loadTexture(blendConfig.grass.url, blendConfig.grass)
+      : null;
+    const dirtTex = blendConfig.dirt?.url
+      ? loadTexture(blendConfig.dirt.url, blendConfig.dirt)
+      : null;
+
+    if (grassTex) configureTexture(grassTex, blendConfig.grass);
+    if (dirtTex) configureTexture(dirtTex, blendConfig.dirt);
+
+    const maskSize = Math.max(
+      8,
+      Math.min(blendConfig.maskResolution ?? DEFAULT_MASK_RESOLUTION, 1024),
+    );
+    const maskData = new Uint8Array(maskSize * maskSize);
+    const maskTexture = new THREE.DataTexture(
+      maskData,
+      maskSize,
+      maskSize,
+      THREE.LuminanceFormat,
+    );
+    maskTexture.needsUpdate = true;
+    maskTexture.colorSpace = THREE.LinearSRGBColorSpace;
+    maskTexture.magFilter = THREE.LinearFilter;
+    maskTexture.minFilter = THREE.LinearMipMapLinearFilter;
+
+    state.baseBlend = {
+      grassTexture: grassTex,
+      dirtTexture: dirtTex,
+      noiseScale: blendConfig.noiseScale ?? 16,
+      noiseContrast: Math.max(0.0001, blendConfig.noiseContrast ?? 1.2),
+      maskTexture,
+      maskData,
+      maskSize,
+      maskStrength: THREE.MathUtils.clamp(blendConfig.maskStrength ?? 1, 0, 2),
+      uniforms: {},
+    };
+  }
+
   return state;
 }
 
 export function injectGroundTextureShader(shader, state) {
-  if (!state?.detailLayers?.length) {
+  const hasDetails = state?.detailLayers?.length > 0;
+  const hasBlend = !!state?.baseBlend?.dirtTexture;
+  if (!hasDetails && !hasBlend) {
     return;
   }
 
@@ -384,58 +438,104 @@ export function injectGroundTextureShader(shader, state) {
     );
   }
 
-  const groundHeightVarying = "varying float vGroundHeight;";
+  const varyings = [];
+  if (hasDetails) {
+    const groundHeightVarying = "varying float vGroundHeight;";
+    if (!shader.vertexShader.includes(groundHeightVarying)) {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <uv_pars_vertex>",
+        `#include <uv_pars_vertex>\n${groundHeightVarying}`,
+      );
+    }
 
-  if (!shader.vertexShader.includes(groundHeightVarying)) {
-    shader.vertexShader = shader.vertexShader.replace(
-      "#include <uv_pars_vertex>",
-      `#include <uv_pars_vertex>\n${groundHeightVarying}`,
-    );
+    if (!shader.vertexShader.includes("vGroundHeight = position.z;")) {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\n  vGroundHeight = position.z;",
+      );
+    }
+    varyings.push(groundHeightVarying);
   }
 
-  if (!shader.vertexShader.includes("vGroundHeight = position.z;")) {
-    shader.vertexShader = shader.vertexShader.replace(
-      "#include <begin_vertex>",
-      "#include <begin_vertex>\n  vGroundHeight = position.z;",
-    );
+  if (hasBlend) {
+    const worldXZVarying = "varying vec2 vWorldXZ;";
+    if (!shader.vertexShader.includes(worldXZVarying)) {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <uv_pars_vertex>",
+        `#include <uv_pars_vertex>\n${worldXZVarying}`,
+      );
+    }
+    if (!shader.vertexShader.includes("vWorldXZ = (modelMatrix * vec4(transformed, 1.0)).xz;")) {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\n  vWorldXZ = (modelMatrix * vec4(transformed, 1.0)).xz;",
+      );
+    }
+    varyings.push(worldXZVarying);
   }
 
-  const header = shader.fragmentShader.includes(groundHeightVarying)
+  const header = shader.fragmentShader.includes("varying float vGroundHeight;")
     ? []
-    : [groundHeightVarying];
+    : varyings;
   const mixCode = [];
 
-  state.detailLayers.forEach((layer, index) => {
-    const mapName = `uGroundDetailMap${index}`;
-    const paramName = `uGroundDetailParams${index}`;
-    const tintName = `uGroundDetailTint${index}`;
-    const modeName = `uGroundDetailMode${index}`;
-    const tintMultiplierName = `uGroundDetailTintMultiplier${index}`;
-    const noiseName = `uGroundDetailNoise${index}`;
-
-    shader.uniforms[mapName] = { value: layer.texture };
-    shader.uniforms[paramName] = { value: layer.params };
-    shader.uniforms[tintName] = { value: layer.tint };
-    shader.uniforms[modeName] = { value: layer.mode };
-    shader.uniforms[tintMultiplierName] = {
-      value: layer.tintMultiplier ?? 1,
+  if (hasBlend) {
+    shader.uniforms.uGroundDirtMap = { value: state.baseBlend.dirtTexture };
+    shader.uniforms.uGroundBlendNoise = {
+      value: new THREE.Vector2(
+        state.baseBlend.noiseScale ?? 16,
+        state.baseBlend.noiseContrast ?? 1.2,
+      ),
     };
-    shader.uniforms[noiseName] = {
-      value: layer.noise ?? new THREE.Vector2(0, 0),
+    shader.uniforms.uGroundBlendMask = {
+      value: state.baseBlend.maskTexture || fallbackMask,
+    };
+    shader.uniforms.uGroundBlendMaskStrength = {
+      value: state.baseBlend.maskStrength ?? 1,
+    };
+    shader.uniforms.uGroundGrassMap = {
+      value:
+        state.baseBlend.grassTexture || shader.uniforms.map?.value || fallbackMask,
     };
 
-    header.push(
-      [
-        `uniform sampler2D ${mapName};`,
-        `uniform vec4 ${paramName};`,
-        `uniform vec3 ${tintName};`,
-        `uniform float ${modeName};`,
-        `uniform float ${tintMultiplierName};`,
-        `uniform vec2 ${noiseName};`,
-      ].join("\n"),
-    );
+    state.baseBlend.uniforms = {
+      mask: shader.uniforms.uGroundBlendMask,
+      maskStrength: shader.uniforms.uGroundBlendMaskStrength,
+    };
+  }
 
-    mixCode.push(`
+  if (hasDetails) {
+    state.detailLayers.forEach((layer, index) => {
+      const mapName = `uGroundDetailMap${index}`;
+      const paramName = `uGroundDetailParams${index}`;
+      const tintName = `uGroundDetailTint${index}`;
+      const modeName = `uGroundDetailMode${index}`;
+      const tintMultiplierName = `uGroundDetailTintMultiplier${index}`;
+      const noiseName = `uGroundDetailNoise${index}`;
+
+      shader.uniforms[mapName] = { value: layer.texture };
+      shader.uniforms[paramName] = { value: layer.params };
+      shader.uniforms[tintName] = { value: layer.tint };
+      shader.uniforms[modeName] = { value: layer.mode };
+      shader.uniforms[tintMultiplierName] = {
+        value: layer.tintMultiplier ?? 1,
+      };
+      shader.uniforms[noiseName] = {
+        value: layer.noise ?? new THREE.Vector2(0, 0),
+      };
+
+      header.push(
+        [
+          `uniform sampler2D ${mapName};`,
+          `uniform vec4 ${paramName};`,
+          `uniform vec3 ${tintName};`,
+          `uniform float ${modeName};`,
+          `uniform float ${tintMultiplierName};`,
+          `uniform vec2 ${noiseName};`,
+        ].join("\n"),
+      );
+
+      mixCode.push(`
       {
         vec4 detailSample = texture2D(${mapName}, vUv);
         float minH = ${paramName}.x;
@@ -466,7 +566,8 @@ export function injectGroundTextureShader(shader, state) {
         }
       }
     `);
-  });
+    });
+  }
 
   const hasUvParsFragment = shader.fragmentShader.includes(
     "#include <uv_pars_fragment>",
@@ -489,22 +590,38 @@ float groundNoise(vec2 p) {
 }
 `;
 
+  const blendHeader = hasBlend
+    ? `uniform sampler2D uGroundDirtMap;\nuniform sampler2D uGroundBlendMask;\nuniform vec2 uGroundBlendNoise;\nuniform float uGroundBlendMaskStrength;\nuniform sampler2D uGroundGrassMap;`
+    : "";
+
   const commonInjection = [
     "#include <common>",
     ...(hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"]),
     ...header,
     groundNoiseFn,
-  ].join("\n");
+    blendHeader,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   shader.fragmentShader = shader.fragmentShader.replace(
     "#include <common>",
     commonInjection,
   );
 
-  shader.fragmentShader = shader.fragmentShader.replace(
-    "vec4 diffuseColor = vec4( diffuse, opacity );",
-    `vec4 diffuseColor = vec4( diffuse, opacity );\nfloat groundHeight = vGroundHeight;\n${mixCode.join(
-      "\n",
-    )}`,
-  );
+  if (hasBlend) {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <map_fragment>",
+      `vec4 grassTexel = vec4(1.0);\nvec3 baseDiffuse = diffuseColor.rgb;\n#ifdef USE_MAP\n  vec4 texelColor = texture2D(uGroundGrassMap, vUv);\n  texelColor = mapTexelToLinear(texelColor);\n  grassTexel = texelColor;\n#endif\nvec3 dirtTexel = texture2D(uGroundDirtMap, vUv).rgb;\nfloat noiseWeight = clamp(groundNoise(vWorldXZ * uGroundBlendNoise.x), 0.0, 1.0);\nnoiseWeight = pow(noiseWeight, max(uGroundBlendNoise.y, 0.0001));\nfloat maskWeight = texture2D(uGroundBlendMask, vUv).r * uGroundBlendMaskStrength;\nfloat dirtWeight = clamp(max(noiseWeight, maskWeight), 0.0, 1.0);\nvec3 mixed = mix(grassTexel.rgb, dirtTexel, dirtWeight);\ndiffuseColor = vec4(mixed * baseDiffuse, diffuseColor.a);`,
+    );
+  }
+
+  if (hasDetails) {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "vec4 diffuseColor = vec4( diffuse, opacity );",
+      `vec4 diffuseColor = vec4( diffuse, opacity );\nfloat groundHeight = vGroundHeight;\n${mixCode.join(
+        "\n",
+      )}`,
+    );
+  }
 }

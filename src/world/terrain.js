@@ -206,3 +206,83 @@ export function createTerrain(scene) {
 }
 
 export function updateTerrain() {}
+
+export function updateTerrainCoverageMask(terrain, options = {}) {
+  const state = terrain?.userData?.groundTextureState?.baseBlend;
+  if (!terrain || !state?.maskTexture || !state.maskData) return;
+
+  const geometry = terrain.geometry;
+  const terrainSize = geometry?.userData?.size;
+  if (!Number.isFinite(terrainSize)) return;
+
+  const halfSize = terrainSize * 0.5;
+  const resolution = state.maskSize;
+  const data = state.maskData;
+  data.fill(0);
+
+  const paintCircle = (worldX, worldZ, radius) => {
+    const u = (worldX + halfSize) / terrainSize;
+    const v = (worldZ + halfSize) / terrainSize;
+    if (u < 0 || u > 1 || v < 0 || v > 1) return;
+
+    const px = Math.round(u * (resolution - 1));
+    const py = Math.round(v * (resolution - 1));
+    const pr = Math.ceil((radius / terrainSize) * resolution);
+    const r2 = pr * pr;
+
+    const minX = Math.max(0, px - pr);
+    const maxX = Math.min(resolution - 1, px + pr);
+    const minY = Math.max(0, py - pr);
+    const maxY = Math.min(resolution - 1, py + pr);
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const dx = x - px;
+        const dy = y - py;
+        if (dx * dx + dy * dy <= r2) {
+          const index = y * resolution + x;
+          data[index] = 255;
+        }
+      }
+    }
+  };
+
+  const paintCurve = (curve, width = 3) => {
+    if (!curve?.getPoint) return;
+    const samples = 160;
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const point = curve.getPoint(t);
+      const radius = Math.max(0.5, width * 0.65);
+      paintCircle(point.x, point.z, radius);
+    }
+  };
+
+  const buildingPlacements = Array.isArray(options?.buildingPlacements)
+    ? options.buildingPlacements
+    : [];
+  buildingPlacements.forEach((placement) => {
+    const { x, z, width, depth } = placement;
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return;
+    const radius = Math.max(1.2, Math.hypot(width ?? 1, depth ?? 1) * 0.6);
+    paintCircle(x, z, radius);
+  });
+
+  const mainRoad = options?.mainRoadCurve ?? null;
+  if (mainRoad) {
+    paintCurve(mainRoad, options.mainRoadWidth ?? 3.2);
+  }
+
+  const secondaryRoads = Array.isArray(options?.roadCurves)
+    ? options.roadCurves
+    : [];
+  secondaryRoads.forEach((curve) => paintCurve(curve, options.roadWidth ?? 3));
+
+  state.maskTexture.needsUpdate = true;
+  if (state.uniforms?.mask) {
+    state.uniforms.mask.value = state.maskTexture;
+  }
+  if (state.uniforms?.maskStrength) {
+    state.uniforms.maskStrength.value = state.maskStrength ?? 1;
+  }
+}

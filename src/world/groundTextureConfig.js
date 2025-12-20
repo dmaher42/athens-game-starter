@@ -67,6 +67,36 @@ export const GROUND_TEXTURE_CONFIG = {
     seed: 2024
   },
   /**
+   * Dual-texture blend between grass and dirt. When enabled, the terrain shader
+   * samples both maps and mixes them together with Perlin-style noise. The
+   * coverage mask can be updated at runtime to force dirt beneath roads or
+   * buildings so grass does not poke through floors.
+   */
+  blend: {
+    enabled: true,
+    /** Primary grass map already assigned as the base texture. */
+    grass: {
+      url: textureUrl("grass-albedo.jpg"),
+      colorSpace: "srgb",
+      repeat: [64, 64],
+      rotation: 0,
+    },
+    /** Secondary dirt map used for splatmapping. */
+    dirt: {
+      url: textureUrl("dirt-albedo.jpg"),
+      colorSpace: "srgb",
+      repeat: [48, 48],
+      rotation: 0.13,
+    },
+    /** How strong and large the procedural patches should be. */
+    noiseScale: 22,
+    noiseContrast: 1.35,
+    /** Mask resolution for forced dirt regions (roads/buildings). */
+    maskResolution: 256,
+    /** Multiplier applied to the mask; leave at 1 to fully respect it. */
+    maskStrength: 1,
+  },
+  /**
    * Additional detail layers can be stacked on top of the base color. Each
    * layer may target a specific height range to keep cliffs rocky and valleys
    * lush. Add or remove entries in this array to match the JPGs you provide.
