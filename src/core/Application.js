@@ -100,6 +100,7 @@ import {
   WORLD_ROOT_NAME,
 } from "./Scene.js";
 import { GameLoop } from "./GameLoop.js";
+import { TrafficManager } from "../world/traffic.js";
 
 console.info("[build]", engineConfig.build || {});
 
@@ -569,6 +570,7 @@ export class Application {
     const worldRoot = refreshWorldRoot();
 
     let grassRoot = null;
+    let trafficManager = null;
 
     const roadsVisible =
       engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
@@ -730,12 +732,16 @@ export class Application {
     // Plazas (agora + acropolis terraces) — disabled per request to remove large discs
     // createPlazas(worldRoot);
 
-    const harborCity = await createCity(worldRoot, terrain, {
+    const { city: harborCity, roadCurves } = await createCity(worldRoot, terrain, {
       roadsVisible,
       useProceduralBlocks: FORCE_PROCEDURAL_LANDMARKS,
       forceProcedural: FORCE_PROC,
       seaLevel: resolvedSeaLevel,
     });
+
+    if (roadCurves && roadCurves.length > 0) {
+      trafficManager = new TrafficManager(scene, roadCurves, terrain);
+    }
 
     // Hill-city buildings (uses terrain sampler + road curve)
     const hillCity = await createHillCity(worldRoot, terrain, mainRoad, {
@@ -1812,6 +1818,10 @@ export class Application {
         thirdPersonCamera.update(deltaTime);
       }
       for (const updateNpc of npcUpdaters) updateNpc(deltaTime);
+
+      if (trafficManager) {
+        trafficManager.update(deltaTime);
+      }
 
       // Cast a ray through the center of the screen to detect hovered objects and
       // highlight anything marked as interactable via userData.
