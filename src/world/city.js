@@ -273,6 +273,7 @@ export async function createCity(scene, terrain, options = {}) {
 
     let bestDist = Infinity;
     let bestTangent = null;
+    let bestRoadPt = null;
     
     for (const road of roadCurves) {
         const samples = road.getSpacedPoints(10);
@@ -281,82 +282,175 @@ export async function createCity(scene, terrain, options = {}) {
             const d = Math.hypot(x - pt.x, z - pt.z);
             if (d < bestDist) {
                 bestDist = d;
+                bestRoadPt = pt;
                 const tVal = k / (samples.length - 1);
                 bestTangent = road.getTangentAt(tVal);
             }
         }
     }
 
-    if (bestDist < MIN_DIST_FROM_ROAD) continue;
-    if (bestDist > MAX_DIST_FROM_ROAD) continue;
+    if (bestDist < MIN_DIST_FROM_ROAD) continue; // Too close to road (blocked)
+    if (bestDist > MAX_DIST_FROM_ROAD) continue; // Too far (isolated)
 
-    // Determine archetype based on random seed (and maybe district logic)
-    // 60% Gable, 25% Flat, 15% Courtyard
-    const typeRoll = random();
-    let type = 'gable';
-    if (typeRoll > 0.6) type = 'flat';
-    if (typeRoll > 0.85) type = 'courtyard';
+    // C. Define Lot & Subdivision
+    const baseWidth = 3.5 + random() * 2.5;
+    const baseDepth = 3.5 + random() * 2.5;
 
-    // Size rules
-    let width = 3.5 + random() * 2.5;
-    let depth = 3.5 + random() * 2.5;
-    if (type === 'courtyard') {
-        width += 2; // Courtyards are bigger
-        depth += 2;
+    // Plot Subdivision (25-45% chance)
+    const doSubdivide = random() < 0.35;
+
+    // Prepare candidates
+    const candidates = [];
+
+    // Road info
+    const roadDir = new THREE.Vector2(bestTangent.x, bestTangent.z).normalize();
+    const toLotDir = new THREE.Vector2(x - bestRoadPt.x, z - bestRoadPt.z).normalize();
+    const angleFromTangent = Math.atan2(roadDir.y, roadDir.x);
+
+    if (doSubdivide) {
+        // Split along the road tangent axis
+        const splitOffset = baseWidth * 0.28;
+
+        candidates.push({
+            relX: -roadDir.x * splitOffset,
+            relZ: -roadDir.y * splitOffset,
+            w: baseWidth * 0.4,
+            d: baseDepth * 0.8,
+            isSub: true
+        });
+        candidates.push({
+            relX: roadDir.x * splitOffset,
+            relZ: roadDir.y * splitOffset,
+            w: baseWidth * 0.4,
+            d: baseDepth * 0.8,
+            isSub: true
+        });
+    } else {
+        candidates.push({
+            relX: 0, relZ: 0,
+            w: baseWidth, d: baseDepth,
+            isSub: false
+        });
     }
-    const radius = Math.max(width, depth) * 0.6;
 
-    let overlap = false;
-    for (const p of placedPoints) {
-        const d = Math.hypot(x - p.x, z - p.z);
-        if (d < (radius + p.radius + BUILDING_MIN_GAP)) {
-            overlap = true;
+    // Process candidates to final placements
+    const finalBuildings = [];
+    let collisionDetected = false;
+
+    for (const cand of candidates) {
+        // 1. Setback Variance (0.5 - 2.0m)
+        const setback = 0.5 + random() * 1.5;
+        // Move away from road
+        const setbackVec = toLotDir.clone().multiplyScalar(setback);
+
+        let cx = x + cand.relX + setbackVec.x;
+        let cz = z + cand.relZ + setbackVec.y;
+
+        // 2. Position Jitter (10-18% of lot size)
+        const jitterMag = Math.min(cand.w, cand.d) * (0.10 + random() * 0.08);
+        cx += (random() - 0.5) * 2 * jitterMag;
+        cz += (random() - 0.5) * 2 * jitterMag;
+
+        // 3. Scale Jitter (0.85 - 1.15)
+        const sJitter = 0.85 + random() * 0.3;
+        const finalW = cand.w * sJitter;
+        const finalD = cand.d * sJitter;
+
+        // Resolve district early for rotation rules
+        const distRule = resolveDistrictAt(terrain, districtRules, cx, cz, 'residential');
+
+        // 4. Rotation Jitter
+        // Base rotation: Align to road tangent (grid)
+        let baseRot = angleFromTangent;
+
+        // Bias: 80% chance to align strictly with road grid (0 or 90 offset)
+        if (random() < 0.8) {
+             baseRot += (random() > 0.5 ? Math.PI/2 : 0);
+        }
+        // Else: keep tangent alignment (no 90 deg snap), effectively same base but allows drift via jitter logic below
+
+        // Apply Jitter based on district
+        const isCivic = distRule.id === 'sacred' || distRule.id === 'commercial' || distRule.id === 'civic';
+        const jitterMin = isCivic ? 2 : 8;
+        const jitterMax = isCivic ? 5 : 18;
+
+        const rJitterDeg = jitterMin + random() * (jitterMax - jitterMin);
+        const rJitterRad = rJitterDeg * (Math.PI / 180);
+        const rSign = random() > 0.5 ? 1 : -1;
+        const finalRot = baseRot + (rJitterRad * rSign);
+
+        const radius = Math.max(finalW, finalD) * 0.6;
+
+        // D. Collision Check (Neighbors)
+        let overlap = false;
+        for (const p of placedPoints) {
+            const d = Math.hypot(cx - p.x, cz - p.z);
+            if (d < (radius + p.radius + BUILDING_MIN_GAP)) {
+                overlap = true;
+                break;
+            }
+        }
+        // Self-collision (for subdivided)
+        for (const fb of finalBuildings) {
+             const d = Math.hypot(cx - fb.x, cz - fb.z);
+             // Use width-based check for siblings to allow dense packing
+             if (d < (finalW * 0.5 + fb.width * 0.5 + 0.1)) {
+                 overlap = true;
+                 break;
+             }
+        }
+
+        if (overlap) {
+            collisionDetected = true;
             break;
         }
+
+        // E. Terrain/Water Check
+        const fallbackHeight = (Number.isFinite(seaLevel) ? seaLevel : SEA_LEVEL_Y) + MIN_ABOVE_SEA;
+        const ty = sampleHeight(terrain, cx, cz, fallbackHeight);
+        const seaBaseline = Number.isFinite(SEA_LEVEL_Y) ? SEA_LEVEL_Y : seaLevel;
+        const underwaterThreshold = (Number.isFinite(seaBaseline) ? seaBaseline : 0) + 0.05;
+
+        if (!Number.isFinite(ty) || ty <= underwaterThreshold) {
+            collisionDetected = true;
+            break;
+        }
+
+        const inHarborBuffer = isWithinHarborWater(cx, cz, SHORELINE_BUFFER_METERS);
+        const isWaterfrontTagged = options?.lotTag === "harbor" || options?.lotTag === "pier";
+        if (inHarborBuffer && !isWaterfrontTagged) {
+             collisionDetected = true;
+             break;
+        }
+
+        // Roof color
+        const roofPalette = (Array.isArray(distRule.roofColors) && distRule.roofColors.length > 0)
+            ? distRule.roofColors
+            : ROOF_COLOR_PRESETS;
+
+        // Heights
+        const [minH, maxH] = Array.isArray(distRule.heightRange) ? distRule.heightRange : [3, 4.5];
+        const wH = minH + random() * (maxH - minH);
+
+        finalBuildings.push({
+            x: cx, y: ty + 0.05, z: cz,
+            rotation: finalRot,
+            width: finalW, depth: finalD,
+            wallHeight: wH,
+            roofHeight: 1.2 * (cand.isSub ? 0.8 : 1.0),
+            color: new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random)),
+            roofColor: new THREE.Color(pickRandom(roofPalette, random)),
+            radius: radius
+        });
     }
-    if (overlap) continue;
 
-    const fallbackHeight =
-      (Number.isFinite(seaLevel) ? seaLevel : SEA_LEVEL_Y) + MIN_ABOVE_SEA;
-    const y = sampleHeight(terrain, x, z, fallbackHeight);
-    const seaBaseline = Number.isFinite(SEA_LEVEL_Y) ? SEA_LEVEL_Y : seaLevel;
-    const underwaterThreshold = (Number.isFinite(seaBaseline) ? seaBaseline : 0) + 0.05;
+    if (collisionDetected) continue;
 
-    if (!Number.isFinite(y) || y <= underwaterThreshold) {
-      if (isDevEnvironment && underwaterSkipLogCount < UNDERWATER_LOG_LIMIT) {
-        console.info("[city] skipped lot: underwater", { x, z, y });
-        underwaterSkipLogCount++;
-      }
-      continue;
+    // F. Commit placements
+    for (const b of finalBuildings) {
+        buildingPlacements.push(b);
+        placedPoints.push({ x: b.x, z: b.z, radius: b.radius });
     }
-
-    const inHarborBuffer = isWithinHarborWater(x, z, SHORELINE_BUFFER_METERS);
-    const isWaterfrontTagged = options?.lotTag === "harbor" || options?.lotTag === "pier";
-    if (inHarborBuffer && !isWaterfrontTagged) continue;
-
-    const roadAngle = Math.atan2(bestTangent.x, bestTangent.z);
-    const rotation = roadAngle + (random() > 0.5 ? Math.PI/2 : 0) + (random()-0.5)*0.2;
-
-    const distRule = resolveDistrictAt(terrain, districtRules, x, z, 'residential');
-
-    const roofPalette = (Array.isArray(distRule.roofColors) && distRule.roofColors.length > 0)
-        ? distRule.roofColors
-        : ROOF_COLOR_PRESETS;
-
-    const [minH, maxH] = Array.isArray(distRule.heightRange) ? distRule.heightRange : [3, 4.5];
-    const wH = minH + random() * (maxH - minH);
-
-    buildingPlacements[type].push({
-        x, y: y + 0.05, z,
-        rotation,
-        width, depth,
-        wallHeight: wH,
-        roofHeight: 1.2 + random() * 0.4,
-        color: new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random)),
-        roofColor: new THREE.Color(pickRandom(roofPalette, random))
-    });
-
-    placedPoints.push({ x, z, radius });
   }
 
   // 3. Instantiate Buildings
