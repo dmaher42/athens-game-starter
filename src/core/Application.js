@@ -3,6 +3,7 @@ import { Soundscape } from "../audio/soundscape.js";
 import { mountAudioMixer } from "../ui/audioMixer.ts";
 import { createSky, updateSky, getSunDirection, setTimeOfDayPhase } from "../world/sky.js";
 import { createLighting, updateLighting } from "../world/lighting.js";
+import { azElToDirection, applySunAlignment } from "../world/lighting/sunAlignment.js";
 import {
   createInteractor,
   queueSceneInteractable,
@@ -89,6 +90,7 @@ import {
   parseBooleanQuery,
 } from "../config/EngineConfig.js";
 import { lightingConfig } from "../config/LightingConfig.js";
+import { skyboxLightingConfig } from "../config/skyboxLightingConfig.js";
 import { CollectiblesManager } from "../world/collectibles.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "../features/aristotle-texture.js";
@@ -106,6 +108,10 @@ import { GameLoop } from "./GameLoop.js";
 import { VillagerSystem } from "../world/traffic.js";
 import { createAtmosphericParticles } from "../world/particles.js";
 import { scatterGroundProps } from "../world/groundProps.js";
+import {
+  disposeSkybox,
+  loadEquirectangularSkybox,
+} from "../world/skybox/SkyboxManager.js";
 
 console.info("[build]", engineConfig.build || {});
 
@@ -116,6 +122,8 @@ const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 
 const LIGHTING_PRESETS = lightingConfig.presets || {};
+const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
+const SUN_ELEVATION_STORAGE_KEY = "skybox.sunElevationDeg";
 
 const DEFAULT_FORCE_GLB =
   typeof engineConfig.featureFlags?.forceGlb === "boolean"
@@ -185,6 +193,7 @@ export class Application {
     this.devHud = null;
     this.ocean = null;
     this.pendingOceanStatus = null;
+    this.skyboxTexture = null;
   }
 
   async run() {
@@ -221,6 +230,58 @@ export class Application {
         includeGlbCandidates: !FORCE_PROC,
       })
       .catch((err) => console.warn("[probe] initial asset scan failed", err));
+
+    const readStoredNumber = (key, fallback) => {
+      try {
+        if (typeof window !== "undefined" && window.localStorage) {
+          const value = Number(window.localStorage.getItem(key));
+          if (Number.isFinite(value)) return value;
+        }
+      } catch (error) {
+        console.warn(`[storage] Unable to read ${key}`, error);
+      }
+      return fallback;
+    };
+
+    const writeStoredNumber = (key, value) => {
+      try {
+        if (typeof window !== "undefined" && window.localStorage) {
+          window.localStorage.setItem(key, String(value));
+        }
+      } catch (error) {
+        console.warn(`[storage] Unable to persist ${key}`, error);
+      }
+    };
+
+    const clampElevation = (deg) => Math.max(0, Math.min(90, Number(deg) || 0));
+    const wrapAzimuth = (deg) => {
+      const value = Number(deg) || 0;
+      const wrapped = value % 360;
+      return wrapped < 0 ? wrapped + 360 : wrapped;
+    };
+
+    const sunTargetVector = new THREE.Vector3(
+      skyboxLightingConfig.sunTarget?.x ?? 0,
+      skyboxLightingConfig.sunTarget?.y ?? 0,
+      skyboxLightingConfig.sunTarget?.z ?? 0,
+    );
+    const sunDistance = Number.isFinite(skyboxLightingConfig.sunDistance)
+      ? skyboxLightingConfig.sunDistance
+      : 1000;
+    const sunAlignmentState = {
+      azimuthDeg: wrapAzimuth(
+        readStoredNumber(
+          SUN_AZIMUTH_STORAGE_KEY,
+          skyboxLightingConfig.sunAzimuthDeg,
+        ),
+      ),
+      elevationDeg: clampElevation(
+        readStoredNumber(
+          SUN_ELEVATION_STORAGE_KEY,
+          skyboxLightingConfig.sunElevationDeg,
+        ),
+      ),
+    };
 
     this.renderer = createRenderer();
     const renderer = this.renderer;
@@ -412,6 +473,38 @@ export class Application {
     // Sky & lighting
     const skyObj = createSky(scene);
     const lights = createLighting(scene);
+
+    const normalizedSkyboxPath = (skyboxLightingConfig.skyboxUrl || "")
+      .toString()
+      .replace(/^\/+/, "");
+    const resolvedSkyboxUrl = joinPath(BASE_URL, normalizedSkyboxPath);
+
+    try {
+      this.skyboxTexture = await loadEquirectangularSkybox(
+        renderer,
+        scene,
+        resolvedSkyboxUrl,
+      );
+      if (skyObj?.mesh) {
+        skyObj.mesh.visible = false;
+      }
+    } catch (error) {
+      console.warn(
+        "[skybox] Failed to load equirectangular skybox. Ensure the asset exists at public/assets/skyboxes/athens_sunset_360.png",
+        error,
+      );
+    }
+
+    const alignSunLight = () =>
+      applySunAlignment(
+        lights.sunLight,
+        sunTargetVector,
+        sunAlignmentState.azimuthDeg,
+        sunAlignmentState.elevationDeg,
+        sunDistance,
+      );
+
+    alignSunLight();
     // ---- Living City Soundscape ----
     const soundscape = new Soundscape(
       scene,
@@ -1766,6 +1859,53 @@ export class Application {
     const timeOfDayState = { timeOfDayPhase: 0 };
     setTimeOfDayPhase(timeOfDayState, 0);
 
+    const persistSunAlignment = () => {
+      writeStoredNumber(SUN_AZIMUTH_STORAGE_KEY, sunAlignmentState.azimuthDeg);
+      writeStoredNumber(
+        SUN_ELEVATION_STORAGE_KEY,
+        sunAlignmentState.elevationDeg,
+      );
+    };
+
+    const getAlignedSunDirection = () =>
+      azElToDirection(sunAlignmentState.azimuthDeg, sunAlignmentState.elevationDeg);
+
+    const syncSunLighting = (sunHeightOverride) => {
+      const direction = alignSunLight() || getAlignedSunDirection();
+      const height = Number.isFinite(sunHeightOverride)
+        ? sunHeightOverride
+        : direction.y;
+      updateLighting(lights, direction, {
+        applyPosition: false,
+        sunHeightOverride: height,
+        sunDistance,
+        sunTarget: sunTargetVector,
+      });
+      return direction;
+    };
+
+    const setSunAlignment = (updates = {}) => {
+      let changed = false;
+      if (updates.azimuthDeg != null && Number.isFinite(Number(updates.azimuthDeg))) {
+        sunAlignmentState.azimuthDeg = wrapAzimuth(updates.azimuthDeg);
+        changed = true;
+      }
+      if (
+        updates.elevationDeg != null &&
+        Number.isFinite(Number(updates.elevationDeg))
+      ) {
+        sunAlignmentState.elevationDeg = clampElevation(updates.elevationDeg);
+        changed = true;
+      }
+
+      if (changed) {
+        persistSunAlignment();
+        const cycleDir = getSunDirection(timeOfDayState);
+        syncSunLighting(cycleDir?.y);
+        renderFrame();
+      }
+    };
+
     const applyLightingPreset = (presetName) => {
       const preset = LIGHTING_PRESETS[presetName];
       if (!preset) return;
@@ -1774,8 +1914,8 @@ export class Application {
       renderer.toneMappingExposure = preset.exposure;
       console.log(`[HUD] preset: ${presetName}`);
 
-      const sunDir = getSunDirection(timeOfDayState);
-      updateLighting(lights, sunDir);
+      const sunDirForCycle = getSunDirection(timeOfDayState);
+      const alignedSunDir = syncSunLighting(sunDirForCycle?.y);
       updateSky(scene, presetName);
 
       updateHarborLighting(harbor, lights.nightFactor);
@@ -1786,7 +1926,7 @@ export class Application {
         timeOfDayPhase: phase,
       });
       updateMainHillRoadLighting(roadGroup, lights.nightFactor);
-      updateOcean(ocean, 0, sunDir, lights.nightFactor);
+      updateOcean(ocean, 0, alignedSunDir, lights.nightFactor);
       if (grassRoot) {
         setGrassNightFactor(lights.nightFactor);
         updateGrass(0, player?.position ?? null);
@@ -1812,11 +1952,11 @@ export class Application {
 
       const phase = timeOfDayState.timeOfDayPhase ?? 0;
       timeOfDayState.elapsedSeconds = elapsed;
-      const sunDir = getSunDirection(timeOfDayState);
+      const sunDirForCycle = getSunDirection(timeOfDayState);
+      const alignedSunDir = syncSunLighting(sunDirForCycle?.y);
 
       // Update sky dome and atmospheric lighting each frame.
-      updateLighting(lights, sunDir);
-
+      
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
         timeOfDayPhase: phase,
@@ -1832,7 +1972,7 @@ export class Application {
 
       // Advance the GPU-driven terrain sway (no CPU vertex updates required).
       updateTerrain(terrain, elapsed);
-      updateOcean(ocean, deltaTime, sunDir, lights.nightFactor);
+      updateOcean(ocean, deltaTime, alignedSunDir, lights.nightFactor);
 
       // Update soundscape once per frame (player position optional)
       soundscape.update(player?.position);
@@ -1927,6 +2067,11 @@ export class Application {
       lightingPresets: LIGHTING_PRESETS,
       getFogEnabled: () => fogEnabled,
       onToggleFog: toggleFog,
+      sunAlignment: {
+        getAzimuthDeg: () => sunAlignmentState.azimuthDeg,
+        getElevationDeg: () => sunAlignmentState.elevationDeg,
+        onChange: setSunAlignment,
+      },
     });
     this.devHud = devHud;
     mountMiniMap({ getPosition, getDirection });
@@ -1993,6 +2138,7 @@ export class Application {
    */
   cleanUp() {
     if (this.sceneContext) {
+      disposeSkybox(this.sceneContext.scene);
       // Traverse the scene and free GPU resources
       this.sceneContext.scene.traverse((object) => {
         if (!object.isMesh) return;
