@@ -1739,9 +1739,9 @@ export class Application {
 
     interactor = createInteractor(renderer, camera, scene);
 
-    atmosphericParticles = createAtmosphericParticles(scene, {
-      getCenter: () => player?.object?.position ?? null,
-    });
+    // atmosphericParticles = createAtmosphericParticles(scene, {
+    //   getCenter: () => player?.object?.position ?? null,
+    // });
 
     if (thirdPersonCamera) {
       setThirdPersonEnabled(USE_THIRD_PERSON);
