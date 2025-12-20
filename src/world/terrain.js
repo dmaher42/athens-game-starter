@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { getSeaLevelY } from "./locations.js";
+import { getSeaLevelY, HARBOR_WATER_BOUNDS, HARBOR_WATER_EAST_LIMIT } from "./locations.js";
 import {
   createGroundTextureState,
   injectGroundTextureShader,
@@ -49,6 +49,38 @@ const OCEAN_DEPTH = -12.0;
 const CITY_HEIGHT = 4.0;
 const CITY_MIN_HEIGHT = 2.0;
 
+const HARBOR_GROUND_HEIGHT = 1;
+const HARBOR_COAST_PADDING = 36;
+const HARBOR_LONGITUDINAL_PADDING = 12;
+const HARBOR_SLOPE_WIDTH = 6;
+
+function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
+  const { west, east, north, south } = HARBOR_WATER_BOUNDS;
+  const harborGroundY = seaLevel + HARBOR_GROUND_HEIGHT;
+
+  const withinWater = x >= west && x <= east && z >= north && z <= south;
+  if (withinWater) {
+    return seaLevel - 0.4; // Carve a shallow basin so docks never intersect terrain
+  }
+
+  const coastalWest = east;
+  const coastalEast = HARBOR_WATER_EAST_LIMIT + HARBOR_COAST_PADDING;
+  const coastalNorth = north - HARBOR_LONGITUDINAL_PADDING;
+  const coastalSouth = south + HARBOR_LONGITUDINAL_PADDING;
+  const withinCoast =
+    x >= coastalWest &&
+    x <= coastalEast &&
+    z >= coastalNorth &&
+    z <= coastalSouth;
+
+  if (!withinCoast) return baseHeight;
+
+  const distanceFromEdge = Math.max(0, x - coastalWest);
+  const slopeFactor = THREE.MathUtils.clamp(distanceFromEdge / HARBOR_SLOPE_WIDTH, 0, 1);
+  // Blend from water height up to dry ground over a short ramp
+  return THREE.MathUtils.lerp(seaLevel, harborGroundY, slopeFactor);
+}
+
 function getElevation(x, z, seaLevel) {
   const oceanHeight = seaLevel + OCEAN_DEPTH;
   const cityHeight = seaLevel + CITY_HEIGHT;
@@ -65,6 +97,9 @@ function getElevation(x, z, seaLevel) {
 
   const noise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE) * NOISE_AMPLITUDE;
   let height = baseHeight + noise;
+
+  // Harbor band flattening & sand pad for warehouses/docks
+  height = clampHarborBandHeight(x, z, seaLevel, height);
 
   if (z > CITY_BOUNDARY_Z && height < seaLevel + CITY_MIN_HEIGHT) {
     height = seaLevel + CITY_MIN_HEIGHT;
