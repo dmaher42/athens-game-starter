@@ -70,6 +70,7 @@ export class InputMap {
   private readonly keys: Set<string> = new Set();
   private readonly canvas: HTMLCanvasElement | null;
   private flyToggleQueued = false;
+  private interactQueued = false;
   private cameraSettings: CameraSettings | null;
   private unsubscribeCameraSettings: (() => void) | null = null;
 
@@ -91,8 +92,11 @@ export class InputMap {
         return;
       }
       this.keys.add(event.code);
-      if (event.code === "KeyF" && !event.repeat) {
+      if (event.code === "KeyG" && !event.repeat) {
         this.flyToggleQueued = true;
+      }
+      if (event.code === "KeyF" && !event.repeat) {
+        this.interactQueued = true;
       }
       if (CONTROL_KEYS.has(event.code)) {
         event.preventDefault();
@@ -112,6 +116,7 @@ export class InputMap {
     this.blurHandler = () => {
       this.resetKeys();
       this.flyToggleQueued = false;
+      this.interactQueued = false;
     };
 
     window.addEventListener("keydown", this.keyDownHandler);
@@ -227,6 +232,12 @@ export class InputMap {
   consumeFlyToggle(): boolean {
     if (!this.flyToggleQueued) return false;
     this.flyToggleQueued = false;
+    return true;
+  }
+
+  consumeInteract(): boolean {
+    if (!this.interactQueued) return false;
+    this.interactQueued = false;
     return true;
   }
 
