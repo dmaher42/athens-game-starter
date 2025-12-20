@@ -1219,9 +1219,10 @@ export class Application {
       character.initializeFromGLTF(root, gltf.animations);
       player.attachCharacter(character);
 
-      if (url !== heroRootPath) {
+      const resolvedHeroRootPath = joinPath(BASE_URL, heroRootPath);
+      if (url !== resolvedHeroRootPath && url !== heroRootPath) {
         console.info(
-          `Hero GLB not found at ${joinPath(BASE_URL, "models/character/hero.glb")}; using bundled astronaut sample from ${url}.`,
+          `Hero GLB not found at ${resolvedHeroRootPath}; using bundled astronaut sample from ${url}.`,
         );
       }
       console.log("[Hero] Loaded:", url);

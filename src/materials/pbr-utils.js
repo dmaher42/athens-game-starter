@@ -43,20 +43,22 @@ async function loadAny(loader, stem, { isSRGB = false } = {}) {
   if (typeof stem !== "string" || stem.length === 0) return null;
   const trimmedStem = stem.trim();
   if (!trimmedStem) return null;
+  const flatMarble = trimmedStem
+    .replace("marble/basecolor", "marble_base")
+    .replace("marble/albedo", "marble_base")
+    .replace("marble/normal", "marble_normal-dx")
+    .replace("marble/roughness", "marble_rough")
+    .replace("marble/ao", "marble_ao");
+
   const variants = Array.from(
     new Set(
       [
+        // Prioritize flat marble paths (e.g. textures/marble_base) to avoid 404s on directory paths
+        ...(flatMarble !== trimmedStem ? [flatMarble] : []),
         trimmedStem,
         trimmedStem
           .replace("basecolor", "albedo")
           .replace("gravel/", "gravel_path-"),
-        // Fix for flat marble texture paths (e.g. textures/marble/basecolor -> textures/marble_base)
-        trimmedStem
-          .replace("marble/basecolor", "marble_base")
-          .replace("marble/albedo", "marble_base")
-          .replace("marble/normal", "marble_normal-dx")
-          .replace("marble/roughness", "marble_rough")
-          .replace("marble/ao", "marble_ao"),
         // Fallback for missing gravel textures: reuse marble_base
         trimmedStem.includes("textures/gravel")
           ? "textures/marble_base"

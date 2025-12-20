@@ -58,6 +58,7 @@ export class Soundscape {
     this.buffers = new Map();
     this.emitters = [];
     this.oneShotTimers = [];
+    this.pendingSources = new Set();
     this.ready = false;
     this.manifestLoaded = false;
     this._manifest = null;
@@ -68,6 +69,15 @@ export class Soundscape {
       agora: { pos: anchors.agora, radius: 40 },
       acropolis: { pos: anchors.acropolis, radius: 40 }
     };
+  }
+
+  _safePlay(source) {
+    if (!source) return;
+    if (this.listener.context.state === "running") {
+      source.play();
+    } else {
+      this.pendingSources.add(source);
+    }
   }
 
   logMissing(name, url) {
@@ -261,9 +271,9 @@ export class Soundscape {
       const zone = entry?.id && this.zones?.[entry.id];
       const target = zone?.pos;
       if (target) {
-        this._makePositional(buffer, target, entry.group || "ambience", opts)?.play();
+        this._safePlay(this._makePositional(buffer, target, entry.group || "ambience", opts));
       } else {
-        this._makeGlobal(buffer, entry.group || "ambience", opts)?.play();
+        this._safePlay(this._makeGlobal(buffer, entry.group || "ambience", opts));
       }
     }
 
@@ -328,14 +338,14 @@ export class Soundscape {
     const cart = await this.loadBuffer("cart", toUrl(effects.cart));
 
     // Global ambient: sea + wind (wind mixed more at night)
-    this._makeGlobal(sea, "ambience", { volume: 0.25 })?.play();
-    this._makeGlobal(wind, "ambience", { volume: 0.05 })?.play();
+    this._safePlay(this._makeGlobal(sea, "ambience", { volume: 0.25 }));
+    this._safePlay(this._makeGlobal(wind, "ambience", { volume: 0.05 }));
 
     // Zones: harbor, agora, acropolis
-    this._makePositional(gulls, this.zones.harbor.pos, "ambience", { volume: 0.35, refDistance: 16, maxDistance: 120 })?.play();
-    this._makePositional(market, this.zones.agora.pos, "voices", { volume: 0.35, refDistance: 10 })?.play();
-    this._makePositional(fountain, this.zones.agora.pos.clone().add(new THREE.Vector3(6,0,-4)), "ambience", { volume: 0.25, refDistance: 8 })?.play();
-    this._makePositional(lyre, this.zones.acropolis.pos, "ambience", { volume: 0.22, refDistance: 10 })?.play();
+    this._safePlay(this._makePositional(gulls, this.zones.harbor.pos, "ambience", { volume: 0.35, refDistance: 16, maxDistance: 120 }));
+    this._safePlay(this._makePositional(market, this.zones.agora.pos, "voices", { volume: 0.35, refDistance: 10 }));
+    this._safePlay(this._makePositional(fountain, this.zones.agora.pos.clone().add(new THREE.Vector3(6,0,-4)), "ambience", { volume: 0.25, refDistance: 8 }));
+    this._safePlay(this._makePositional(lyre, this.zones.acropolis.pos, "ambience", { volume: 0.22, refDistance: 10 }));
 
     // One-shots with randomized scheduling
     this.scheduleOneShots(blacksmith, this.zones.agora.pos.clone().add(new THREE.Vector3(-8,0,6)), "effects", 12, 22); // every 12–22s
@@ -381,6 +391,13 @@ export class Soundscape {
     if (ctx.state === "running") return;
     const resume = async () => {
       try { await ctx.resume(); } catch {}
+      // Play pending
+      for (const src of this.pendingSources) {
+        try {
+          if (src && src.play) src.play();
+        } catch {}
+      }
+      this.pendingSources.clear();
       window.removeEventListener("pointerdown", resume);
       window.removeEventListener("keydown", resume);
     };
