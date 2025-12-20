@@ -50,6 +50,13 @@ async function loadAny(loader, stem, { isSRGB = false } = {}) {
         trimmedStem
           .replace("basecolor", "albedo")
           .replace("gravel/", "gravel_path-"),
+        // Fix for flat marble texture paths (e.g. textures/marble/basecolor -> textures/marble_base)
+        trimmedStem
+          .replace("marble/basecolor", "marble_base")
+          .replace("marble/albedo", "marble_base")
+          .replace("marble/normal", "marble_normal-dx")
+          .replace("marble/roughness", "marble_rough")
+          .replace("marble/ao", "marble_ao"),
         // Fallback for missing gravel textures: reuse marble_base
         trimmedStem.includes("textures/gravel")
           ? "textures/marble_base"
