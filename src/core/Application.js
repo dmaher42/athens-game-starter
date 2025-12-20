@@ -101,6 +101,7 @@ import {
 } from "./Scene.js";
 import { GameLoop } from "./GameLoop.js";
 import { TrafficManager } from "../world/traffic.js";
+import { createAtmosphericParticles } from "../world/particles.js";
 
 console.info("[build]", engineConfig.build || {});
 
@@ -571,6 +572,7 @@ export class Application {
 
     let grassRoot = null;
     let trafficManager = null;
+    let atmosphericParticles = null;
 
     const roadsVisible =
       engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
@@ -741,6 +743,8 @@ export class Application {
 
     if (roadCurves && roadCurves.length > 0) {
       trafficManager = new TrafficManager(scene, roadCurves, terrain);
+      scene.userData = scene.userData || {};
+      scene.userData.trafficManager = trafficManager;
     }
 
     // Hill-city buildings (uses terrain sampler + road curve)
@@ -1715,6 +1719,10 @@ export class Application {
 
     interactor = createInteractor(renderer, camera, scene);
 
+    atmosphericParticles = createAtmosphericParticles(scene, {
+      getCenter: () => player?.object?.position ?? null,
+    });
+
     if (thirdPersonCamera) {
       setThirdPersonEnabled(USE_THIRD_PERSON);
     }
@@ -1821,6 +1829,10 @@ export class Application {
 
       if (trafficManager) {
         trafficManager.update(deltaTime);
+      }
+
+      if (atmosphericParticles) {
+        atmosphericParticles.update(deltaTime, elapsed);
       }
 
       // Cast a ray through the center of the screen to detect hovered objects and
