@@ -113,12 +113,6 @@ import {
   loadEquirectangularSkybox,
 } from "../world/skybox/SkyboxManager.js";
 
-// === NEW RPG SYSTEMS ===
-import { QuestManager } from "../state/QuestManager.js";
-import { InteractionSystem } from "../interactions/InteractionSystem.js";
-import { QuestHud } from "../ui/questHud.ts";
-import { InteractionHud } from "../ui/interactionHud.ts";
-
 console.info("[build]", engineConfig.build || {});
 
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl();
@@ -460,12 +454,20 @@ export class Application {
     const skyObj = createSky(scene);
     const lights = createLighting(scene);
 
+    const normalizedSkyboxPath = (skyboxLightingConfig.skyboxUrl || "")
+      .toString()
+      .replace(/^\/+/, "");
+    const resolvedSkyboxUrl = joinPath(BASE_URL, normalizedSkyboxPath);
+
     try {
       this.skyboxTexture = await loadEquirectangularSkybox(
         renderer,
         scene,
-        skyboxLightingConfig.skyboxUrl,
+        resolvedSkyboxUrl,
       );
+      if (skyObj?.mesh) {
+        skyObj.mesh.visible = false;
+      }
     } catch (error) {
       console.warn(
         "[skybox] Failed to load equirectangular skybox. Ensure the asset exists at public/assets/skyboxes/athens_sunset_360.png",
