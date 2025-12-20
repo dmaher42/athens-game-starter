@@ -39,10 +39,15 @@ export function createSceneContext({
   scene.userData.renderer = renderer;
   scene.userData.baseUrl = baseUrl;
 
+  const fogState = {
+    color: new THREE.Color(0xbfd5ff),
+    density: 0.0014,
+  };
+
   const createSceneFog = () => {
     // Atmospheric fog matching the sky tint (approx #dbeaff)
-    // Density 0.002 provides a subtle depth cue without obscuring the city
-    return new THREE.FogExp2(0xcce0ff, 0.002);
+    // Density tuned for gentle depth cues without binary pop-in
+    return new THREE.FogExp2(fogState.color.clone(), fogState.density);
   };
 
   let fogEnabled = false;
@@ -50,6 +55,20 @@ export function createSceneContext({
   const syncFogState = () => {
     if (typeof onFogChange === "function") {
       onFogChange(fogEnabled, scene);
+    }
+  };
+
+  const setFogOptions = ({ color, density } = {}) => {
+    if (color) {
+      fogState.color.copy(color instanceof THREE.Color ? color : new THREE.Color(color));
+    }
+    if (Number.isFinite(density)) {
+      fogState.density = Math.max(0, density);
+    }
+
+    if (scene.fog && scene.fog.isFogExp2) {
+      scene.fog.color.copy(fogState.color);
+      scene.fog.density = fogState.density;
     }
   };
 
@@ -67,6 +86,12 @@ export function createSceneContext({
   const toggleFog = () => {
     setFogEnabled(!fogEnabled);
   };
+
+  scene.userData.setFogOptions = setFogOptions;
+  scene.userData.getFogOptions = () => ({
+    color: fogState.color.clone(),
+    density: fogState.density,
+  });
 
   const disposeMaterial = (material) => {
     if (!material) return;

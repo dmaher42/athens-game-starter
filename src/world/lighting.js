@@ -5,17 +5,17 @@ import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils } from "th
 // --- COLORS CONFIGURATION ---
 
 const SUN_COLOR_DAWN = new Color("#ffb37f");
-// Slightly warmer noon sun
-const SUN_COLOR_NOON = new Color("#fffbf5");
+// Slightly warmer noon sun to avoid washed-out light
+const SUN_COLOR_NOON = new Color("#ffe1b5");
 const SUN_COLOR_DUSK = new Color("#ff9f76");
 
 const SKY_COLOR_NIGHT = new Color("#0b1d51");
-// Soft blue sky instead of pure white to add atmosphere to shadows
-const SKY_COLOR_DAY = new Color("#dbeaff");
+// Cooler skylight to keep shadows blue-toned
+const SKY_COLOR_DAY = new Color("#a6c4ff");
 
 const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
-// Warm beige for ground bounce
-const GROUND_COLOR_DAY = new Color("#e6dccf");
+// Cooler ground bounce to reduce flatness
+const GROUND_COLOR_DAY = new Color("#d9dde3");
 // ------------------------------------------------------------------
 
 const scratchColor = new Color();
@@ -56,8 +56,8 @@ export function createLighting(scene) {
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  // Reduced ambient intensity (0.6 -> 0.4) to prevent washing out shadows
-  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.4);
+  // Reduced ambient intensity and cooler colors to keep contrast in shadows
+  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.35);
   scene.add(hemiLight);
 
   return { sunLight, hemiLight, nightFactor: 0 };
