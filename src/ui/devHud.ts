@@ -19,6 +19,11 @@ export interface DevHudOptions {
   readonly lightingPresets?: Record<string, LightingPresetMeta | null | undefined>;
   readonly getFogEnabled?: () => boolean;
   readonly onToggleFog?: () => void;
+  readonly sunAlignment?: {
+    getAzimuthDeg?: () => number;
+    getElevationDeg?: () => number;
+    onChange?: (updates: { azimuthDeg?: number; elevationDeg?: number }) => void;
+  };
 }
 
 type OceanBounds = {
@@ -55,6 +60,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     lightingPresets,
     getFogEnabled,
     onToggleFog,
+    sunAlignment,
   } = options;
   const isDevBuild = Boolean(
     (import.meta as ImportMetaWithEnv).env?.DEV,
@@ -383,6 +389,109 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     section.appendChild(buttonRow);
     read.appendChild(section);
     updateFogControls();
+  }
+
+  if (sunAlignment) {
+    const section = document.createElement("div");
+    section.className = "hud-sun-alignment";
+    Object.assign(section.style, {
+      marginTop: "8px",
+      paddingTop: "6px",
+      borderTop: "1px solid rgba(255,255,255,0.15)",
+      pointerEvents: "auto",
+    });
+
+    const heading = document.createElement("div");
+    heading.textContent = "Sun Alignment";
+    Object.assign(heading.style, {
+      fontWeight: 600,
+      letterSpacing: "0.08em",
+      fontSize: "11px",
+      opacity: "0.85",
+      textTransform: "uppercase",
+    });
+    section.appendChild(heading);
+
+    const createSliderRow = (
+      labelText: string,
+      min: number,
+      max: number,
+      step: number,
+      initialValue: number,
+      onValue: (value: number) => void,
+    ) => {
+      const row = document.createElement("div");
+      Object.assign(row.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        marginTop: "8px",
+      });
+
+      const label = document.createElement("div");
+      label.textContent = labelText;
+      Object.assign(label.style, {
+        width: "90px",
+        opacity: "0.85",
+        fontSize: "12px",
+      });
+
+      const input = document.createElement("input");
+      input.type = "range";
+      input.min = String(min);
+      input.max = String(max);
+      input.step = String(step);
+      input.value = String(initialValue);
+      input.style.flex = "1";
+
+      const value = document.createElement("span");
+      value.textContent = initialValue.toFixed(1);
+      value.style.width = "48px";
+      value.style.opacity = "0.75";
+
+      const updateValue = (next: string | number) => {
+        const v = Math.min(max, Math.max(min, Number(next)));
+        if (!Number.isFinite(v)) return;
+        input.value = String(v);
+        value.textContent = v.toFixed(1);
+        onValue(v);
+      };
+
+      input.addEventListener("input", (event) => {
+        const target = event.target as HTMLInputElement | null;
+        if (target) {
+          updateValue(target.value);
+        }
+      });
+
+      row.appendChild(label);
+      row.appendChild(input);
+      row.appendChild(value);
+      section.appendChild(row);
+    };
+
+    const initialAzimuth = sunAlignment.getAzimuthDeg?.() ?? 0;
+    const initialElevation = sunAlignment.getElevationDeg?.() ?? 0;
+
+    createSliderRow(
+      "Sun Azimuth",
+      0,
+      360,
+      1,
+      initialAzimuth,
+      (value) => sunAlignment.onChange?.({ azimuthDeg: value }),
+    );
+
+    createSliderRow(
+      "Sun Elevation",
+      0,
+      90,
+      0.5,
+      initialElevation,
+      (value) => sunAlignment.onChange?.({ elevationDeg: value }),
+    );
+
+    read.appendChild(section);
   }
 
   wrap.appendChild(comp);
