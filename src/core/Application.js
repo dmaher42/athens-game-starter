@@ -486,9 +486,12 @@ export class Application {
     }
 
     const currentSeaLevel = getSeaLevelY();
-    const harborSampler = terrain?.userData?.getHeightAt;
+    const harborSampler = null;
     let sampledSeaLevel = currentSeaLevel;
     let harborSampleCount = 0;
+    let harbor = null;
+
+    harbor = createHarbor(scene);
 
     if (typeof harborSampler === "function") {
       const { west, east, north, south } = HARBOR_WATER_BOUNDS;
@@ -576,10 +579,6 @@ export class Application {
     };
     this.pendingOceanStatus = pendingOceanStatus;
     updateOceanHudStatus();
-    const harbor = createHarbor(scene, {
-      center: HARBOR_CENTER_3D,
-      seaLevel: resolvedSeaLevel,
-    });
     const envCollider = new EnvironmentCollider();
     scene.add(envCollider.mesh);
 

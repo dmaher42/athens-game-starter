@@ -42,6 +42,38 @@ function applyVertexColor(geometry, color) {
   return geom;
 }
 
+function findHighestPoint(terrain, center, radius, step = 6) {
+  let best = null;
+  for (let x = center.x - radius; x <= center.x + radius; x += step) {
+    for (let z = center.z - radius; z <= center.z + radius; z += step) {
+      const y = sampleHeight(terrain, x, z, center.y);
+      if (!Number.isFinite(y)) continue;
+      if (!best || y > best.y) {
+        best = { x, y, z };
+      }
+    }
+  }
+  return best;
+}
+
+function findSteepestSlope(terrain, center, radius, step = 10) {
+  let best = null;
+  for (let x = center.x - radius; x <= center.x + radius; x += step) {
+    for (let z = center.z - radius; z <= center.z + radius; z += step) {
+      const h = sampleHeight(terrain, x, z, center.y);
+      const hx = sampleHeight(terrain, x + step, z, h);
+      const hz = sampleHeight(terrain, x, z + step, h);
+      if (!Number.isFinite(h) || !Number.isFinite(hx) || !Number.isFinite(hz)) continue;
+      const slopeVec = new THREE.Vector3(hx - h, 0, hz - h);
+      const magnitude = slopeVec.length();
+      if (!best || magnitude > best.slope) {
+        best = { x, z, y: h, slope: magnitude, downhill: slopeVec.clone().normalize() };
+      }
+    }
+  }
+  return best;
+}
+
 function populateCityDetails(cityGroup, terrain, buildingPlacements, roadCurves) {
   if (!cityGroup) return;
 
@@ -250,6 +282,10 @@ export async function createCity(scene, terrain, options = {}) {
   city.name = "HarborCity";
   scene.add(city);
 
+  const monuments = new THREE.Group();
+  monuments.name = "Monuments";
+  city.add(monuments);
+
   // Roads radiating from center
   const roadCurves = [];
   for (let i = 0; i < 5; i++) {
@@ -391,6 +427,40 @@ export async function createCity(scene, terrain, options = {}) {
     cityMesh.receiveShadow = true;
     city.add(cityMesh);
   }
+
+  const acropolisPeak = findHighestPoint(terrain, origin, 80, 6);
+  if (acropolisPeak) {
+    const parthenon = createParthenon();
+    parthenon.position.set(acropolisPeak.x, acropolisPeak.y, acropolisPeak.z);
+    monuments.add(parthenon);
+
+    const gatewayGeo = generateTempleGeometry(16, 28, 8, 6, 12);
+    const gatewayMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.02 });
+    const gateway = new THREE.Mesh(gatewayGeo, gatewayMaterial);
+    gateway.castShadow = true;
+    gateway.receiveShadow = true;
+    const gatewayPos = new THREE.Vector3(acropolisPeak.x + 10, acropolisPeak.y, acropolisPeak.z - 24);
+    gatewayPos.y = sampleHeight(terrain, gatewayPos.x, gatewayPos.z, gatewayPos.y);
+    gateway.position.copy(gatewayPos);
+    monuments.add(gateway);
+  }
+
+  const slopeSpot = findSteepestSlope(terrain, origin, CITY_AREA_RADIUS, 12);
+  const theaterPos = slopeSpot
+    ? new THREE.Vector3(slopeSpot.x, slopeSpot.y, slopeSpot.z)
+    : new THREE.Vector3(origin.x + 100, sampleHeight(terrain, origin.x + 100, origin.z + 100, origin.y), origin.z + 100);
+  const theater = createTheater();
+  theater.position.copy(theaterPos);
+  if (slopeSpot?.downhill) {
+    theater.rotation.y = Math.atan2(-slopeSpot.downhill.x, -slopeSpot.downhill.z);
+  }
+  monuments.add(theater);
+
+  const zeusPos = new THREE.Vector3(origin.x - 80, origin.y, origin.z + 40);
+  zeusPos.y = sampleHeight(terrain, zeusPos.x, zeusPos.z, origin.y);
+  const templeOfZeus = createTempleOfZeus();
+  templeOfZeus.position.copy(zeusPos);
+  monuments.add(templeOfZeus);
 
   populateCityDetails(city, terrain, buildingPlacements, roadCurves);
 
