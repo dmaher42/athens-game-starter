@@ -63,19 +63,31 @@ export function createLighting(scene) {
   return { sunLight, hemiLight, nightFactor: 0 };
 }
 
-export function updateLighting(lights, sunDir) {
+export function updateLighting(lights, sunDir, options = {}) {
   if (!lights || !lights.sunLight || !lights.hemiLight) return;
   const { sunLight, hemiLight } = lights;
 
+  const {
+    applyPosition = true,
+    sunDistance = 100,
+    sunTarget = { x: 0, y: 0, z: 0 },
+    sunHeightOverride,
+  } = options;
+
   const norm = scratchDir.copy(sunDir).normalize();
-  const sunHeight = norm.y;
+  const sunHeight = Number.isFinite(sunHeightOverride)
+    ? sunHeightOverride
+    : norm.y;
 
   const dayFactor = MathUtils.clamp(MathUtils.smoothstep(sunHeight, -0.15, 0.1), 0, 1);
   const nightFactor = 1 - dayFactor;
 
-  sunLight.position.copy(norm).multiplyScalar(100);
-  sunLight.target.position.set(0, 0, 0);
-  sunLight.target.updateMatrixWorld();
+  if (applyPosition) {
+    sunLight.position.copy(norm).multiplyScalar(sunDistance);
+    const target = sunTarget || { x: 0, y: 0, z: 0 };
+    sunLight.target.position.set(target.x ?? 0, target.y ?? 0, target.z ?? 0);
+    sunLight.target.updateMatrixWorld();
+  }
 
   // Lerp sun intensity to new max (3.5)
   const targetSunIntensity = MathUtils.lerp(0.0, 3.5, dayFactor);
