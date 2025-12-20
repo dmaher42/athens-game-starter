@@ -59,7 +59,8 @@ export const GROUND_TEXTURE_CONFIG = {
     contrast: NEUTRAL_GROUND_FALLBACK_TINT.contrast,
     /** Repeat count for the base texture across the terrain. */
     // de-tiling: lower repeats + anisotropy + slight rotation
-    repeat: [64, 64],
+    // Reduce the base texture tiling so the ground pattern appears at a larger scale.
+    repeat: [36, 36],
     anisotropy: 16,
     /** Rotate the texture in radians if you need to align features. */
     rotation: 0,
@@ -78,19 +79,23 @@ export const GROUND_TEXTURE_CONFIG = {
     grass: {
       url: textureUrl("grass-albedo.jpg"),
       colorSpace: "srgb",
-      repeat: [64, 64],
+      // Reduce the grass texture tiling to enlarge its pattern on the terrain.
+      repeat: [36, 36],
       rotation: 0,
     },
     /** Secondary dirt map used for splatmapping. */
     dirt: {
       url: textureUrl("dirt-albedo.jpg"),
       colorSpace: "srgb",
-      repeat: [48, 48],
+      // Reduce the dirt texture tiling to enlarge the dirt patches and better integrate them.
+      repeat: [28, 28],
       rotation: 0.13,
     },
     /** How strong and large the procedural patches should be. */
-    noiseScale: 22,
-    noiseContrast: 1.35,
+    // Lower the noise scale to create larger, smoother dirt vs. grass regions instead of fine swirls.
+    noiseScale: 6,
+    // Lower the noise contrast to soften the transitions between grass and dirt.
+    noiseContrast: 1.1,
     /** Mask resolution for forced dirt regions (roads/buildings). */
     maskResolution: 256,
     /** Multiplier applied to the mask; leave at 1 to fully respect it. */
