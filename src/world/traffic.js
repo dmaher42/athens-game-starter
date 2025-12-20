@@ -1,22 +1,32 @@
 import * as THREE from "three";
 
-const TUNIC_COLORS = ["#ffffff", "#f5e6c8", "#c8d9ff"];
-const CITIZEN_MESH_NAME = "Citizens";
+const CITY_RADIUS = 200;
+const MIN_TARGET_DISTANCE = 10;
+const MAX_TARGET_DISTANCE = 20;
+const WATER_HEIGHT_THRESHOLD = 2.0;
+const TUNIC_COLORS = ["#ffffff", "#f5e6c8", "#7a5b3a", "#c8d9ff"];
+const VILLAGER_MESH_NAME = "Villagers";
+const STATE_IDLE = 0;
+const STATE_WALKING = 1;
 
-export class TrafficManager {
-  constructor(scene, roadCurves = [], terrain = null) {
+export class VillagerSystem {
+  constructor(scene, terrain = null, count = 60) {
     this.scene = scene;
     this.terrain = terrain;
-    this.roadCurves = Array.isArray(roadCurves) ? roadCurves : [];
-    this.agentCount = 40;
-    this.agents = [];
+    this.count = Math.max(0, Math.floor(count ?? 60));
     this.mesh = null;
     this.halfHeight = 0.85;
+
+    this.positions = new Array(this.count);
+    this.targets = new Array(this.count);
+    this.states = new Array(this.count).fill(STATE_IDLE);
+    this.timers = new Array(this.count).fill(0);
+    this.speeds = new Array(this.count);
+    this.rotations = new Array(this.count);
+
     this.tempMatrix = new THREE.Matrix4();
     this.tempQuaternion = new THREE.Quaternion();
     this.forward = new THREE.Vector3(0, 0, 1);
-    this.nextPoint = new THREE.Vector3();
-    this.position = new THREE.Vector3();
     this.direction = new THREE.Vector3();
     this.scale = new THREE.Vector3(1, 1, 1);
 
@@ -24,39 +34,30 @@ export class TrafficManager {
   }
 
   init() {
-    if (!this.scene || this.roadCurves.length === 0) {
-      return;
-    }
+    if (!this.scene || this.count <= 0) return;
 
     const geometry = new THREE.BoxGeometry(0.5, 1.7, 0.5);
     const material = new THREE.MeshStandardMaterial({ vertexColors: true });
-    const mesh = new THREE.InstancedMesh(geometry, material, this.agentCount);
-    mesh.name = CITIZEN_MESH_NAME;
+    const mesh = new THREE.InstancedMesh(geometry, material, this.count);
+    mesh.name = VILLAGER_MESH_NAME;
     mesh.castShadow = true;
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh = mesh;
 
-    for (let i = 0; i < this.agentCount; i++) {
-      const curve = this.pickCurve();
-      const t = Math.random();
-      const speed = 0.1 + Math.random() * 0.1;
+    for (let i = 0; i < this.count; i++) {
       const color = new THREE.Color(TUNIC_COLORS[i % TUNIC_COLORS.length]);
-      this.agents.push({ curve, t, speed, paused: false, instanceId: i });
       mesh.setColorAt(i, color);
-      this.updateAgent(i, 0);
+      this.speeds[i] = 1.5 + Math.random() * 1.5;
+      this.rotations[i] = new THREE.Quaternion();
+      this.spawnVillager(i);
+      this.updateVillagerMatrix(i);
     }
-    mesh.instanceColor.needsUpdate = true;
 
+    mesh.instanceColor.needsUpdate = true;
     this.scene.add(mesh);
   }
 
-  pickCurve() {
-    if (this.roadCurves.length === 0) return null;
-    const index = Math.floor(Math.random() * this.roadCurves.length);
-    return this.roadCurves[index];
-  }
-
-  sampleHeight(x, z, fallback) {
+  sampleHeight(x, z, fallback = 0) {
     const getter = this.terrain?.userData?.getHeightAt;
     if (typeof getter === "function") {
       const height = getter(x, z);
@@ -65,72 +66,102 @@ export class TrafficManager {
     return fallback;
   }
 
-  updateAgent(index, dt) {
-    const agent = this.agents[index];
-    const mesh = this.mesh;
-    if (!agent || !mesh || !agent.curve) return;
-    if (agent.paused) return;
-
-    agent.t += dt * agent.speed;
-    if (agent.t >= 1) {
-      agent.t = 1;
-      agent.speed *= -1;
-    } else if (agent.t <= 0) {
-      agent.t = 0;
-      agent.speed *= -1;
+  randomNavigablePoint() {
+    for (let attempts = 0; attempts < 20; attempts++) {
+      const r = Math.sqrt(Math.random()) * CITY_RADIUS;
+      const theta = Math.random() * Math.PI * 2;
+      const x = Math.cos(theta) * r;
+      const z = Math.sin(theta) * r;
+      const height = this.sampleHeight(x, z, 0);
+      if (height > WATER_HEIGHT_THRESHOLD) {
+        return new THREE.Vector3(x, height + this.halfHeight, z);
+      }
     }
-
-    const position = agent.curve.getPoint(Math.min(Math.max(agent.t, 0), 1), this.position);
-    const lookT = Math.min(1, Math.max(0, agent.t + 0.01 * Math.sign(agent.speed)));
-    const lookTarget = agent.curve.getPoint(lookT, this.nextPoint);
-    this.direction.copy(lookTarget).sub(position);
-
-    if (this.direction.lengthSq() > 1e-6) {
-      this.direction.normalize();
-      this.tempQuaternion.setFromUnitVectors(this.forward, this.direction);
-    }
-
-    const groundY = this.sampleHeight(position.x, position.z, position.y);
-    position.y = groundY + this.halfHeight;
-
-    this.tempMatrix.compose(position, this.tempQuaternion, this.scale);
-    mesh.setMatrixAt(index, this.tempMatrix);
+    return new THREE.Vector3(0, this.halfHeight, 0);
   }
 
-  update(deltaTime = 0) {
-    if (!this.mesh || this.agents.length === 0) return;
-    for (let i = 0; i < this.agents.length; i++) {
-      this.updateAgent(i, deltaTime);
+  pickNewTarget(fromPosition) {
+    for (let attempts = 0; attempts < 20; attempts++) {
+      const distance =
+        MIN_TARGET_DISTANCE + Math.random() * (MAX_TARGET_DISTANCE - MIN_TARGET_DISTANCE);
+      const theta = Math.random() * Math.PI * 2;
+      const offsetX = Math.cos(theta) * distance;
+      const offsetZ = Math.sin(theta) * distance;
+      const x = fromPosition.x + offsetX;
+      const z = fromPosition.z + offsetZ;
+
+      if (Math.hypot(x, z) > CITY_RADIUS) continue;
+
+      const height = this.sampleHeight(x, z, fromPosition.y - this.halfHeight);
+      if (height > WATER_HEIGHT_THRESHOLD) {
+        return new THREE.Vector3(x, height + this.halfHeight, z);
+      }
     }
+    return fromPosition.clone();
+  }
+
+  spawnVillager(index) {
+    const startPos = this.randomNavigablePoint();
+    this.positions[index] = startPos;
+    this.targets[index] = startPos.clone();
+    this.states[index] = STATE_IDLE;
+    this.timers[index] = 2 + Math.random() * 3;
+    this.rotations[index].identity();
+  }
+
+  updateVillagerMatrix(index) {
+    const position = this.positions[index];
+    const rotation = this.rotations[index];
+    if (!position || !rotation || !this.mesh) return;
+    this.tempMatrix.compose(position, rotation, this.scale);
+    this.mesh.setMatrixAt(index, this.tempMatrix);
+  }
+
+  update(dt = 0) {
+    if (!this.mesh) return;
+
+    for (let i = 0; i < this.count; i++) {
+      this.updateVillager(i, dt);
+      this.updateVillagerMatrix(i);
+    }
+
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
-  getAgentByInstanceId(instanceId, mesh = null) {
-    if (!Number.isInteger(instanceId)) return null;
-    if (mesh && mesh !== this.mesh) return null;
-    return this.agents[instanceId] ?? null;
-  }
+  updateVillager(index, dt) {
+    const position = this.positions[index];
+    const target = this.targets[index];
+    if (!position || !target) return;
 
-  getAgent(instanceId, mesh = null) {
-    return this.getAgentByInstanceId(instanceId, mesh);
-  }
+    const state = this.states[index];
+    if (state === STATE_IDLE) {
+      this.timers[index] -= dt;
+      if (this.timers[index] <= 0) {
+        this.states[index] = STATE_WALKING;
+        this.targets[index] = this.pickNewTarget(position);
+      }
+      return;
+    }
 
-  setAgentPaused(instanceId, paused = true) {
-    const agent = this.getAgentByInstanceId(instanceId);
-    if (!agent) return;
-    agent.paused = !!paused;
-  }
+    // WALKING
+    this.direction.copy(target).sub(position);
+    const distance = this.direction.length();
 
-  pauseAgent(agentOrInstanceId, fallbackInstanceId = null) {
-    const instanceId = this.resolveInstanceId(agentOrInstanceId, fallbackInstanceId);
-    if (!Number.isInteger(instanceId)) return;
-    this.setAgentPaused(instanceId, true);
-  }
+    if (distance > 0.0001) {
+      this.direction.normalize();
+      const step = Math.min(distance, this.speeds[index] * dt);
+      position.addScaledVector(this.direction, step);
 
-  resolveInstanceId(agentOrInstanceId, fallbackInstanceId = null) {
-    if (Number.isInteger(agentOrInstanceId)) return agentOrInstanceId;
-    if (Number.isInteger(fallbackInstanceId)) return fallbackInstanceId;
-    const idx = this.agents.indexOf(agentOrInstanceId);
-    return idx >= 0 ? idx : null;
+      this.tempQuaternion.setFromUnitVectors(this.forward, this.direction);
+      this.rotations[index].copy(this.tempQuaternion);
+    }
+
+    const groundY = this.sampleHeight(position.x, position.z, position.y - this.halfHeight);
+    position.y = groundY + this.halfHeight;
+
+    if (distance < 1.0) {
+      this.states[index] = STATE_IDLE;
+      this.timers[index] = 2 + Math.random() * 3;
+    }
   }
 }

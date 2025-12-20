@@ -99,7 +99,7 @@ import {
   WORLD_ROOT_NAME,
 } from "./Scene.js";
 import { GameLoop } from "./GameLoop.js";
-import { TrafficManager } from "../world/traffic.js";
+import { VillagerSystem } from "../world/traffic.js";
 import { createAtmosphericParticles } from "../world/particles.js";
 
 console.info("[build]", engineConfig.build || {});
@@ -585,7 +585,7 @@ export class Application {
     const worldRoot = refreshWorldRoot();
 
     let grassRoot = null;
-    let trafficManager = null;
+    let villagerSystem = null;
     let atmosphericParticles = null;
 
     const roadsVisible =
@@ -760,9 +760,9 @@ export class Application {
     );
 
     if (roadCurves && roadCurves.length > 0) {
-      trafficManager = new TrafficManager(scene, roadCurves, terrain);
+      villagerSystem = new VillagerSystem(scene, terrain);
       scene.userData = scene.userData || {};
-      scene.userData.trafficManager = trafficManager;
+      scene.userData.villagerSystem = villagerSystem;
     }
 
     // Hill-city buildings (uses terrain sampler + road curve)
@@ -1846,8 +1846,8 @@ export class Application {
       }
       for (const updateNpc of npcUpdaters) updateNpc(deltaTime);
 
-      if (trafficManager) {
-        trafficManager.update(deltaTime);
+      if (villagerSystem) {
+        villagerSystem.update(deltaTime);
       }
 
       if (atmosphericParticles) {
