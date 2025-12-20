@@ -349,6 +349,9 @@ export async function createOcean(scene, options = {}) {
   return water;
 }
 
+function createBoundsLoop(bounds, color = 0xffffff, yOffset = 0) {
+  if (!bounds) return null;
+  const { west, east, north, south } = bounds;
   const geometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(west, 0, north),
     new THREE.Vector3(east, 0, north),

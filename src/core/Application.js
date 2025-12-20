@@ -1,27 +1,3 @@
-// Application.js
-// 1. Add these imports at the top
-import { createHorizon } from "../world/horizon.js";
-import { createOcean } from "../world/ocean.js";
-
-// 2. Find your _createWorld or init function
-async _createWorld() {
-    // ... (Your existing city/terrain code) ...
-
-    // --- ADD THIS BLOCK ---
-    console.log("Generating Horizon...");
-    this.horizon = createHorizon(this.scene);
-    
-    // Ensure Ocean exists (Horizon is just the floor, Ocean is the water surface)
-    if (!this.ocean) {
-        this.ocean = createOcean(this.scene);
-    }
-    // Scale ocean to touch the mountains
-    if (this.ocean) {
-         this.ocean.scale.set(100, 1, 100); 
-    }
-    // ----------------------
-}
-
 import * as THREE from "three";
 import { Soundscape } from "../audio/soundscape.js";
 import { mountAudioMixer } from "../ui/audioMixer.ts";
@@ -33,6 +9,7 @@ import {
 } from "../world/interactions.js";
 import { attachCrosshair } from "../world/ui/crosshair.js";
 import { createTerrain, updateTerrain } from "../world/terrain.js";
+import { createHorizon } from "../world/horizon.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
 import { createHarbor, updateHarborLighting } from "../world/harbor.js";
 import { createHarborDecorations } from "../world/decoration.js";
@@ -396,6 +373,7 @@ export class Application {
       setFogEnabled,
       toggleFog,
     } = sceneContext;
+    this.scene = scene;
     setFogEnabled(true);
 
     const disposeMaterial = (material) => {
@@ -462,6 +440,19 @@ export class Application {
     // a perfectly flat plane. We'll pass the mesh to the character so it can
     // query ground height during its update loop.
     const terrain = createTerrain(scene);
+    this.terrain = terrain;
+
+    // --- Horizon & Ocean ---
+    if (!this.horizon) {
+      this.horizon = createHorizon(this.scene);
+    }
+    if (!this.ocean) {
+      // Ocean is massive (4000 units), so we keep scale at 1
+      this.ocean = await createOcean(this.scene, { seaLevel: 0 });
+      if (this.ocean) this.ocean.scale.set(1, 1, 1);
+    }
+    ocean = this.ocean;
+    // -----------------------
     attachHeightSampler(terrain);
     scene.userData.terrain = terrain;
     scene.userData.getHeightAt = terrain?.userData?.getHeightAt;
@@ -569,12 +560,14 @@ export class Application {
     const grassEnabled =
       engineConfig.performance?.enableGrass ?? parseBooleanQuery("grass", false);
 
-    ocean = await createOcean(scene, {
-      bounds: HARBOR_WATER_BOUNDS,
-      waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
-      seaLevel: resolvedSeaLevel,
-      shoreBlendWidth: 4,
-    });
+    if (!ocean) {
+      ocean = await createOcean(scene, {
+        bounds: HARBOR_WATER_BOUNDS,
+        waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
+        seaLevel: resolvedSeaLevel,
+        shoreBlendWidth: 4,
+      });
+    }
     this.ocean = ocean;
     onFogChange(fogEnabled);
     pendingOceanStatus = {
@@ -756,12 +749,16 @@ export class Application {
     // Plazas (agora + acropolis terraces) — disabled per request to remove large discs
     // createPlazas(worldRoot);
 
-    const { city: harborCity, roadCurves } = await createCity(worldRoot, terrain, {
-      roadsVisible,
-      useProceduralBlocks: FORCE_PROCEDURAL_LANDMARKS,
-      forceProcedural: FORCE_PROC,
-      seaLevel: resolvedSeaLevel,
-    });
+    const { city: harborCity, roadCurves } = await createCity(
+      worldRoot,
+      this.terrain,
+      {
+        roadsVisible,
+        useProceduralBlocks: FORCE_PROCEDURAL_LANDMARKS,
+        forceProcedural: FORCE_PROC,
+        seaLevel: resolvedSeaLevel,
+      },
+    );
 
     if (roadCurves && roadCurves.length > 0) {
       trafficManager = new TrafficManager(scene, roadCurves, terrain);
