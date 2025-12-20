@@ -474,7 +474,7 @@ export class Application {
       }
     } catch (error) {
       console.warn(
-        "[skybox] Failed to load equirectangular skybox. Ensure the asset exists at public/assets/skyboxes/athens_sunset_360.png",
+        `[skybox] Failed to load equirectangular skybox. Ensure the asset exists at ${resolvedSkyboxUrl}`,
         error,
       );
     }
