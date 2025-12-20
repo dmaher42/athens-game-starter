@@ -40,11 +40,9 @@ export function createSceneContext({
   scene.userData.baseUrl = baseUrl;
 
   const createSceneFog = () => {
-    const fog = new THREE.Fog(0xa0a0a0, 50, 400);
-    if (fog instanceof THREE.FogExp2) {
-      fog.density *= 0.9;
-    }
-    return fog;
+    // Atmospheric fog matching the sky tint (approx #dbeaff)
+    // Density 0.002 provides a subtle depth cue without obscuring the city
+    return new THREE.FogExp2(0xcce0ff, 0.002);
   };
 
   let fogEnabled = false;
