@@ -9,7 +9,12 @@ import {
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { generateStoaGeometry, generateTholosGeometry } from "./monuments.js";
-import { createParthenon, createTempleOfZeus, createTheater } from "./landmarks.js";
+import {
+  createParthenon,
+  createTempleOfZeus,
+  createTheater,
+  generateTempleGeometry,
+} from "./landmarks.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
 const ROOF_COLOR_PRESETS = ["#b4472c", "#c05621", "#d66f2c"];
