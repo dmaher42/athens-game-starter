@@ -23,6 +23,7 @@ import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { DEBUG_FLAGS } from "../debug/flags.js";
+import { roadNoise } from "../utils/noise.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
 const ROOF_COLOR_PRESETS = ["#b4472c", "#c05621", "#d66f2c"];
@@ -60,15 +61,17 @@ function isWithinHarborWater(x, z, buffer = 0) {
 }
 
 // Draw a visible road mesh along a curve segment
-function createVisibleRoadSegment(p1, p2, width, collect) {
-  const half = width * 0.5;
+function createVisibleRoadSegment(p1, p2, w1, w2, collect) {
+  const half1 = w1 * 0.5;
+  const half2 = w2 * 0.5;
   const dir = p2.clone().sub(p1).normalize();
+  // Perpendicular vector (-z, 0, x)
   const side = new THREE.Vector3(-dir.z, 0, dir.x);
   
-  const v1 = p1.clone().addScaledVector(side, half);
-  const v2 = p1.clone().addScaledVector(side, -half);
-  const v3 = p2.clone().addScaledVector(side, half);
-  const v4 = p2.clone().addScaledVector(side, -half);
+  const v1 = p1.clone().addScaledVector(side, half1);
+  const v2 = p1.clone().addScaledVector(side, -half1);
+  const v3 = p2.clone().addScaledVector(side, half2);
+  const v4 = p2.clone().addScaledVector(side, -half2);
 
   const positions = new Float32Array([
     v1.x, v1.y, v1.z,  v2.x, v2.y, v2.z,  v3.x, v3.y, v3.z,
@@ -143,8 +146,30 @@ export async function createCity(scene, terrain, options = {}) {
 
     // Mesh the road
     const points = curve.getSpacedPoints(30);
-    for (let j = 0; j < points.length - 1; j++) {
-       createVisibleRoadSegment(points[j], points[j+1], ROAD_WIDTH, roadGeometries);
+    const perturbedPoints = [];
+    const widths = [];
+
+    for (let k = 0; k < points.length; k++) {
+        const t = k / (points.length - 1);
+        const tangent = curve.getTangentAt(t);
+        const perp = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+        // Add lateral offset (0.4-1.2 units)
+        const offsetVal = roadNoise(t * 5 + i * 10, CITY_SEED) * 0.8;
+        const p = points[k].clone().addScaledVector(perp, offsetVal);
+
+        // Resample height at new position
+        p.y = sampleHeight(terrain, p.x, p.z, origin.y) + 0.1;
+
+        perturbedPoints.push(p);
+
+        // Add width variance (+/- 10%)
+        const widthVar = 1.0 + roadNoise(t * 8 + i * 10 + 50, CITY_SEED) * 0.1;
+        widths.push(ROAD_WIDTH * widthVar);
+    }
+
+    for (let j = 0; j < perturbedPoints.length - 1; j++) {
+       createVisibleRoadSegment(perturbedPoints[j], perturbedPoints[j+1], widths[j], widths[j+1], roadGeometries);
     }
   }
 
