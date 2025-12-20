@@ -432,7 +432,20 @@ export async function createCity(scene, terrain, options = {}) {
         const [minH, maxH] = Array.isArray(distRule.heightRange) ? distRule.heightRange : [3, 4.5];
         const wH = minH + random() * (maxH - minH);
 
+        // --- Determine Archetype ---
+        let archetype = 'gable';
+        // Check courtyard chance
+        if (distRule.courtyardChance > 0 && random() < distRule.courtyardChance) {
+            archetype = 'courtyard';
+        } else {
+            // Randomly choose between gable and flat
+            // 60% Gable, 40% Flat? Or purely random?
+            // Let's bias slightly towards gable for "village" feel
+            archetype = random() > 0.4 ? 'gable' : 'flat';
+        }
+
         finalBuildings.push({
+            type: archetype,
             x: cx, y: ty + 0.05, z: cz,
             rotation: finalRot,
             width: finalW, depth: finalD,
@@ -448,7 +461,17 @@ export async function createCity(scene, terrain, options = {}) {
 
     // F. Commit placements
     for (const b of finalBuildings) {
-        buildingPlacements.push(b);
+        if (!Array.isArray(buildingPlacements[b.type])) {
+          // Defensive guard: if invalid type, fallback to gable
+          if (Array.isArray(buildingPlacements.gable)) {
+             buildingPlacements.gable.push(b);
+          } else {
+             // If even that fails, log error (should not happen given init)
+             console.error("[district-style] Critical: buildingPlacements structure invalid", buildingPlacements);
+          }
+        } else {
+          buildingPlacements[b.type].push(b);
+        }
         placedPoints.push({ x: b.x, z: b.z, radius: b.radius });
     }
   }
