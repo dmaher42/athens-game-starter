@@ -7,7 +7,7 @@ import {
 } from "./locations.js";
 import { roadNoise } from "../utils/noise.js";
 
-const SURFACE_OFFSET = 0.05;
+const SURFACE_OFFSET = 0.025;
 
 // scene + terrain required so we can drape to ground
 export function createMainHillRoad(scene, terrain) {
@@ -77,7 +77,11 @@ export function createMainHillRoad(scene, terrain) {
       // Sample height at the specific vertex position
       let y = getH ? getH(x, z) : p.y;
       if (!Number.isFinite(y)) y = p.y;
-      y += 0.08; // increased lift to avoid z-fighting with ground
+
+      const shoulderBlend = THREE.MathUtils.smoothstep(Math.abs(side), 0, 0.5);
+      const embed = THREE.MathUtils.lerp(0.012, -0.018, shoulderBlend);
+
+      y += SURFACE_OFFSET + embed;
       pos.setXYZ(vertexIndex, x, y, z);
     }
   }
