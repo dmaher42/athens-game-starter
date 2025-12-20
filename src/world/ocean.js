@@ -287,7 +287,7 @@ function sampleTerrainCeiling(bounds, sampler) {
 }
 
 export async function createOcean(scene, options = {}) {
-  // remove prior water meshes if any
+  // Remove prior water meshes
   scene.traverse((o) => {
     if (o && (o.name === "AegeanOcean" || o.userData?.isWater)) {
       o.parent?.remove(o);
@@ -298,26 +298,20 @@ export async function createOcean(scene, options = {}) {
     options.waterNormalsCandidates || HARBOR_WATER_NORMAL_CANDIDATES
   );
 
-  const heightSampler = resolveHeightSampler(scene, options);
+  // 1. RESOLVE SEA LEVEL
   const seaLevel = Number.isFinite(options.seaLevel)
     ? options.seaLevel
     : Number.isFinite(getSeaLevelY())
       ? getSeaLevelY()
       : SEA_LEVEL_Y;
-  const bounds = options.bounds || HARBOR_WATER_BOUNDS;
-  const width = Math.abs(bounds.east - bounds.west);
-  const height = Math.abs(bounds.south - bounds.north);
-  const centerX = (bounds.west + bounds.east) / 2;
-  const centerZ = (bounds.north + bounds.south) / 2;
 
-  const paddedWidth = Math.max(width, (HARBOR_WATER_SIZE?.x ?? width) + 4);
-  const paddedHeight = Math.max(height, (HARBOR_WATER_SIZE?.y ?? height) + 4);
-  const terrainCeiling = sampleTerrainCeiling(bounds, heightSampler);
-  const resolvedSeaLevel = Number.isFinite(terrainCeiling)
-    ? Math.min(seaLevel, terrainCeiling)
-    : seaLevel;
+  // 2. CREATE MASSIVE GEOMETRY (The Fix)
+  // Instead of using HARBOR_WATER_BOUNDS, we use a fixed massive size
+  // to ensure it touches the horizon mountains.
+  const SIZE = 4000; 
+  const geometry = new THREE.PlaneGeometry(SIZE, SIZE);
 
-  const geometry = new THREE.PlaneGeometry(paddedWidth, paddedHeight);
+  // 3. CONFIGURE WATER SHADER
   const water = new Water(geometry, {
     textureWidth: 512,
     textureHeight: 512,
@@ -329,64 +323,31 @@ export async function createOcean(scene, options = {}) {
     fog: scene.fog !== undefined,
   });
 
+  // 4. POSITIONING
   water.rotation.x = -Math.PI / 2;
-  water.position.set(centerX, resolvedSeaLevel, centerZ);
+  // Center at (0, seaLevel, 0) so it extends equally in all directions
+  water.position.set(0, seaLevel, 0); 
+  
   water.name = "AegeanOcean";
   water.userData.isWater = true;
-  water.userData.seaLevel = resolvedSeaLevel;
+  water.userData.seaLevel = seaLevel;
 
-  // Custom wave scale fix
+  // Custom wave scaling
   if (waterNormals) {
-     waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping;
-     // The internal Water shader logic uses texture coord scaling, but we can pre-set
-     // repeat here if needed, or rely on distortionScale.
-     // Let's set a higher repeat for finer waves
-     waterNormals.repeat.set(4, 4);
+    waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping;
+    // Repeat texture 20 times across the massive plane so waves look detailed, not stretched
+    waterNormals.repeat.set(20, 20); 
   }
 
   scene.add(water);
 
-  if (heightSampler) {
-    const harborTerrainHeight = heightSampler(
-      HARBOR_WATER_CENTER.x,
-      HARBOR_WATER_CENTER.z,
-    );
-    if (water.material) {
-      water.material.depthTest = true;
-    }
-
-    if (import.meta.env?.DEV) {
-      console.info("[ocean] SEA_LEVEL_Y", SEA_LEVEL_Y.toFixed(3));
-      console.info("[ocean] ocean.y", water.position.y.toFixed(3));
-      if (Number.isFinite(harborTerrainHeight)) {
-        console.info(
-          "[ocean] terrain@harbor",
-          harborTerrainHeight.toFixed(3),
-        );
-      } else {
-        console.info("[ocean] terrain@harbor unavailable");
-      }
-    }
-  } else if (import.meta.env?.DEV) {
-    console.info("[ocean] SEA_LEVEL_Y", SEA_LEVEL_Y.toFixed(3));
-    console.info("[ocean] ocean.y", water.position.y.toFixed(3));
-    console.info("[ocean] terrain@harbor unavailable");
+  // Debug info
+  if (import.meta.env?.DEV) {
+    console.info(`[ocean] Created Global Ocean at Y=${seaLevel}`);
   }
 
   return water;
 }
-
-function createBoundsLoop(bounds, color, yOffset) {
-  if (!bounds) return null;
-  const { west, east, north, south } = bounds;
-  if (
-    !Number.isFinite(west) ||
-    !Number.isFinite(east) ||
-    !Number.isFinite(north) ||
-    !Number.isFinite(south)
-  ) {
-    return null;
-  }
 
   const geometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(west, 0, north),
