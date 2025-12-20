@@ -3,6 +3,7 @@ import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { Prefabs, spawnBuilding } from './buildingSpawner.js';
 import { buildTemple } from '../features/temples.js';
+import { loadDistrictRules } from './districtRules.js';
 
 /* PATCH: Harbor zone params */
 export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.25 };
@@ -164,6 +165,9 @@ export async function createCivicDistrict(scene, options = {}) {
   group.name = 'CivicDistrict';
   scene.add(group);
 
+  // Load district rules
+  const districtRules = await loadDistrictRules();
+
   const centerOption = options.center ?? AGORA_CENTER_3D;
   const terrainSampler =
     options.heightSampler ??
@@ -271,7 +275,8 @@ export async function createCivicDistrict(scene, options = {}) {
 
        const buildingGroup = spawnBuilding({
          district: cell.district,
-         rng: rng
+         rng: rng,
+         districtRules
        });
 
        if (buildingGroup) {

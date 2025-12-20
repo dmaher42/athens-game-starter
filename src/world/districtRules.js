@@ -111,6 +111,8 @@ function normalizeRules(cfg) {
     d.road = d.road || {};
     d.road.width = Number.isFinite(d.road.width) ? d.road.width : 3.2;
     d.road.color = toColor(d.road.color);
+    d.roofColors = Array.isArray(d.roofColors) ? d.roofColors : [];
+    d.courtyardChance = Number.isFinite(d.courtyardChance) ? d.courtyardChance : 0;
   }
   const spacingSource = cfg.densitySpacingMeters || cfg.densityToLotSpacing || {};
   cfg.densitySpacingMeters = {
