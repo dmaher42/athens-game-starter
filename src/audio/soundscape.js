@@ -1,6 +1,104 @@
 import * as THREE from "three";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
+// Simple noise buffer for placeholder ambience when assets are missing
+function createNoiseBuffer(context, { duration = 1, amplitude = 0.12 } = {}) {
+  const sampleRate = context.sampleRate || 44100;
+  const length = Math.max(1, Math.floor(duration * sampleRate));
+  const buffer = context.createBuffer(1, length, sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i += 1) {
+    data[i] = (Math.random() * 2 - 1) * amplitude;
+  }
+  return buffer;
+}
+
+class ZoneAmbienceManager {
+  constructor(listener, loadBuffer, busNode) {
+    this.listener = listener;
+    this.loadBuffer = loadBuffer;
+    this.busNode = busNode;
+    this.tracks = new Map();
+    this.trackConfigs = new Map();
+    this.loading = new Map();
+  }
+
+  registerTrack(key, config) {
+    this.trackConfigs.set(key, config || {});
+  }
+
+  async _prepareTrack(key) {
+    if (this.tracks.has(key)) return this.tracks.get(key);
+    if (this.loading.has(key)) return this.loading.get(key);
+    const config = this.trackConfigs.get(key) || {};
+    const ctx = this.listener.context;
+    const promise = (async () => {
+      let buffer = null;
+      if (config.url) {
+        buffer = await this.loadBuffer(key, config.url);
+      }
+      if (!buffer) {
+        buffer = createNoiseBuffer(ctx, config.noiseOptions);
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      let outputNode = source;
+      if (config.filter) {
+        const filter = ctx.createBiquadFilter();
+        filter.type = config.filter.type || "lowpass";
+        if (config.filter.frequency) {
+          filter.frequency.value = config.filter.frequency;
+        }
+        outputNode.connect(filter);
+        outputNode = filter;
+      }
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      outputNode.connect(gain);
+      gain.connect(this.busNode);
+      source.start();
+      const track = {
+        key,
+        source,
+        gain,
+        targetVolume: 0,
+      };
+      this.tracks.set(key, track);
+      this.loading.delete(key);
+      return track;
+    })();
+    this.loading.set(key, promise);
+    return promise;
+  }
+
+  async setActiveZones(activeKeys) {
+    const activeSet = new Set(activeKeys);
+    await Promise.all(Array.from(activeSet).map((key) => this._prepareTrack(key)));
+    for (const track of this.tracks.values()) {
+      track.targetVolume = activeSet.has(track.key) ? 0.55 : 0;
+    }
+  }
+
+  updateFades(fadeRate = 0.08) {
+    for (const track of this.tracks.values()) {
+      const current = track.gain.gain.value;
+      const next = current + (track.targetVolume - current) * fadeRate;
+      track.gain.gain.value = next;
+    }
+  }
+
+  dispose() {
+    for (const track of this.tracks.values()) {
+      try { track.source.stop(); } catch {}
+      try { track.source.disconnect(); } catch {}
+      try { track.gain.disconnect(); } catch {}
+    }
+    this.tracks.clear();
+    this.loading.clear();
+  }
+}
+
 // Ensure we always work with strings; accept object forms like { url: "..." }
 function ensureUrl(input) {
   if (typeof input === "string") return input;
@@ -62,6 +160,30 @@ export class Soundscape {
     this.ready = false;
     this.manifestLoaded = false;
     this._manifest = null;
+    this.zoneAmbience = new ZoneAmbienceManager(
+      this.listener,
+      (name, url) => this.loadBuffer(name, url),
+      this.bus.ambience,
+    );
+    const BASE = resolveBaseUrl();
+    this.zoneAmbience.registerTrack("harbor", {
+      label: "Ocean Waves",
+      url: joinPath(BASE, "audio/ocean_waves.mp3"),
+      noiseOptions: { duration: 2, amplitude: 0.08 },
+      filter: { type: "lowpass", frequency: 600 },
+    });
+    this.zoneAmbience.registerTrack("city", {
+      label: "Crowd Murmur",
+      url: joinPath(BASE, "audio/crowd_murmur.mp3"),
+      noiseOptions: { duration: 2, amplitude: 0.06 },
+      filter: { type: "bandpass", frequency: 450 },
+    });
+    this.zoneAmbience.registerTrack("wind", {
+      label: "Wind",
+      url: joinPath(BASE, "audio/wind.mp3"),
+      noiseOptions: { duration: 2, amplitude: 0.05 },
+      filter: { type: "highpass", frequency: 300 },
+    });
 
     // Zones
     this.zones = {
@@ -384,6 +506,22 @@ export class Soundscape {
     this.bus.ambience.gain.value = lerp(0.85, 0.95, night);
     // Master stays ~0.9; optionally lower late night:
     this.masterGain.gain.value = lerp(0.9, 0.8, night);
+    this._updateZoneAmbience(playerPos);
+  }
+
+  _updateZoneAmbience(playerPos) {
+    if (!playerPos || !this.zoneAmbience) return;
+    const activeZones = [];
+    if (playerPos.z > 50) {
+      activeZones.push("harbor");
+    } else {
+      activeZones.push("city");
+    }
+    if (playerPos.y > 15) {
+      activeZones.push("wind");
+    }
+    this.zoneAmbience.setActiveZones(activeZones).catch(() => {});
+    this.zoneAmbience.updateFades();
   }
 
   async ensureUserGestureResume() {
@@ -413,6 +551,9 @@ export class Soundscape {
     this.oneShotTimers.forEach(id => clearTimeout(id));
     this.emitters = [];
     this.buffers.clear();
+    if (this.zoneAmbience) {
+      this.zoneAmbience.dispose();
+    }
     // detach listener
     try { this.camera.remove(this.listener); } catch {}
   }
