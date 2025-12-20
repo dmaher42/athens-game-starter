@@ -227,34 +227,69 @@ function populateCityDetails(cityGroup, terrain, buildingPlacements, roadCurves)
   cityGroup.add(detailGroup);
 }
 
-export function generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor) {
+export function generateGreekHouseGeometry(
+  width,
+  depth,
+  wallHeight,
+  roofHeight,
+  wallColor,
+  roofColor,
+  options = {},
+) {
   const geometries = [];
   const porchInset = 1.0;
   const foundationHeight = 0.2;
+  const courtyard = Boolean(options.courtyard);
 
   // Foundation
   const foundationGeo = new THREE.BoxGeometry(width + 0.4, foundationHeight, depth + 0.4);
   foundationGeo.translate(0, foundationHeight * 0.5, 0);
   geometries.push(applyVertexColor(foundationGeo, 0x999999));
 
-  // Walls with front inset to leave a porch
-  const roomDepth = Math.max(0.5, depth - porchInset);
-  const wallGeo = new THREE.BoxGeometry(width, wallHeight, roomDepth);
-  wallGeo.translate(0, foundationHeight + wallHeight * 0.5, -porchInset * 0.5);
-  geometries.push(applyVertexColor(wallGeo, wallColor));
+  if (courtyard) {
+    // U-shaped layout with open courtyard
+    const wingDepth = Math.max(0.5, depth - porchInset);
+    const wingWidth = width * 0.42;
+    const wingHeight = wallHeight;
+    const wingYOffset = foundationHeight + wingHeight * 0.5;
 
-  // Porch columns
-  const columnCount = Math.max(1, Math.floor(width / 1.5));
-  const spacing = width / (columnCount + 1);
-  const columnHeight = wallHeight;
-  const columnGeo = new THREE.CylinderGeometry(0.15, 0.15, columnHeight, 8);
-  columnGeo.translate(0, foundationHeight + columnHeight * 0.5, 0);
-  const porchZ = depth * 0.5 - porchInset * 0.5;
-  for (let i = 0; i < columnCount; i++) {
-    const col = columnGeo.clone();
-    const x = -width * 0.5 + spacing * (i + 1);
-    col.translate(x, 0, porchZ - 0.1);
-    geometries.push(applyVertexColor(col, 0xdddddd));
+    const leftWing = new THREE.BoxGeometry(wingWidth, wingHeight, wingDepth);
+    leftWing.translate(-width * 0.5 + wingWidth * 0.5, wingYOffset, -porchInset * 0.5);
+    geometries.push(applyVertexColor(leftWing, wallColor));
+
+    const rightWing = leftWing.clone();
+    rightWing.translate(width - wingWidth, 0, 0);
+    geometries.push(applyVertexColor(rightWing, wallColor));
+
+    const backWingDepth = Math.max(0.5, wingDepth * 0.45);
+    const backWing = new THREE.BoxGeometry(width - wingWidth * 0.5, wingHeight, backWingDepth);
+    backWing.translate(0, wingYOffset, -wingDepth * 0.35 - porchInset * 0.25);
+    geometries.push(applyVertexColor(backWing, wallColor));
+
+    const courtyardFloor = new THREE.PlaneGeometry(width - 1.0, Math.max(1.0, depth * 0.7));
+    courtyardFloor.rotateX(-Math.PI / 2);
+    courtyardFloor.translate(0, foundationHeight + 0.02, -porchInset * 0.35);
+    geometries.push(applyVertexColor(courtyardFloor, 0xd9c8a0));
+  } else {
+    // Walls with front inset to leave a porch
+    const roomDepth = Math.max(0.5, depth - porchInset);
+    const wallGeo = new THREE.BoxGeometry(width, wallHeight, roomDepth);
+    wallGeo.translate(0, foundationHeight + wallHeight * 0.5, -porchInset * 0.5);
+    geometries.push(applyVertexColor(wallGeo, wallColor));
+
+    // Porch columns
+    const columnCount = Math.max(1, Math.floor(width / 1.5));
+    const spacing = width / (columnCount + 1);
+    const columnHeight = wallHeight;
+    const columnGeo = new THREE.CylinderGeometry(0.15, 0.15, columnHeight, 8);
+    columnGeo.translate(0, foundationHeight + columnHeight * 0.5, 0);
+    const porchZ = depth * 0.5 - porchInset * 0.5;
+    for (let i = 0; i < columnCount; i++) {
+      const col = columnGeo.clone();
+      const x = -width * 0.5 + spacing * (i + 1);
+      col.translate(x, 0, porchZ - 0.1);
+      geometries.push(applyVertexColor(col, 0xdddddd));
+    }
   }
 
   // Roof as a triangular prism cylinder
@@ -265,7 +300,10 @@ export function generateGreekHouseGeometry(width, depth, wallHeight, roofHeight,
   roofGeo.translate(0, foundationHeight + wallHeight + roofHeight * 0.5, -porchInset * 0.2);
   geometries.push(applyVertexColor(roofGeo, roofColor));
 
-  return mergeGeometries(geometries, false);
+  const merged = mergeGeometries(geometries, false);
+  merged.userData = merged.userData || {};
+  merged.userData.courtyard = courtyard;
+  return merged;
 }
 
 // --- MAIN ORGANIC GENERATOR ---
@@ -329,7 +367,59 @@ export async function createCity(scene, terrain, options = {}) {
   const cityGeometries = [];
   const placedPoints = [];
   const buildingPlacements = [];
-  const scatterAttempts = 2500;
+
+  const OCEAN_BOUNDARY_Z = -100;
+  const CITY_BOUNDARY_Z = -40;
+  const OCEAN_DEPTH = -12.0;
+  const CITY_HEIGHT = 4.0;
+  const CITY_MIN_HEIGHT = 2.0;
+
+  const sampleElevation = (x, z) => {
+    const oceanHeight = seaLevel + OCEAN_DEPTH;
+    const cityHeight = seaLevel + CITY_HEIGHT;
+    let baseHeight = cityHeight;
+    if (z < OCEAN_BOUNDARY_Z) {
+      baseHeight = oceanHeight;
+    } else if (z > CITY_BOUNDARY_Z) {
+      baseHeight = cityHeight;
+    } else {
+      const t = (z - OCEAN_BOUNDARY_Z) / (CITY_BOUNDARY_Z - OCEAN_BOUNDARY_Z);
+      baseHeight = THREE.MathUtils.lerp(oceanHeight, cityHeight, t);
+    }
+    let height = baseHeight;
+    if (z > CITY_BOUNDARY_Z && height < seaLevel + CITY_MIN_HEIGHT) {
+      height = seaLevel + CITY_MIN_HEIGHT;
+    }
+    const sampled = sampleHeight(terrain, x, z, height);
+    return Number.isFinite(sampled) ? sampled : height;
+  };
+
+  const findNearestRoad = (x, z) => {
+    let bestDist = Infinity;
+    let bestCurve = null;
+    let bestT = 0;
+    roadCurves.forEach((curve, idx) => {
+      const samples = roadSamples[idx];
+      for (let s = 0; s < samples.length; s++) {
+        const pt = samples[s];
+        const d = Math.hypot(x - pt.x, z - pt.z);
+        if (d < bestDist) {
+          bestDist = d;
+          bestCurve = curve;
+          bestT = s / (samples.length - 1);
+        }
+      }
+    });
+    return { bestDist, bestCurve, bestT };
+  };
+
+  const canPlace = (x, z, radius) => {
+    for (const p of placedPoints) {
+      const dist = Math.hypot(x - p.x, z - p.z);
+      if (dist < radius + p.radius) return false;
+    }
+    return true;
+  };
 
   // Central monuments
   const tholosRadius = 5;
@@ -355,49 +445,30 @@ export async function createCity(scene, terrain, options = {}) {
   placedPoints.push({ x: stoaX, z: stoaZ, radius: Math.hypot(stoaLength, stoaWidth) * 0.5 });
   buildingPlacements.push({ x: stoaX, z: stoaZ, rotation: 0, width: stoaLength, depth: stoaWidth });
 
-  for (let i = 0; i < scatterAttempts; i++) {
-    const r = Math.sqrt(random()) * CITY_AREA_RADIUS;
+  const zoneACount = 800;
+  let zoneAPlaced = 0;
+  let attemptsA = 0;
+  while (zoneAPlaced < zoneACount && attemptsA < zoneACount * 8) {
+    attemptsA++;
+    const r = Math.sqrt(random()) * 120;
     const theta = random() * Math.PI * 2;
     const x = origin.x + r * Math.cos(theta);
     const z = origin.z + r * Math.sin(theta);
+    if (z >= origin.z - 50) continue;
 
-    let bestDist = Infinity;
-    let bestCurve = null;
-    let bestT = 0;
+    const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
+    if (bestDist > 18 || bestDist < 2) continue;
 
-    roadCurves.forEach((curve, idx) => {
-      const samples = roadSamples[idx];
-      for (let s = 0; s < samples.length; s++) {
-        const pt = samples[s];
-        const d = Math.hypot(x - pt.x, z - pt.z);
-        if (d < bestDist) {
-          bestDist = d;
-          bestCurve = curve;
-          bestT = s / (samples.length - 1);
-        }
-      }
-    });
+    const width = 2.5;
+    const depth = 2.5;
+    const wallHeight = 4.0;
+    const roofHeight = 1.0;
+    const neighborRadius = Math.max(width, depth) * 0.5 + 0.5;
 
-    if (bestDist > 15 || bestDist < 4) continue;
+    if (!canPlace(x, z, neighborRadius)) continue;
 
-    const width = 3 + random() * 3;
-    const depth = 3 + random() * 3;
-    const wallHeight = 2.5 + random() * 1.5;
-    const roofHeight = 0.8 + random() * 0.8;
-    const neighborRadius = Math.max(width, depth) * 0.6;
-
-    let tooClose = false;
-    for (const p of placedPoints) {
-      const dist = Math.hypot(x - p.x, z - p.z);
-      if (dist < neighborRadius + p.radius) {
-        tooClose = true;
-        break;
-      }
-    }
-    if (tooClose) continue;
-
-    const y = sampleHeight(terrain, x, z, -999);
-    if (y < seaLevel + 1.0) continue;
+    const y = sampleElevation(x, z);
+    if (y < seaLevel + 0.5) continue;
 
     const wallColor = new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random));
     const roofColor = new THREE.Color(pickRandom(ROOF_COLOR_PRESETS, random));
@@ -408,13 +479,109 @@ export async function createCity(scene, terrain, options = {}) {
     if (bestCurve) {
       const tangent = bestCurve.getTangent(bestT);
       angle = Math.atan2(tangent.x, tangent.z);
-      houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
     }
-
+    angle += THREE.MathUtils.degToRad((random() - 0.5) * 60);
+    houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
     houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
     cityGeometries.push(houseGeo);
     placedPoints.push({ x, z, radius: neighborRadius });
     buildingPlacements.push({ x, z, rotation: angle, width, depth });
+    zoneAPlaced++;
+  }
+
+  const zoneBCount = 600;
+  let zoneBPlaced = 0;
+  let attemptsB = 0;
+  while (zoneBPlaced < zoneBCount && attemptsB < zoneBCount * 8) {
+    attemptsB++;
+    const r = Math.sqrt(random()) * 200;
+    const theta = random() * Math.PI * 2;
+    const x = origin.x + r * Math.cos(theta);
+    const z = origin.z + r * Math.sin(theta);
+
+    const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
+    if (bestDist > 20 || bestDist < 3) continue;
+
+    const width = 4.0;
+    const depth = 4.0;
+    const wallHeight = 3.0;
+    const roofHeight = 1.0;
+    const neighborRadius = Math.max(width, depth) * 0.5 + 2.0;
+
+    if (!canPlace(x, z, neighborRadius)) continue;
+
+    const y = sampleElevation(x, z);
+    if (y < seaLevel + 0.5) continue;
+
+    const wallColor = new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random));
+    const roofColor = new THREE.Color(pickRandom(ROOF_COLOR_PRESETS, random));
+
+    const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
+
+    let angle = 0;
+    if (bestCurve) {
+      const tangent = bestCurve.getTangent(bestT);
+      angle = Math.atan2(tangent.x, tangent.z);
+    }
+    angle += THREE.MathUtils.degToRad((random() - 0.5) * 12);
+    houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
+    houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
+    cityGeometries.push(houseGeo);
+    placedPoints.push({ x, z, radius: neighborRadius });
+    buildingPlacements.push({ x, z, rotation: angle, width, depth });
+    zoneBPlaced++;
+  }
+
+  const zoneCCount = 150;
+  let zoneCPlaced = 0;
+  let attemptsC = 0;
+  while (zoneCPlaced < zoneCCount && attemptsC < zoneCCount * 12) {
+    attemptsC++;
+    const r = 200 + Math.sqrt(random()) * Math.max(0, CITY_AREA_RADIUS - 200);
+    const theta = random() * Math.PI * 2;
+    const x = origin.x + r * Math.cos(theta);
+    const z = origin.z + r * Math.sin(theta);
+
+    const y = sampleElevation(x, z);
+    if (y <= seaLevel + 0.5) continue;
+    if (Math.hypot(x - origin.x, z - origin.z) < 190 && y <= 10) continue;
+
+    const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
+    if (bestDist < 3) continue;
+
+    const width = 6.0;
+    const depth = 6.0;
+    const wallHeight = 3.6;
+    const roofHeight = 1.2;
+    const neighborRadius = Math.max(width, depth) * 0.5 + 8.0;
+
+    if (!canPlace(x, z, neighborRadius)) continue;
+
+    const wallColor = new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random));
+    const roofColor = new THREE.Color(pickRandom(ROOF_COLOR_PRESETS, random));
+
+    const houseGeo = generateGreekHouseGeometry(
+      width,
+      depth,
+      wallHeight,
+      roofHeight,
+      wallColor,
+      roofColor,
+      { courtyard: true },
+    );
+
+    let angle = 0;
+    if (bestCurve) {
+      const tangent = bestCurve.getTangent(bestT);
+      angle = Math.atan2(tangent.x, tangent.z);
+    }
+    angle += THREE.MathUtils.degToRad((random() - 0.5) * 30);
+    houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
+    houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
+    cityGeometries.push(houseGeo);
+    placedPoints.push({ x, z, radius: neighborRadius });
+    buildingPlacements.push({ x, z, rotation: angle, width, depth });
+    zoneCPlaced++;
   }
 
   if (cityGeometries.length > 0) {
