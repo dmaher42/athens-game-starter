@@ -15,7 +15,13 @@ const DEFAULT_MASK_RESOLUTION = 128;
 
 const fallbackMask = (() => {
   const data = new Uint8Array([0]);
-  const tex = new THREE.DataTexture(data, 1, 1, THREE.LuminanceFormat);
+  const tex = new THREE.DataTexture(
+    data,
+    1,
+    1,
+    THREE.RedFormat,
+    THREE.UnsignedByteType,
+  );
   tex.needsUpdate = true;
   tex.colorSpace = THREE.LinearSRGBColorSpace;
   return tex;
@@ -387,7 +393,8 @@ export function createGroundTextureState(
       maskData,
       maskSize,
       maskSize,
-      THREE.LuminanceFormat,
+      THREE.RedFormat,
+      THREE.UnsignedByteType,
     );
     maskTexture.needsUpdate = true;
     maskTexture.colorSpace = THREE.LinearSRGBColorSpace;
