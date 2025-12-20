@@ -1,35 +1,51 @@
 import * as THREE from "three";
 
-const GEOMETRY_SIZE = 2400;
+const GEOMETRY_SIZE = 4000; // Larger to fill the distance
 const GEOMETRY_SEGMENTS = 128;
-const CITY_RADIUS = 300;
-const MAX_HEIGHT = 120;
+const CITY_RADIUS = 400; // Flat area for the city
+const MAX_HEIGHT = 180; // Taller mountains
 
-const abyssColor = new THREE.Color(0x0b1d3a);
-const sandColor = new THREE.Color(0xcab89b);
-const baseColor = new THREE.Color(0x2f4a3a);
-const snowColor = new THREE.Color(0xffffff);
+const abyssColor = new THREE.Color(0x0b1d3a); // Deep Water
+const sandColor = new THREE.Color(0xcab89b);  // Beach
+const baseColor = new THREE.Color(0x2f4a3a);  // Forest
+const snowColor = new THREE.Color(0xffffff);  // Peaks
 
 function sampleNoise(x, z) {
-  const waveA = Math.sin(x * 0.01) + Math.cos(z * 0.02);
-  const waveB = Math.sin((x + z) * 0.005) * 0.6;
-  const waveC = Math.cos((x - z) * 0.01) * 0.4;
-  const combined = waveA + waveB + waveC;
-  return (combined * 0.5 + 1) * (MAX_HEIGHT * 0.5);
+  // Composite noise for jagged rocks
+  const waveA = Math.sin(x * 0.005) + Math.cos(z * 0.005);
+  const waveB = Math.sin((x + z) * 0.01) * 0.5;
+  const waveC = Math.sin((x - z) * 0.02) * 0.2;
+  return (waveA + waveB + waveC + 2) * 0.25 * MAX_HEIGHT;
 }
 
 function bayMask(angle) {
-  const normalized = THREE.MathUtils.clamp((angle + Math.PI / 2) / Math.PI, 0, 1);
-  return normalized * normalized;
+  // We want an opening at North (Negative Z in 3D space)
+  // In the Plane geometry (before rotation), Y is "Up", which becomes -Z after rotation.
+  // So we target the angle PI/2.
+  
+  const targetAngle = Math.PI / 2; 
+  
+  // Calculate difference from the target angle
+  let diff = Math.abs(angle - targetAngle);
+  if (diff > Math.PI) diff = 2 * Math.PI - diff; // Handle wrap-around
+  
+  // If we are within 45 degrees (0.8 radians) of North, flatten it
+  // Otherwise, smooth transition to full height
+  if (diff < 0.8) {
+      // Smooth step from 0 to 1
+      const t = diff / 0.8;
+      return t * t; 
+  }
+  return 1.0;
 }
 
 function assignVertexColor(target, height) {
   if (height < 2) {
     target.lerpColors(abyssColor, sandColor, Math.max(0, height) / 2);
-  } else if (height < 40) {
-    target.lerpColors(sandColor, baseColor, (height - 2) / 38);
-  } else if (height < 80) {
-    target.lerpColors(baseColor, snowColor, (height - 40) / 40);
+  } else if (height < 60) {
+    target.lerpColors(sandColor, baseColor, (height - 2) / 58);
+  } else if (height < 120) {
+    target.lerpColors(baseColor, snowColor, (height - 60) / 60);
   } else {
     target.copy(snowColor);
   }
@@ -40,7 +56,7 @@ export function createHorizon(scene) {
     GEOMETRY_SIZE,
     GEOMETRY_SIZE,
     GEOMETRY_SEGMENTS,
-    GEOMETRY_SEGMENTS,
+    GEOMETRY_SEGMENTS
   );
 
   const positions = geometry.attributes.position;
@@ -50,36 +66,46 @@ export function createHorizon(scene) {
 
   for (let i = 0; i < vertexCount; i++) {
     const x = positions.getX(i);
-    const z = positions.getY(i);
-    const distance = Math.sqrt(x * x + z * z);
+    const y = positions.getY(i); // This becomes Z in world space
+    const distance = Math.hypot(x, y);
 
-    let height = 0;
+    let height = -10; // Default deep underwater
+
+    // Only raise mountains outside the city
     if (distance >= CITY_RADIUS) {
-      const angle = Math.atan2(z, x);
+      const angle = Math.atan2(y, x);
       const mask = bayMask(angle);
-      height = sampleNoise(x, z) * mask;
+      
+      // Calculate noise height
+      const noise = sampleNoise(x, y);
+      
+      // Apply mask: If mask is 0 (North), height stays low (-10). 
+      // If mask is 1, height becomes noise.
+      height = -10 + (noise + 10) * mask; 
     }
 
-    positions.setZ(i, height);
+    positions.setZ(i, height); // Set Z because Plane is flat initially
     assignVertexColor(workingColor, height);
     workingColor.toArray(colors, i * 3);
   }
 
-  positions.needsUpdate = true;
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  geometry.computeVertexNormals();
 
   const material = new THREE.MeshStandardMaterial({
     vertexColors: true,
     flatShading: true,
-    fog: true,
+    roughness: 1.0,
+    fog: true, // Important for depth
   });
 
   const horizon = new THREE.Mesh(geometry, material);
-  horizon.rotation.x = -Math.PI / 2;
-  horizon.position.y = -5;
+  horizon.name = "HorizonMesh";
+  horizon.rotation.x = -Math.PI / 2; // Rotate flat
+  horizon.position.y = -2; // Just below sea level
   horizon.receiveShadow = true;
 
-  if (scene?.add) {
+  if (scene) {
     scene.add(horizon);
   }
 
