@@ -3,6 +3,7 @@ import { LOD } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   resolveKTX2TranscoderPath,
   DEFAULT_BASIS_TRANSCODER_PATH,
@@ -729,4 +730,156 @@ export function disposeLandmarks() {
     removePlaceholder(entry);
   }
   trackedLandmarks.clear();
+}
+
+function applyVertexColor(geometry, color) {
+  const geom = geometry.toNonIndexed();
+  const c = new THREE.Color(color);
+  const count = geom.getAttribute("position").count;
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+  geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  return geom;
+}
+
+export function generateTempleGeometry(width, length, height, columnCountFront, columnCountSide) {
+  const geometries = [];
+  const marbleColor = 0xf0f0f0;
+  const roofColor = 0xb4472c;
+  const accentColor = 0x355c90;
+
+  const baseStepHeight = Math.max(0.4, height * 0.08);
+  const basePadding = 1.5;
+
+  for (let tier = 0; tier < 3; tier++) {
+    const tierGeo = new THREE.BoxGeometry(
+      width + basePadding * 2 - tier * 0.6,
+      baseStepHeight,
+      length + basePadding * 2 - tier * 0.6
+    );
+    tierGeo.translate(0, baseStepHeight * 0.5 + tier * baseStepHeight, 0);
+    geometries.push(applyVertexColor(tierGeo, marbleColor));
+  }
+
+  const columnHeight = height;
+  const columnGeo = new THREE.CylinderGeometry(0.8, 1.0, columnHeight, 8);
+  columnGeo.translate(0, baseStepHeight * 3 + columnHeight * 0.5, 0);
+
+  const frontSpacing = width / (columnCountFront - 1);
+  const sideSpacing = length / (columnCountSide - 1);
+  const halfWidth = width * 0.5;
+  const halfLength = length * 0.5;
+
+  for (let i = 0; i < columnCountFront; i++) {
+    const x = -halfWidth + frontSpacing * i;
+    const frontCol = columnGeo.clone();
+    frontCol.translate(x, 0, -halfLength);
+    geometries.push(applyVertexColor(frontCol, marbleColor));
+
+    if (i === 0 || i === columnCountFront - 1) continue;
+    const backCol = columnGeo.clone();
+    backCol.translate(x, 0, halfLength);
+    geometries.push(applyVertexColor(backCol, marbleColor));
+  }
+
+  for (let i = 0; i < columnCountSide; i++) {
+    const z = -halfLength + sideSpacing * i;
+    const leftCol = columnGeo.clone();
+    leftCol.translate(-halfWidth, 0, z);
+    geometries.push(applyVertexColor(leftCol, marbleColor));
+
+    if (i === 0 || i === columnCountSide - 1) continue;
+    const rightCol = columnGeo.clone();
+    rightCol.translate(halfWidth, 0, z);
+    geometries.push(applyVertexColor(rightCol, marbleColor));
+  }
+
+  const lintelHeight = Math.max(1.5, height * 0.25);
+  const lintelGeo = new THREE.BoxGeometry(width + 0.6, lintelHeight, length + 0.6);
+  lintelGeo.translate(0, baseStepHeight * 3 + columnHeight + lintelHeight * 0.5, 0);
+  geometries.push(applyVertexColor(lintelGeo, marbleColor));
+
+  const pedimentHeight = Math.max(2, height * 0.35);
+  const roofGeo = new THREE.CylinderGeometry(width * 0.55, width * 0.55, length + 1.2, 3, 1, true);
+  roofGeo.rotateX(Math.PI / 2);
+  roofGeo.translate(0, baseStepHeight * 3 + columnHeight + lintelHeight + pedimentHeight * 0.5, 0);
+  geometries.push(applyVertexColor(roofGeo, roofColor));
+
+  const pedimentGeo = new THREE.ConeGeometry(width * 0.5, pedimentHeight, 3, 1, true);
+  pedimentGeo.rotateY(Math.PI / 6);
+  pedimentGeo.translate(0, baseStepHeight * 3 + columnHeight + lintelHeight + pedimentHeight * 0.5, -halfLength - 0.3);
+  geometries.push(applyVertexColor(pedimentGeo, accentColor));
+
+  const pedimentBack = pedimentGeo.clone();
+  pedimentBack.translate(0, 0, length + 0.6);
+  geometries.push(applyVertexColor(pedimentBack, accentColor));
+
+  return mergeGeometries(geometries, true);
+}
+
+export function generateTheaterGeometry(radius, tierCount) {
+  const geometries = [];
+  const marbleColor = 0xf0f0f0;
+  const stepHeight = Math.max(0.35, radius * 0.01);
+  const stepDepth = Math.max(0.8, radius / (tierCount * 1.5));
+  const thetaLength = Math.PI;
+
+  for (let tier = 0; tier < tierCount; tier++) {
+    const tierRadius = radius + tier * stepDepth;
+    const tierGeo = new THREE.CylinderGeometry(
+      tierRadius + stepDepth,
+      tierRadius,
+      stepHeight,
+      32,
+      1,
+      false,
+      -thetaLength * 0.5,
+      thetaLength
+    );
+    tierGeo.translate(0, stepHeight * 0.5 + tier * stepHeight, 0);
+    geometries.push(applyVertexColor(tierGeo, marbleColor));
+  }
+
+  const orchestraGeo = new THREE.CylinderGeometry(radius * 0.4, radius * 0.4, stepHeight * 0.6, 32, 1, false);
+  orchestraGeo.translate(0, stepHeight * 0.3, 0);
+  geometries.push(applyVertexColor(orchestraGeo, marbleColor));
+
+  const merged = mergeGeometries(geometries, true);
+  merged.rotateY(Math.PI);
+  return merged;
+}
+
+export function createParthenon() {
+  const geometry = generateTempleGeometry(30, 70, 12, 8, 17);
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.0 });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.name = "Parthenon";
+  return mesh;
+}
+
+export function createTempleOfZeus() {
+  const geometry = generateTempleGeometry(40, 96, 20, 8, 20);
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0.05 });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.name = "TempleOfZeus";
+  return mesh;
+}
+
+export function createTheater() {
+  const geometry = generateTheaterGeometry(50, 30);
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.02, side: THREE.DoubleSide });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.rotation.x = Math.PI;
+  mesh.name = "TheaterOfEpidaurus";
+  return mesh;
 }
