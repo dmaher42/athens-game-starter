@@ -424,15 +424,22 @@ export async function createCity(scene, terrain, options = {}) {
   const cityGeometries = [];
   const placedPoints = [];
   const buildingPlacements = [];
+  const landmarkBuffers = [];
+
+  const addLandmarkBuffer = (x, z, radius) => {
+    if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(radius)) return;
+    landmarkBuffers.push({ x, z, radius });
+    placedPoints.push({ x, z, radius });
+  };
 
   if (landmarkSpots?.acropolisPos) {
-    placedPoints.push({ x: landmarkSpots.acropolisPos.x, z: landmarkSpots.acropolisPos.z, radius: 50 });
+    addLandmarkBuffer(landmarkSpots.acropolisPos.x, landmarkSpots.acropolisPos.z, 70);
   }
   if (landmarkSpots?.theaterPos) {
-    placedPoints.push({ x: landmarkSpots.theaterPos.x, z: landmarkSpots.theaterPos.z, radius: 60 });
+    addLandmarkBuffer(landmarkSpots.theaterPos.x, landmarkSpots.theaterPos.z, 80);
   }
   if (landmarkSpots?.agoraPos) {
-    placedPoints.push({ x: landmarkSpots.agoraPos.x, z: landmarkSpots.agoraPos.z, radius: 55 });
+    addLandmarkBuffer(landmarkSpots.agoraPos.x, landmarkSpots.agoraPos.z, 75);
   }
 
   const OCEAN_BOUNDARY_Z = -100;
@@ -485,6 +492,10 @@ export async function createCity(scene, terrain, options = {}) {
       const dist = Math.hypot(x - p.x, z - p.z);
       if (dist < radius + p.radius) return false;
     }
+    for (const landmark of landmarkBuffers) {
+      const dist = Math.hypot(x - landmark.x, z - landmark.z);
+      if (dist < radius + landmark.radius) return false;
+    }
     return true;
   };
 
@@ -497,7 +508,9 @@ export async function createCity(scene, terrain, options = {}) {
   const tholosGeo = generateTholosGeometry(tholosRadius, tholosHeight);
   tholosGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(tholosX, tholosY, tholosZ));
   cityGeometries.push(tholosGeo);
-  placedPoints.push({ x: tholosX, z: tholosZ, radius: tholosRadius * 1.2 });
+  const tholosRadiusMeters = tholosRadius * 1.2;
+  placedPoints.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters });
+  landmarkBuffers.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters + 6 });
   buildingPlacements.push({ x: tholosX, z: tholosZ, rotation: 0, width: tholosRadius * 2, depth: tholosRadius * 2 });
 
   const stoaLength = 22;
@@ -509,7 +522,9 @@ export async function createCity(scene, terrain, options = {}) {
   const stoaGeo = generateStoaGeometry(stoaLength, stoaWidth, stoaHeight);
   stoaGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(stoaX, stoaY, stoaZ));
   cityGeometries.push(stoaGeo);
-  placedPoints.push({ x: stoaX, z: stoaZ, radius: Math.hypot(stoaLength, stoaWidth) * 0.5 });
+  const stoaRadius = Math.hypot(stoaLength, stoaWidth) * 0.5;
+  placedPoints.push({ x: stoaX, z: stoaZ, radius: stoaRadius });
+  landmarkBuffers.push({ x: stoaX, z: stoaZ, radius: stoaRadius + 10 });
   buildingPlacements.push({ x: stoaX, z: stoaZ, rotation: 0, width: stoaLength, depth: stoaWidth });
 
   const zoneACount = 800;
