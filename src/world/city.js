@@ -21,7 +21,6 @@ import { HARBOR_FLOOR_DEPTH, getHarborShoreBlendProfile } from "./harborTerrainC
 import { addFoundationPad } from "./foundations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { loadDistrictRules, resolveDistrictAt, spacingForDensity } from "./districtRules.js";
-import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { DEBUG_FLAGS } from "../debug/flags.js";
 import { roadNoise } from "../utils/noise.js";
 
@@ -84,6 +83,82 @@ function createVisibleRoadSegment(p1, p2, w1, w2, collect) {
   collect.push(geometry);
 }
 
+// --- ARCHETYPE GEOMETRIES ---
+
+function createGableRoofGeometry() {
+  // Triangular prism lying on Z axis (length along Z), triangle in XY
+  // But our standard building fits in a Box(1,1,1) centered at 0?
+  // Our instancing logic scales a 1x1x1 box.
+  // We want a roof that fits on top of a 1x1 box.
+  // The 'roof' scale in instancing is (width, roofHeight, depth).
+
+  // A standard gable roof along Z axis (depth):
+  // Vertices:
+  // Top Ridge: (0, 0.5, 0.5) to (0, 0.5, -0.5) relative to roof center?
+  // Base: (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, -0.5, -0.5), (-0.5, -0.5, -0.5)
+  // Let's assume the roof geometry is normalized to fit in a unit cube 1x1x1,
+  // where Y goes from 0 to 1.
+
+  const positions = [
+    // Front Face (Triangle)
+    -0.5, 0, 0.5,  0.5, 0, 0.5,  0, 1, 0.5,
+    // Back Face (Triangle)
+    0.5, 0, -0.5, -0.5, 0, -0.5, 0, 1, -0.5,
+    // Left Face (Quad -> 2 Tris)
+    -0.5, 0, -0.5, -0.5, 0, 0.5, 0, 1, 0.5,
+    -0.5, 0, -0.5, 0, 1, 0.5,    0, 1, -0.5,
+    // Right Face
+    0.5, 0, 0.5,   0.5, 0, -0.5, 0, 1, -0.5,
+    0.5, 0, 0.5,   0, 1, -0.5,   0, 1, 0.5,
+    // Bottom (Quad)
+    -0.5, 0, -0.5, 0.5, 0, -0.5, 0.5, 0, 0.5,
+    -0.5, 0, -0.5, 0.5, 0, 0.5,  -0.5, 0, 0.5
+  ];
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function createParapetGeometry() {
+  // A rim around the top of a 1x1 box.
+  // Height 1. Thickness approx 0.1?
+  // Let's make it a hollow box.
+  // Outer box 1x1x1. Inner hole 0.8x1x0.8.
+  // We'll just build 4 walls.
+  // Normalized to 1x1x1.
+
+  const thickness = 0.15;
+  const outer = 0.5;
+  const inner = 0.5 - thickness;
+
+  // Create shape for extrusion? No, manual buffer geom is faster/cleaner than dragging in ShapeUtils.
+  // Just 4 boxes merged.
+  const wall1 = new THREE.BoxGeometry(1, 1, thickness); // Front
+  wall1.translate(0, 0.5, 0.5 - thickness/2);
+
+  const wall2 = new THREE.BoxGeometry(1, 1, thickness); // Back
+  wall2.translate(0, 0.5, -(0.5 - thickness/2));
+
+  const wall3 = new THREE.BoxGeometry(thickness, 1, 1 - 2*thickness); // Left
+  wall3.translate(-(0.5 - thickness/2), 0.5, 0);
+
+  const wall4 = new THREE.BoxGeometry(thickness, 1, 1 - 2*thickness); // Right
+  wall4.translate(0.5 - thickness/2, 0.5, 0);
+
+  return mergeGeometries([wall1, wall2, wall3, wall4]);
+}
+
+function createCourtyardGeometry() {
+  // Similar to Parapet but for the main body.
+  // A hollow box 1x1x1.
+  // Using the same logic as parapet, maybe just reuse?
+  // Yes, a courtyard block is just walls around a center.
+  // We can reuse the Parapet geometry, maybe rename it `createHollowBoxGeometry`.
+  return createParapetGeometry();
+}
+
 // --- MAIN ORGANIC GENERATOR ---
 
 export async function createCity(scene, terrain, options = {}) {
@@ -101,10 +176,10 @@ export async function createCity(scene, terrain, options = {}) {
 
   // Configuration
   const ROAD_WIDTH = 3.5;
-  const BUILDING_MIN_GAP = 2.0; // Tight alleys
-  const SCATTER_ATTEMPTS = 3000; // High count to fill gaps
-  const MIN_DIST_FROM_ROAD = 3.5; // Don't block street
-  const MAX_DIST_FROM_ROAD = 12.0; // Don't build in middle of nowhere
+  const BUILDING_MIN_GAP = 2.0;
+  const SCATTER_ATTEMPTS = 3000;
+  const MIN_DIST_FROM_ROAD = 3.5;
+  const MAX_DIST_FROM_ROAD = 12.0;
   const SHORELINE_BUFFER_METERS = 6;
 
   const isDevEnvironment =
@@ -120,25 +195,21 @@ export async function createCity(scene, terrain, options = {}) {
   const roadCurves = [];
   const roadGeometries = [];
   
-  // Create 5 main arteries radiating from center
   const numArteries = 5;
   for (let i = 0; i < numArteries; i++) {
     const angle = (i / numArteries) * Math.PI * 2 + (random() * 0.5);
     const start = origin.clone();
     
-    // End point near the edge of the city radius
     const end = new THREE.Vector3(
         origin.x + Math.cos(angle) * CITY_AREA_RADIUS,
         origin.y,
         origin.z + Math.sin(angle) * CITY_AREA_RADIUS
     );
 
-    // Add a control point to curve the road
     const mid = start.clone().lerp(end, 0.5);
     mid.x += (random() - 0.5) * 40; 
     mid.z += (random() - 0.5) * 40;
 
-    // Sample terrain height for curve points
     [start, mid, end].forEach(p => {
         p.y = sampleHeight(terrain, p.x, p.z, origin.y) + 0.1;
     });
@@ -146,7 +217,6 @@ export async function createCity(scene, terrain, options = {}) {
     const curve = new THREE.CatmullRomCurve3([start, mid, end]);
     roadCurves.push(curve);
 
-    // Mesh the road
     const points = curve.getSpacedPoints(30);
     const perturbedPoints = [];
     const widths = [];
@@ -156,16 +226,13 @@ export async function createCity(scene, terrain, options = {}) {
         const tangent = curve.getTangentAt(t);
         const perp = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
 
-        // Add lateral offset (0.4-1.2 units)
         const offsetVal = roadNoise(t * 5 + i * 10, CITY_SEED) * 0.8;
         const p = points[k].clone().addScaledVector(perp, offsetVal);
 
-        // Resample height at new position
         p.y = sampleHeight(terrain, p.x, p.z, origin.y) + 0.1;
 
         perturbedPoints.push(p);
 
-        // Add width variance (+/- 10%)
         const widthVar = 1.0 + roadNoise(t * 8 + i * 10 + 50, CITY_SEED) * 0.1;
         widths.push(ROAD_WIDTH * widthVar);
     }
@@ -175,38 +242,39 @@ export async function createCity(scene, terrain, options = {}) {
     }
   }
 
-  // Create Road Mesh
   if (roadGeometries.length > 0) {
     const merged = mergeGeometries(roadGeometries);
     const material = new THREE.MeshStandardMaterial({ 
-      color: 0x8f8676, // Earthy
+      color: 0x8f8676,
       roughness: 1.0, 
       metalness: 0.0,
       side: THREE.DoubleSide
     });
     const mesh = new THREE.Mesh(merged, material);
     mesh.receiveShadow = true;
-    mesh.userData.noCollision = true; // Terrain handles collision
+    mesh.userData.noCollision = true;
     city.add(mesh);
   }
 
   // 2. Scatter Buildings
-  const buildingPlacements = [];
-  const placedPoints = []; // Simple collision list {x, z, r}
+  const buildingPlacements = {
+    gable: [],
+    flat: [],
+    courtyard: []
+  };
+
+  const placedPoints = [];
 
   for (let i = 0; i < SCATTER_ATTEMPTS; i++) {
-    // A. Pick random spot in city radius
-    const r = Math.sqrt(random()) * CITY_AREA_RADIUS; // Uniform area distribution
+    const r = Math.sqrt(random()) * CITY_AREA_RADIUS;
     const theta = random() * Math.PI * 2;
     const x = origin.x + r * Math.cos(theta);
     const z = origin.z + r * Math.sin(theta);
 
-    // B. Check Road Proximity (Must be near, but not ON road)
     let bestDist = Infinity;
     let bestTangent = null;
     
     for (const road of roadCurves) {
-        // Approximate closest point on curve
         const samples = road.getSpacedPoints(10);
         for (let k=0; k<samples.length; k++) {
             const pt = samples[k];
@@ -219,15 +287,25 @@ export async function createCity(scene, terrain, options = {}) {
         }
     }
 
-    if (bestDist < MIN_DIST_FROM_ROAD) continue; // Too close to road (blocked)
-    if (bestDist > MAX_DIST_FROM_ROAD) continue; // Too far (isolated)
+    if (bestDist < MIN_DIST_FROM_ROAD) continue;
+    if (bestDist > MAX_DIST_FROM_ROAD) continue;
 
-    // C. Size the building
-    const width = 3.5 + random() * 2.5;
-    const depth = 3.5 + random() * 2.5;
-    const radius = Math.max(width, depth) * 0.6; // Bounding radius
+    // Determine archetype based on random seed (and maybe district logic)
+    // 60% Gable, 25% Flat, 15% Courtyard
+    const typeRoll = random();
+    let type = 'gable';
+    if (typeRoll > 0.6) type = 'flat';
+    if (typeRoll > 0.85) type = 'courtyard';
 
-    // D. Check Neighbor Collision
+    // Size rules
+    let width = 3.5 + random() * 2.5;
+    let depth = 3.5 + random() * 2.5;
+    if (type === 'courtyard') {
+        width += 2; // Courtyards are bigger
+        depth += 2;
+    }
+    const radius = Math.max(width, depth) * 0.6;
+
     let overlap = false;
     for (const p of placedPoints) {
         const d = Math.hypot(x - p.x, z - p.z);
@@ -238,7 +316,6 @@ export async function createCity(scene, terrain, options = {}) {
     }
     if (overlap) continue;
 
-    // E. Terrain Check
     const fallbackHeight =
       (Number.isFinite(seaLevel) ? seaLevel : SEA_LEVEL_Y) + MIN_ABOVE_SEA;
     const y = sampleHeight(terrain, x, z, fallbackHeight);
@@ -250,37 +327,31 @@ export async function createCity(scene, terrain, options = {}) {
         console.info("[city] skipped lot: underwater", { x, z, y });
         underwaterSkipLogCount++;
       }
-      continue; // Underwater or sampler missing
+      continue;
     }
 
     const inHarborBuffer = isWithinHarborWater(x, z, SHORELINE_BUFFER_METERS);
     const isWaterfrontTagged = options?.lotTag === "harbor" || options?.lotTag === "pier";
     if (inHarborBuffer && !isWaterfrontTagged) continue;
 
-    // F. Success - Place it
-    // Align rotation to road tangent (or perpendicular to it)
     const roadAngle = Math.atan2(bestTangent.x, bestTangent.z);
-    // Randomly face road (0) or side (90) or random jitter
     const rotation = roadAngle + (random() > 0.5 ? Math.PI/2 : 0) + (random()-0.5)*0.2;
 
-    // Resolve district for this specific location
     const distRule = resolveDistrictAt(terrain, districtRules, x, z, 'residential');
 
-    // Pick roof color from district palette if available
     const roofPalette = (Array.isArray(distRule.roofColors) && distRule.roofColors.length > 0)
         ? distRule.roofColors
         : ROOF_COLOR_PRESETS;
 
-    // Determine heights
     const [minH, maxH] = Array.isArray(distRule.heightRange) ? distRule.heightRange : [3, 4.5];
     const wH = minH + random() * (maxH - minH);
 
-    buildingPlacements.push({
+    buildingPlacements[type].push({
         x, y: y + 0.05, z,
         rotation,
         width, depth,
         wallHeight: wH,
-        roofHeight: 1.2,
+        roofHeight: 1.2 + random() * 0.4,
         color: new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random)),
         roofColor: new THREE.Color(pickRandom(roofPalette, random))
     });
@@ -289,64 +360,159 @@ export async function createCity(scene, terrain, options = {}) {
   }
 
   // 3. Instantiate Buildings
-  if (buildingPlacements.length > 0) {
-    // Use PBR texture if available, else fallback
-    const wallMat = (await makeTiledPBR("textures/marble", { repeat: { x: 0.25, y: 0.25 }})) 
-                    || new THREE.MeshStandardMaterial({ color: 0xe0d0b0 });
-    wallMat.vertexColors = true; // Enable tinting
-    wallMat.roughness = 0.9;
 
-    const roofMat = new THREE.MeshStandardMaterial({ 
-        color: 0xffffff, vertexColors: true, roughness: 0.9 
-    });
+  // Materials
+  // Plaster for walls (light cream/white)
+  const plasterMat = new THREE.MeshStandardMaterial({
+      color: 0xfffcf5, // Very light warm cream
+      roughness: 0.9,
+      vertexColors: true
+  });
 
-    const wallGeo = new THREE.BoxGeometry(1, 1, 1);
-    wallGeo.translate(0, 0.5, 0); // Pivot at bottom
-    
-    const roofGeo = new THREE.CylinderGeometry(0, 0.5, 1, 4, 1, false);
-    roofGeo.rotateY(Math.PI/4); // Align square pyramid
-    roofGeo.translate(0, 0.5, 0);
+  // Terracotta for roofs (red/orange)
+  const terracottaMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff, // Tinted by vertex color
+      roughness: 0.8,
+      vertexColors: true
+  });
 
-    const walls = new THREE.InstancedMesh(wallGeo, wallMat, buildingPlacements.length);
-    const roofs = new THREE.InstancedMesh(roofGeo, roofMat, buildingPlacements.length);
-    
-    walls.castShadow = true; walls.receiveShadow = true;
-    roofs.castShadow = true; roofs.receiveShadow = true;
+  // Geometries
+  // Type A: Gable
+  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  boxGeo.translate(0, 0.5, 0); // Pivot at bottom
 
-    const dummy = new THREE.Object3D();
+  const gableRoofGeo = createGableRoofGeometry();
+  // Pivot is already at bottom (0) of geometry if constructed 0..1 Y
 
-    buildingPlacements.forEach((b, i) => {
-        // Wall
-        dummy.position.set(b.x, b.y, b.z);
-        dummy.rotation.set(0, b.rotation, 0);
-        dummy.scale.set(b.width, b.wallHeight, b.depth);
-        dummy.updateMatrix();
-        walls.setMatrixAt(i, dummy.matrix);
-        walls.setColorAt(i, b.color);
+  // Type B: Flat (Parapet)
+  // Wall is Box. Roof is Flat (invisible or just top of box).
+  // Parapet is a rim.
+  const parapetGeo = createParapetGeometry();
+  // parapetGeo ranges Y=0..1.
 
-        // Roof
-        dummy.position.y += b.wallHeight;
-        dummy.scale.set(b.width * 1.1, b.roofHeight, b.depth * 1.1);
-        dummy.updateMatrix();
-        roofs.setMatrixAt(i, dummy.matrix);
-        roofs.setColorAt(i, b.roofColor);
-    });
+  // Type C: Courtyard
+  // Wall is Hollow Box (Parapet Geometry scaled up for body).
+  const hollowBoxGeo = createCourtyardGeometry();
+  hollowBoxGeo.translate(0, 0.5, 0); // Need to shift if not already shifted?
+  // Wait, my helper created it centered at Y=0.5 but range 0..1?
+  // Helper: translate(0, 0.5, ...) -> range 0..1. Center is 0.5.
+  // Wait, createParapetGeometry:
+  //   wall1.translate(0, 0.5, ...) -> BoxGeometry(1,1,1) is centered at 0. So -0.5 to 0.5.
+  //   Translated +0.5 -> 0 to 1.
+  // So Parapet Geo is 0 to 1 Y.
 
-    walls.instanceMatrix.needsUpdate = true;
-    walls.instanceColor.needsUpdate = true;
-    roofs.instanceMatrix.needsUpdate = true;
-    roofs.instanceColor.needsUpdate = true;
+  // Instancing Function
+  const createInstancedMesh = (geo, mat, count) => {
+      const mesh = new THREE.InstancedMesh(geo, mat, count);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+  }
 
-    city.add(walls);
-    city.add(roofs);
-    
-    // Store for potential interaction/updates
-    city.userData.walls = walls;
-    city.userData.roofs = roofs;
+  const dummy = new THREE.Object3D();
+
+  // --- TYPE A: GABLE ---
+  const listA = buildingPlacements.gable;
+  if (listA.length > 0) {
+      const walls = createInstancedMesh(boxGeo, plasterMat, listA.length);
+      const roofs = createInstancedMesh(gableRoofGeo, terracottaMat, listA.length);
+
+      listA.forEach((b, i) => {
+          // Walls
+          dummy.position.set(b.x, b.y, b.z);
+          dummy.rotation.set(0, b.rotation, 0);
+          dummy.scale.set(b.width, b.wallHeight, b.depth);
+          dummy.updateMatrix();
+          walls.setMatrixAt(i, dummy.matrix);
+          walls.setColorAt(i, b.color);
+
+          // Roofs
+          // Position at top of wall
+          dummy.position.y += b.wallHeight;
+          // Scale roof to match width/depth + overhang
+          dummy.scale.set(b.width + 0.6, b.roofHeight, b.depth + 0.6);
+          dummy.updateMatrix();
+          roofs.setMatrixAt(i, dummy.matrix);
+          roofs.setColorAt(i, b.roofColor);
+      });
+
+      city.add(walls);
+      city.add(roofs);
+  }
+
+  // --- TYPE B: FLAT (PARAPET) ---
+  const listB = buildingPlacements.flat;
+  if (listB.length > 0) {
+      const walls = createInstancedMesh(boxGeo, plasterMat, listB.length);
+      // Optional: Add a rim?
+      // Let's use the Parapet geometry as a "cap" or just scale the wall differently?
+      // "House B (flat roof + parapet): Base box + slightly taller thin top rim."
+      const rims = createInstancedMesh(parapetGeo, plasterMat, listB.length);
+
+      listB.forEach((b, i) => {
+          // Walls
+          dummy.position.set(b.x, b.y, b.z);
+          dummy.rotation.set(0, b.rotation, 0);
+          dummy.scale.set(b.width, b.wallHeight, b.depth);
+          dummy.updateMatrix();
+          walls.setMatrixAt(i, dummy.matrix);
+          walls.setColorAt(i, b.color);
+
+          // Rim
+          // Sit on top of wall? Or be the top part of the wall?
+          // Let's make it sit on top.
+          dummy.position.y += b.wallHeight;
+          dummy.scale.set(b.width, 0.6, b.depth); // 0.6m high parapet
+          dummy.updateMatrix();
+          rims.setMatrixAt(i, dummy.matrix);
+          rims.setColorAt(i, b.color); // Same color as wall
+      });
+
+      city.add(walls);
+      city.add(rims);
+  }
+
+  // --- TYPE C: COURTYARD ---
+  const listC = buildingPlacements.courtyard;
+  if (listC.length > 0) {
+      // Use hollow box for walls
+      // createCourtyardGeometry returns geometry 0..1 Y
+      const walls = createInstancedMesh(hollowBoxGeo, plasterMat, listC.length);
+
+      // Roof for courtyard? "4 thin wall boxes forming a ring".
+      // Roof could be flat (just a rim) or pitched.
+      // Instructions: "House C... inner empty courtyard".
+      // Usually courtyard houses have pitched roofs on the wings.
+      // Let's add a "Gable Ring" roof? Too complex for procedural geometry right now?
+      // Let's use the Flat Roof + Parapet style for courtyard for now, or use 4 Gable Roofs?
+      // Simpler: Just make it a flat roof courtyard (Parapet style).
+      // Or: 4 separate gable roofs?
+      // To keep geometry count low, let's use a "Hollow Gable" geometry?
+      // Too much math for now. Let's do Flat Roof Courtyard with Parapet.
+      // So just walls + rim.
+      const rims = createInstancedMesh(parapetGeo, plasterMat, listC.length);
+
+      listC.forEach((b, i) => {
+          dummy.position.set(b.x, b.y, b.z);
+          dummy.rotation.set(0, b.rotation, 0);
+          dummy.scale.set(b.width, b.wallHeight, b.depth);
+          dummy.updateMatrix();
+          walls.setMatrixAt(i, dummy.matrix);
+          walls.setColorAt(i, b.color);
+
+          dummy.position.y += b.wallHeight;
+          dummy.scale.set(b.width, 0.5, b.depth);
+          dummy.updateMatrix();
+          rims.setMatrixAt(i, dummy.matrix);
+          rims.setColorAt(i, b.color);
+      });
+
+      city.add(walls);
+      city.add(rims);
   }
 
   // 4. Add Organic Trees (Scatter in gaps)
-  const treeCount = Math.floor(buildingPlacements.length * 0.8);
+  const treeCount = Math.floor((listA.length + listB.length + listC.length) * 0.8);
   if (treeCount > 0) {
       const trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, 1.5, 5);
       trunkGeo.translate(0, 0.75, 0);
@@ -369,14 +535,12 @@ export async function createCity(scene, terrain, options = {}) {
           const tx = origin.x + r * Math.cos(th);
           const tz = origin.z + r * Math.sin(th);
           
-          // Check collision with buildings
           let clear = true;
           for (const p of placedPoints) {
               if (Math.hypot(tx-p.x, tz-p.z) < p.radius + 1.5) { clear = false; break; }
           }
           if (!clear) continue;
           
-          // Check road distance (keep trees off the road)
           if (Math.hypot(tx-origin.x, tz-origin.z) < 5.0) continue; 
 
           const y = sampleHeight(terrain, tx, tz, -999);
