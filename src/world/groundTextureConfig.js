@@ -111,7 +111,7 @@ export const GROUND_TEXTURE_CONFIG = {
     // baked-in color work.
     {
       url: textureUrl("dirt-albedo.jpg"),
-      repeat: [36, 36],
+      repeat: [28, 28],
       rotation: 0.23,
       anisotropy: 16,
       strength: 0.55, // Enable detail layer tinting
