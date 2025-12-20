@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { BufferGeometryUtils } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const CITY_RADIUS = 200;
 const MIN_TARGET_DISTANCE = 10;
@@ -8,6 +9,28 @@ const TUNIC_COLORS = ["#ffffff", "#f5e6c8", "#7a5b3a", "#c8d9ff"];
 const VILLAGER_MESH_NAME = "Villagers";
 const STATE_IDLE = 0;
 const STATE_WALKING = 1;
+
+function applyColorAttribute(geometry, color) {
+  const positionAttribute = geometry.getAttribute("position");
+  const colorArray = new Float32Array(positionAttribute.count * 3);
+  for (let i = 0; i < positionAttribute.count; i++) {
+    colorArray[i * 3] = color.r;
+    colorArray[i * 3 + 1] = color.g;
+    colorArray[i * 3 + 2] = color.b;
+  }
+  geometry.setAttribute("color", new THREE.BufferAttribute(colorArray, 3));
+}
+
+function generateVillagerGeometry() {
+  const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.5, 1.2, 8);
+  applyColorAttribute(bodyGeometry, new THREE.Color(0xffffff));
+
+  const headGeometry = new THREE.SphereGeometry(0.25, 8, 6);
+  headGeometry.translate(0, 1.3, 0);
+  applyColorAttribute(headGeometry, new THREE.Color("#e0ac69"));
+
+  return BufferGeometryUtils.mergeGeometries([bodyGeometry, headGeometry], true);
+}
 
 export class VillagerSystem {
   constructor(scene, terrain = null, count = 60) {
@@ -36,7 +59,7 @@ export class VillagerSystem {
   init() {
     if (!this.scene || this.count <= 0) return;
 
-    const geometry = new THREE.BoxGeometry(0.5, 1.7, 0.5);
+    const geometry = generateVillagerGeometry();
     const material = new THREE.MeshStandardMaterial({ vertexColors: true });
     const mesh = new THREE.InstancedMesh(geometry, material, this.count);
     mesh.name = VILLAGER_MESH_NAME;
@@ -157,7 +180,9 @@ export class VillagerSystem {
     }
 
     const groundY = this.sampleHeight(position.x, position.z, position.y - this.halfHeight);
-    position.y = groundY + this.halfHeight;
+    const bobOffset =
+      state === STATE_WALKING ? Math.sin(Date.now() * 0.01 + index) * 0.1 : 0;
+    position.y = groundY + this.halfHeight + bobOffset;
 
     if (distance < 1.0) {
       this.states[index] = STATE_IDLE;
