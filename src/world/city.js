@@ -370,7 +370,9 @@ export async function createCity(scene, terrain, options = {}) {
   populateCityDetails(city, terrain, buildingPlacements, roadCurves);
 
   applyTextureBudgetToObject(city, scene?.userData?.renderer);
-  return city;
+  city.userData = city.userData || {};
+  city.userData.roadCurves = roadCurves;
+  return { city, roadCurves };
 }
 
 export function updateCityLighting(city, nightFactor = 0, opts = {}) {
