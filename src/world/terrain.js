@@ -4,7 +4,6 @@ import {
   AGORA_CENTER_3D,
   CITY_AREA_RADIUS,
   getSeaLevelY,
-  getHarborSeaLevel,
 } from "./locations.js";
 import {
   createGroundTextureState,
@@ -12,10 +11,6 @@ import {
 } from "./groundTextures.js";
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
 import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
-import {
-  HARBOR_FLOOR_DEPTH,
-  getHarborShoreBlendProfile,
-} from "./harborTerrainConfig.js";
 
 // Utility: gradient noise (kept for compatibility)
 function gradientNoise(x, z) {
@@ -48,16 +43,8 @@ function gradientNoise(x, z) {
 }
 
 const _scratchVec = new THREE.Vector3();
-const HARBOR_SHORE_PROFILE = getHarborShoreBlendProfile();
-const {
-  radii: {
-    inner: HARBOR_BLEND_INNER_RADIUS,
-    shelf: HARBOR_BLEND_SHELF_RADIUS,
-    outer: HARBOR_BLEND_OUTER_RADIUS,
-  },
-  shoreShelfDepth: HARBOR_SHORE_SHELF_DEPTH,
-  taperFalloff: HARBOR_SHORE_TAPER_FALLOFF,
-} = HARBOR_SHORE_PROFILE;
+const HARBOR_RADIUS = 150;
+const HARBOR_SEABED_HEIGHT = -8.0;
 
 export function createTerrain(scene) {
   const size = 500;
@@ -100,70 +87,26 @@ export function createTerrain(scene) {
     const x = positionAttribute.getX(i);
     const z = positionAttribute.getY(i);
 
-    let height = FLAT_GROUND_LEVEL;
-
     const distToCity = Math.hypot(x - CITY_CENTER_XZ.x, z - CITY_CENTER_XZ.y);
     const hillBlend = THREE.MathUtils.smoothstep(distToCity, CITY_INNER, CITY_OUTER);
+    const harborDistance = Math.hypot(x - HARBOR_CENTER.x, z - HARBOR_CENTER.y);
+    const inHarborZone = harborDistance <= HARBOR_RADIUS;
+    const inCityZone = distToCity <= CITY_AREA_RADIUS;
 
-    const gentleHills = gradientNoise(x * HILL_FREQ, z * HILL_FREQ) * HILL_AMPLITUDE;
-    const microVariation = gradientNoise(x * MICRO_FREQ, z * MICRO_FREQ) * MICRO_AMPLITUDE;
-    height += gentleHills * hillBlend + microVariation;
+    let height = FLAT_GROUND_LEVEL;
 
-    // Apply Harbor Depression (Cut out the bay)
-    const dx = x - HARBOR_CENTER.x;
-    const dz = z - HARBOR_CENTER.y;
-    const distance = Math.hypot(dx, dz);
-    if (distance < HARBOR_BLEND_OUTER_RADIUS) {
-      const flatten = 1 - THREE.MathUtils.smoothstep(
-        distance,
-        HARBOR_BLEND_INNER_RADIUS,
-        HARBOR_BLEND_OUTER_RADIUS,
-      );
-      if (flatten > 0) {
-        const runtimeSeaLevel = getHarborSeaLevel();
-        const harborShorelineSurface = runtimeSeaLevel - 0.02;
-        const harborFloorHeight = runtimeSeaLevel - HARBOR_FLOOR_DEPTH;
-        const harborShelfHeight = runtimeSeaLevel - HARBOR_SHORE_SHELF_DEPTH;
-        const firstStageSpan = Math.max(
-          1e-3,
-          HARBOR_BLEND_SHELF_RADIUS - HARBOR_BLEND_INNER_RADIUS,
-        );
-        const secondStageSpan = Math.max(
-          1e-3,
-          HARBOR_BLEND_OUTER_RADIUS - HARBOR_BLEND_SHELF_RADIUS,
-        );
-        const distanceIntoBlend = distance - HARBOR_BLEND_INNER_RADIUS;
-        const shelfStageT = THREE.MathUtils.clamp(
-          distanceIntoBlend / firstStageSpan,
-          0,
-          1,
-        );
-        const shorelineStageT = THREE.MathUtils.clamp(
-          (distance - HARBOR_BLEND_SHELF_RADIUS) / secondStageSpan,
-          0,
-          1,
-        );
-        let harborTargetHeight = harborFloorHeight;
-        if (distance <= HARBOR_BLEND_SHELF_RADIUS) {
-          const easedShelf = shelfStageT * shelfStageT;
-          harborTargetHeight = THREE.MathUtils.lerp(
-            harborFloorHeight,
-            harborShelfHeight,
-            easedShelf,
-          );
-        } else {
-          const easedFalloff = 1 - Math.pow(
-            1 - shorelineStageT,
-            HARBOR_SHORE_TAPER_FALLOFF,
-          );
-          harborTargetHeight = THREE.MathUtils.lerp(
-            harborShelfHeight,
-            harborShorelineSurface,
-            easedFalloff,
-          );
-        }
-        height = THREE.MathUtils.lerp(height, harborTargetHeight, flatten);
-      }
+    if (!inHarborZone && !inCityZone) {
+      const gentleHills = gradientNoise(x * HILL_FREQ, z * HILL_FREQ) * HILL_AMPLITUDE;
+      const microVariation =
+        gradientNoise(x * MICRO_FREQ, z * MICRO_FREQ) * MICRO_AMPLITUDE;
+      height += gentleHills * hillBlend + microVariation;
+    }
+
+    // Sculpt the harbor basin with a clear drop-off from the city streets.
+    if (inHarborZone) {
+      height = HARBOR_SEABED_HEIGHT;
+    } else if (inCityZone) {
+      height = FLAT_GROUND_LEVEL;
     }
 
     positionAttribute.setZ(i, height);
