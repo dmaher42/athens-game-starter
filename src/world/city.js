@@ -181,7 +181,17 @@ export async function createCity(scene, terrain, options = {}) {
     let s = seed;
     return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 0xffffffff);
   };
-  const random = rng(options.seed ?? CITY_SEED);
+  const baseSeed = options.seed ?? CITY_SEED;
+  const random = rng(baseSeed);
+
+  const lotRandomFor = (lotIndex, px, pz) => {
+    // Quantize coordinates to stabilize seeds even if small offsets change
+    const qx = Math.floor(px * 10);
+    const qz = Math.floor(pz * 10);
+    const seed =
+      ((lotIndex + 1) * 7919) ^ (qx << 1) ^ (qz << 3) ^ (baseSeed & 0xffffffff);
+    return rng(seed >>> 0);
+  };
 
   const city = new THREE.Group();
   city.name = "HarborCity";
@@ -311,12 +321,15 @@ export async function createCity(scene, terrain, options = {}) {
     if (bestDist < MIN_DIST_FROM_ROAD) continue; // Too close to road (blocked)
     if (bestDist > MAX_DIST_FROM_ROAD) continue; // Too far (isolated)
 
-    // C. Define Lot & Subdivision
-    const baseWidth = 3.5 + random() * 2.5;
-    const baseDepth = 3.5 + random() * 2.5;
+    const lotRng = lotRandomFor(i, x, z);
 
-    // Plot Subdivision (25-45% chance)
-    const doSubdivide = random() < 0.35;
+    // C. Define Lot & Subdivision
+    const baseWidth = 3.5 + lotRng() * 2.5;
+    const baseDepth = 3.5 + lotRng() * 2.5;
+
+    // Plot Subdivision (30-45% chance)
+    const subdivisionChance = 0.3 + lotRng() * 0.15;
+    const doSubdivide = lotRng() < subdivisionChance;
 
     // Prepare candidates
     const candidates = [];
@@ -324,6 +337,7 @@ export async function createCity(scene, terrain, options = {}) {
     // Road info
     const roadDir = new THREE.Vector2(bestTangent.x, bestTangent.z).normalize();
     const toLotDir = new THREE.Vector2(x - bestRoadPt.x, z - bestRoadPt.z).normalize();
+    const lotSideDir = new THREE.Vector2(-toLotDir.y, toLotDir.x);
     const angleFromTangent = Math.atan2(roadDir.y, roadDir.x);
 
     if (doSubdivide) {
@@ -369,22 +383,47 @@ export async function createCity(scene, terrain, options = {}) {
 
     for (const cand of candidates) {
         // 1. Setback Variance (0.5 - 2.0m)
-        const setback = 0.5 + random() * 1.5;
+        const setback = 0.5 + lotRng() * 1.5;
         // Move away from road
         const setbackVec = toLotDir.clone().multiplyScalar(setback);
 
-        let cx = x + cand.relX + setbackVec.x;
-        let cz = z + cand.relZ + setbackVec.y;
+        const baseCenter = new THREE.Vector2(x + cand.relX, z + cand.relZ).add(setbackVec);
 
-        // 2. Position Jitter (10-18% of lot size)
-        const jitterMag = Math.min(cand.w, cand.d) * (0.10 + random() * 0.08);
-        cx += (random() - 0.5) * 2 * jitterMag;
-        cz += (random() - 0.5) * 2 * jitterMag;
+        // 2. Scale Jitter (0.85 - 1.15), clamped to lot bounds
+        const sJitter = 0.85 + lotRng() * 0.3;
+        const scaledW = cand.w * sJitter;
+        const scaledD = cand.d * sJitter;
+        const finalW = Math.min(cand.w, scaledW);
+        const finalD = Math.min(cand.d, scaledD);
 
-        // 3. Scale Jitter (0.85 - 1.15)
-        const sJitter = 0.85 + random() * 0.3;
-        const finalW = cand.w * sJitter;
-        const finalD = cand.d * sJitter;
+        const halfLotW = cand.w * 0.5;
+        const halfLotD = cand.d * 0.5;
+        const halfFootW = finalW * 0.5;
+        const halfFootD = finalD * 0.5;
+
+        // If setback already consumes the lot depth, abort early
+        if (halfLotD - halfFootD <= Math.abs(setback)) {
+          collisionDetected = true;
+          break;
+        }
+
+        // 3. Position Jitter (10-18% of lot size), clamped within lot bounds
+        const jitterRatio = 0.1 + lotRng() * 0.08;
+        const maxSideJitter = Math.min(halfLotW - halfFootW, halfLotW * jitterRatio);
+        const availableDepth = halfLotD - halfFootD - Math.abs(setback);
+        const maxDepthJitter = Math.min(Math.max(availableDepth, 0), halfLotD * jitterRatio);
+
+        const sideJitter = maxSideJitter > 0 ? (lotRng() - 0.5) * 2 * maxSideJitter : 0;
+        const forwardJitter = maxDepthJitter > 0 ? (lotRng() - 0.5) * 2 * maxDepthJitter : 0;
+
+        const jitterOffset = lotSideDir
+          .clone()
+          .multiplyScalar(sideJitter)
+          .addScaledVector(toLotDir, forwardJitter);
+
+        const jittered = baseCenter.clone().add(jitterOffset);
+        const cx = jittered.x;
+        const cz = jittered.y;
 
         // Check strict road setback
         const checkRadius = Math.max(finalW, finalD) * 0.6;
@@ -409,19 +448,19 @@ export async function createCity(scene, terrain, options = {}) {
         let baseRot = angleFromTangent;
 
         // Bias: 80% chance to align strictly with road grid (0 or 90 offset)
-        if (random() < 0.8) {
-             baseRot += (random() > 0.5 ? Math.PI/2 : 0);
+        if (lotRng() < 0.8) {
+             baseRot += (lotRng() > 0.5 ? Math.PI/2 : 0);
         }
         // Else: keep tangent alignment (no 90 deg snap), effectively same base but allows drift via jitter logic below
 
         // Apply Jitter based on district
         const isCivic = distRule.id === 'sacred' || distRule.id === 'commercial' || distRule.id === 'civic';
-        const jitterMin = isCivic ? 2 : 8;
-        const jitterMax = isCivic ? 5 : 18;
+        const jitterMin = isCivic ? 8 : 12;
+        const jitterMax = isCivic ? 12 : 18;
 
-        const rJitterDeg = jitterMin + random() * (jitterMax - jitterMin);
+        const rJitterDeg = jitterMin + lotRng() * (jitterMax - jitterMin);
         const rJitterRad = rJitterDeg * (Math.PI / 180);
-        const rSign = random() > 0.5 ? 1 : -1;
+        const rSign = lotRng() > 0.5 ? 1 : -1;
         const finalRot = baseRot + (rJitterRad * rSign);
 
         const radius = Math.max(finalW, finalD) * 0.6;
@@ -475,18 +514,18 @@ export async function createCity(scene, terrain, options = {}) {
 
         // Heights
         const [minH, maxH] = Array.isArray(distRule.heightRange) ? distRule.heightRange : [3, 4.5];
-        const wH = minH + random() * (maxH - minH);
+        const wH = minH + lotRng() * (maxH - minH);
 
         // --- Determine Archetype ---
         let archetype = 'gable';
         // Check courtyard chance
-        if (distRule.courtyardChance > 0 && random() < distRule.courtyardChance) {
+        if (distRule.courtyardChance > 0 && lotRng() < distRule.courtyardChance) {
             archetype = 'courtyard';
         } else {
             // Randomly choose between gable and flat
             // 60% Gable, 40% Flat? Or purely random?
             // Let's bias slightly towards gable for "village" feel
-            archetype = random() > 0.4 ? 'gable' : 'flat';
+            archetype = lotRng() > 0.4 ? 'gable' : 'flat';
         }
 
         finalBuildings.push({
@@ -496,8 +535,8 @@ export async function createCity(scene, terrain, options = {}) {
             width: finalW, depth: finalD,
             wallHeight: wH,
             roofHeight: 1.2 * (cand.isSub ? 0.8 : 1.0),
-            color: new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random)),
-            roofColor: new THREE.Color(pickRandom(roofPalette, random)),
+            color: new THREE.Color(pickRandom(WALL_COLOR_PRESETS, lotRng)),
+            roofColor: new THREE.Color(pickRandom(roofPalette, lotRng)),
             radius: radius
         });
     }
