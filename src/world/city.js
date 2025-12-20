@@ -2,23 +2,12 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   CITY_CHUNK_CENTER,
-  CITY_CHUNK_SIZE,
   CITY_SEED,
   getSeaLevelY,
   CITY_AREA_RADIUS,
-  HARBOR_EXCLUDE_RADIUS,
-  HARBOR_CENTER_3D,
-  HARBOR_WATER_BOUNDS,
-  HARBOR_WATER_EAST_LIMIT,
-  HARBOR_SETBACKS,
-  AGORA_CENTER_3D,
-  ACROPOLIS_PEAK_3D,
 } from "./locations.js";
-import { HARBOR_FLOOR_DEPTH, getHarborShoreBlendProfile } from "./harborTerrainConfig.js";
-import { addFoundationPad } from "./foundations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
-import { DEBUG_FLAGS } from "../debug/flags.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
 const ROOF_COLOR_PRESETS = ["#b4472c", "#c05621", "#d66f2c"];
@@ -38,25 +27,59 @@ function sampleHeight(terrain, x, z, fallback) {
   return fallback;
 }
 
-function createVisibleRoadSegment(p1, p2, width, collect) {
-  const half = width * 0.5;
-  const dir = p2.clone().sub(p1).normalize();
-  const side = new THREE.Vector3(-dir.z, 0, dir.x);
-  
-  const v1 = p1.clone().addScaledVector(side, half);
-  const v2 = p1.clone().addScaledVector(side, -half);
-  const v3 = p2.clone().addScaledVector(side, half);
-  const v4 = p2.clone().addScaledVector(side, -half);
+function applyVertexColor(geometry, color) {
+  const c = color instanceof THREE.Color ? color : new THREE.Color(color);
+  const geom = geometry.toNonIndexed();
+  const count = geom.getAttribute("position").count;
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    colors[i * 3] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+  geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  return geom;
+}
 
-  const positions = new Float32Array([
-    v1.x, v1.y, v1.z,  v2.x, v2.y, v2.z,  v3.x, v3.y, v3.z,
-    v2.x, v2.y, v2.z,  v4.x, v4.y, v4.z,  v3.x, v3.y, v3.z
-  ]);
+export function generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor) {
+  const geometries = [];
+  const porchInset = 1.0;
+  const foundationHeight = 0.2;
 
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geometry.computeVertexNormals();
-  collect.push(geometry);
+  // Foundation
+  const foundationGeo = new THREE.BoxGeometry(width + 0.4, foundationHeight, depth + 0.4);
+  foundationGeo.translate(0, foundationHeight * 0.5, 0);
+  geometries.push(applyVertexColor(foundationGeo, 0x999999));
+
+  // Walls with front inset to leave a porch
+  const roomDepth = Math.max(0.5, depth - porchInset);
+  const wallGeo = new THREE.BoxGeometry(width, wallHeight, roomDepth);
+  wallGeo.translate(0, foundationHeight + wallHeight * 0.5, -porchInset * 0.5);
+  geometries.push(applyVertexColor(wallGeo, wallColor));
+
+  // Porch columns
+  const columnCount = Math.max(1, Math.floor(width / 1.5));
+  const spacing = width / (columnCount + 1);
+  const columnHeight = wallHeight;
+  const columnGeo = new THREE.CylinderGeometry(0.15, 0.15, columnHeight, 8);
+  columnGeo.translate(0, foundationHeight + columnHeight * 0.5, 0);
+  const porchZ = depth * 0.5 - porchInset * 0.5;
+  for (let i = 0; i < columnCount; i++) {
+    const col = columnGeo.clone();
+    const x = -width * 0.5 + spacing * (i + 1);
+    col.translate(x, 0, porchZ - 0.1);
+    geometries.push(applyVertexColor(col, 0xdddddd));
+  }
+
+  // Roof as a triangular prism cylinder
+  const roofRadius = Math.max(depth * 0.55, 0.5);
+  const roofGeo = new THREE.CylinderGeometry(roofRadius, roofRadius, width, 3, 1, true);
+  roofGeo.rotateZ(Math.PI / 2);
+  roofGeo.scale(1, roofHeight / (roofRadius * 2), 1);
+  roofGeo.translate(0, foundationHeight + wallHeight + roofHeight * 0.5, -porchInset * 0.2);
+  geometries.push(applyVertexColor(roofGeo, roofColor));
+
+  return mergeGeometries(geometries, false);
 }
 
 // --- MAIN ORGANIC GENERATOR ---
@@ -74,298 +97,119 @@ export async function createCity(scene, terrain, options = {}) {
   city.name = "HarborCity";
   scene.add(city);
 
-  const ROAD_WIDTH_MAIN = 3.8;
-  const ROAD_WIDTH_ALLEY = 2.4;
-  const SCATTER_ATTEMPTS = 4000; // Increased for density
-  const MIN_DIST_FROM_ROAD = 3.0; 
-  const MAX_DIST_FROM_ROAD = 14.0;
-
-  // 1. Generate Organic Road Network
-  // Hierarchy: Arteries (Main) -> Branches (Alleys)
+  // Roads radiating from center
   const roadCurves = [];
-  const roadGeometries = [];
-  
-  // A. Main Arteries (Radiating)
-  const numArteries = 5;
-  for (let i = 0; i < numArteries; i++) {
-    const angle = (i / numArteries) * Math.PI * 2 + (random() * 0.4);
+  for (let i = 0; i < 5; i++) {
+    const angle = (i / 5) * Math.PI * 2 + random() * 0.4;
     const start = origin.clone();
     const end = new THREE.Vector3(
-        origin.x + Math.cos(angle) * CITY_AREA_RADIUS,
-        origin.y,
-        origin.z + Math.sin(angle) * CITY_AREA_RADIUS
+      origin.x + Math.cos(angle) * CITY_AREA_RADIUS,
+      origin.y,
+      origin.z + Math.sin(angle) * CITY_AREA_RADIUS
     );
     const mid = start.clone().lerp(end, 0.5);
-    mid.x += (random() - 0.5) * 40; 
-    mid.z += (random() - 0.5) * 40;
-
-    [start, mid, end].forEach(p => p.y = sampleHeight(terrain, p.x, p.z, origin.y) + 0.1);
-
+    mid.x += (random() - 0.5) * 30;
+    mid.z += (random() - 0.5) * 30;
+    [start, mid, end].forEach((p) => (p.y = sampleHeight(terrain, p.x, p.z, origin.y) + 0.05));
     const curve = new THREE.CatmullRomCurve3([start, mid, end]);
-    curve.userData = { type: 'main' };
     roadCurves.push(curve);
   }
 
-  // B. Branch Roads (The "Organic" Fix)
-  // Spawn small winding alleys off the main roads
-  const numBranches = 8;
-  for (let i = 0; i < numBranches; i++) {
-      const parentParams = {
-          curveIndex: Math.floor(random() * numArteries),
-          t: 0.3 + random() * 0.5 // Start mid-way along parent
-      };
-      
-      const parent = roadCurves[parentParams.curveIndex];
-      const start = parent.getPointAt(parentParams.t);
-      const tangent = parent.getTangentAt(parentParams.t);
-      const normal = new THREE.Vector3(-tangent.z, 0, tangent.x);
-      
-      // Flip side randomly
-      if (random() > 0.5) normal.negate();
-      
-      const length = 25 + random() * 20;
-      const end = start.clone().addScaledVector(normal, length);
-      // Wiggle the end
-      end.x += (random() - 0.5) * 15;
-      end.z += (random() - 0.5) * 15;
-      
-      const mid = start.clone().lerp(end, 0.5);
-      mid.x += (random() - 0.5) * 8;
-      
-      [start, mid, end].forEach(p => p.y = sampleHeight(terrain, p.x, p.z, origin.y) + 0.1);
-      
-      const branch = new THREE.CatmullRomCurve3([start, mid, end]);
-      branch.userData = { type: 'alley' };
-      roadCurves.push(branch);
-  }
-
-  // Mesh all roads
-  for (const road of roadCurves) {
-      const width = road.userData.type === 'main' ? ROAD_WIDTH_MAIN : ROAD_WIDTH_ALLEY;
-      const points = road.getSpacedPoints(30);
-      for (let j = 0; j < points.length - 1; j++) {
-         createVisibleRoadSegment(points[j], points[j+1], width, roadGeometries);
-      }
-  }
+  const roadGeometries = roadCurves.map((curve) => {
+    const tube = new THREE.TubeGeometry(curve, 80, 1.5, 8, false);
+    return applyVertexColor(tube, 0x8f8676);
+  });
 
   if (roadGeometries.length > 0) {
-    const merged = mergeGeometries(roadGeometries);
-    const material = new THREE.MeshStandardMaterial({ 
-      color: 0x8f8676, 
-      roughness: 1.0, 
+    const mergedRoads = mergeGeometries(roadGeometries, true);
+    const roadMaterial = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 1.0,
       metalness: 0.0,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
     });
-    const mesh = new THREE.Mesh(merged, material);
-    mesh.receiveShadow = true;
-    mesh.userData.noCollision = true; 
-    city.add(mesh);
+    const roadMesh = new THREE.Mesh(mergedRoads, roadMaterial);
+    roadMesh.receiveShadow = true;
+    roadMesh.userData.noCollision = true;
+    city.add(roadMesh);
   }
 
-  // 2. Scatter Buildings (Compounds)
-  const buildingPlacements = [];
-  const placedPoints = []; 
+  const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(60));
 
-  for (let i = 0; i < SCATTER_ATTEMPTS; i++) {
-    // Pick spot
-    const r = Math.sqrt(random()) * CITY_AREA_RADIUS; 
+  const cityGeometries = [];
+  const placedHouses = [];
+  const scatterAttempts = 2500;
+
+  for (let i = 0; i < scatterAttempts; i++) {
+    const r = Math.sqrt(random()) * CITY_AREA_RADIUS;
     const theta = random() * Math.PI * 2;
     const x = origin.x + r * Math.cos(theta);
     const z = origin.z + r * Math.sin(theta);
 
-    // Check Roads
     let bestDist = Infinity;
-    let bestTangent = null;
-    let nearestRoadType = 'main';
-    
-    for (const road of roadCurves) {
-        const samples = road.getSpacedPoints(10);
-        for (let k=0; k<samples.length; k++) {
-            const pt = samples[k];
-            const d = Math.hypot(x - pt.x, z - pt.z);
-            if (d < bestDist) {
-                bestDist = d;
-                const tVal = k / (samples.length - 1);
-                bestTangent = road.getTangentAt(tVal);
-                nearestRoadType = road.userData.type;
-            }
+    let bestCurve = null;
+    let bestT = 0;
+
+    roadCurves.forEach((curve, idx) => {
+      const samples = roadSamples[idx];
+      for (let s = 0; s < samples.length; s++) {
+        const pt = samples[s];
+        const d = Math.hypot(x - pt.x, z - pt.z);
+        if (d < bestDist) {
+          bestDist = d;
+          bestCurve = curve;
+          bestT = s / (samples.length - 1);
         }
+      }
+    });
+
+    if (bestDist > 15 || bestDist < 4) continue;
+
+    const width = 3 + random() * 3;
+    const depth = 3 + random() * 3;
+    const wallHeight = 2.5 + random() * 1.5;
+    const roofHeight = 0.8 + random() * 0.8;
+    const neighborRadius = Math.max(width, depth) * 0.6;
+
+    let tooClose = false;
+    for (const p of placedHouses) {
+      const dist = Math.hypot(x - p.x, z - p.z);
+      if (dist < neighborRadius + p.radius) {
+        tooClose = true;
+        break;
+      }
     }
-
-    if (bestDist < MIN_DIST_FROM_ROAD) continue; 
-    if (bestDist > MAX_DIST_FROM_ROAD) continue;
-
-    // Size Variation
-    const width = 3.5 + random() * 2.5;
-    const depth = 3.5 + random() * 2.5;
-    const radius = Math.max(width, depth) * 0.6; 
-
-    // Overlap Check
-    let overlap = false;
-    for (const p of placedPoints) {
-        const d = Math.hypot(x - p.x, z - p.z);
-        if (d < (radius + p.radius + 1.2)) { // Tighter gap (1.2m) for clutter
-            overlap = true;
-            break;
-        }
-    }
-    if (overlap) continue;
+    if (tooClose) continue;
 
     const y = sampleHeight(terrain, x, z, -999);
-    if (y < seaLevel + 1.2) continue; 
+    if (y < seaLevel + 1.0) continue;
 
-    // Orientation with Jitter
-    const roadAngle = Math.atan2(bestTangent.x, bestTangent.z);
-    // Face road (0) or side (90)
-    const baseRot = roadAngle + (random() > 0.5 ? Math.PI/2 : 0);
-    // Add chaos (+/- 20 degrees)
-    const rotation = baseRot + (random() - 0.5) * 0.7;
-
-    const color = new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random));
+    const wallColor = new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random));
     const roofColor = new THREE.Color(pickRandom(ROOF_COLOR_PRESETS, random));
 
-    // MAIN STRUCTURE
-    buildingPlacements.push({
-        x, y: y + 0.05, z,
-        rotation,
-        width, depth,
-        wallHeight: 3 + random() * 1.5,
-        roofHeight: 1.2,
-        type: 'main',
-        color,
-        roofColor
-    });
+    const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
 
-    // ANNEX (The "Compound" Fix)
-    // 50% chance to add a lean-to or shed
-    if (random() > 0.5) {
-        const annexW = width * 0.5;
-        const annexD = depth * 0.5;
-        // Place relative to main
-        const offsetDist = (width + annexW) * 0.45; 
-        const annexX = x + Math.cos(rotation) * offsetDist;
-        const annexZ = z + Math.sin(rotation) * offsetDist;
-        
-        buildingPlacements.push({
-            x: annexX, y: y + 0.05, z: annexZ,
-            rotation: rotation + (random()-0.5)*0.2, // Slight misalignment
-            width: annexW, 
-            depth: annexD,
-            wallHeight: 2.2, // Lower
-            roofHeight: 0.8,
-            type: 'annex',
-            color: color.clone().multiplyScalar(0.9), // Slightly different shade
-            roofColor
-        });
+    if (bestCurve) {
+      const tangent = bestCurve.getTangent(bestT);
+      const angle = Math.atan2(tangent.x, tangent.z);
+      houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
     }
 
-    placedPoints.push({ x, z, radius });
+    houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
+    cityGeometries.push(houseGeo);
+    placedHouses.push({ x, z, radius: neighborRadius });
   }
 
-  // 3. Instantiate
-  if (buildingPlacements.length > 0) {
-    const wallMat = (await makeTiledPBR("textures/marble", { repeat: { x: 0.25, y: 0.25 }})) 
-                    || new THREE.MeshStandardMaterial({ color: 0xe0d0b0 });
-    wallMat.vertexColors = true; 
-    wallMat.roughness = 0.95;
-
-    const roofMat = new THREE.MeshStandardMaterial({ 
-        color: 0xffffff, vertexColors: true, roughness: 0.95 
-    });
-
-    const wallGeo = new THREE.BoxGeometry(1, 1, 1);
-    wallGeo.translate(0, 0.5, 0); 
-    
-    const roofGeo = new THREE.CylinderGeometry(0, 0.5, 1, 4, 1, false);
-    roofGeo.rotateY(Math.PI/4); 
-    roofGeo.translate(0, 0.5, 0);
-
-    const walls = new THREE.InstancedMesh(wallGeo, wallMat, buildingPlacements.length);
-    const roofs = new THREE.InstancedMesh(roofGeo, roofMat, buildingPlacements.length);
-    
-    walls.castShadow = true; walls.receiveShadow = true;
-    roofs.castShadow = true; roofs.receiveShadow = true;
-
-    const dummy = new THREE.Object3D();
-
-    buildingPlacements.forEach((b, i) => {
-        // Wall
-        dummy.position.set(b.x, b.y, b.z);
-        dummy.rotation.set(0, b.rotation, 0);
-        dummy.scale.set(b.width, b.wallHeight, b.depth);
-        dummy.updateMatrix();
-        walls.setMatrixAt(i, dummy.matrix);
-        walls.setColorAt(i, b.color);
-
-        // Roof
-        dummy.position.y += b.wallHeight;
-        dummy.scale.set(b.width * 1.1, b.roofHeight, b.depth * 1.1);
-        dummy.updateMatrix();
-        roofs.setMatrixAt(i, dummy.matrix);
-        roofs.setColorAt(i, b.roofColor);
-    });
-
-    walls.instanceMatrix.needsUpdate = true;
-    walls.instanceColor.needsUpdate = true;
-    roofs.instanceMatrix.needsUpdate = true;
-    roofs.instanceColor.needsUpdate = true;
-
-    city.add(walls);
-    city.add(roofs);
-  }
-
-  // 4. Add Trees (Scattered)
-  const treeCount = Math.floor(buildingPlacements.length * 0.6);
-  if (treeCount > 0) {
-      const trunkGeo = new THREE.CylinderGeometry(0.15, 0.25, 1.5, 5);
-      trunkGeo.translate(0, 0.75, 0);
-      const leafGeo = new THREE.DodecahedronGeometry(1.0);
-      leafGeo.translate(0, 2.0, 0);
-      
-      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5d4037 });
-      const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 });
-      
-      const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
-      const leaves = new THREE.InstancedMesh(leafGeo, leafMat, treeCount);
-      trunks.castShadow = true; leaves.castShadow = true;
-      
-      let tIdx = 0;
-      const dummyT = new THREE.Object3D();
-      
-      for(let i=0; i < SCATTER_ATTEMPTS && tIdx < treeCount; i++) {
-          const r = Math.sqrt(random()) * CITY_AREA_RADIUS;
-          const th = random() * Math.PI * 2;
-          const tx = origin.x + r * Math.cos(th);
-          const tz = origin.z + r * Math.sin(th);
-          
-          let clear = true;
-          for (const p of placedPoints) {
-              if (Math.hypot(tx-p.x, tz-p.z) < p.radius + 1.2) { clear = false; break; }
-          }
-          if (!clear) continue;
-          
-          if (Math.hypot(tx-origin.x, tz-origin.z) < 5.0) continue; 
-
-          const y = sampleHeight(terrain, tx, tz, -999);
-          if (y > seaLevel + 1.5) {
-              dummyT.position.set(tx, y, tz);
-              dummyT.rotation.y = random() * Math.PI;
-              const s = 0.7 + random() * 0.6;
-              dummyT.scale.set(s,s,s);
-              dummyT.updateMatrix();
-              
-              trunks.setMatrixAt(tIdx, dummyT.matrix);
-              leaves.setMatrixAt(tIdx, dummyT.matrix);
-              tIdx++;
-          }
-      }
-      
-      trunks.count = tIdx;
-      leaves.count = tIdx;
-      trunks.instanceMatrix.needsUpdate = true;
-      leaves.instanceMatrix.needsUpdate = true;
-      city.add(trunks);
-      city.add(leaves);
+  if (cityGeometries.length > 0) {
+    const mergedCity = mergeGeometries(cityGeometries, true);
+    const cityMaterial =
+      (await makeTiledPBR("textures/marble", { repeat: { x: 0.25, y: 0.25 } })) ||
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
+    cityMaterial.vertexColors = true;
+    const cityMesh = new THREE.Mesh(mergedCity, cityMaterial);
+    cityMesh.castShadow = true;
+    cityMesh.receiveShadow = true;
+    city.add(cityMesh);
   }
 
   applyTextureBudgetToObject(city, scene?.userData?.renderer);
