@@ -543,7 +543,7 @@ export async function loadLandmark(scene, url, options = {}) {
   // Beginners tip: showing a simple glowing box makes it obvious to the player
   // that something will appear here soon. It also gives feedback while large
   // downloads are still happening in the background.
-  scene.add(placeholder);
+  // scene.add(placeholder);
 
   const entry = { scene, url, placeholder, object: null };
   trackedLandmarks.add(entry);

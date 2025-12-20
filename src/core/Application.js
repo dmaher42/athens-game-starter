@@ -573,6 +573,72 @@ export class Application {
     const roadsVisible =
       engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
 
+    // === DEBUG SCANNER ===
+    if (import.meta.env.DEV) {
+      window.debugScanPlaceholders = () => {
+        console.log("🕵️ Scanning for black placeholder cubes...");
+        const results = [];
+        const groups = {};
+
+        scene.traverse((child) => {
+          if (!child.isMesh) return;
+
+          let isSuspicious = false;
+          const reasons = [];
+
+          // Check Geometry: BoxGeometry
+          if (child.geometry?.type === "BoxGeometry") {
+             // We can check if it's a raw generic box (1x1x1) or similar?
+             // But valid houses use BoxGeometry too.
+             // Let's flag it but check material.
+          }
+
+          // Check Material: Black or Dark
+          if (child.material) {
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            for (const m of mats) {
+              if (m.color) {
+                const { r, g, b } = m.color;
+                if (r < 0.08 && g < 0.08 && b < 0.08) {
+                  isSuspicious = true;
+                  reasons.push(`Dark Color (${r.toFixed(2)},${g.toFixed(2)},${b.toFixed(2)})`);
+                }
+              }
+              // Check for default name "MeshBasicMaterial" or similar if unconfigured?
+            }
+          }
+
+          // Check Name
+          if (/Placeholder|Building|Cube|Block/i.test(child.name)) {
+             // Suspicious name
+             // reasons.push(`Suspicious Name: ${child.name}`);
+             // But "Building" is common.
+             if (/Cube/i.test(child.name) || /Placeholder/i.test(child.name)) {
+                isSuspicious = true;
+                reasons.push(`Name: ${child.name}`);
+             }
+          }
+
+          if (isSuspicious) {
+             const parentName = child.parent?.name || "NoParent";
+             results.push({
+                name: child.name,
+                type: child.type,
+                parent: parentName,
+                geo: child.geometry?.type,
+                reasons: reasons.join(", ")
+             });
+
+             if (!groups[parentName]) groups[parentName] = 0;
+             groups[parentName]++;
+          }
+        });
+
+        console.table(results);
+        console.log("Summary by Parent:", groups);
+      };
+    }
+
     // Roads first (needs terrain sampler)
     const { group: roadGroup, curve: mainRoad } = createMainHillRoad(
       worldRoot,

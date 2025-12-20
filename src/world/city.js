@@ -694,5 +694,168 @@ export function createHillCity(scene, terrain, curve, opts = {}) {
   const group = new THREE.Group();
   group.name = "HillCity";
   scene.add(group);
+
+  if (!curve) return group;
+
+  const rng = (seed) => {
+    let s = seed;
+    return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 0xffffffff);
+  };
+  const random = rng(opts.seed ?? 12345);
+
+  const buildingCount = opts.buildingCount ?? 80;
+  const buildingPlacements = {
+    gable: [],
+    flat: [],
+    courtyard: []
+  };
+
+  const points = curve.getSpacedPoints(buildingCount * 1.5);
+  // Just scatter along the road
+  for (let i=0; i < points.length; i+=2) { // Skip some to spread out
+     if (random() > 0.8) continue; // Random gaps
+
+     const pt = points[i];
+     const t = i / (points.length - 1);
+     const tangent = curve.getTangentAt(t);
+     const perp = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+     // Left or Right side
+     const side = random() > 0.5 ? 1 : -1;
+     const dist = 4.0 + random() * 3.0;
+
+     const x = pt.x + perp.x * dist * side;
+     const z = pt.z + perp.z * dist * side;
+
+     const y = sampleHeight(terrain, x, z, pt.y);
+
+     const w = 3.5 + random() * 2.0;
+     const d = 3.5 + random() * 2.0;
+
+     // Rotate to face road (perp * -side)
+     const angle = Math.atan2(-perp.z * side, -perp.x * side);
+     // Jitter rotation
+     const rot = angle + (random() - 0.5) * 0.2;
+
+     const h = 3.0 + random() * 1.5;
+
+     let type = 'gable';
+     const rVal = random();
+     if (rVal < 0.3) type = 'flat';
+     else if (rVal < 0.5) type = 'courtyard';
+
+     // Add to list
+     buildingPlacements[type].push({
+         x, y: y + 0.1, z,
+         rotation: rot,
+         width: w, depth: d,
+         wallHeight: h,
+         roofHeight: 1.2,
+         color: new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random)),
+         roofColor: new THREE.Color(pickRandom(ROOF_COLOR_PRESETS, random)),
+     });
+  }
+
+  // Instantiate
+  const plasterMat = new THREE.MeshStandardMaterial({
+      color: 0xfffcf5,
+      roughness: 0.9,
+      vertexColors: true
+  });
+  const terracottaMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.8,
+      vertexColors: true
+  });
+
+  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  boxGeo.translate(0, 0.5, 0);
+
+  const gableRoofGeo = createGableRoofGeometry();
+  const parapetGeo = createParapetGeometry();
+  const hollowBoxGeo = createCourtyardGeometry();
+
+  const createInstancedMesh = (geo, mat, count) => {
+      const mesh = new THREE.InstancedMesh(geo, mat, count);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+  }
+
+  const dummy = new THREE.Object3D();
+
+  // Gable
+  if (buildingPlacements.gable.length > 0) {
+      const list = buildingPlacements.gable;
+      const walls = createInstancedMesh(boxGeo, plasterMat, list.length);
+      const roofs = createInstancedMesh(gableRoofGeo, terracottaMat, list.length);
+
+      list.forEach((b, i) => {
+          dummy.position.set(b.x, b.y, b.z);
+          dummy.rotation.set(0, b.rotation, 0);
+          dummy.scale.set(b.width, b.wallHeight, b.depth);
+          dummy.updateMatrix();
+          walls.setMatrixAt(i, dummy.matrix);
+          walls.setColorAt(i, b.color);
+
+          dummy.position.y += b.wallHeight;
+          dummy.scale.set(b.width + 0.6, b.roofHeight, b.depth + 0.6);
+          dummy.updateMatrix();
+          roofs.setMatrixAt(i, dummy.matrix);
+          roofs.setColorAt(i, b.roofColor);
+      });
+      group.add(walls);
+      group.add(roofs);
+  }
+
+  // Flat
+  if (buildingPlacements.flat.length > 0) {
+      const list = buildingPlacements.flat;
+      const walls = createInstancedMesh(boxGeo, plasterMat, list.length);
+      const rims = createInstancedMesh(parapetGeo, plasterMat, list.length);
+
+      list.forEach((b, i) => {
+          dummy.position.set(b.x, b.y, b.z);
+          dummy.rotation.set(0, b.rotation, 0);
+          dummy.scale.set(b.width, b.wallHeight, b.depth);
+          dummy.updateMatrix();
+          walls.setMatrixAt(i, dummy.matrix);
+          walls.setColorAt(i, b.color);
+
+          dummy.position.y += b.wallHeight;
+          dummy.scale.set(b.width, 0.6, b.depth);
+          dummy.updateMatrix();
+          rims.setMatrixAt(i, dummy.matrix);
+          rims.setColorAt(i, b.color);
+      });
+      group.add(walls);
+      group.add(rims);
+  }
+
+  // Courtyard
+  if (buildingPlacements.courtyard.length > 0) {
+      const list = buildingPlacements.courtyard;
+      const walls = createInstancedMesh(hollowBoxGeo, plasterMat, list.length);
+      const rims = createInstancedMesh(parapetGeo, plasterMat, list.length);
+
+      list.forEach((b, i) => {
+          dummy.position.set(b.x, b.y, b.z);
+          dummy.rotation.set(0, b.rotation, 0);
+          dummy.scale.set(b.width, b.wallHeight, b.depth);
+          dummy.updateMatrix();
+          walls.setMatrixAt(i, dummy.matrix);
+          walls.setColorAt(i, b.color);
+
+          dummy.position.y += b.wallHeight;
+          dummy.scale.set(b.width, 0.5, b.depth);
+          dummy.updateMatrix();
+          rims.setMatrixAt(i, dummy.matrix);
+          rims.setColorAt(i, b.color);
+      });
+      group.add(walls);
+      group.add(rims);
+  }
+
+  applyTextureBudgetToObject(group, scene?.userData?.renderer);
   return group;
 }
