@@ -8,6 +8,7 @@ import {
 } from "./locations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
+import { generateStoaGeometry, generateTholosGeometry } from "./monuments.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
 const ROOF_COLOR_PRESETS = ["#b4472c", "#c05621", "#d66f2c"];
@@ -289,9 +290,33 @@ export async function createCity(scene, terrain, options = {}) {
   const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(60));
 
   const cityGeometries = [];
-  const placedHouses = [];
+  const placedPoints = [];
   const buildingPlacements = [];
   const scatterAttempts = 2500;
+
+  // Central monuments
+  const tholosRadius = 5;
+  const tholosHeight = 7;
+  const tholosX = origin.x + 6;
+  const tholosZ = origin.z;
+  const tholosY = sampleHeight(terrain, tholosX, tholosZ, origin.y);
+  const tholosGeo = generateTholosGeometry(tholosRadius, tholosHeight);
+  tholosGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(tholosX, tholosY, tholosZ));
+  cityGeometries.push(tholosGeo);
+  placedPoints.push({ x: tholosX, z: tholosZ, radius: tholosRadius * 1.2 });
+  buildingPlacements.push({ x: tholosX, z: tholosZ, rotation: 0, width: tholosRadius * 2, depth: tholosRadius * 2 });
+
+  const stoaLength = 22;
+  const stoaWidth = 8;
+  const stoaHeight = 6;
+  const stoaX = origin.x - 10;
+  const stoaZ = origin.z - 6;
+  const stoaY = sampleHeight(terrain, stoaX, stoaZ, origin.y);
+  const stoaGeo = generateStoaGeometry(stoaLength, stoaWidth, stoaHeight);
+  stoaGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(stoaX, stoaY, stoaZ));
+  cityGeometries.push(stoaGeo);
+  placedPoints.push({ x: stoaX, z: stoaZ, radius: Math.hypot(stoaLength, stoaWidth) * 0.5 });
+  buildingPlacements.push({ x: stoaX, z: stoaZ, rotation: 0, width: stoaLength, depth: stoaWidth });
 
   for (let i = 0; i < scatterAttempts; i++) {
     const r = Math.sqrt(random()) * CITY_AREA_RADIUS;
@@ -325,7 +350,7 @@ export async function createCity(scene, terrain, options = {}) {
     const neighborRadius = Math.max(width, depth) * 0.6;
 
     let tooClose = false;
-    for (const p of placedHouses) {
+    for (const p of placedPoints) {
       const dist = Math.hypot(x - p.x, z - p.z);
       if (dist < neighborRadius + p.radius) {
         tooClose = true;
@@ -351,7 +376,7 @@ export async function createCity(scene, terrain, options = {}) {
 
     houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
     cityGeometries.push(houseGeo);
-    placedHouses.push({ x, z, radius: neighborRadius });
+    placedPoints.push({ x, z, radius: neighborRadius });
     buildingPlacements.push({ x, z, rotation: angle, width, depth });
   }
 
