@@ -55,8 +55,8 @@ export function resolveBaseUrl() {
   if (onGithubPages) {
     // Always serve from the repo base when hosted on GitHub Pages.
     base = REPO_BASE;
-  } else if (typeof window !== "undefined") {
-    // Local dev or non-GitHub Pages hosts should resolve from root.
+  } else if (typeof window !== "undefined" && !globalBase && !envBase) {
+    // Local dev or non-GitHub Pages hosts should resolve from root when no explicit base is provided.
     base = "/";
   }
 
