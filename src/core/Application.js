@@ -107,6 +107,12 @@ import { VillagerSystem } from "../world/traffic.js";
 import { createAtmosphericParticles } from "../world/particles.js";
 import { scatterGroundProps } from "../world/groundProps.js";
 
+// === NEW RPG SYSTEMS ===
+import { QuestManager } from "../state/QuestManager.js";
+import { InteractionSystem } from "../interactions/InteractionSystem.js";
+import { QuestHud } from "../ui/questHud.ts";
+import { InteractionHud } from "../ui/interactionHud.ts";
+
 console.info("[build]", engineConfig.build || {});
 
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl();
@@ -291,26 +297,6 @@ export class Application {
         devHud.setStatusLine("sea", message);
       }
     };
-
-    const interactPrompt = document.createElement("div");
-    interactPrompt.textContent = "Press E to interact";
-    Object.assign(interactPrompt.style, {
-      position: "fixed",
-      left: "50%",
-      bottom: "20%",
-      transform: "translateX(-50%)",
-      padding: "8px 12px",
-      borderRadius: "6px",
-      background: "rgba(0, 0, 0, 0.6)",
-      color: "#fff",
-      fontFamily: "sans-serif",
-      fontSize: "14px",
-      letterSpacing: "0.05em",
-      opacity: "0",
-      transition: "opacity 0.2s ease",
-      pointerEvents: "none",
-    });
-    document.body.appendChild(interactPrompt);
 
     const timeOfDayDisplay = document.createElement("div");
     Object.assign(timeOfDayDisplay.style, {
@@ -596,72 +582,6 @@ export class Application {
     const roadsVisible =
       engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
 
-    // === DEBUG SCANNER ===
-    if (import.meta.env.DEV) {
-      window.debugScanPlaceholders = () => {
-        console.log("🕵️ Scanning for black placeholder cubes...");
-        const results = [];
-        const groups = {};
-
-        scene.traverse((child) => {
-          if (!child.isMesh) return;
-
-          let isSuspicious = false;
-          const reasons = [];
-
-          // Check Geometry: BoxGeometry
-          if (child.geometry?.type === "BoxGeometry") {
-             // We can check if it's a raw generic box (1x1x1) or similar?
-             // But valid houses use BoxGeometry too.
-             // Let's flag it but check material.
-          }
-
-          // Check Material: Black or Dark
-          if (child.material) {
-            const mats = Array.isArray(child.material) ? child.material : [child.material];
-            for (const m of mats) {
-              if (m.color) {
-                const { r, g, b } = m.color;
-                if (r < 0.08 && g < 0.08 && b < 0.08) {
-                  isSuspicious = true;
-                  reasons.push(`Dark Color (${r.toFixed(2)},${g.toFixed(2)},${b.toFixed(2)})`);
-                }
-              }
-              // Check for default name "MeshBasicMaterial" or similar if unconfigured?
-            }
-          }
-
-          // Check Name
-          if (/Placeholder|Building|Cube|Block/i.test(child.name)) {
-             // Suspicious name
-             // reasons.push(`Suspicious Name: ${child.name}`);
-             // But "Building" is common.
-             if (/Cube/i.test(child.name) || /Placeholder/i.test(child.name)) {
-                isSuspicious = true;
-                reasons.push(`Name: ${child.name}`);
-             }
-          }
-
-          if (isSuspicious) {
-             const parentName = child.parent?.name || "NoParent";
-             results.push({
-                name: child.name,
-                type: child.type,
-                parent: parentName,
-                geo: child.geometry?.type,
-                reasons: reasons.join(", ")
-             });
-
-             if (!groups[parentName]) groups[parentName] = 0;
-             groups[parentName]++;
-          }
-        });
-
-        console.table(results);
-        console.log("Summary by Parent:", groups);
-      };
-    }
-
     // Roads first (needs terrain sampler)
     const { group: roadGroup, curve: mainRoad } = createMainHillRoad(
       worldRoot,
@@ -683,11 +603,6 @@ export class Application {
 
     if (!FORCE_PROC) {
       // --- Aristotle's Tomb (local GLB) ---------------------------------------
-      // We prefer a local asset the repo expects at:
-      //   public/models/landmarks/aristotle_tomb.glb
-      // At runtime we try both the site base (for GitHub Pages) and root (for dev).
-      // If found, we stream it via loadLandmark(); the loader will auto-raise it
-      // ~5cm above ground and handle KTX2 texture support transparently.
       try {
         const aristotleUrl =
           await assetLoader.resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
@@ -749,9 +664,6 @@ export class Application {
     } else {
       console.info("[proc] GLB loading disabled (procedural default)");
     }
-
-    // Plazas (agora + acropolis terraces) — disabled per request to remove large discs
-    // createPlazas(worldRoot);
 
     const { city: harborCity, roadCurves } = await createCity(
       worldRoot,
@@ -843,6 +755,7 @@ export class Application {
       border: "2px solid #ffd700",
       pointerEvents: "none",
       textShadow: "0px 2px 4px black",
+      display: "none" // Hiding scroll score to de-clutter for quest system
     });
     scoreContainer.innerText = "Scrolls Found: 0 / 0";
     document.body.appendChild(scoreContainer);
@@ -1097,74 +1010,95 @@ export class Application {
     // describe behaviour without subclassing three.js meshes. Below we hook up a
     // swinging door and a street lamp that toggles its light.
 
-    const doorPivot = new THREE.Group();
-    doorPivot.name = "DemoDoor";
-    doorPivot.position.set(-2, 0, -12);
+    // === QUEST SYSTEM INIT ===
+    const questManager = new QuestManager();
+    const questHud = new QuestHud(questManager);
+    const interactionHud = new InteractionHud();
+    const interactionSystem = new InteractionSystem(input, camera, scene, interactionHud);
 
-    const doorGeometry = new THREE.BoxGeometry(1.2, 2.4, 0.12);
-    const doorMaterial = new THREE.MeshStandardMaterial({ color: 0x5a3310 });
-    const door = new THREE.Mesh(doorGeometry, doorMaterial);
-    door.position.set(0.6, 1.2, 0);
-    door.castShadow = true;
-    door.receiveShadow = true;
-    doorPivot.add(door);
+    // === TEMPLE NPC (QUEST GIVER) ===
+    const templeNpcGroup = new THREE.Group();
+    templeNpcGroup.name = "TempleNPC_QuestGiver";
 
-    doorPivot.userData.interactable = true;
-    doorPivot.userData.highlightTarget = door;
-    doorPivot.userData.open = false;
-    doorPivot.userData.onUse = (object) => {
-      const willOpen = !object.userData.open;
-      object.userData.open = willOpen;
-      door.rotation.y = willOpen ? -Math.PI / 2 : 0;
-      console.log(`Door ${willOpen ? "opened" : "closed"}`);
-    };
+    // Create visual (Blue tunic)
+    const npcBodyMat = new THREE.MeshStandardMaterial({ color: 0x4e8ef7, roughness: 0.7 });
+    const npcBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 1.1, 4, 16), npcBodyMat);
+    npcBody.position.y = 1.1 / 2 + 0.35; // approximate grounding
+    npcBody.castShadow = true;
+    templeNpcGroup.add(npcBody);
 
-    worldRoot.add(doorPivot);
-    queueSceneInteractable(scene, doorPivot);
+    const npcHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({color: 0xeacdad}));
+    npcHead.position.y = 1.5;
+    npcHead.castShadow = true;
+    templeNpcGroup.add(npcHead);
 
-    const lamp = new THREE.Group();
-    lamp.name = "DemoLamp";
-    lamp.position.set(2, 0, -12);
+    // Place at Acropolis Peak
+    // ACROPOLIS_PEAK_3D is (-40, Y, 10). Let's offset slightly so it's not inside the tomb/landmark
+    const templePos = ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(5, 0, 5));
+    // Sample height to be safe
+    const templeY = terrain?.userData?.getHeightAt?.(templePos.x, templePos.z) ?? templePos.y;
+    templeNpcGroup.position.set(templePos.x, templeY + 0.05, templePos.z);
 
-    const poleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 3, 12);
-    const poleMaterial = new THREE.MeshStandardMaterial({ color: 0x303030 });
-    const pole = new THREE.Mesh(poleGeometry, poleMaterial);
-    pole.position.y = 1.5;
-    pole.castShadow = false;
-    lamp.add(pole);
+    worldRoot.add(templeNpcGroup);
 
-    const bulbMaterial = new THREE.MeshStandardMaterial({
-      color: 0x222222,
-      emissive: new THREE.Color(0xfff5b5),
-      emissiveIntensity: 1.5,
+    // Register Interaction
+    interactionSystem.register(templeNpcGroup, {
+        label: "Talk to Temple Keeper",
+        distance: 4.0,
+        onInteract: () => {
+            if (questManager.currentQuest.status === 'Not Started') {
+                questManager.startQuest("The Harbour Run", "Find the Lost Crate at the Harbour.");
+                // Update label? For now we just keep "Talk" or change it.
+                // Simple state change:
+                templeNpcGroup.userData.interactable.label = "Current Objective: Find Crate";
+            } else if (questManager.currentQuest.objective === "Return to the Temple.") {
+                questManager.completeQuest();
+                templeNpcGroup.userData.interactable.label = "Quest Completed";
+            } else if (questManager.currentQuest.status === 'Completed') {
+                // Do nothing or say thanks
+            } else {
+                // In progress
+                // Could show dialog bubble
+            }
+        }
     });
-    const bulb = new THREE.Mesh(
-      new THREE.SphereGeometry(0.25, 16, 16),
-      bulbMaterial,
-    );
-    bulb.position.y = 3;
-    bulb.castShadow = false;
-    lamp.add(bulb);
 
-    const pointLight = new THREE.PointLight(0xfff5b5, 1.5, 12, 2);
-    pointLight.position.y = 3;
-    pointLight.castShadow = false;
-    lamp.add(pointLight);
+    // === HARBOR CRATE (OBJECTIVE) ===
+    const crateGroup = new THREE.Group();
+    crateGroup.name = "LostCrate_HarbourRun";
 
-    lamp.userData.interactable = true;
-    lamp.userData.highlightTarget = bulb;
-    lamp.userData.light = pointLight;
-    lamp.userData.onUse = (object) => {
-      const light = object.userData.light;
-      if (!light) return;
-      const isOn = light.intensity > 0.1;
-      light.intensity = isOn ? 0 : 1.5;
-      bulbMaterial.emissiveIntensity = isOn ? 0 : 1.5;
-      console.log(`Lamp ${isOn ? "turned off" : "turned on"}`);
-    };
+    const crateGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+    const crateMat = new THREE.MeshStandardMaterial({ color: 0x8d6b45, roughness: 0.9 });
+    const crateMesh = new THREE.Mesh(crateGeo, crateMat);
+    crateMesh.castShadow = true;
+    crateMesh.position.y = 0.4;
+    crateGroup.add(crateMesh);
 
-    worldRoot.add(lamp);
-    queueSceneInteractable(scene, lamp);
+    // Place at Harbor
+    // HARBOR_CENTER_3D is (-120, Y, 80).
+    const harborPos = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(2, 0, 2));
+    const harborY = terrain?.userData?.getHeightAt?.(harborPos.x, harborPos.z) ?? harborPos.y;
+    crateGroup.position.set(harborPos.x, harborY + 0.05, harborPos.z);
+
+    worldRoot.add(crateGroup);
+
+    // Register Interaction (Initially hidden or non-interactable? Or just check quest state)
+    interactionSystem.register(crateGroup, {
+        label: "Inspect Crate",
+        distance: 3.5,
+        onInteract: () => {
+            if (questManager.currentQuest.status === 'In Progress' &&
+                questManager.currentQuest.objective.includes("Find the Lost Crate")) {
+
+                questManager.updateObjective("Return to the Temple.");
+                // Maybe remove crate or change its label
+                crateGroup.visible = false; // "Picked up"
+                interactionSystem.unregister(crateGroup); // Cannot interact anymore
+            } else {
+                // Just a crate
+            }
+        }
+    });
 
     const createFallbackAvatar = () => {
       const group = new THREE.Group();
@@ -1749,10 +1683,6 @@ export class Application {
 
     interactor = createInteractor(renderer, camera, scene);
 
-    // atmosphericParticles = createAtmosphericParticles(scene, {
-    //   getCenter: () => player?.object?.position ?? null,
-    // });
-
     if (thirdPersonCamera) {
       setThirdPersonEnabled(USE_THIRD_PERSON);
     }
@@ -1841,6 +1771,9 @@ export class Application {
         collectibles.update(deltaTime, player.object.position);
       }
 
+      // Update Interaction System
+      interactionSystem.update(deltaTime);
+
       if (thirdPersonCamera && thirdPersonEnabled) {
         player.cameraYaw = thirdPersonCamera.getYaw();
         player.cameraPitch = thirdPersonCamera.getPitch();
@@ -1868,7 +1801,7 @@ export class Application {
       // Cast a ray through the center of the screen to detect hovered objects and
       // highlight anything marked as interactable via userData.
       const hovered = interactor.updateHover(deltaTime);
-      interactPrompt.style.opacity = hovered ? "1" : "0";
+      // Legacy interactPrompt removed to avoid ReferenceError
 
       const formattedTime = formatPhaseAsTime(phase);
       if (formattedTime !== lastDisplayedTime) {

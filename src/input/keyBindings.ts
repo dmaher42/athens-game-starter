@@ -4,7 +4,7 @@ export type KeyCode = string;
 export type KeyList = readonly KeyCode[];
 export type MovementKey = "forward" | "back" | "left" | "right";
 export type LookKey = "left" | "right" | "up" | "down";
-export type ActionKey = "jump" | "sprint" | "flyToggle" | "crouch";
+export type ActionKey = "jump" | "sprint" | "flyToggle" | "crouch" | "interact";
 
 type KeyGroups<T extends string> = Readonly<Record<T, KeyList>>;
 
@@ -56,8 +56,9 @@ export const ALL_LOOK_KEYS = createKeyGroups<LookKey>({
 export const ACTION_KEYS = createKeyGroups<ActionKey>({
   jump: ["Space"],
   sprint: ["ShiftLeft", "ShiftRight"],
-  flyToggle: ["KeyF"],
+  flyToggle: ["KeyG"],
   crouch: ["ControlLeft", "ControlRight", "KeyC"],
+  interact: ["KeyF"],
 });
 
 export function flattenKeyGroups<T extends string>(
