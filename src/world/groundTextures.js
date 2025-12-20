@@ -612,7 +612,7 @@ float groundNoise(vec2 p) {
   if (hasBlend) {
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <map_fragment>",
-      `vec4 grassTexel = vec4(1.0);\nvec3 baseDiffuse = diffuseColor.rgb;\n#ifdef USE_MAP\n  vec4 texelColor = texture2D(uGroundGrassMap, vUv);\n  texelColor = mapTexelToLinear(texelColor);\n  grassTexel = texelColor;\n#endif\nvec3 dirtTexel = texture2D(uGroundDirtMap, vUv).rgb;\nfloat noiseWeight = clamp(groundNoise(vWorldXZ * uGroundBlendNoise.x), 0.0, 1.0);\nnoiseWeight = pow(noiseWeight, max(uGroundBlendNoise.y, 0.0001));\nfloat maskWeight = texture2D(uGroundBlendMask, vUv).r * uGroundBlendMaskStrength;\nfloat dirtWeight = clamp(max(noiseWeight, maskWeight), 0.0, 1.0);\nvec3 mixed = mix(grassTexel.rgb, dirtTexel, dirtWeight);\ndiffuseColor = vec4(mixed * baseDiffuse, diffuseColor.a);`,
+      `vec4 grassTexel = vec4(1.0);\nvec3 baseDiffuse = diffuseColor.rgb;\n#ifdef USE_MAP\n  vec4 texelColor = texture2D(uGroundGrassMap, vUv);\n  grassTexel = texelColor;\n#endif\nvec3 dirtTexel = texture2D(uGroundDirtMap, vUv).rgb;\nfloat noiseWeight = clamp(groundNoise(vWorldXZ * uGroundBlendNoise.x), 0.0, 1.0);\nnoiseWeight = pow(noiseWeight, max(uGroundBlendNoise.y, 0.0001));\nfloat maskWeight = texture2D(uGroundBlendMask, vUv).r * uGroundBlendMaskStrength;\nfloat dirtWeight = clamp(max(noiseWeight, maskWeight), 0.0, 1.0);\nvec3 mixed = mix(grassTexel.rgb, dirtTexel, dirtWeight);\ndiffuseColor = vec4(mixed * baseDiffuse, diffuseColor.a);`,
     );
   }
 
