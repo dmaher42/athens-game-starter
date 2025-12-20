@@ -59,6 +59,19 @@ function isWithinHarborWater(x, z, buffer = 0) {
   );
 }
 
+function pointToSegmentDistance(px, pz, p1x, p1z, p2x, p2z) {
+  const dx = p2x - p1x;
+  const dz = p2z - p1z;
+  const l2 = dx * dx + dz * dz;
+  if (l2 === 0) return Math.hypot(px - p1x, pz - p1z);
+
+  let t = ((px - p1x) * dx + (pz - p1z) * dz) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = p1x + t * dx;
+  const cz = p1z + t * dz;
+  return Math.hypot(px - cx, pz - cz);
+}
+
 // Draw a visible road mesh along a curve segment
 function createVisibleRoadSegment(p1, p2, w1, w2, collect) {
   const half1 = w1 * 0.5;
@@ -194,6 +207,7 @@ export async function createCity(scene, terrain, options = {}) {
   // 1. Generate Organic Roads (The "Spine")
   const roadCurves = [];
   const roadGeometries = [];
+  const roadSegments = [];
   
   const numArteries = 5;
   for (let i = 0; i < numArteries; i++) {
@@ -239,6 +253,11 @@ export async function createCity(scene, terrain, options = {}) {
 
     for (let j = 0; j < perturbedPoints.length - 1; j++) {
        createVisibleRoadSegment(perturbedPoints[j], perturbedPoints[j+1], widths[j], widths[j+1], roadGeometries);
+       roadSegments.push({
+         p1: perturbedPoints[j],
+         p2: perturbedPoints[j+1],
+         radius: Math.max(widths[j], widths[j+1]) * 0.5
+       });
     }
   }
 
@@ -337,6 +356,17 @@ export async function createCity(scene, terrain, options = {}) {
     const finalBuildings = [];
     let collisionDetected = false;
 
+    // Helper to check road proximity
+    const isNearRoad = (tx, tz, checkRadius) => {
+      // setback: require at least 2m clearance from road edge
+      const MIN_SETBACK = 2.0;
+      for (const seg of roadSegments) {
+        const d = pointToSegmentDistance(tx, tz, seg.p1.x, seg.p1.z, seg.p2.x, seg.p2.z);
+        if (d < (seg.radius + checkRadius + MIN_SETBACK)) return true;
+      }
+      return false;
+    };
+
     for (const cand of candidates) {
         // 1. Setback Variance (0.5 - 2.0m)
         const setback = 0.5 + random() * 1.5;
@@ -355,6 +385,21 @@ export async function createCity(scene, terrain, options = {}) {
         const sJitter = 0.85 + random() * 0.3;
         const finalW = cand.w * sJitter;
         const finalD = cand.d * sJitter;
+
+        // Check strict road setback
+        const checkRadius = Math.max(finalW, finalD) * 0.6;
+        if (isNearRoad(cx, cz, checkRadius)) {
+           if (isDevEnvironment && random() < 0.05) { // Debug marker (sample 5%)
+              const m = new THREE.Mesh(
+                 new THREE.BoxGeometry(0.3, 3, 0.3),
+                 new THREE.MeshBasicMaterial({ color: 0xff0000 })
+              );
+              m.position.set(cx, seaLevel + 5, cz);
+              city.add(m);
+           }
+           collisionDetected = true;
+           break;
+        }
 
         // Resolve district early for rotation rules
         const distRule = resolveDistrictAt(terrain, districtRules, cx, cz, 'residential');
