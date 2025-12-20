@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 const TUNIC_COLORS = ["#ffffff", "#f5e6c8", "#c8d9ff"];
+const CITIZEN_MESH_NAME = "Citizens";
 
 export class TrafficManager {
   constructor(scene, roadCurves = [], terrain = null) {
@@ -30,6 +31,7 @@ export class TrafficManager {
     const geometry = new THREE.BoxGeometry(0.5, 1.7, 0.5);
     const material = new THREE.MeshStandardMaterial({ vertexColors: true });
     const mesh = new THREE.InstancedMesh(geometry, material, this.agentCount);
+    mesh.name = CITIZEN_MESH_NAME;
     mesh.castShadow = true;
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh = mesh;
@@ -39,7 +41,7 @@ export class TrafficManager {
       const t = Math.random();
       const speed = 0.1 + Math.random() * 0.1;
       const color = new THREE.Color(TUNIC_COLORS[i % TUNIC_COLORS.length]);
-      this.agents.push({ curve, t, speed });
+      this.agents.push({ curve, t, speed, paused: false, instanceId: i });
       mesh.setColorAt(i, color);
       this.updateAgent(i, 0);
     }
@@ -67,6 +69,7 @@ export class TrafficManager {
     const agent = this.agents[index];
     const mesh = this.mesh;
     if (!agent || !mesh || !agent.curve) return;
+    if (agent.paused) return;
 
     agent.t += dt * agent.speed;
     if (agent.t >= 1) {
@@ -100,5 +103,34 @@ export class TrafficManager {
       this.updateAgent(i, deltaTime);
     }
     this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  getAgentByInstanceId(instanceId, mesh = null) {
+    if (!Number.isInteger(instanceId)) return null;
+    if (mesh && mesh !== this.mesh) return null;
+    return this.agents[instanceId] ?? null;
+  }
+
+  getAgent(instanceId, mesh = null) {
+    return this.getAgentByInstanceId(instanceId, mesh);
+  }
+
+  setAgentPaused(instanceId, paused = true) {
+    const agent = this.getAgentByInstanceId(instanceId);
+    if (!agent) return;
+    agent.paused = !!paused;
+  }
+
+  pauseAgent(agentOrInstanceId, fallbackInstanceId = null) {
+    const instanceId = this.resolveInstanceId(agentOrInstanceId, fallbackInstanceId);
+    if (!Number.isInteger(instanceId)) return;
+    this.setAgentPaused(instanceId, true);
+  }
+
+  resolveInstanceId(agentOrInstanceId, fallbackInstanceId = null) {
+    if (Number.isInteger(agentOrInstanceId)) return agentOrInstanceId;
+    if (Number.isInteger(fallbackInstanceId)) return fallbackInstanceId;
+    const idx = this.agents.indexOf(agentOrInstanceId);
+    return idx >= 0 ? idx : null;
   }
 }
