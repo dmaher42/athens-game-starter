@@ -1,6 +1,21 @@
 import * as THREE from "three";
 
 const PENDING_INTERACTABLES_KEY = "__interactorPending";
+const CITIZEN_MESH_NAME = "Citizens";
+const CITIZEN_PROMPT_TEXT = "Citizen: [Press E to Talk]";
+const CITIZEN_DIALOGUES = [
+  "The wind is favorable today.",
+  "Have you visited the Agora?",
+  "The bakers have fresh bread this morning.",
+  "Be careful on the steeper slopes near the Acropolis.",
+  "They say a new play opens at the theater tonight.",
+];
+
+const _instanceMatrix = new THREE.Matrix4();
+const _instancePosition = new THREE.Vector3();
+const _instanceQuaternion = new THREE.Quaternion();
+const _instanceScale = new THREE.Vector3();
+const _instanceLook = new THREE.Vector3();
 
 export function queueSceneInteractable(scene, object, options = {}) {
   if (!scene || !object) return;
@@ -48,11 +63,16 @@ export function createInteractor(renderer, camera, scene) {
   const HOVER_UPDATE_INTERVAL = 1 / 24; // limit expensive raycasts to ~24 Hz
   const storedMaterialState = new Map();
   let currentHover = null;
+  let currentCitizenHit = null;
   let hoverTimer = HOVER_UPDATE_INTERVAL; // ensure the first call performs a hit test
 
   const trackedInteractables = new Map();
   const intersectTargets = [];
   let targetsDirty = true;
+
+  const citizenPrompt = createCitizenPrompt();
+  const citizenDialogueOverlay = createCitizenDialogueOverlay();
+  let dialogueHideTimer = null;
 
   function isInScene(object) {
     let node = object;
@@ -69,6 +89,10 @@ export function createInteractor(renderer, camera, scene) {
       if (!object) continue;
       if (!isInScene(object)) continue;
       intersectTargets.push(object);
+    }
+    const citizenMesh = scene?.getObjectByName?.(CITIZEN_MESH_NAME);
+    if (citizenMesh?.isInstancedMesh && !intersectTargets.includes(citizenMesh)) {
+      intersectTargets.push(citizenMesh);
     }
     targetsDirty = false;
   }
@@ -198,6 +222,7 @@ export function createInteractor(renderer, camera, scene) {
     }
     currentHover = null;
     hoverTimer = HOVER_UPDATE_INTERVAL;
+    setCitizenHover(null);
   }
 
   /**
@@ -277,7 +302,10 @@ export function createInteractor(renderer, camera, scene) {
 
     hoverTimer = 0;
     const hit = pickCenter();
-    const target = hit ? findInteractable(hit.object) : null;
+    const citizenHit = resolveCitizenHit(hit);
+    setCitizenHover(citizenHit);
+
+    const target = citizenHit ? hit?.object : hit ? findInteractable(hit.object) : null;
 
     if (!target) {
       clearHover();
@@ -298,6 +326,11 @@ export function createInteractor(renderer, camera, scene) {
   }
 
   function useObject() {
+    if (currentCitizenHit) {
+      handleCitizenInteraction(currentCitizenHit);
+      return;
+    }
+
     if (!currentHover) {
       console.log("Nothing to interact with.");
       return;
@@ -310,6 +343,97 @@ export function createInteractor(renderer, camera, scene) {
       const name = currentHover.name || currentHover.type || "object";
       console.log(`Nothing to interact with on ${name}.`);
     }
+  }
+
+  function resolveCitizenHit(hit) {
+    if (!hit || !hit.object || !hit.object.isInstancedMesh) return null;
+    if (hit.object.name !== CITIZEN_MESH_NAME) return null;
+    if (!Number.isInteger(hit.instanceId) || hit.instanceId < 0) return null;
+
+    const trafficManager = scene?.userData?.trafficManager;
+    const agent =
+      trafficManager?.getAgentByInstanceId?.(hit.instanceId, hit.object) ??
+      trafficManager?.getAgent?.(hit.instanceId, hit.object) ??
+      (Array.isArray(trafficManager?.agents) ? trafficManager.agents[hit.instanceId] : null);
+
+    return {
+      object: hit.object,
+      instanceId: hit.instanceId,
+      agent,
+    };
+  }
+
+  function setCitizenHover(hit) {
+    currentCitizenHit = hit;
+    if (citizenPrompt) {
+      citizenPrompt.style.opacity = hit ? "1" : "0";
+    }
+  }
+
+  function handleCitizenInteraction(hit) {
+    if (!hit?.object || !Number.isInteger(hit.instanceId)) return;
+
+    tryPauseCitizen(hit.agent, hit.instanceId);
+    rotateCitizenToFacePlayer(hit.object, hit.instanceId);
+    showCitizenDialogue();
+  }
+
+  function tryPauseCitizen(agent, instanceId) {
+    const trafficManager = scene?.userData?.trafficManager;
+    if (trafficManager?.pauseAgent) {
+      trafficManager.pauseAgent(agent ?? instanceId, instanceId);
+      return;
+    }
+    if (trafficManager?.setAgentPaused) {
+      trafficManager.setAgentPaused(instanceId, true);
+      return;
+    }
+    if (!agent) return;
+    if (typeof agent.pause === "function") {
+      agent.pause();
+      return;
+    }
+    if (typeof agent.setPaused === "function") {
+      agent.setPaused(true);
+      return;
+    }
+    if ("paused" in agent) {
+      agent.paused = true;
+    }
+  }
+
+  function rotateCitizenToFacePlayer(mesh, instanceId) {
+    if (!mesh?.isInstancedMesh || !Number.isInteger(instanceId)) return;
+
+    mesh.getMatrixAt(instanceId, _instanceMatrix);
+    _instanceMatrix.decompose(_instancePosition, _instanceQuaternion, _instanceScale);
+
+    _instanceLook.subVectors(camera.position, _instancePosition);
+    _instanceLook.y = 0;
+    if (_instanceLook.lengthSq() === 0) return;
+
+    _instanceLook.normalize();
+    const yaw = Math.atan2(_instanceLook.x, _instanceLook.z);
+    _instanceQuaternion.setFromEuler(new THREE.Euler(0, yaw, 0));
+    _instanceMatrix.compose(_instancePosition, _instanceQuaternion, _instanceScale);
+    mesh.setMatrixAt(instanceId, _instanceMatrix);
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  function showCitizenDialogue() {
+    if (!citizenDialogueOverlay) return;
+
+    const dialogue = CITIZEN_DIALOGUES[Math.floor(Math.random() * CITIZEN_DIALOGUES.length)];
+    citizenDialogueOverlay.textContent = dialogue;
+    citizenDialogueOverlay.style.opacity = "1";
+
+    if (dialogueHideTimer) {
+      clearTimeout(dialogueHideTimer);
+    }
+
+    dialogueHideTimer = setTimeout(() => {
+      citizenDialogueOverlay.style.opacity = "0";
+    }, 3200);
   }
 
   const api = {
@@ -343,4 +467,55 @@ export function createInteractor(renderer, camera, scene) {
   scanSceneForInteractables(scene);
 
   return api;
+}
+
+function createCitizenPrompt() {
+  if (typeof document === "undefined") return null;
+  const node = document.createElement("div");
+  node.textContent = CITIZEN_PROMPT_TEXT;
+  Object.assign(node.style, {
+    position: "fixed",
+    left: "50%",
+    bottom: "26%",
+    transform: "translateX(-50%)",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    background: "rgba(0, 0, 0, 0.7)",
+    color: "#fff",
+    fontFamily: "sans-serif",
+    fontSize: "14px",
+    letterSpacing: "0.05em",
+    opacity: "0",
+    transition: "opacity 0.2s ease",
+    pointerEvents: "none",
+    zIndex: 1100,
+  });
+  document.body.appendChild(node);
+  return node;
+}
+
+function createCitizenDialogueOverlay() {
+  if (typeof document === "undefined") return null;
+  const node = document.createElement("div");
+  Object.assign(node.style, {
+    position: "fixed",
+    left: "50%",
+    bottom: "32%",
+    transform: "translateX(-50%)",
+    padding: "10px 14px",
+    borderRadius: "8px",
+    background: "rgba(0, 0, 0, 0.75)",
+    color: "#f5f5f5",
+    fontFamily: "sans-serif",
+    fontSize: "15px",
+    letterSpacing: "0.05em",
+    opacity: "0",
+    transition: "opacity 0.25s ease",
+    pointerEvents: "none",
+    zIndex: 1150,
+    minWidth: "220px",
+    textAlign: "center",
+  });
+  document.body.appendChild(node);
+  return node;
 }
