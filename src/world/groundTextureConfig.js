@@ -88,6 +88,8 @@ export const GROUND_TEXTURE_CONFIG = {
       mode: "mix", // Corresponds to uGroundDetailMode = 1 (mix blend)
       seed: 404,
       tintAttenuation: 0.42,
+      noiseScale: 18,
+      noiseStrength: 0.55,
     }
   ],
 };

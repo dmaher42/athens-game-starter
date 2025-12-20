@@ -218,6 +218,8 @@ function createDetailLayer(config) {
   }
 
   const mode = config.mode === "mix" ? 1 : 0;
+  const noiseScale = Number.isFinite(config.noiseScale) ? config.noiseScale : 0;
+  const noiseStrength = THREE.MathUtils.clamp(config.noiseStrength ?? 0, 0, 1);
 
   return {
     texture,
@@ -225,6 +227,7 @@ function createDetailLayer(config) {
     tint,
     mode,
     tintMultiplier: applyTintMultiplier ? 1 : 0,
+    noise: new THREE.Vector2(noiseScale, noiseStrength),
   };
 }
 
@@ -408,6 +411,7 @@ export function injectGroundTextureShader(shader, state) {
     const tintName = `uGroundDetailTint${index}`;
     const modeName = `uGroundDetailMode${index}`;
     const tintMultiplierName = `uGroundDetailTintMultiplier${index}`;
+    const noiseName = `uGroundDetailNoise${index}`;
 
     shader.uniforms[mapName] = { value: layer.texture };
     shader.uniforms[paramName] = { value: layer.params };
@@ -415,6 +419,9 @@ export function injectGroundTextureShader(shader, state) {
     shader.uniforms[modeName] = { value: layer.mode };
     shader.uniforms[tintMultiplierName] = {
       value: layer.tintMultiplier ?? 1,
+    };
+    shader.uniforms[noiseName] = {
+      value: layer.noise ?? new THREE.Vector2(0, 0),
     };
 
     header.push(
@@ -424,6 +431,7 @@ export function injectGroundTextureShader(shader, state) {
         `uniform vec3 ${tintName};`,
         `uniform float ${modeName};`,
         `uniform float ${tintMultiplierName};`,
+        `uniform vec2 ${noiseName};`,
       ].join("\n"),
     );
 
@@ -440,6 +448,13 @@ export function injectGroundTextureShader(shader, state) {
           mask *= 1.0 - smoothstep(maxH - fade, maxH, groundHeight);
         }
         float layerStrength = strength * mask;
+        float noiseScale = ${noiseName}.x;
+        float noiseStrength = ${noiseName}.y;
+        if (noiseScale > 0.0 && noiseStrength > 0.0) {
+          float n = groundNoise(vUv * noiseScale);
+          float noiseMask = smoothstep(0.5 - 0.5 * noiseStrength, 0.5 + 0.5 * noiseStrength, n);
+          layerStrength *= noiseMask;
+        }
         if (layerStrength > 0.0) {
           vec3 layerColor = detailSample.rgb;
           layerColor *= mix(vec3(1.0), ${tintName}, ${tintMultiplierName});
@@ -457,10 +472,28 @@ export function injectGroundTextureShader(shader, state) {
     "#include <uv_pars_fragment>",
   );
 
+  const groundNoiseFn = `
+float groundHash(vec2 p) {
+  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+}
+
+float groundNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  float a = groundHash(i);
+  float b = groundHash(i + vec2(1.0, 0.0));
+  float c = groundHash(i + vec2(0.0, 1.0));
+  float d = groundHash(i + vec2(1.0, 1.0));
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+}
+`;
+
   const commonInjection = [
     "#include <common>",
     ...(hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"]),
     ...header,
+    groundNoiseFn,
   ].join("\n");
 
   shader.fragmentShader = shader.fragmentShader.replace(
