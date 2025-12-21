@@ -344,6 +344,35 @@ export async function createOcean(scene, options = {}) {
     waterNormals.repeat.set(repeat, repeat);
   }
 
+  // Distance-based fade to blend water into horizon/fog
+  water.material.onBeforeCompile = function (shader) {
+    shader.uniforms.uFadeStart = { value: 300.0 };
+    shader.uniforms.uFadeEnd = { value: 1800.0 };
+
+    shader.fragmentShader = `
+      uniform float uFadeStart;
+      uniform float uFadeEnd;
+    ` + shader.fragmentShader;
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <fog_fragment>",
+      `
+      float dist = length(vToEye);
+      float fadeFactor = smoothstep(uFadeStart, uFadeEnd, dist);
+
+      vec3 targetColor = waterColor;
+      #ifdef USE_FOG
+         targetColor = fogColor;
+      #endif
+
+      // Mix existing color (reflection/refraction) with target color to reduce contrast and detail
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, targetColor, fadeFactor * 0.9);
+
+      #include <fog_fragment>
+      `
+    );
+  };
+
   scene.add(water);
 
   // Debug info
