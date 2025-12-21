@@ -17,6 +17,7 @@ import {
 } from "./materials.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildTemple } from "../features/temples.js";
+import { disableFog } from "../utils/materialUtils.js";
 
 /**
  * Example usage:
@@ -701,15 +702,7 @@ export async function loadLandmark(scene, url, options = {}) {
 
     const finalized = finalizeLandmarkObject(entry, finalObject, scene, options, materialPreset);
     if (finalized) {
-    finalized.traverse((child) => {
-      if (child.isMesh && child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach((m) => (m.fog = false));
-        } else {
-          child.material.fog = false;
-        }
-      }
-    });
+      disableFog(finalized);
       return finalized;
     }
     return null;

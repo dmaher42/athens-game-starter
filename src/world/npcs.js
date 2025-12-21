@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Character } from '../characters/Character.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
+import { disableFog } from '../utils/materialUtils.js';
 
 function sanitizeRelativePath(value) {
   if (typeof value !== 'string') return '';
@@ -256,15 +257,7 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
 
     try {
       await character.load(prioritizedCandidates, scene.userData?.renderer, { targetHeight: 1.7 });
-      character.traverse((child) => {
-        if (child.isMesh && child.material) {
-          if (Array.isArray(child.material)) {
-            child.material.forEach((m) => (m.fog = false));
-          } else {
-            child.material.fog = false;
-          }
-        }
-      });
+      disableFog(character);
     } catch (error) {
       const message = error?.message || String(error);
       if (message && message.includes('Downloaded HTML instead of GLB')) {
