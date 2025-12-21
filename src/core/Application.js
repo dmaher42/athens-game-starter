@@ -41,6 +41,8 @@ import {
   CITY_AREA_RADIUS,
   ACROPOLIS_PEAK_3D,
   HARBOR_WATER_BOUNDS,
+  HARBOR_WATER_CENTER,
+  HARBOR_WATER_EAST_LIMIT,
   HARBOR_WATER_NORMAL_CANDIDATES,
   MAIN_ROAD_WIDTH,
   getSeaLevelY,
@@ -1292,9 +1294,21 @@ export class Application {
     dockhandHead.castShadow = true;
     dockhandGroup.add(dockhandHead);
 
-    const dockhandPos = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(6, 0, -4));
-    const dockhandY = terrain?.userData?.getHeightAt?.(dockhandPos.x, dockhandPos.z) ?? dockhandPos.y;
-    dockhandGroup.position.set(dockhandPos.x, dockhandY + 0.05, dockhandPos.z);
+    const seaLevel = getSeaLevelY();
+
+    const dockhandPosition = new THREE.Vector3(
+      HARBOR_WATER_EAST_LIMIT + 6.0,
+      seaLevel,
+      HARBOR_WATER_CENTER.z - 2.0,
+    );
+    const dockhandY =
+      terrain?.userData?.getHeightAt?.(dockhandPosition.x, dockhandPosition.z) ??
+      getSeaLevelY();
+    dockhandGroup.position.set(
+      dockhandPosition.x,
+      dockhandY + 0.05,
+      dockhandPosition.z,
+    );
 
     worldRoot.add(dockhandGroup);
 
@@ -1320,11 +1334,19 @@ export class Application {
     crateMesh.position.y = 0.4;
     crateGroup.add(crateMesh);
 
-    // Place at Harbor
-    // HARBOR_CENTER_3D is (-120, Y, 80).
-    const harborPos = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(2, 0, 2));
-    const harborY = terrain?.userData?.getHeightAt?.(harborPos.x, harborPos.z) ?? harborPos.y;
-    crateGroup.position.set(harborPos.x, harborY + 0.05, harborPos.z);
+    // Place on the harbor shoreline alongside the pier rows.
+    const cratePosition = new THREE.Vector3(
+      HARBOR_WATER_EAST_LIMIT + 10.0,
+      seaLevel,
+      HARBOR_WATER_CENTER.z - 2.0,
+    );
+    const harborY =
+      terrain?.userData?.getHeightAt?.(cratePosition.x, cratePosition.z) ?? getSeaLevelY();
+    crateGroup.position.set(
+      cratePosition.x,
+      harborY + 0.05,
+      cratePosition.z,
+    );
 
     worldRoot.add(crateGroup);
 
