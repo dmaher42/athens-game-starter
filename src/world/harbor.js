@@ -14,9 +14,9 @@ const DOCK_GAP = 0.35;
 const HARBOR_GROUND_HEIGHT = 1;
 
 const BOAT_STYLES = [
-  { hull: 0x2f6bb4, accent: 0xf2a541 },
-  { hull: 0x1d5c8a, accent: 0xd96941 },
-  { hull: 0x3d7dc8, accent: 0xf4b860 },
+  { hull: 0x2f6e8d, accent: 0xe2a86a },
+  { hull: 0x2a5879, accent: 0xd08b58 },
+  { hull: 0x3a7aa1, accent: 0xe9b46d },
 ];
 
 function enableShadows(mesh) {
@@ -30,10 +30,10 @@ function createHarborWaterPlane(seaLevel) {
   const depth = Math.abs(HARBOR_WATER_BOUNDS.south - HARBOR_WATER_BOUNDS.north) + padding * 2;
   const geometry = new THREE.PlaneGeometry(width, depth, 12, 12);
   const material = new THREE.MeshStandardMaterial({
-    color: 0x3c7ac2,
-    metalness: 0.28,
-    roughness: 0.42,
-    flatShading: true,
+    color: 0x3a8a97,
+    metalness: 0.42,
+    roughness: 0.24,
+    envMapIntensity: 1.15,
     transparent: true,
     opacity: 0.96,
   });
@@ -52,15 +52,19 @@ function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOC
   const deck = new THREE.Mesh(
     new THREE.BoxGeometry(length, DOCK_THICKNESS, width),
     new THREE.MeshStandardMaterial({
-      color: 0x7a5a3c,
-      roughness: 0.7,
-      metalness: 0.08,
+      color: 0x9b7b5d,
+      roughness: 0.62,
+      metalness: 0.06,
     }),
   );
   deck.position.y = seaLevel - DOCK_THICKNESS * 0.5;
   enableShadows(deck);
 
-  const postMaterial = new THREE.MeshStandardMaterial({ color: 0x5a4230, roughness: 0.85, metalness: 0.05 });
+  const postMaterial = new THREE.MeshStandardMaterial({
+    color: 0x7a6248,
+    roughness: 0.78,
+    metalness: 0.05,
+  });
   const postGeometry = new THREE.CylinderGeometry(0.35, 0.42, DOCK_POST_HEIGHT + 0.6, 10);
 
   const posts = new THREE.Group();
@@ -112,7 +116,7 @@ function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f
 
   const hullMesh = new THREE.Mesh(
     new THREE.BoxGeometry(length, 1.1, width),
-    new THREE.MeshStandardMaterial({ color: hull, roughness: 0.45, metalness: 0.12 }),
+    new THREE.MeshStandardMaterial({ color: hull, roughness: 0.42, metalness: 0.15 }),
   );
   hullMesh.position.y = seaLevel + 0.55;
   enableShadows(hullMesh);
@@ -120,7 +124,7 @@ function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f
 
   const bow = new THREE.Mesh(
     new THREE.ConeGeometry(width * 0.55, 1.6, 10),
-    new THREE.MeshStandardMaterial({ color: accent, roughness: 0.5, metalness: 0.1 }),
+    new THREE.MeshStandardMaterial({ color: accent, roughness: 0.46, metalness: 0.12 }),
   );
   bow.rotation.z = Math.PI;
   bow.position.set(length * 0.5 - 1.0, seaLevel + 1.15, 0);
@@ -150,7 +154,11 @@ function createCrateCluster() {
   const group = new THREE.Group();
   group.name = "HarborCrateCluster";
   const geometry = new THREE.BoxGeometry(1.5, 1.2, 1.1);
-  const material = new THREE.MeshStandardMaterial({ color: 0x8a6a42, roughness: 0.68 });
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x90785c,
+    roughness: 0.6,
+    metalness: 0.06,
+  });
 
   const count = 3 + Math.floor(Math.random() * 2);
   for (let i = 0; i < count; i++) {
@@ -166,7 +174,11 @@ function createBarrelCluster() {
   const group = new THREE.Group();
   group.name = "HarborBarrels";
   const barrelGeometry = new THREE.CylinderGeometry(0.5, 0.55, 1.1, 12);
-  const barrelMaterial = new THREE.MeshStandardMaterial({ color: 0x5e3c2b, roughness: 0.62 });
+  const barrelMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6d4f3a,
+    roughness: 0.58,
+    metalness: 0.05,
+  });
 
   const count = 2 + Math.floor(Math.random() * 2);
   for (let i = 0; i < count; i++) {
@@ -215,7 +227,11 @@ function createShed(size, groundY, position) {
 
   const base = new THREE.Mesh(
     new THREE.BoxGeometry(size.x, size.y, size.z),
-    new THREE.MeshStandardMaterial({ color: 0x575046, roughness: 0.65 }),
+    new THREE.MeshStandardMaterial({
+      color: 0x4e5661,
+      roughness: 0.54,
+      metalness: 0.18,
+    }),
   );
   base.position.y = size.y * 0.5;
   enableShadows(base);
@@ -223,7 +239,11 @@ function createShed(size, groundY, position) {
 
   const roof = new THREE.Mesh(
     new THREE.BoxGeometry(size.x + 0.6, 0.9, size.z + 0.6),
-    new THREE.MeshStandardMaterial({ color: 0x979797, roughness: 0.4, metalness: 0.2 }),
+    new THREE.MeshStandardMaterial({
+      color: 0xb36747,
+      roughness: 0.36,
+      metalness: 0.12,
+    }),
   );
   roof.position.y = size.y + 0.45;
   enableShadows(roof);
@@ -273,7 +293,7 @@ export function createHarbor(scene) {
   for (let i = 0; i < dressingZ.length; i++) {
     const post = new THREE.Mesh(
       new THREE.CylinderGeometry(0.25, 0.28, 2.4, 10),
-      new THREE.MeshStandardMaterial({ color: 0x5a4230, roughness: 0.85 }),
+      new THREE.MeshStandardMaterial({ color: 0x7a6248, roughness: 0.78 }),
     );
     post.position.set(HARBOR_WATER_EAST_LIMIT + 4.0, seaLevel + 1.2, dressingZ[i]);
     shorelineGroup.add(post);
@@ -320,4 +340,69 @@ export function createHarbor(scene) {
   return harbor;
 }
 
-export function updateHarborLighting() {}
+export function updateHarborLighting(harbor, nightFactor = 0) {
+  if (!harbor) return;
+
+  const clampedNight = THREE.MathUtils.clamp(nightFactor ?? 0, 0, 1);
+  const daylight = 1 - clampedNight;
+  const warmSunlight = new THREE.Color("#e3b07a");
+  const coolAmbient = new THREE.Color("#d2d9e4");
+
+  harbor.traverse((child) => {
+    if (!child.isMesh) return;
+    const materials = Array.isArray(child.material)
+      ? child.material
+      : [child.material];
+
+    for (const material of materials) {
+      if (!material || !material.isMaterial) continue;
+
+      material.userData = material.userData || {};
+
+      if (material.color && !material.userData.baseColor) {
+        material.userData.baseColor = material.color.clone();
+      }
+      if (
+        material.envMapIntensity !== undefined &&
+        material.userData.baseEnvMapIntensity === undefined
+      ) {
+        material.userData.baseEnvMapIntensity = material.envMapIntensity ?? 1;
+      }
+      if (
+        material.roughness !== undefined &&
+        material.userData.baseRoughness === undefined
+      ) {
+        material.userData.baseRoughness = material.roughness;
+      }
+
+      if (material.color && material.userData.baseColor) {
+        const cooled = material.userData.baseColor
+          .clone()
+          .lerp(coolAmbient, clampedNight * 0.2);
+        material.color.copy(cooled.lerp(warmSunlight, daylight * 0.18));
+      }
+
+      if (material.envMapIntensity !== undefined) {
+        const baseEnv = material.userData.baseEnvMapIntensity ?? 1;
+        const dayReflect = baseEnv * 1.25;
+        const nightReflect = baseEnv * 0.32;
+        material.envMapIntensity = THREE.MathUtils.lerp(
+          dayReflect,
+          nightReflect,
+          clampedNight,
+        );
+      }
+
+      if (material.roughness !== undefined) {
+        const baseRoughness = material.userData.baseRoughness ?? material.roughness;
+        const dayRoughness = Math.max(0.02, baseRoughness - 0.08 * daylight);
+        const nightRoughness = Math.min(1, baseRoughness + 0.1 * clampedNight);
+        material.roughness = THREE.MathUtils.lerp(
+          dayRoughness,
+          nightRoughness,
+          clampedNight,
+        );
+      }
+    }
+  });
+}

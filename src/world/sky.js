@@ -13,8 +13,8 @@ const DEFAULT_SKY_SETTINGS = {
   zenith: "#2f6cb5",
   horizon: "#f2d3a5",
   sun: "#ffd8a6",
-  fogNear: 220,
-  fogFar: 1600,
+  fogNear: 300,
+  fogFar: 1950,
 };
 
 const SKY_PRESETS = {
@@ -22,29 +22,29 @@ const SKY_PRESETS = {
     zenith: "#1f3f78",
     horizon: "#6ca5ff",
     sun: "#ffd8a6",
-    fogNear: 220,
-    fogFar: 1500,
+    fogNear: 300,
+    fogFar: 1850,
   },
   golden_hour: {
     zenith: "#3d5f9f",
     horizon: "#f8bf82",
     sun: "#ffb86c",
-    fogNear: 210,
-    fogFar: 1500,
+    fogNear: 290,
+    fogFar: 1850,
   },
   high_noon: {
     zenith: "#2f6cb5",
     horizon: "#f2d3a5",
     sun: "#ffd8a6",
-    fogNear: 220,
-    fogFar: 1650,
+    fogNear: 300,
+    fogFar: 1950,
   },
   night_sky: {
     zenith: "#0b1d51",
     horizon: "#1b2a4f",
     sun: "#9fc4ff",
-    fogNear: 240,
-    fogFar: 1800,
+    fogNear: 320,
+    fogFar: 2050,
   },
 };
 
