@@ -44,7 +44,7 @@ export function createColorGradePass({
       uniform vec3 midTint;
       uniform vec3 highlightTint;
 
-      float luminance(vec3 color) {
+      float computeLuminance(vec3 color) {
         return dot(color, vec3(0.2126, 0.7152, 0.0722));
       }
 
@@ -54,14 +54,14 @@ export function createColorGradePass({
       }
 
       vec3 applyTints(vec3 color) {
-        float luma = luminance(color);
+        float luma = computeLuminance(color);
         vec3 rangeTint = mix(shadowTint, highlightTint, smoothstep(0.32, 0.82, luma));
         vec3 mixTint = mix(midTint, rangeTint, 0.55);
         return color * mixTint;
       }
 
       vec3 applySaturation(vec3 color, float boost) {
-        float luma = luminance(color);
+        float luma = computeLuminance(color);
         vec3 gray = vec3(luma);
         return mix(gray, color, 1.0 + boost);
       }
@@ -73,7 +73,7 @@ export function createColorGradePass({
         color = applySCurve(color, contrastStrength);
         color = applyTints(color);
 
-        float luma = luminance(color);
+        float luma = computeLuminance(color);
         float highlightGlow = smoothstep(0.58, 1.0, luma);
         color = mix(color, color * vec3(1.03, 0.995, 0.98), highlightGlow * 0.35);
 
