@@ -204,6 +204,26 @@ function syncFogToSky(scene, radius) {
   });
 }
 
+const applyHazePreset = (scene, haze, setFogOptions) => {
+  if (!scene || !haze) return;
+  if (!haze.color || !Number.isFinite(haze.start) || !Number.isFinite(haze.end)) return;
+
+  const color = new THREE.Color(haze.color);
+  if (typeof setFogOptions === "function") {
+    setFogOptions({
+      color,
+      near: haze.start,
+      far: haze.end,
+    });
+  } else if (scene.fog && scene.fog.isFog) {
+    scene.fog.color.copy(color);
+    scene.fog.near = haze.start;
+    scene.fog.far = haze.end;
+  } else {
+    scene.fog = new THREE.Fog(color, haze.start, haze.end);
+  }
+};
+
 export class Application {
   constructor({
     baseUrl = DEFAULT_BASE_URL,
@@ -2198,7 +2218,20 @@ export class Application {
         timeOfDayPhase: phase,
       });
       updateMainHillRoadLighting(roadGroup, lights.nightFactor);
-      updateOcean(ocean, 0, alignedSunDir, lights.nightFactor, lights.sunLight.color);
+
+      if (preset.haze) {
+        applyHazePreset(scene, preset.haze, sceneContext?.setFogOptions);
+      }
+
+      updateOcean(
+        ocean,
+        0,
+        alignedSunDir,
+        lights.nightFactor,
+        lights.sunLight.color,
+        preset.haze
+      );
+
       if (grassRoot) {
         setGrassNightFactor(lights.nightFactor);
         updateGrass(0, player?.position ?? null);

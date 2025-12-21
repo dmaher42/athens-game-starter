@@ -15,8 +15,26 @@ export const DEFAULT_LIGHTING_CONFIG = {
     step: 0.01,
   },
   presets: {
-    blue_hour: { phase: 0.18, exposure: 0.82, label: "Blue Hour" },
-    golden_hour: { phase: 0.62, exposure: 0.96, label: "Golden Hour" },
+    blue_hour: {
+      phase: 0.18,
+      exposure: 0.82,
+      label: "Blue Hour",
+      haze: {
+        start: 300,
+        end: 2000,
+        color: "#3b5278",
+      },
+    },
+    golden_hour: {
+      phase: 0.62,
+      exposure: 0.96,
+      label: "Golden Hour",
+      haze: {
+        start: 400,
+        end: 2500,
+        color: "#ffcc99",
+      },
+    },
     high_noon: {
       phase: 0.5,
       exposure: 1.12,
@@ -29,8 +47,22 @@ export const DEFAULT_LIGHTING_CONFIG = {
         saturationBoost: 0.0,
         contrastStrength: 0.16,
       },
+      haze: {
+        start: 900,
+        end: 3500,
+        color: "#bfe5f9",
+      },
     },
-    night_sky: { phase: 0.92, exposure: 0.55, label: "Deep Night" },
+    night_sky: {
+      phase: 0.92,
+      exposure: 0.55,
+      label: "Deep Night",
+      haze: {
+        start: 200,
+        end: 1500,
+        color: "#0b1d51",
+      },
+    },
   },
 };
 
