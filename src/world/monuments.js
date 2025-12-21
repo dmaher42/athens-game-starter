@@ -47,7 +47,7 @@ export function generateTholosGeometry(radius, height) {
 
   const roofGeo = new THREE.ConeGeometry(radius * 1.05, roofHeight, 24);
   roofGeo.translate(0, foundationHeight + columnHeight + roofHeight * 0.5, 0);
-  geometries.push(applyVertexColor(roofGeo, 0xc05621));
+  geometries.push(applyVertexColor(roofGeo, 0xb04c28));
 
   return mergeGeometries(geometries, false);
 }
@@ -89,7 +89,7 @@ export function generateStoaGeometry(length, width, height) {
   const roofGeo = new THREE.CylinderGeometry(roofRadius, roofRadius, length + wallThickness * 2, 3, 1, true);
   roofGeo.rotateZ(Math.PI / 2);
   roofGeo.translate(0, foundationHeight + wallHeight + roofRadius * 0.2, 0);
-  geometries.push(applyVertexColor(roofGeo, 0xc05621));
+  geometries.push(applyVertexColor(roofGeo, 0xb04c28));
 
   return mergeGeometries(geometries, false);
 }

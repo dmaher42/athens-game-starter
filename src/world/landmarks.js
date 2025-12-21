@@ -749,7 +749,7 @@ function applyVertexColor(geometry, color) {
 export function generateTempleGeometry(width, length, height, columnCountFront, columnCountSide) {
   const geometries = [];
   const marbleColor = 0xf0f0f0;
-  const roofColor = 0xb4472c;
+  const roofColor = 0xa74a30;
   const accentColor = 0x355c90;
 
   const baseStepHeight = Math.max(0.4, height * 0.08);

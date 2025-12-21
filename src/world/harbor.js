@@ -240,8 +240,8 @@ function createShed(size, groundY, position) {
   const roof = new THREE.Mesh(
     new THREE.BoxGeometry(size.x + 0.6, 0.9, size.z + 0.6),
     new THREE.MeshStandardMaterial({
-      color: 0xb36747,
-      roughness: 0.36,
+      color: 0xa35d3f,
+      roughness: 0.46,
       metalness: 0.12,
     }),
   );

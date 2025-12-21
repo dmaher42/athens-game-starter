@@ -4,12 +4,12 @@
 
 // PRESERVED EXPORT: Required by src/world/groundTextures.js
 export const NEUTRAL_GROUND_FALLBACK_TINT = {
-  baseColor: [160, 160, 160],
-  shadowColor: [120, 120, 120],
-  highlightColor: [200, 200, 200],
-  shadowStrength: 0.22,
-  highlightStrength: 0.28,
-  contrast: 1,
+  baseColor: [150, 152, 160],
+  shadowColor: [112, 118, 128],
+  highlightColor: [192, 198, 210],
+  shadowStrength: 0.25,
+  highlightStrength: 0.24,
+  contrast: 0.95,
 };
 
 /**
