@@ -177,6 +177,47 @@ function startTimeOfDayCycle(options = {}) {
   };
 }
 
+function addTerrainSkirt(scene, worldRoot, terrain) {
+  const size = terrain?.geometry?.userData?.size;
+  if (!Number.isFinite(size)) return;
+
+  const half = size * 0.5;
+  const outer = size * 1.6;
+  const outerHalf = outer * 0.5;
+  const sea = typeof getSeaLevelY === "function" ? getSeaLevelY() : 0;
+
+  const skirtGroup = new THREE.Group();
+  skirtGroup.name = "TerrainSkirt";
+
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xb59a76,
+    roughness: 1.0,
+    metalness: 0.0,
+  });
+
+  const createSkirt = (width, depth, x, z, label) => {
+    const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(x, sea - 0.25, z);
+    mesh.receiveShadow = true;
+    mesh.name = `TerrainSkirt_${label}`;
+    skirtGroup.add(mesh);
+  };
+
+  const depthNS = outerHalf - half;
+  const centerZ = (half + outerHalf) / 2;
+  createSkirt(outer, depthNS, 0, centerZ, "N");
+  createSkirt(outer, depthNS, 0, -centerZ, "S");
+
+  const widthEW = outerHalf - half;
+  const centerX = (half + outerHalf) / 2;
+  createSkirt(widthEW, outer, centerX, 0, "E");
+  createSkirt(widthEW, outer, -centerX, 0, "W");
+
+  worldRoot.add(skirtGroup);
+}
+
 export class Application {
   constructor({
     baseUrl = DEFAULT_BASE_URL,
@@ -540,44 +581,6 @@ export class Application {
     const terrain = createTerrain(scene);
     this.terrain = terrain;
 
-    const terrainSize = terrain?.geometry?.userData?.size;
-    if (Number.isFinite(terrainSize)) {
-      const halfSize = terrainSize * 0.5;
-      const outerSize = terrainSize * 3;
-      const outerHalf = outerSize * 0.5;
-      const skirtHeight = Math.max(outerHalf - halfSize, 0);
-      const skirtCenterOffset = (halfSize + outerHalf) * 0.5;
-      const skirtMaterial = new THREE.MeshStandardMaterial({
-        color: 0xc2a57a,
-        roughness: 1,
-        metalness: 0,
-      });
-      const skirtGroup = new THREE.Group();
-      skirtGroup.name = "TerrainSkirt";
-      const skirtY = (Number.isFinite(getSeaLevelY()) ? getSeaLevelY() : SEA_LEVEL) - 0.1;
-
-      const createSkirtPlane = (width, height, x, z) => {
-        const geometry = new THREE.PlaneGeometry(width, height);
-        geometry.rotateX(-Math.PI / 2);
-        const mesh = new THREE.Mesh(geometry, skirtMaterial);
-        mesh.receiveShadow = true;
-        mesh.castShadow = false;
-        mesh.position.set(x, skirtY, z);
-        return mesh;
-      };
-
-      // North and south skirts
-      const northPlane = createSkirtPlane(outerHalf * 2, skirtHeight, 0, skirtCenterOffset);
-      const southPlane = createSkirtPlane(outerHalf * 2, skirtHeight, 0, -skirtCenterOffset);
-
-      // East and west skirts
-      const eastPlane = createSkirtPlane(skirtHeight, outerHalf * 2, skirtCenterOffset, 0);
-      const westPlane = createSkirtPlane(skirtHeight, outerHalf * 2, -skirtCenterOffset, 0);
-
-      skirtGroup.add(northPlane, southPlane, eastPlane, westPlane);
-      scene.add(skirtGroup);
-    }
-
     // --- Horizon & Ocean ---
     if (!this.horizon) {
       this.horizon = createHorizon(this.scene);
@@ -719,6 +722,8 @@ export class Application {
     scene.add(envCollider.mesh);
 
     const worldRoot = refreshWorldRoot();
+    worldRoot.add(terrain);
+    addTerrainSkirt(scene, worldRoot, terrain);
 
     let grassRoot = null;
     let villagerSystem = null;
