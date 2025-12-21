@@ -514,7 +514,7 @@ export function mountWaterClipDebug(
   return group;
 }
 
-export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0) {
+export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor) {
   if (!ocean) return;
   const uniforms = ocean.uniforms ?? ocean.mesh?.material?.uniforms;
   if (!uniforms) return;
@@ -526,9 +526,14 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0) {
     uniforms.sunDirection.value.copy(sunDir);
   }
 
+  if (sunColor && uniforms.sunColor) {
+    uniforms.sunColor.value.copy(sunColor);
+  }
+
   const calmFactor = THREE.MathUtils.clamp(typeof mood === "number" ? mood : 0, 0, 1);
   if (uniforms.distortionScale) {
-    uniforms.distortionScale.value = THREE.MathUtils.lerp(2.0, 0.8, calmFactor);
+    // Ensure water does not become too flat (1.1 min) even in calm/night conditions
+    uniforms.distortionScale.value = THREE.MathUtils.lerp(2.0, 1.1, calmFactor);
   }
   if (uniforms.waterColor) {
     uniforms.waterColor.value.copy(
