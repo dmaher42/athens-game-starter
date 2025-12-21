@@ -1243,11 +1243,12 @@ export class Application {
     const dockhandY =
       terrain?.userData?.getHeightAt?.(dockhandPosition.x, dockhandPosition.z) ??
       getSeaLevelY();
-    dockhandGroup.position.set(
+    dockhand.position.set(
       dockhandPosition.x,
       dockhandY + 0.05,
       dockhandPosition.z,
     );
+    worldRoot.add(dockhand);
 
     const crateGroup = new THREE.Group();
     crateGroup.name = "HarbourQuestCrate";
