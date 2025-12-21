@@ -671,7 +671,7 @@ export class Application {
         seaLevel,
         radius: oceanRadius,
         horizonOffset: 0,
-        waterColor: 0x0f304c,
+        waterColor: 0x006b7c,
       });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
     }
