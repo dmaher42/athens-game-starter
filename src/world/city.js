@@ -733,7 +733,7 @@ export async function createCity(scene, terrain, options = {}) {
   applyTextureBudgetToObject(city, scene?.userData?.renderer);
 
   // Ensure the entire city group (buildings, roads, monuments, details) is fog-free
-  disableFog(city);
+  applyForegroundFogPolicy(city);
 
   city.userData = city.userData || {};
   city.userData.roadCurves = roadCurves;

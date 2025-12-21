@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createGLTFLoader, loadGLBWithFallbacks } from '../utils/glbSafeLoader.js';
-import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
+import { applyForegroundFogPolicy } from '../utils/materialUtils.js';
 
 /** @typedef {'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump'} AnimName */
 
