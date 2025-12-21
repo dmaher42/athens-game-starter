@@ -5,8 +5,7 @@ import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils } from "th
 // --- COLORS CONFIGURATION ---
 
 const SUN_COLOR_DAWN = new Color("#ffb37f");
-// Golden-leaning noon sun to add warmth to highlights
-const SUN_COLOR_NOON = new Color("#f8cfa1");
+const SUN_COLOR_NOON = new Color("#ffe6c6");
 const SUN_COLOR_DUSK = new Color("#ff9b6a");
 
 const SKY_COLOR_NIGHT = new Color("#0b1d51");
@@ -79,7 +78,18 @@ export function updateLighting(lights, sunDir, options = {}) {
     ? sunHeightOverride
     : norm.y;
 
-  const dayFactor = MathUtils.clamp(MathUtils.smoothstep(sunHeight, -0.15, 0.1), 0, 1);
+  const directLightFactor = MathUtils.clamp(
+    MathUtils.smoothstep(sunHeight, -0.2, 0.35),
+    0,
+    1
+  );
+  const ambientFactor = MathUtils.clamp(
+    MathUtils.smoothstep(sunHeight, -0.45, 0.15),
+    0,
+    1
+  );
+
+  const dayFactor = directLightFactor;
   const nightFactor = 1 - dayFactor;
 
   if (applyPosition) {
@@ -89,8 +99,8 @@ export function updateLighting(lights, sunDir, options = {}) {
     sunLight.target.updateMatrixWorld();
   }
 
-  // Lerp sun intensity to new max (3.6)
-  const targetSunIntensity = MathUtils.lerp(0.0, 3.6, dayFactor);
+  // Lerp sun intensity to new max (3.9)
+  const targetSunIntensity = MathUtils.lerp(0.05, 3.9, directLightFactor);
   sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
 
   const c0 = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, dayFactor);
@@ -98,8 +108,8 @@ export function updateLighting(lights, sunDir, options = {}) {
   sunLight.color.copy(sunColor);
 
   // Lerp hemi intensity to keep directional light dominant
-  const hemiTarget = MathUtils.lerp(0.05, 0.22, dayFactor);
-  hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
+  const hemiTarget = MathUtils.lerp(0.12, 0.22, ambientFactor);
+  hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.12);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
   lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
 

@@ -19,18 +19,18 @@ const DEFAULT_SKY_SETTINGS = {
 
 const SKY_PRESETS = {
   blue_hour: {
-    zenith: "#1f3f78",
-    horizon: "#6ca5ff",
-    sun: "#ffd8a6",
-    fogNear: 300,
-    fogFar: 1850,
+    zenith: "#1f2f54",
+    horizon: "#7397c8",
+    sun: "#d8e5ff",
+    fogNear: 260,
+    fogFar: 1750,
   },
   golden_hour: {
     zenith: "#3d5f9f",
-    horizon: "#f8bf82",
+    horizon: "#f5b778",
     sun: "#ffb86c",
-    fogNear: 290,
-    fogFar: 1850,
+    fogNear: 275,
+    fogFar: 1825,
   },
   high_noon: {
     zenith: "#2f6cb5",

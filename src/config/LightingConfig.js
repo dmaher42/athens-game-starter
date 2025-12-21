@@ -15,10 +15,10 @@ export const DEFAULT_LIGHTING_CONFIG = {
     step: 0.01,
   },
   presets: {
-    blue_hour: { phase: 0.2, exposure: 0.7, label: "Blue Hour" },
-    golden_hour: { phase: 0.7, exposure: 0.9, label: "Golden Hour" },
-    high_noon: { phase: 0.40, exposure: 1.05, label: "Bright Noon" },
-    night_sky: { phase: 0.9, exposure: 0.5, label: "Deep Night" },
+    blue_hour: { phase: 0.18, exposure: 0.82, label: "Blue Hour" },
+    golden_hour: { phase: 0.62, exposure: 0.96, label: "Golden Hour" },
+    high_noon: { phase: 0.5, exposure: 1.12, label: "Bright Noon" },
+    night_sky: { phase: 0.92, exposure: 0.55, label: "Deep Night" },
   },
 };
 
