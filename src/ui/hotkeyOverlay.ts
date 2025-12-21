@@ -115,7 +115,13 @@ export function mountHotkeyOverlay(
 
     const dt = document.createElement("dt");
     dt.className = `${ROOT_CLASS}__keys`;
-    dt.textContent = keys.join(" / ");
+
+    keys.forEach((key) => {
+      const kbd = document.createElement("kbd");
+      kbd.className = `${ROOT_CLASS}__kbd`;
+      kbd.textContent = key;
+      dt.appendChild(kbd);
+    });
 
     const dd = document.createElement("dd");
     dd.className = `${ROOT_CLASS}__description`;
@@ -286,8 +292,25 @@ function ensureStyles(): void {
 
     .${ROOT_CLASS}__keys {
       margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .${ROOT_CLASS}__kbd {
+      display: inline-block;
+      padding: 3px 6px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 13px;
       font-weight: 600;
-      letter-spacing: 0.05em;
+      line-height: 1;
+      color: #eee;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 5px;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+      text-shadow: 0 1px 0 rgba(0,0,0,0.5);
     }
 
     .${ROOT_CLASS}__description {
