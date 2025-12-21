@@ -10,6 +10,7 @@ import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { generateStoaGeometry, generateTholosGeometry } from "./monuments.js";
 import { generateTempleGeometry, createParthenon, createTempleOfZeus, createTheater } from "./landmarks.js";
+import { disableFog } from "../utils/materialUtils.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
 const ROOF_COLOR_PRESETS = ["#a94a30", "#b55634", "#9f432d"];
@@ -728,6 +729,10 @@ export async function createCity(scene, terrain, options = {}) {
   populateCityDetails(city, terrain, buildingPlacements, roadCurves);
 
   applyTextureBudgetToObject(city, scene?.userData?.renderer);
+
+  // Ensure the entire city group (buildings, roads, monuments, details) is fog-free
+  disableFog(city);
+
   city.userData = city.userData || {};
   city.userData.roadCurves = roadCurves;
   city.userData.buildingPlacements = buildingPlacements;

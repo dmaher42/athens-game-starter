@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { getSeaLevelY } from "./locations.js";
 import { makeTreeMaterials } from "./materials.js";
+import { disableFog } from "../utils/materialUtils.js";
 
 const HARBOR_SCATTER_RADIUS = 5;
 const BETWEEN_BUILDING_MAX_DISTANCE = 12;
@@ -128,7 +129,7 @@ function createOliveTree(baseMaterials) {
     group.add(sideCanopy);
   }
 
-  return markNoCollision(group);
+  return disableFog(markNoCollision(group));
 }
 
 function createPalmTree(baseMaterials) {
@@ -162,7 +163,7 @@ function createPalmTree(baseMaterials) {
     group.add(frond);
   }
 
-  return markNoCollision(group);
+  return disableFog(markNoCollision(group));
 }
 
 function getPotMaterial() {
@@ -203,7 +204,7 @@ function createPottedPlant(baseMaterials) {
   canopy.position.y = stemHeight + 0.32;
   group.add(canopy);
 
-  return markNoCollision(group);
+  return disableFog(markNoCollision(group));
 }
 
 function getCrateMaterial() {
@@ -238,7 +239,7 @@ function createCrateStack() {
     group.add(top);
   }
 
-  return markNoCollision(group);
+  return disableFog(markNoCollision(group));
 }
 
 function getUmbrellaPoleMaterial() {
@@ -293,7 +294,7 @@ function createUmbrella() {
   finial.position.y = poleHeight + 0.38;
   group.add(finial);
 
-  return markNoCollision(group);
+  return disableFog(markNoCollision(group));
 }
 
 function getAmphoraMaterial() {
@@ -333,7 +334,7 @@ function createAmphoraStack() {
      mesh.rotation.z = THREE.MathUtils.randFloatSpread(0.3);
      group.add(mesh);
   }
-  return markNoCollision(group);
+  return disableFog(markNoCollision(group));
 }
 
 function createTorch() {
@@ -375,7 +376,7 @@ function createTorch() {
   };
   group.add(flame);
 
-  return markNoCollision(group);
+  return disableFog(markNoCollision(group));
 }
 
 function pickHarborPrefab(treeMaterials) {
