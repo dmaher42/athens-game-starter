@@ -3,6 +3,8 @@ import {
   getSeaLevelY,
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_EAST_LIMIT,
+  HARBOR_CENTER,
+  HARBOR_WATER_RADIUS,
   AGORA_CENTER_3D,
 } from "./locations.js";
 import {
@@ -58,6 +60,22 @@ const HARBOR_GROUND_HEIGHT = 1;
 const HARBOR_COAST_PADDING = 36;
 const HARBOR_LONGITUDINAL_PADDING = 12;
 const HARBOR_SLOPE_WIDTH = 6;
+const HARBOUR_RADIUS = HARBOR_WATER_RADIUS;
+const HARBOUR_TARGET_DEPTH = 2;
+
+function applyHarbourCarve(x, z, seaLevel, height) {
+  const dx = x - HARBOR_CENTER.x;
+  const dz = z - HARBOR_CENTER.y;
+  const distance = Math.hypot(dx, dz);
+
+  if (distance >= HARBOUR_RADIUS) return height;
+
+  const t = THREE.MathUtils.clamp(1 - distance / HARBOUR_RADIUS, 0, 1);
+  const blend = t * t;
+  const targetHeight = seaLevel - HARBOUR_TARGET_DEPTH;
+
+  return THREE.MathUtils.lerp(height, targetHeight, blend);
+}
 
 function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   const { west, east, north, south } = HARBOR_WATER_BOUNDS;
@@ -102,6 +120,8 @@ function getElevation(x, z, seaLevel) {
 
   const noise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE) * NOISE_AMPLITUDE;
   let height = baseHeight + noise;
+
+  height = applyHarbourCarve(x, z, seaLevel, height);
 
   // Harbor band flattening & sand pad for warehouses/docks
   height = clampHarborBandHeight(x, z, seaLevel, height);
