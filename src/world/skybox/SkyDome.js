@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-export function createSkyDome(texture, radius = 800) {
+export function createSkyDome(texture, radius = 1600) {
   const geo = new THREE.SphereGeometry(radius, 64, 32);
 
   const mat = new THREE.MeshBasicMaterial({
