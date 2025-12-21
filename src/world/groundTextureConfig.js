@@ -54,7 +54,7 @@ export const GROUND_TEXTURE_CONFIG = {
     colorSpace: "srgb",
 
     // Lower repeat => larger texture features (less “tiny tiles”).
-    repeat: [36, 36],
+    repeat: [24, 24],
 
     // Small rotation prevents obvious grid tiling.
     rotation: 0.08,
@@ -67,7 +67,7 @@ export const GROUND_TEXTURE_CONFIG = {
     grass: {
       url: textureUrl("grass-albedo.jpg"),
       colorSpace: "srgb",
-      repeat: [36, 36],
+      repeat: [24, 24],
       rotation: 0.00,
     },
 
@@ -75,7 +75,7 @@ export const GROUND_TEXTURE_CONFIG = {
       url: textureUrl("dirt-albedo.jpg"),
       colorSpace: "srgb",
       // Dirt should be slightly less tiled so patches feel broad and natural.
-      repeat: [28, 28],
+      repeat: [18, 18],
       rotation: 0.13,
     },
 
@@ -87,8 +87,8 @@ export const GROUND_TEXTURE_CONFIG = {
      * If your shader uses different names (e.g. `maskScale`, `maskContrast`),
      * rename these to exactly what the shader/material reads.
      */
-    noiseScale: 6,
-    noiseContrast: 1.1,
+    noiseScale: 2.0,
+    noiseContrast: 0.8,
 
     /**
      * Optional: if your loader supports these, they help break repetition further.
@@ -98,4 +98,31 @@ export const GROUND_TEXTURE_CONFIG = {
     noiseOffset: [0.0, 0.0],
     noiseRotation: 0.0,
   },
+
+  /**
+   * Beach configuration
+   * Applied by shader to force dirt/sand texture at low altitudes
+   */
+  beach: {
+    height: 2.5,
+    fade: 2.0,
+  },
+
+  /**
+   * Detail layers (e.g. gravel, rock, variations)
+   */
+  details: [
+    {
+      // Gravel/Path detail - subtle darkening/coloring in the city/mid-band
+      url: textureUrl("dirt-albedo.jpg"),
+      mode: 'multiply',
+      minHeight: 4.0,
+      maxHeight: 40.0,
+      fade: 5.0,
+      strength: 0.4,
+      tint: [0.7, 0.7, 0.7], // Grayish
+      noiseScale: 15.0, // Finer noise
+      noiseStrength: 0.5,
+    }
+  ]
 };

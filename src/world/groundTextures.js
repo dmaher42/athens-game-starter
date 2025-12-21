@@ -254,6 +254,7 @@ export function createGroundTextureState(
   const state = {
     detailLayers: [],
     baseBlend: null,
+    beach: null, // New beach state
   };
 
   const baseConfig = config?.base;
@@ -414,13 +415,24 @@ export function createGroundTextureState(
     };
   }
 
+  // Parse Beach Config
+  if (config?.beach) {
+    state.beach = {
+      height: config.beach.height ?? 2.0,
+      fade: config.beach.fade ?? 2.0,
+      uniforms: {},
+    };
+  }
+
   return state;
 }
 
 export function injectGroundTextureShader(shader, state) {
   const hasDetails = state?.detailLayers?.length > 0;
   const hasBlend = !!state?.baseBlend?.dirtTexture;
-  if (!hasDetails && !hasBlend) {
+  const hasBeach = !!state?.beach;
+
+  if (!hasDetails && !hasBlend && !hasBeach) {
     return;
   }
 
@@ -446,7 +458,9 @@ export function injectGroundTextureShader(shader, state) {
   }
 
   const varyings = [];
-  if (hasDetails) {
+
+  // ALWAYS inject vGroundHeight if we have details OR beach
+  if (hasDetails || hasBeach) {
     const groundHeightVarying = "varying float vGroundHeight;";
     if (!shader.vertexShader.includes(groundHeightVarying)) {
       shader.vertexShader = shader.vertexShader.replace(
@@ -485,6 +499,21 @@ export function injectGroundTextureShader(shader, state) {
     ? []
     : varyings;
   const mixCode = [];
+
+  // Beach Uniforms
+  let beachHeader = "";
+  if (hasBeach) {
+    shader.uniforms.uSeaLevel = { value: 0.0 }; // Will be updated by state consumer
+    shader.uniforms.uBeachHeight = { value: state.beach.height };
+    shader.uniforms.uBeachFade = { value: state.beach.fade };
+
+    // Store reference to update uniform later
+    state.beach.uniforms = {
+      uSeaLevel: shader.uniforms.uSeaLevel
+    };
+
+    beachHeader = `uniform float uSeaLevel;\nuniform float uBeachHeight;\nuniform float uBeachFade;`;
+  }
 
   if (hasBlend) {
     shader.uniforms.uGroundDirtMap = { value: state.baseBlend.dirtTexture };
@@ -551,8 +580,8 @@ export function injectGroundTextureShader(shader, state) {
         float strength = clamp(${paramName}.w, 0.0, 1.0);
         float mask = 1.0;
         if (maxH > minH) {
-          mask = smoothstep(minH, minH + fade, groundHeight);
-          mask *= 1.0 - smoothstep(maxH - fade, maxH, groundHeight);
+          mask = smoothstep(minH, minH + fade, vGroundHeight); // Use vGroundHeight explicitly
+          mask *= 1.0 - smoothstep(maxH - fade, maxH, vGroundHeight);
         }
         float layerStrength = strength * mask;
         float noiseScale = ${noiseName}.x;
@@ -607,6 +636,7 @@ float groundNoise(vec2 p) {
     ...header,
     groundNoiseFn,
     blendHeader,
+    beachHeader, // Add beach uniforms
   ]
     .filter(Boolean)
     .join("\n");
@@ -617,18 +647,55 @@ float groundNoise(vec2 p) {
   );
 
   if (hasBlend) {
+    // Modified blend logic to include beach factor
+    let blendLogic = `
+      vec4 grassTexel = vec4(1.0);
+      vec3 baseDiffuse = diffuseColor.rgb;
+      #ifdef USE_MAP
+        vec4 texelColor = texture2D(uGroundGrassMap, vUv);
+        grassTexel = texelColor;
+      #endif
+      vec3 dirtTexel = texture2D(uGroundDirtMap, vUv).rgb;
+      float noiseWeight = clamp(groundNoise(vWorldXZ * uGroundBlendNoise.x), 0.0, 1.0);
+      noiseWeight = pow(noiseWeight, max(uGroundBlendNoise.y, 0.0001));
+      float maskWeight = texture2D(uGroundBlendMask, vUv).r * uGroundBlendMaskStrength;
+      float dirtWeight = clamp(max(noiseWeight, maskWeight), 0.0, 1.0);
+    `;
+
+    // Inject beach calculation
+    if (hasBeach) {
+       blendLogic += `
+      float beachLimit = uSeaLevel + uBeachHeight;
+      float beachFactor = 1.0 - smoothstep(beachLimit, beachLimit + uBeachFade, vGroundHeight);
+      dirtWeight = clamp(max(dirtWeight, beachFactor), 0.0, 1.0);
+       `;
+    }
+
+    blendLogic += `
+      vec3 mixed = mix(grassTexel.rgb, dirtTexel, dirtWeight);
+      diffuseColor = vec4(mixed * baseDiffuse, diffuseColor.a);
+    `;
+
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <map_fragment>",
-      `vec4 grassTexel = vec4(1.0);\nvec3 baseDiffuse = diffuseColor.rgb;\n#ifdef USE_MAP\n  vec4 texelColor = texture2D(uGroundGrassMap, vUv);\n  grassTexel = texelColor;\n#endif\nvec3 dirtTexel = texture2D(uGroundDirtMap, vUv).rgb;\nfloat noiseWeight = clamp(groundNoise(vWorldXZ * uGroundBlendNoise.x), 0.0, 1.0);\nnoiseWeight = pow(noiseWeight, max(uGroundBlendNoise.y, 0.0001));\nfloat maskWeight = texture2D(uGroundBlendMask, vUv).r * uGroundBlendMaskStrength;\nfloat dirtWeight = clamp(max(noiseWeight, maskWeight), 0.0, 1.0);\nvec3 mixed = mix(grassTexel.rgb, dirtTexel, dirtWeight);\ndiffuseColor = vec4(mixed * baseDiffuse, diffuseColor.a);`,
+      blendLogic
     );
   }
 
   if (hasDetails) {
+    // If no blend, we need vGroundHeight declaration injection? No, handled in header.
+    // If no blend, we still need the 'varying float vGroundHeight' available if mixed code uses it.
+    // Wait, mixCode uses 'vGroundHeight' now instead of 'groundHeight'.
+    // Original code: float groundHeight = vGroundHeight;
+
+    // Check if we need to declare groundHeight local var or just use vGroundHeight
+    // Using vGroundHeight directly is fine.
+
+    const injection = `vec4 diffuseColor = vec4( diffuse, opacity );\n${mixCode.join("\n")}`;
+
     shader.fragmentShader = shader.fragmentShader.replace(
       "vec4 diffuseColor = vec4( diffuse, opacity );",
-      `vec4 diffuseColor = vec4( diffuse, opacity );\nfloat groundHeight = vGroundHeight;\n${mixCode.join(
-        "\n",
-      )}`,
+      injection
     );
   }
 }
