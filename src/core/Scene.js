@@ -42,8 +42,8 @@ export function createSceneContext({
 
   const fogState = {
     color: new THREE.Color(0xbfd5ff),
-    near: 220,
-    far: 1600,
+    near: 300,
+    far: 1950,
     density: 0.0002,
   };
 
