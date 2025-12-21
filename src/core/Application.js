@@ -2249,6 +2249,35 @@ export class Application {
     });
   }
 
+  waitForAdvance(target = document.body) {
+    return new Promise((resolve) => {
+      let settled = false;
+
+      const cleanup = () => {
+        target?.removeEventListener("pointerdown", onPointerDown);
+        window.removeEventListener("keydown", onKeyDown);
+      };
+
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve();
+      };
+
+      const onPointerDown = () => settle();
+
+      const onKeyDown = (event) => {
+        if (event.code !== "Space") return;
+        event.preventDefault();
+        settle();
+      };
+
+      target?.addEventListener("pointerdown", onPointerDown, { once: true });
+      window.addEventListener("keydown", onKeyDown);
+    });
+  }
+
   /**
    * Helper to clean up all Three.js resources when destroying or restarting the game.
    */
