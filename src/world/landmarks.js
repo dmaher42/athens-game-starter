@@ -17,7 +17,7 @@ import {
 } from "./materials.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildTemple } from "../features/temples.js";
-import { disableFog } from "../utils/materialUtils.js";
+import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
 /**
  * Example usage:
@@ -199,6 +199,7 @@ export function createHarborLandmarkFallback(type, THREE) {
     const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.9, 1.4, 16), new THREE.MeshStandardMaterial({ color:"#b4472c", roughness:0.6, fog: false }));
     cap.position.y = 5.5; g.add(cap);
     const lamp = new THREE.PointLight("#ffd26a", 2.1, 40, 2.0); lamp.position.y = 6.2; g.add(lamp);
+    applyForegroundFogPolicy(g);
     return g;
   }
   if (type === "clocktower") {
@@ -206,6 +207,7 @@ export function createHarborLandmarkFallback(type, THREE) {
     g.add(new THREE.Mesh(new THREE.BoxGeometry(3.2, 10.5, 3.2), new THREE.MeshStandardMaterial({ color:"#f5efe3", roughness:0.75, fog: false })));
     const face = new THREE.Mesh(new THREE.CircleGeometry(0.8, 24), new THREE.MeshStandardMaterial({ color:"#ffffff", emissive:"#ffe6bf", emissiveIntensity:0.15, fog: false }));
     face.position.set(0, 2.5, 1.65); g.add(face);
+    applyForegroundFogPolicy(g);
     return g;
   }
   // sculpture
@@ -214,6 +216,7 @@ export function createHarborLandmarkFallback(type, THREE) {
   plinth.position.y = 0.4; g.add(plinth);
   const form = new THREE.Mesh(new THREE.TorusKnotGeometry(0.9, 0.25, 80, 10), new THREE.MeshStandardMaterial({ color:"#b5a689", roughness:0.55, metalness:0.15, fog: false }));
   form.position.y = 1.6; g.add(form);
+  applyForegroundFogPolicy(g);
   return g;
 }
 
@@ -702,7 +705,7 @@ export async function loadLandmark(scene, url, options = {}) {
 
     const finalized = finalizeLandmarkObject(entry, finalObject, scene, options, materialPreset);
     if (finalized) {
-      disableFog(finalized);
+      applyForegroundFogPolicy(finalized);
       return finalized;
     }
     return null;

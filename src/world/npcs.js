@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Character } from '../characters/Character.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
-import { disableFog } from '../utils/materialUtils.js';
+import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
 function sanitizeRelativePath(value) {
   if (typeof value !== 'string') return '';
@@ -96,6 +96,8 @@ function createCitizenModel(primaryColor, secondaryColor) {
   sash.castShadow = true;
   sash.userData.noCollision = true;
   group.add(sash);
+
+  applyForegroundFogPolicy(group);
 
   return { group, body };
 }
@@ -257,7 +259,7 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
 
     try {
       await character.load(prioritizedCandidates, scene.userData?.renderer, { targetHeight: 1.7 });
-      disableFog(character);
+      applyForegroundFogPolicy(character);
     } catch (error) {
       const message = error?.message || String(error);
       if (message && message.includes('Downloaded HTML instead of GLB')) {

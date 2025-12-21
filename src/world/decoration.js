@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { getSeaLevelY } from "./locations.js";
 import { makeTreeMaterials } from "./materials.js";
-import { disableFog } from "../utils/materialUtils.js";
+import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
 const HARBOR_SCATTER_RADIUS = 5;
 const BETWEEN_BUILDING_MAX_DISTANCE = 12;
@@ -545,6 +545,8 @@ export function createHarborDecorations(parent, options = {}) {
     parent.remove(group);
     return null;
   }
+
+  applyForegroundFogPolicy(group);
 
   return group;
 }
