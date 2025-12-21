@@ -15,6 +15,7 @@ import {
   updateTerrainCoverageMask,
 } from "../world/terrain.js";
 import { createHorizon } from "../world/horizon.js";
+import { createShorelineTermination } from "../world/shoreTermination.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
 import { createWorldFloorCap, applyKillPlane } from "../world/worldBounds.js";
 import { createHarbor, updateHarborLighting } from "../world/harbor.js";
@@ -272,6 +273,7 @@ export class Application {
     this.devHud = null;
     this.ocean = null;
     this.pendingOceanStatus = null;
+    this.shoreTermination = null;
     this.skyboxTexture = null;
   }
 
@@ -650,6 +652,10 @@ export class Application {
     const seaLevel = getSeaLevelY();
     const oceanRadius = 1800;
     const horizonColor = 0x2a3f5c;
+    const shorelineInnerRadius = Math.max(
+      Number.isFinite(terrainSize) ? terrainSize * 0.5 + 25 : 0,
+      220,
+    );
 
     // --- Horizon & Ocean ---
     if (!this.horizon) {
@@ -668,6 +674,15 @@ export class Application {
         waterColor: 0x0f304c,
       });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
+    }
+    if (!this.shoreTermination) {
+      this.shoreTermination = createShorelineTermination(this.scene, {
+        seaLevel,
+        innerRadius: shorelineInnerRadius,
+        bandWidth: 150,
+        oceanRadius,
+        horizonColor,
+      });
     }
     if (!this.worldFloorCap) {
       this.worldFloorCap = createWorldFloorCap(this.scene, {
