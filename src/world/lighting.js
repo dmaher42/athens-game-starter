@@ -5,7 +5,7 @@ import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils } from "th
 // --- COLORS CONFIGURATION ---
 
 const SUN_COLOR_DAWN = new Color("#ffb37f");
-const SUN_COLOR_NOON = new Color("#ffe6c6");
+const SUN_COLOR_NOON = new Color("#fff8f2");
 const SUN_COLOR_DUSK = new Color("#ff9b6a");
 
 const SKY_COLOR_NIGHT = new Color("#0b1d51");

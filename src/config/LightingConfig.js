@@ -17,7 +17,19 @@ export const DEFAULT_LIGHTING_CONFIG = {
   presets: {
     blue_hour: { phase: 0.18, exposure: 0.82, label: "Blue Hour" },
     golden_hour: { phase: 0.62, exposure: 0.96, label: "Golden Hour" },
-    high_noon: { phase: 0.5, exposure: 1.12, label: "Bright Noon" },
+    high_noon: {
+      phase: 0.5,
+      exposure: 1.12,
+      label: "Bright Noon",
+      environmentIntensity: 0.6,
+      colorGrade: {
+        shadowTint: "#f3f6ff",
+        midTint: "#ffffff",
+        highlightTint: "#f7fbff",
+        saturationBoost: 0.0,
+        contrastStrength: 0.16,
+      },
+    },
     night_sky: { phase: 0.92, exposure: 0.55, label: "Deep Night" },
   },
 };

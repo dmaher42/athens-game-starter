@@ -495,6 +495,7 @@ export class Application {
       camera,
       composer,
       bloomPass,
+      colorGradePass,
       renderFrame,
       refreshWorldRoot,
       setFogEnabled,
@@ -502,6 +503,74 @@ export class Application {
     } = sceneContext;
     this.scene = scene;
     setFogEnabled(true);
+
+    const colorGradeUniforms = colorGradePass?.material?.uniforms || null;
+    const defaultColorGradeSettings = colorGradeUniforms
+      ? {
+          contrastStrength: colorGradeUniforms.contrastStrength.value,
+          saturationBoost: colorGradeUniforms.saturationBoost.value,
+          shadowTint: colorGradeUniforms.shadowTint.value.clone(),
+          midTint: colorGradeUniforms.midTint.value.clone(),
+          highlightTint: colorGradeUniforms.highlightTint.value.clone(),
+        }
+      : null;
+
+    const DEFAULT_ENV_INTENSITY = 1;
+
+    const normalizeColorInput = (value) => {
+      if (value instanceof THREE.Color) return value;
+      if (value instanceof THREE.Vector3)
+        return new THREE.Color(value.x, value.y, value.z);
+      return new THREE.Color(value);
+    };
+
+    const applyColorGradeSettings = (overrides = {}) => {
+      if (!colorGradeUniforms || !defaultColorGradeSettings) return;
+
+      const merged = { ...defaultColorGradeSettings, ...overrides };
+      const setTint = (key, value) => {
+        if (!value || !colorGradeUniforms[key]?.value) return;
+        const color = normalizeColorInput(value);
+        colorGradeUniforms[key].value.set(color.r, color.g, color.b);
+      };
+
+      if (Number.isFinite(merged.contrastStrength)) {
+        colorGradeUniforms.contrastStrength.value = merged.contrastStrength;
+      }
+      if (Number.isFinite(merged.saturationBoost)) {
+        colorGradeUniforms.saturationBoost.value = merged.saturationBoost;
+      }
+
+      setTint("shadowTint", merged.shadowTint);
+      setTint("midTint", merged.midTint);
+      setTint("highlightTint", merged.highlightTint);
+    };
+
+    const applyEnvironmentIntensity = (intensity) => {
+      const target = Number.isFinite(intensity)
+        ? Math.max(0, intensity)
+        : DEFAULT_ENV_INTENSITY;
+
+      const applyToMaterial = (material) => {
+        if (!material || typeof material !== "object") return;
+        if (Array.isArray(material)) {
+          material.forEach(applyToMaterial);
+          return;
+        }
+
+        if ("envMapIntensity" in material) {
+          material.envMapIntensity = target;
+          material.needsUpdate = true;
+        }
+      };
+
+      scene?.traverse((child) => {
+        if (!child?.isMesh) return;
+        applyToMaterial(child.material);
+      });
+
+      scene.userData.environmentIntensity = target;
+    };
 
     const disposeMaterial = (material) => {
       if (!material) return;
@@ -2184,6 +2253,8 @@ export class Application {
 
       const phase = setTimeOfDayPhase(timeOfDayState, preset.phase);
       renderer.toneMappingExposure = preset.exposure;
+      applyEnvironmentIntensity(preset.environmentIntensity);
+      applyColorGradeSettings(preset.colorGrade);
       console.log(`[HUD] preset: ${presetName}`);
 
       const sunDirForCycle = getSunDirection(timeOfDayState);
