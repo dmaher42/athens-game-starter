@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { getSeaLevelY } from "./locations.js";
+import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
 const ROCK_GEOMETRY = new THREE.DodecahedronGeometry(0.25, 0);
 const GRASS_GEOMETRY = new THREE.ConeGeometry(0.15, 0.6, 6);
@@ -140,5 +141,6 @@ export function scatterGroundProps(scene, terrain, options = {}) {
     return null;
   }
 
+  applyForegroundFogPolicy(group);
   return group;
 }

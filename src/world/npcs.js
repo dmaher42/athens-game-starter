@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Character } from '../characters/Character.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
-import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
+import { applyForegroundFogPolicy } from '../utils/materialUtils.js';
 
 function sanitizeRelativePath(value) {
   if (typeof value !== 'string') return '';
