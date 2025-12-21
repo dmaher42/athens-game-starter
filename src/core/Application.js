@@ -469,23 +469,25 @@ export class Application {
       .toString()
       .replace(/^\/+/, "");
     const resolvedSkyboxUrl = joinPath(BASE_URL, normalizedSkyboxPath);
+    const USE_SKY_DOME = true;
 
     try {
-      this.skyboxTexture = await loadEquirectangularSkybox(
+      const texture = await loadEquirectangularSkybox(
         renderer,
         scene,
         resolvedSkyboxUrl,
       );
+      this.skyboxTexture = texture;
       if (skyObj?.mesh) {
         skyObj.mesh.visible = false;
       }
-      const USE_SKY_DOME = true;
-      if (USE_SKY_DOME && this.skyboxTexture) {
+      if (USE_SKY_DOME && texture) {
         scene.background = null;
-        const skyDome = createSkyDome(this.skyboxTexture);
+        const skyDome = createSkyDome(texture, 2500);
         scene.add(skyDome);
         scene.userData.skyDome = skyDome;
       }
+      scene.environment = texture;
     } catch (error) {
       console.warn(
         `[skybox] Failed to load equirectangular skybox. Ensure the asset exists at ${resolvedSkyboxUrl}`,
@@ -2117,10 +2119,8 @@ export class Application {
       const sunDirForCycle = getSunDirection(timeOfDayState);
       const alignedSunDir = syncSunLighting(sunDirForCycle?.y);
 
-      const skyDome = scene?.userData?.skyDome;
-      if (skyDome) {
-        skyDome.position.copy(camera.position);
-      }
+      const skyDome = scene.userData.skyDome;
+      if (skyDome) skyDome.position.copy(camera.position);
 
       // Update sky dome and atmospheric lighting each frame.
 

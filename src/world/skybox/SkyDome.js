@@ -1,16 +1,18 @@
 import * as THREE from "three";
 
-export function createSkyDome(texture, radius = 2000) {
-  if (texture) {
-    texture.mapping = THREE.EquirectangularReflectionMapping;
-  }
+export function createSkyDome(texture, radius = 2500) {
+  const geo = new THREE.SphereGeometry(radius, 64, 32);
 
-  const geometry = new THREE.SphereGeometry(radius, 64, 32);
-  const material = new THREE.MeshBasicMaterial({
+  const mat = new THREE.MeshBasicMaterial({
     map: texture,
     side: THREE.BackSide,
     depthWrite: false,
   });
 
-  return new THREE.Mesh(geometry, material);
+  const dome = new THREE.Mesh(geo, mat);
+  dome.name = "SkyDome";
+  dome.frustumCulled = false;
+  dome.renderOrder = -1000;
+
+  return dome;
 }
