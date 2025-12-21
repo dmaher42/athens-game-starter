@@ -77,6 +77,8 @@ export interface LightingPreset {
   phase: number;
   exposure: number;
   hotkey?: string;
+  sunAzimuthDeg?: number;
+  sunElevationDeg?: number;
 }
 
 /** Runtime lighting configuration including authored presets. */
