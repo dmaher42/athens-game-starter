@@ -1348,8 +1348,6 @@ export class Application {
     dockhandHead.castShadow = true;
     dockhand.add(dockhandHead);
 
-    const seaLevel = getSeaLevelY();
-
     const dockhandPosition = new THREE.Vector3(
       HARBOR_WATER_EAST_LIMIT + 6.0,
       seaLevel,
