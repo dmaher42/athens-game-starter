@@ -94,7 +94,7 @@ import {
 import { lightingConfig } from "../config/LightingConfig.js";
 import { skyboxLightingConfig } from "../config/skyboxLightingConfig.js";
 import { CollectiblesManager } from "../world/collectibles.js";
-import { QuestManager } from "../state/QuestManager.js";
+import { QuestManager, QuestStatus } from "../state/QuestManager.js";
 import { InteractionSystem } from "../interactions/InteractionSystem.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "../features/aristotle-texture.js";
@@ -887,6 +887,15 @@ export class Application {
     });
     worldRoot.add(player.object);
 
+    let playerMovementEnabled = true;
+    const setPlayerMovementEnabled = (enabled) => {
+      playerMovementEnabled = !!enabled;
+      if (!playerMovementEnabled) {
+        player.velocity.set(0, 0, 0);
+        player.desired.set(0, 0, 0);
+      }
+    };
+
     const spawnPosition = findSafePlayerSpawn({
       envCollider,
       terrain,
@@ -1111,127 +1120,242 @@ export class Application {
     const interactionHud = new InteractionHud();
     const interactionSystem = new InteractionSystem(input, camera, scene, interactionHud);
 
-    // === TEMPLE NPC (QUEST GIVER) ===
+    const dialogueOverlay = document.createElement("div");
+    Object.assign(dialogueOverlay.style, {
+      position: "fixed",
+      bottom: "40px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      padding: "16px 20px",
+      maxWidth: "560px",
+      background: "rgba(0, 0, 0, 0.8)",
+      color: "#f4f4f4",
+      borderRadius: "12px",
+      fontFamily: "Georgia, serif",
+      fontSize: "16px",
+      lineHeight: "1.4",
+      border: "1px solid rgba(255, 215, 160, 0.6)",
+      display: "none",
+      zIndex: 2000,
+      cursor: "pointer",
+      textAlign: "center",
+      boxShadow: "0 10px 24px rgba(0,0,0,0.35)",
+    });
+    document.body.appendChild(dialogueOverlay);
+
+    let dialogueActive = false;
+    const waitForAdvance = () =>
+      new Promise((resolve) => {
+        const cleanup = () => {
+          window.removeEventListener("keydown", onKey);
+          dialogueOverlay.removeEventListener("click", onClick);
+          resolve();
+        };
+
+        const onKey = (event) => {
+          if (event.code === "Space" || event.code === "Enter") {
+            cleanup();
+          }
+        };
+
+        const onClick = () => cleanup();
+
+        window.addEventListener("keydown", onKey);
+        dialogueOverlay.addEventListener("click", onClick);
+      });
+
+    const runDialogueSequence = async (title, lines = []) => {
+      if (dialogueActive || !Array.isArray(lines) || lines.length === 0) return;
+
+      dialogueActive = true;
+      setPlayerMovementEnabled(false);
+      interactionHud.hide();
+
+      for (const line of lines) {
+        dialogueOverlay.innerHTML = `<strong>${title}</strong><br/>${line}<br/><small>(Press Space/Enter or click to continue)</small>`;
+        dialogueOverlay.style.display = "block";
+        await waitForAdvance();
+      }
+
+      dialogueOverlay.style.display = "none";
+      setPlayerMovementEnabled(true);
+      dialogueActive = false;
+    };
+
+    // === QUEST ACTORS ===
     const templeNpcGroup = new THREE.Group();
     templeNpcGroup.name = "TempleNPC_QuestGiver";
 
-    // Create visual (Blue tunic)
-    const npcBodyMat = new THREE.MeshStandardMaterial({ color: 0x4e8ef7, roughness: 0.7 });
-    const npcBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 1.1, 4, 16), npcBodyMat);
-    npcBody.position.y = 1.1 / 2 + 0.35; // approximate grounding
+    const npcBodyMat = new THREE.MeshStandardMaterial({
+      color: 0x4e8ef7,
+      roughness: 0.7,
+    });
+    const npcBody = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.35, 1.1, 4, 16),
+      npcBodyMat,
+    );
+    npcBody.position.y = 1.1 / 2 + 0.35;
     npcBody.castShadow = true;
     templeNpcGroup.add(npcBody);
 
-    const npcHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({color: 0xeacdad}));
+    const npcHead = new THREE.Mesh(
+      new THREE.SphereGeometry(0.3, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xeacdad }),
+    );
     npcHead.position.y = 1.5;
     npcHead.castShadow = true;
     templeNpcGroup.add(npcHead);
 
-    // Place at Acropolis Peak
-    // ACROPOLIS_PEAK_3D is (-40, Y, 10). Let's offset slightly so it's not inside the tomb/landmark
     const templePos = ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(5, 0, 5));
-    // Sample height to be safe
-    const templeY = terrain?.userData?.getHeightAt?.(templePos.x, templePos.z) ?? templePos.y;
+    const templeY =
+      terrain?.userData?.getHeightAt?.(templePos.x, templePos.z) ?? templePos.y;
     templeNpcGroup.position.set(templePos.x, templeY + 0.05, templePos.z);
 
     worldRoot.add(templeNpcGroup);
 
-    // Register Interaction
-    interactionSystem.register(templeNpcGroup, {
-        label: "Talk to Temple Keeper",
-        distance: 4.0,
-        onInteract: () => {
-            if (questManager.currentQuest.status === 'Not Started') {
-                questManager.startQuest("Harbour Run", "Meet the dockhand by the harbour.");
-                templeNpcGroup.userData.interactable.label = "Current Objective: Meet Dockhand";
-            } else if (questManager.currentQuest.objective === "Return to the Temple.") {
-                questManager.completeQuest();
-                templeNpcGroup.userData.interactable.label = "Quest Completed";
-            } else if (questManager.currentQuest.status === 'Completed') {
-                // Do nothing or say thanks
-            } else {
-                // In progress
-                // Could show dialog bubble
-            }
-        }
-    });
-
-    // === DOCKHAND NPC (HARBOR) ===
-    const dockhandGroup = new THREE.Group();
-    dockhandGroup.name = "Dockhand_NPC";
-
-    const dockhandBodyMat = new THREE.MeshStandardMaterial({
-      color: 0x8e6b3c,
-      roughness: 0.65,
-    });
+    const dockhand = new THREE.Group();
+    dockhand.name = "HarbourDockhand_NPC";
     const dockhandBody = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.32, 1.0, 4, 12),
-      dockhandBodyMat,
+      new THREE.CapsuleGeometry(0.3, 1.0, 4, 12),
+      new THREE.MeshStandardMaterial({ color: 0x9c7955, roughness: 0.8 }),
     );
-    dockhandBody.position.y = 1.0 / 2 + 0.32;
+    dockhandBody.position.y = 0.95;
     dockhandBody.castShadow = true;
-    dockhandGroup.add(dockhandBody);
+    dockhand.add(dockhandBody);
 
     const dockhandHead = new THREE.Mesh(
-      new THREE.SphereGeometry(0.28, 14, 14),
-      new THREE.MeshStandardMaterial({ color: 0xd8c3a5 }),
+      new THREE.SphereGeometry(0.28, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xd9c4a1 }),
     );
-    dockhandHead.position.y = 1.2;
+    dockhandHead.position.y = 1.5;
     dockhandHead.castShadow = true;
-    dockhandGroup.add(dockhandHead);
+    dockhand.add(dockhandHead);
 
-    const dockhandPos = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(6, 0, -4));
-    const dockhandY = terrain?.userData?.getHeightAt?.(dockhandPos.x, dockhandPos.z) ?? dockhandPos.y;
-    dockhandGroup.position.set(dockhandPos.x, dockhandY + 0.05, dockhandPos.z);
+    const dockhandPosition = new THREE.Vector3(-118, 0, 94);
+    const dockhandY =
+      terrain?.userData?.getHeightAt?.(dockhandPosition.x, dockhandPosition.z) ??
+      getSeaLevelY();
+    dockhand.position.set(dockhandPosition.x, dockhandY + 0.05, dockhandPosition.z);
+    worldRoot.add(dockhand);
 
-    worldRoot.add(dockhandGroup);
-
-    interactionSystem.register(dockhandGroup, {
-        label: "Talk to Dockhand",
-        distance: 4.0,
-        onInteract: () => {
-            if (questManager.currentQuest.status === 'In Progress' &&
-                questManager.currentQuest.objective === "Meet the dockhand by the harbour.") {
-                questManager.updateObjective("Inspect the marked crate.");
-            }
-        }
-    });
-
-    // === HARBOR CRATE (OBJECTIVE) ===
     const crateGroup = new THREE.Group();
-    crateGroup.name = "LostCrate_HarbourRun";
-
-    const crateGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-    const crateMat = new THREE.MeshStandardMaterial({ color: 0x8d6b45, roughness: 0.9 });
+    crateGroup.name = "HarbourQuestCrate";
+    const crateGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+    const crateMat = new THREE.MeshStandardMaterial({
+      color: 0x8d6b45,
+      roughness: 0.9,
+    });
     const crateMesh = new THREE.Mesh(crateGeo, crateMat);
     crateMesh.castShadow = true;
-    crateMesh.position.y = 0.4;
+    crateMesh.receiveShadow = true;
+    crateMesh.position.y = 0.45;
     crateGroup.add(crateMesh);
 
-    // Place at Harbor
-    // HARBOR_CENTER_3D is (-120, Y, 80).
-    const harborPos = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(2, 0, 2));
-    const harborY = terrain?.userData?.getHeightAt?.(harborPos.x, harborPos.z) ?? harborPos.y;
-    crateGroup.position.set(harborPos.x, harborY + 0.05, harborPos.z);
-
+    const cratePosition = new THREE.Vector3(-114, 0, 88);
+    const crateY =
+      terrain?.userData?.getHeightAt?.(cratePosition.x, cratePosition.z) ??
+      getSeaLevelY();
+    crateGroup.position.set(cratePosition.x, crateY + 0.05, cratePosition.z);
     worldRoot.add(crateGroup);
 
-    // Register Interaction (Initially hidden or non-interactable? Or just check quest state)
-    interactionSystem.register(crateGroup, {
-        label: "Inspect Crate",
-        distance: 3.5,
-        onInteract: () => {
-            if (questManager.currentQuest.status === 'In Progress' &&
-                questManager.currentQuest.objective === "Inspect the marked crate.") {
+    let dockhandBriefed = false;
+    let crateInspected = false;
 
-                questManager.updateObjective("Return to the Temple.");
-                // Maybe remove crate or change its label
-                crateGroup.visible = false; // "Picked up"
-                interactionSystem.unregister(crateGroup); // Cannot interact anymore
-            } else {
-                // Just a crate
-            }
-        }
+    const handleTempleInteract = () => {
+      const status = questManager.currentQuest.status;
+      if (status === QuestStatus.NOT_STARTED) {
+        questManager.startQuest(
+          "Harbour Errand",
+          "Meet the dockhand by the harbour.",
+        );
+        templeNpcGroup.userData.interactable.label = "Ask about the dockhand";
+      } else if (status === QuestStatus.COMPLETED) {
+        runDialogueSequence("Temple Keeper", [
+          "You found the crate? The harbour folk will rest easier tonight.",
+        ]);
+      } else {
+        runDialogueSequence("Temple Keeper", [
+          "The dockhand is waiting on the harbour quay.",
+        ]);
+      }
+    };
+
+    templeNpcGroup.userData.onInteract = handleTempleInteract;
+    interactionSystem.register(templeNpcGroup, {
+      label: "Talk to Temple Keeper",
+      distance: 4.0,
+      onInteract: handleTempleInteract,
+    });
+
+    const handleDockhandInteract = async () => {
+      if (questManager.currentQuest.status !== QuestStatus.IN_PROGRESS) {
+        await runDialogueSequence("Dockhand", [
+          "I've work to do. Orders come from the temple today.",
+        ]);
+        return;
+      }
+
+      if (dockhandBriefed) {
+        await runDialogueSequence("Dockhand", [
+          "The crate is still marked. Inspect it and let me know it's secure.",
+        ]);
+        return;
+      }
+
+      await runDialogueSequence("Dockhand", [
+        "So you're the one from the temple? We've had eyes on a suspicious crate.",
+        "It's waiting on the dock. Give it a look and make sure nothing's amiss.",
+      ]);
+
+      dockhandBriefed = true;
+      questManager.updateObjective("Inspect the marked crate");
+      dockhand.userData.interactable.label = "Dockhand (waiting)";
+    };
+
+    dockhand.userData.onInteract = handleDockhandInteract;
+    interactionSystem.register(dockhand, {
+      label: "Talk to Dockhand",
+      distance: 4.0,
+      onInteract: handleDockhandInteract,
+    });
+
+    const handleCrateInteract = async () => {
+      if (questManager.currentQuest.status !== QuestStatus.IN_PROGRESS) {
+        await runDialogueSequence("Crate", [
+          "An ordinary harbour crate. Nothing to report.",
+        ]);
+        return;
+      }
+
+      if (!dockhandBriefed) {
+        await runDialogueSequence("Crate", [
+          "This must be the crate the dockhand mentioned. Speak with him first.",
+        ]);
+        return;
+      }
+
+      if (crateInspected) {
+        await runDialogueSequence("Crate", [
+          "You've already checked this crate. Time to share the news.",
+        ]);
+        return;
+      }
+
+      await runDialogueSequence("Crate", [
+        "The seal is intact and the contents undisturbed. Crisis averted.",
+      ]);
+
+      crateInspected = true;
+      questManager.completeQuest();
+      crateGroup.userData.interactable.label = "Crate secured";
+      interactionSystem.unregister(crateGroup);
+    };
+
+    crateGroup.userData.onInteract = handleCrateInteract;
+    interactionSystem.register(crateGroup, {
+      label: "Inspect Harbour Crate",
+      distance: 3.5,
+      onInteract: handleCrateInteract,
     });
 
     const createFallbackAvatar = () => {
@@ -1953,7 +2077,11 @@ export class Application {
       }
 
       // Update Interaction System
-      interactionSystem.update(deltaTime);
+      if (!dialogueActive) {
+        interactionSystem.update(deltaTime);
+      } else {
+        interactionHud.hide();
+      }
 
       if (thirdPersonCamera && thirdPersonEnabled) {
         player.cameraYaw = thirdPersonCamera.getYaw();
@@ -1961,7 +2089,11 @@ export class Application {
       }
 
       // Update player movement and drive the attached character animation.
-      player.update(deltaTime);
+      if (playerMovementEnabled) {
+        player.update(deltaTime);
+      } else {
+        player.velocity.set(0, 0, 0);
+      }
       const playerRoot = player?.object;
       const terrainSize = terrain?.geometry?.userData?.size;
       if (playerRoot && Number.isFinite(terrainSize)) {
