@@ -528,16 +528,36 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor)
 
   if (sunColor && uniforms.sunColor) {
     uniforms.sunColor.value.copy(sunColor);
+    // Safety clamp to realistic range
+    uniforms.sunColor.value.r = Math.min(Math.max(uniforms.sunColor.value.r, 0), 1);
+    uniforms.sunColor.value.g = Math.min(Math.max(uniforms.sunColor.value.g, 0), 1);
+    uniforms.sunColor.value.b = Math.min(Math.max(uniforms.sunColor.value.b, 0), 1);
+  }
+
+  // Safety clamps for optional standard material properties
+  if (uniforms.roughness) {
+    uniforms.roughness.value = THREE.MathUtils.clamp(uniforms.roughness.value, 0, 1);
+  }
+  if (uniforms.metalness) {
+    uniforms.metalness.value = THREE.MathUtils.clamp(uniforms.metalness.value, 0, 1);
+  }
+  if (uniforms.reflectivity) {
+    uniforms.reflectivity.value = THREE.MathUtils.clamp(uniforms.reflectivity.value, 0, 1);
   }
 
   const calmFactor = THREE.MathUtils.clamp(typeof mood === "number" ? mood : 0, 0, 1);
   if (uniforms.distortionScale) {
     // Ensure water does not become too flat (1.1 min) even in calm/night conditions
-    uniforms.distortionScale.value = THREE.MathUtils.lerp(2.0, 1.1, calmFactor);
+    const scale = THREE.MathUtils.lerp(2.0, 1.1, calmFactor);
+    uniforms.distortionScale.value = THREE.MathUtils.clamp(scale, 0.1, 10.0);
   }
   if (uniforms.waterColor) {
     uniforms.waterColor.value.copy(
       _moodWaterColor.copy(_dayWaterColor).lerp(_nightWaterColor, calmFactor)
     );
+    // Clamp water color components
+    uniforms.waterColor.value.r = Math.min(Math.max(uniforms.waterColor.value.r, 0), 1);
+    uniforms.waterColor.value.g = Math.min(Math.max(uniforms.waterColor.value.g, 0), 1);
+    uniforms.waterColor.value.b = Math.min(Math.max(uniforms.waterColor.value.b, 0), 1);
   }
 }
