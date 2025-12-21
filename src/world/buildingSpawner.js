@@ -48,7 +48,7 @@ function createMaterial(key, rng, overrides = {}) {
       // However, we want to support color being passed as hex or string.
   }
 
-  const mat = new THREE.MeshStandardMaterial({ ...base, ...overrides, color });
+  const mat = new THREE.MeshStandardMaterial({ ...base, ...overrides, color, fog: false });
   mat.userData = { ...mat.userData, materialType: key };
   return mat;
 }
@@ -146,6 +146,7 @@ function makeWindow(width, height, depth, rng) {
       metalness: 0.4,
       transparent: true,
       opacity: 0.6,
+      fog: false,
     })
   );
   pane.position.z = depth * 0.25;
@@ -327,7 +328,7 @@ export const Prefabs = {
 
     const greenery = new THREE.Mesh(
       new THREE.SphereGeometry(1.2 * scale, 12, 10),
-      new THREE.MeshStandardMaterial({ color: 0x507a3a, roughness: 0.85 })
+      new THREE.MeshStandardMaterial({ color: 0x507a3a, roughness: 0.85, fog: false })
     );
     greenery.position.y = 1.2 * scale;
     planter.add(greenery);

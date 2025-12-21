@@ -171,6 +171,7 @@ function getPotMaterial() {
       color: 0xa97858,
       roughness: 0.85,
       metalness: 0.12,
+      fog: false,
     });
   }
   return potMaterial;
@@ -211,6 +212,7 @@ function getCrateMaterial() {
       color: 0x8d6b45,
       roughness: 0.8,
       metalness: 0.05,
+      fog: false,
     });
   }
   return crateMaterial;
@@ -245,6 +247,7 @@ function getUmbrellaPoleMaterial() {
       color: 0xcfc6bb,
       roughness: 0.6,
       metalness: 0.2,
+      fog: false,
     });
   }
   return umbrellaPoleMaterial;
@@ -258,6 +261,7 @@ function getUmbrellaCanopyMaterial() {
       metalness: 0.05,
       clearcoat: 0.08,
       clearcoatRoughness: 0.7,
+      fog: false,
     });
   }
   return umbrellaCanopyBase;
@@ -298,6 +302,7 @@ function getAmphoraMaterial() {
       color: 0xc98d72,
       roughness: 0.6,
       metalness: 0.1,
+      fog: false,
     });
   }
   return amphoraMaterial;
@@ -338,14 +343,14 @@ function createTorch() {
   // Brazier stand
   const stand = new THREE.Mesh(
       new THREE.CylinderGeometry(0.1, 0.2, 1.2, 6),
-      new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.4 })
+      new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.4, fog: false })
   );
   stand.position.y = 0.6;
   group.add(stand);
 
   const bowl = new THREE.Mesh(
       new THREE.ConeGeometry(0.3, 0.3, 8, 1, true),
-      new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.6, roughness: 0.7 })
+      new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.6, roughness: 0.7, fog: false })
   );
   bowl.position.y = 1.35;
   bowl.rotation.x = Math.PI;

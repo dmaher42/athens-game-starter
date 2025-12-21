@@ -194,24 +194,24 @@ export const HARBOR_LANDMARKS = [
 export function createHarborLandmarkFallback(type, THREE) {
   if (type === "lighthouse") {
     const g = new THREE.Group();
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.0, 9.5, 16), new THREE.MeshStandardMaterial({ color:"#e7e0d6", roughness:0.7 })));
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.9, 1.4, 16), new THREE.MeshStandardMaterial({ color:"#b4472c", roughness:0.6 }));
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(2.6, 3.0, 9.5, 16), new THREE.MeshStandardMaterial({ color:"#e7e0d6", roughness:0.7, fog: false })));
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.9, 1.4, 16), new THREE.MeshStandardMaterial({ color:"#b4472c", roughness:0.6, fog: false }));
     cap.position.y = 5.5; g.add(cap);
     const lamp = new THREE.PointLight("#ffd26a", 2.1, 40, 2.0); lamp.position.y = 6.2; g.add(lamp);
     return g;
   }
   if (type === "clocktower") {
     const g = new THREE.Group();
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(3.2, 10.5, 3.2), new THREE.MeshStandardMaterial({ color:"#f5efe3", roughness:0.75 })));
-    const face = new THREE.Mesh(new THREE.CircleGeometry(0.8, 24), new THREE.MeshStandardMaterial({ color:"#ffffff", emissive:"#ffe6bf", emissiveIntensity:0.15 }));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(3.2, 10.5, 3.2), new THREE.MeshStandardMaterial({ color:"#f5efe3", roughness:0.75, fog: false })));
+    const face = new THREE.Mesh(new THREE.CircleGeometry(0.8, 24), new THREE.MeshStandardMaterial({ color:"#ffffff", emissive:"#ffe6bf", emissiveIntensity:0.15, fog: false }));
     face.position.set(0, 2.5, 1.65); g.add(face);
     return g;
   }
   // sculpture
   const g = new THREE.Group();
-  const plinth = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 2.2), new THREE.MeshStandardMaterial({ color:"#d9d3c7", roughness:0.8 }));
+  const plinth = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 2.2), new THREE.MeshStandardMaterial({ color:"#d9d3c7", roughness:0.8, fog: false }));
   plinth.position.y = 0.4; g.add(plinth);
-  const form = new THREE.Mesh(new THREE.TorusKnotGeometry(0.9, 0.25, 80, 10), new THREE.MeshStandardMaterial({ color:"#b5a689", roughness:0.55, metalness:0.15 }));
+  const form = new THREE.Mesh(new THREE.TorusKnotGeometry(0.9, 0.25, 80, 10), new THREE.MeshStandardMaterial({ color:"#b5a689", roughness:0.55, metalness:0.15, fog: false }));
   form.position.y = 1.6; g.add(form);
   return g;
 }
@@ -701,6 +701,15 @@ export async function loadLandmark(scene, url, options = {}) {
 
     const finalized = finalizeLandmarkObject(entry, finalObject, scene, options, materialPreset);
     if (finalized) {
+    finalized.traverse((child) => {
+      if (child.isMesh && child.material) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach((m) => (m.fog = false));
+        } else {
+          child.material.fog = false;
+        }
+      }
+    });
       return finalized;
     }
     return null;
@@ -855,7 +864,7 @@ export function generateTheaterGeometry(radius, tierCount) {
 
 export function createParthenon() {
   const geometry = generateTempleGeometry(30, 70, 12, 8, 17);
-  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.0 });
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0.0, fog: false });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -865,7 +874,7 @@ export function createParthenon() {
 
 export function createTempleOfZeus() {
   const geometry = generateTempleGeometry(40, 96, 20, 8, 20);
-  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0.05 });
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0.05, fog: false });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -875,7 +884,7 @@ export function createTempleOfZeus() {
 
 export function createTheater() {
   const geometry = generateTheaterGeometry(50, 30);
-  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.02, side: THREE.DoubleSide });
+  const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.02, side: THREE.DoubleSide, fog: false });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
