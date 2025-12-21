@@ -1,153 +1,129 @@
 import * as THREE from "three";
 import { getSeaLevelY } from "./seaLevelState.js";
 
-const GEOMETRY_SIZE = 7200; // Larger to fill the distance
-const GEOMETRY_SEGMENTS = 128;
-const CITY_RADIUS = 400; // Flat area for the city
-const MAX_HEIGHT = 12; // Low rolling land silhouette
+const DEFAULT_HORIZON_RADIUS = 1800;
+const DEFAULT_FADE_WIDTH = 320;
+const SKYBOX_SEA_TINT = new THREE.Color(0x2a3f5c);
+const SKYBOX_SKY_BLEND = new THREE.Color(0x6b7f9c);
 
-const abyssColor = new THREE.Color(0x0b1d3a); // Deep Water
-const sandColor = new THREE.Color(0xcab89b);  // Beach
-const baseColor = new THREE.Color(0x2f4a3a);  // Forest
-
-function sampleNoise(x, z) {
-  // Composite noise for distant, gentle landforms
-  const waveA = Math.sin(x * 0.0016) * 0.6 + Math.cos(z * 0.0016) * 0.6;
-  const waveB = Math.sin((x + z) * 0.0009) * 0.35;
-  const waveC = Math.sin((x - z) * 0.0006) * 0.2;
-  return (waveA + waveB + waveC + 1.3) * 0.45 * MAX_HEIGHT;
+function resolveFogColor(scene) {
+  const fallback = SKYBOX_SKY_BLEND.clone();
+  if (scene?.fog?.color) {
+    return scene.fog.color.clone();
+  }
+  const fogOptions = scene?.userData?.getFogOptions?.();
+  if (fogOptions?.color) {
+    return fogOptions.color.clone();
+  }
+  return fallback;
 }
 
-function bayMask(angle) {
-  // We want an opening at North (Negative Z in 3D space)
-  // In the Plane geometry (before rotation), Y is "Up", which becomes -Z after rotation.
-  // So we target the angle PI/2.
-  
-  const targetAngle = Math.PI / 2; 
-  
-  // Calculate difference from the target angle
-  let diff = Math.abs(angle - targetAngle);
-  if (diff > Math.PI) diff = 2 * Math.PI - diff; // Handle wrap-around
-  
-  // If we are within 45 degrees (0.8 radians) of North, flatten it
-  // Otherwise, smooth transition to full height
-  if (diff < 0.8) {
-      // Smooth step from 0 to 1
-      const t = diff / 0.8;
-      return t * t; 
-  }
-  return 1.0;
-}
+function createHorizonRing({
+  innerRadius,
+  outerRadius,
+  seaLevel,
+  horizonColor,
+  fogColor,
+}) {
+  const geometry = new THREE.RingGeometry(innerRadius, outerRadius, 128, 1);
+  geometry.rotateX(-Math.PI / 2);
 
-function assignVertexColor(target, height) {
-  const shallowBlend = Math.max(0, height);
-
-  if (height < 1) {
-    target.lerpColors(abyssColor, sandColor, shallowBlend);
-  } else if (height < 6) {
-    target.lerpColors(sandColor, baseColor, (height - 1) / 5);
-  } else {
-    target.copy(baseColor);
-  }
-}
-
-export function createHorizon(scene) {
-  const seaLevel = getSeaLevelY();
-
-  const geometry = new THREE.PlaneGeometry(
-    GEOMETRY_SIZE,
-    GEOMETRY_SIZE,
-    GEOMETRY_SEGMENTS,
-    GEOMETRY_SEGMENTS
-  );
-
-  const positions = geometry.attributes.position;
-  const vertexCount = positions.count;
-  const colors = new Float32Array(vertexCount * 3);
-  const workingColor = new THREE.Color();
-
-  for (let i = 0; i < vertexCount; i++) {
-    const x = positions.getX(i);
-    const y = positions.getY(i); // This becomes Z in world space
-    const distance = Math.hypot(x, y);
-
-    let height = -8; // Default shallow water below sea level
-
-    // Only raise distant land outside the city
-    if (distance >= CITY_RADIUS) {
-      const angle = Math.atan2(y, x);
-      const mask = bayMask(angle);
-      
-      // Calculate noise height
-      const noise = sampleNoise(x, y);
-
-      // Apply mask: If mask is 0 (North), height stays low below sea level.
-      // If mask is 1, height becomes noise.
-      height = -8 + (noise + 8) * mask;
-    }
-
-    const maxHeight = seaLevel + 12;
-    height = Math.min(height, maxHeight);
-
-    positions.setZ(i, height); // Set Z because Plane is flat initially
-    assignVertexColor(workingColor, height);
-    workingColor.toArray(colors, i * 3);
-  }
-
-  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-  geometry.computeVertexNormals();
-
-  const material = new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    flatShading: true,
-    roughness: 1.0,
-    fog: true, // Important for depth
-    transparent: true,
-    depthWrite: false,
-  });
-
-  const fadeHeight = 12;
-
-  material.onBeforeCompile = (shader) => {
-    shader.uniforms.seaLevel = { value: seaLevel };
-    shader.uniforms.fadeHeight = { value: fadeHeight };
-
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        "#include <common>",
-        "#include <common>\n varying float vWorldY;"
-      )
-      .replace(
-        "#include <fog_vertex>",
-        "vWorldY = (modelMatrix * vec4(position, 1.0)).y;\n#include <fog_vertex>"
-      );
-
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        "#include <common>",
-        "#include <common>\n varying float vWorldY;\n uniform float seaLevel;\n uniform float fadeHeight;"
-      )
-      .replace(
-        "gl_FragColor = vec4( outgoingLight, diffuseColor.a );",
-        [
-          "float heightT = clamp((vWorldY - seaLevel) / fadeHeight, 0.0, 1.0);",
-          "float alphaFade = mix(1.0, 0.35, heightT);",
-          "float darkness = mix(0.82, 1.0, heightT);",
-          "vec3 finalColor = outgoingLight * darkness;",
-          "gl_FragColor = vec4(finalColor, diffuseColor.a * alphaFade);",
-        ].join("\n")
-      );
+  const uniforms = {
+    innerRadius: { value: innerRadius },
+    outerRadius: { value: outerRadius },
+    seaLevel: { value: seaLevel },
+    horizonColor: { value: horizonColor.clone() },
+    fogColor: { value: fogColor.clone() },
   };
 
-  const horizon = new THREE.Mesh(geometry, material);
-  horizon.name = "HorizonMesh";
-  horizon.rotation.x = -Math.PI / 2; // Rotate flat
-  horizon.position.y = -2; // Just below sea level
-  horizon.receiveShadow = true;
+  const material = new THREE.ShaderMaterial({
+    name: "SkyboxHorizonRing",
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    uniforms,
+    vertexShader: /* glsl */ `
+      varying vec3 vWorldPosition;
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * viewMatrix * worldPosition;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      varying vec3 vWorldPosition;
+      uniform float innerRadius;
+      uniform float outerRadius;
+      uniform float seaLevel;
+      uniform vec3 horizonColor;
+      uniform vec3 fogColor;
 
-  if (scene) {
-    scene.add(horizon);
+      void main() {
+        vec2 xz = vWorldPosition.xz;
+        float dist = length(xz);
+        float radialFade = clamp((dist - innerRadius) / max(outerRadius - innerRadius, 0.0001), 0.0, 1.0);
+        float alpha = 1.0 - smoothstep(0.0, 1.0, radialFade);
+
+        // Gently fade out if the band is ever viewed from above sea level.
+        float heightFade = smoothstep(seaLevel, seaLevel + 12.0, vWorldPosition.y);
+        alpha *= (1.0 - heightFade);
+
+        if (alpha <= 0.01) discard;
+
+        vec3 color = mix(horizonColor, fogColor, radialFade * 0.7);
+        gl_FragColor = vec4(color, alpha * 0.65);
+      }
+    `,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.name = "HorizonFadeRing";
+  mesh.renderOrder = -2;
+  return mesh;
+}
+
+export function createHorizon(scene, options = {}) {
+  const seaLevel = Number.isFinite(options.seaLevel)
+    ? options.seaLevel
+    : getSeaLevelY();
+  const radius = Math.max(options.radius ?? DEFAULT_HORIZON_RADIUS, 400);
+  const fadeWidth = Math.max(options.fadeWidth ?? DEFAULT_FADE_WIDTH, 80);
+  const innerRadius = Math.max(radius - fadeWidth, 10);
+  const outerRadius = radius + fadeWidth;
+
+  const fogColor = resolveFogColor(scene);
+  const horizonColor = options.horizonColor
+    ? new THREE.Color(options.horizonColor)
+    : SKYBOX_SEA_TINT;
+
+  const group = new THREE.Group();
+  group.name = "HorizonSystem";
+
+  const ring = createHorizonRing({
+    innerRadius,
+    outerRadius,
+    seaLevel,
+    horizonColor,
+    fogColor,
+  });
+  ring.position.y = seaLevel;
+  group.add(ring);
+
+  // Soften distance falloff to better match the painted sea line of the skybox.
+  const setFogOptions = scene?.userData?.setFogOptions;
+  if (typeof setFogOptions === "function") {
+    const targetDensity = Math.max(scene?.fog?.density ?? 0.0002, 0.00035);
+    setFogOptions({
+      color: fogColor.lerp(horizonColor, 0.25),
+      density: targetDensity,
+    });
   }
 
-  return horizon;
+  if (scene) {
+    scene.add(group);
+  }
+
+  group.userData.horizonRadius = radius;
+  group.userData.fadeWidth = fadeWidth;
+  return group;
 }
