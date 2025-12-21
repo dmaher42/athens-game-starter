@@ -49,12 +49,15 @@ function gradientNoise(x, z) {
 }
 
 const NOISE_SCALE = 0.05;
-const NOISE_AMPLITUDE = 1.0;
+const NOISE_AMPLITUDE = 0.7;
 const OCEAN_BOUNDARY_Z = -100;
 const CITY_BOUNDARY_Z = -40;
 const OCEAN_DEPTH = -12.0;
 const CITY_HEIGHT = 4.0;
 const CITY_MIN_HEIGHT = 2.0;
+const ISLAND_RADIUS = 220;
+const COAST_BLEND_WIDTH = 70;
+const MAX_ISLAND_HEIGHT = 7.5;
 
 const HARBOR_GROUND_HEIGHT = 1;
 const HARBOR_COAST_PADDING = 36;
@@ -62,6 +65,7 @@ const HARBOR_LONGITUDINAL_PADDING = 12;
 const HARBOR_SLOPE_WIDTH = 6;
 const HARBOUR_RADIUS = HARBOR_WATER_RADIUS;
 const HARBOUR_TARGET_DEPTH = 2;
+const ISLAND_CENTER = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
 
 function applyHarbourCarve(x, z, seaLevel, height) {
   const dx = x - HARBOR_CENTER.x;
@@ -161,6 +165,23 @@ function getElevation(x, z, seaLevel) {
      height = THREE.MathUtils.lerp(height, targetY, blend);
   }
 
+  const dx = x - ISLAND_CENTER.x;
+  const dz = z - ISLAND_CENTER.z;
+  const distanceFromCenter = Math.hypot(dx, dz);
+  const coastStart = Math.max(ISLAND_RADIUS - COAST_BLEND_WIDTH, 0);
+  if (distanceFromCenter > coastStart) {
+    const t = THREE.MathUtils.clamp(
+      (distanceFromCenter - coastStart) / COAST_BLEND_WIDTH,
+      0,
+      1,
+    );
+    const fade = THREE.MathUtils.smoothstep(0, 1, t);
+    const coastalTarget = seaLevel - 1.5;
+    height = THREE.MathUtils.lerp(height, coastalTarget, fade);
+  }
+
+  height = Math.min(height, seaLevel + MAX_ISLAND_HEIGHT);
+
   if (z > CITY_BOUNDARY_Z && height < seaLevel + CITY_MIN_HEIGHT) {
     height = seaLevel + CITY_MIN_HEIGHT;
   }
@@ -169,7 +190,7 @@ function getElevation(x, z, seaLevel) {
 }
 
 export function createTerrain(scene) {
-  const size = 500;
+  const size = 420;
   const segments = 256;
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 

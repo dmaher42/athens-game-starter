@@ -16,6 +16,7 @@ import {
 } from "../world/terrain.js";
 import { createHorizon } from "../world/horizon.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
+import { createWorldFloorCap, applyKillPlane } from "../world/worldBounds.js";
 import { createHarbor, updateHarborLighting } from "../world/harbor.js";
 import { createHarborDecorations } from "../world/decoration.js";
 import {
@@ -578,14 +579,37 @@ export class Application {
       scene.add(skirtGroup);
     }
 
+    const seaLevel = getSeaLevelY();
+    const oceanRadius = 1800;
+    const horizonColor = 0x2a3f5c;
+
     // --- Horizon & Ocean ---
     if (!this.horizon) {
-      this.horizon = createHorizon(this.scene);
+      this.horizon = createHorizon(this.scene, {
+        seaLevel,
+        radius: oceanRadius,
+        fadeWidth: 320,
+        horizonColor,
+      });
     }
     if (!this.ocean) {
-      // Ocean is massive (4000 units), so we keep scale at 1
-      this.ocean = await createOcean(this.scene, { seaLevel: 0 });
+      this.ocean = await createOcean(this.scene, {
+        seaLevel,
+        radius: oceanRadius,
+        horizonOffset: 0,
+        waterColor: 0x0f304c,
+      });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
+    }
+    if (!this.worldFloorCap) {
+      this.worldFloorCap = createWorldFloorCap(this.scene, {
+        seaLevel,
+        radius: oceanRadius,
+        depth: 90,
+      });
+    }
+    if (!this.killPlane) {
+      this.killPlane = applyKillPlane(this.renderer, seaLevel - 75);
     }
     ocean = this.ocean;
     // -----------------------
@@ -621,7 +645,7 @@ export class Application {
       );
     }
 
-    const currentSeaLevel = getSeaLevelY();
+    const currentSeaLevel = seaLevel;
     const harborSampler = null;
     let sampledSeaLevel = currentSeaLevel;
     let harborSampleCount = 0;
@@ -1280,8 +1304,6 @@ export class Application {
     dockhandHead.position.y = 1.5;
     dockhandHead.castShadow = true;
     dockhand.add(dockhandHead);
-
-    const seaLevel = getSeaLevelY();
 
     const dockhandPosition = new THREE.Vector3(
       HARBOR_WATER_EAST_LIMIT + 6.0,
