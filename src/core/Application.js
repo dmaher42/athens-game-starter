@@ -2198,7 +2198,7 @@ export class Application {
         timeOfDayPhase: phase,
       });
       updateMainHillRoadLighting(roadGroup, lights.nightFactor);
-      updateOcean(ocean, 0, alignedSunDir, lights.nightFactor);
+      updateOcean(ocean, 0, alignedSunDir, lights.nightFactor, lights.sunLight.color);
       if (grassRoot) {
         setGrassNightFactor(lights.nightFactor);
         updateGrass(0, player?.position ?? null);
@@ -2247,7 +2247,7 @@ export class Application {
 
       // Advance the GPU-driven terrain sway (no CPU vertex updates required).
       updateTerrain(terrain, elapsed);
-      updateOcean(ocean, deltaTime, alignedSunDir, lights.nightFactor);
+      updateOcean(ocean, deltaTime, alignedSunDir, lights.nightFactor, lights.sunLight.color);
 
       // Update soundscape once per frame (player position optional)
       soundscape.update(player?.position);
