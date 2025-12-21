@@ -2190,6 +2190,14 @@ export class Application {
       const alignedSunDir = syncSunLighting(sunDirForCycle?.y);
       updateSky(scene, presetName);
 
+      const skyDome = scene.userData.skyDome;
+      if (skyDome && skyDome.material) {
+        const skyExp = Number.isFinite(preset.skyboxExposure)
+          ? preset.skyboxExposure
+          : 1.0;
+        skyDome.material.color.setScalar(skyExp);
+      }
+
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
         timeOfDayPhase: phase,
