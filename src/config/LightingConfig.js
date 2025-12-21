@@ -40,6 +40,7 @@ export const DEFAULT_LIGHTING_CONFIG = {
       exposure: 1.12,
       label: "Bright Noon",
       environmentIntensity: 0.6,
+      skyboxExposure: 1.5,
       colorGrade: {
         shadowTint: "#f3f6ff",
         midTint: "#ffffff",
@@ -81,6 +82,9 @@ function validatePreset(name, preset) {
   assert(typeof preset.label === "string" && preset.label.trim() !== "", `lighting preset ${name} requires label`);
   if (preset.hotkey != null) {
     assert(typeof preset.hotkey === "string", `lighting preset ${name} hotkey must be string`);
+  }
+  if (preset.skyboxExposure != null) {
+    assert(Number.isFinite(preset.skyboxExposure), `lighting preset ${name} skyboxExposure must be numeric`);
   }
 }
 
