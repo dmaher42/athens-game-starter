@@ -338,8 +338,8 @@ export async function createOcean(scene, options = {}) {
     shader.uniforms.uHarborRadius = { value: HARBOR_WATER_RADIUS };
 
     // Fade Constants
-    shader.uniforms.uFadeStart = { value: 300.0 };
-    shader.uniforms.uFadeEnd = { value: 1800.0 };
+    shader.uniforms.uFadeStart = { value: 800.0 };
+    shader.uniforms.uFadeEnd = { value: 2900.0 };
 
     shader.vertexShader = shader.vertexShader.replace(
       "void main() {",

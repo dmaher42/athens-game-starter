@@ -56,7 +56,7 @@ export function createLighting(scene) {
   scene.add(sunLight.target);
 
   // Reduced ambient intensity and cooler colors to keep contrast in shadows
-  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.22);
+  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.35);
   scene.add(hemiLight);
 
   return { sunLight, hemiLight, nightFactor: 0 };
@@ -108,7 +108,7 @@ export function updateLighting(lights, sunDir, options = {}) {
   sunLight.color.copy(sunColor);
 
   // Lerp hemi intensity to keep directional light dominant
-  const hemiTarget = MathUtils.lerp(0.12, 0.22, ambientFactor);
+  const hemiTarget = MathUtils.lerp(0.12, 0.35, ambientFactor);
   hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.12);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
   lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
