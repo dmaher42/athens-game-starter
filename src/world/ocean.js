@@ -324,7 +324,7 @@ export async function createOcean(scene, options = {}) {
     sunColor: 0xffffff,
     waterColor: options.waterColor ?? 0x006b7c,
     distortionScale: 1.5,
-    fog: scene.fog !== undefined,
+    fog: !!scene.fog,
   });
 
   // Shader injection for shoreline interaction and distance fade
