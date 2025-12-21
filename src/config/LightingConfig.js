@@ -15,13 +15,24 @@ export const DEFAULT_LIGHTING_CONFIG = {
     step: 0.01,
   },
   presets: {
-    blue_hour: { phase: 0.18, exposure: 0.82, label: "Blue Hour" },
-    golden_hour: { phase: 0.62, exposure: 0.96, label: "Golden Hour" },
+    blue_hour: {
+      phase: 0.18,
+      exposure: 0.82,
+      label: "Blue Hour",
+      skyboxExposure: 0.5,
+    },
+    golden_hour: {
+      phase: 0.62,
+      exposure: 0.96,
+      label: "Golden Hour",
+      skyboxExposure: 1.0,
+    },
     high_noon: {
       phase: 0.5,
       exposure: 1.12,
       label: "Bright Noon",
       environmentIntensity: 0.6,
+      skyboxExposure: 1.5,
       colorGrade: {
         shadowTint: "#f3f6ff",
         midTint: "#ffffff",
@@ -30,7 +41,12 @@ export const DEFAULT_LIGHTING_CONFIG = {
         contrastStrength: 0.16,
       },
     },
-    night_sky: { phase: 0.92, exposure: 0.55, label: "Deep Night" },
+    night_sky: {
+      phase: 0.92,
+      exposure: 0.55,
+      label: "Deep Night",
+      skyboxExposure: 0.2,
+    },
   },
 };
 
@@ -49,6 +65,9 @@ function validatePreset(name, preset) {
   assert(typeof preset.label === "string" && preset.label.trim() !== "", `lighting preset ${name} requires label`);
   if (preset.hotkey != null) {
     assert(typeof preset.hotkey === "string", `lighting preset ${name} hotkey must be string`);
+  }
+  if (preset.skyboxExposure != null) {
+    assert(Number.isFinite(preset.skyboxExposure), `lighting preset ${name} skyboxExposure must be numeric`);
   }
 }
 
