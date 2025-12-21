@@ -662,8 +662,8 @@ export class Application {
     const oceanRadius = 1800;
     const horizonColor = 0x2a3f5c;
     const shorelineInnerRadius = Math.max(
-      Number.isFinite(terrainSize) ? terrainSize * 0.5 + 25 : 0,
-      220,
+      Number.isFinite(terrainSize) ? terrainSize * 0.5 + 4 : 0,
+      215,
     );
 
     // --- Horizon & Ocean ---
@@ -688,7 +688,8 @@ export class Application {
       this.shoreTermination = createShorelineTermination(this.scene, {
         seaLevel,
         innerRadius: shorelineInnerRadius,
-        bandWidth: 150,
+        bandWidth: 35,
+        fadeWidth: 320,
         oceanRadius,
         horizonColor,
       });

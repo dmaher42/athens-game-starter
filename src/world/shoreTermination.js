@@ -2,8 +2,8 @@ import * as THREE from "three";
 import { getSeaLevelY } from "./seaLevelState.js";
 import { HARBOR_CENTER_3D } from "./locations.js";
 
-const DEFAULT_COASTAL_INNER_RADIUS = 240;
-const DEFAULT_COASTAL_WIDTH = 120;
+const DEFAULT_COASTAL_INNER_RADIUS = 215;
+const DEFAULT_COASTAL_WIDTH = 35;
 const DEFAULT_SILHOUETTE_COUNT = 32;
 const SKY_HORIZON_COLOR = new THREE.Color(0x2a3f5c);
 const SKY_BLEND_COLOR = new THREE.Color(0x6b7f9c);
@@ -287,11 +287,11 @@ export function createShorelineTermination(scene, options = {}) {
   const seaLevel = Number.isFinite(options.seaLevel)
     ? options.seaLevel
     : getSeaLevelY();
-  const innerRadius = Math.max(options.innerRadius ?? DEFAULT_COASTAL_INNER_RADIUS, 120);
-  const bandWidth = Math.max(options.bandWidth ?? DEFAULT_COASTAL_WIDTH, 60);
+  const innerRadius = Math.max(options.innerRadius ?? DEFAULT_COASTAL_INNER_RADIUS, 100);
+  const bandWidth = Math.max(options.bandWidth ?? DEFAULT_COASTAL_WIDTH, 10);
   const outerRadius = innerRadius + bandWidth;
   const oceanRadius = Math.max(options.oceanRadius ?? outerRadius + 360, outerRadius + 120);
-  const fadeWidth = Math.max(Math.min(options.fadeWidth ?? 280, oceanRadius - outerRadius - 20), 120);
+  const fadeWidth = Math.max(Math.min(options.fadeWidth ?? 320, oceanRadius - outerRadius - 20), 120);
 
   const fogColor = resolveFogColor(scene, options.fogColor);
   const horizonColor = options.horizonColor
