@@ -318,7 +318,7 @@ export async function createOcean(scene, options = {}) {
     waterNormals: waterNormals,
     sunDirection: new THREE.Vector3(),
     sunColor: 0xffffff,
-    waterColor: options.waterColor ?? 0x0f304c,
+    waterColor: options.waterColor ?? 0x0d2b45,
     distortionScale: 2.4,
     fog: scene.fog !== undefined,
   });

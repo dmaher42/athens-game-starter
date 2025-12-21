@@ -12,7 +12,7 @@ import { generateStoaGeometry, generateTholosGeometry } from "./monuments.js";
 import { generateTempleGeometry, createParthenon, createTempleOfZeus, createTheater } from "./landmarks.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
-const ROOF_COLOR_PRESETS = ["#b4472c", "#c05621", "#d66f2c"];
+const ROOF_COLOR_PRESETS = ["#a94a30", "#b55634", "#9f432d"];
 
 function pickRandom(array, rng) {
   if (!Array.isArray(array) || array.length === 0) return null;

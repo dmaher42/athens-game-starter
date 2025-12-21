@@ -224,9 +224,9 @@ export function createTerrain(scene) {
     baseHeights[i] = height;
 
     if (height < seaLevel + 1.0) {
-      color.setRGB(0.76, 0.70, 0.54); // Sand
+      color.setRGB(0.68, 0.64, 0.55); // Cooler sand
     } else {
-      color.setRGB(0.36, 0.50, 0.32); // Grass / dry earth
+      color.setRGB(0.34, 0.46, 0.32); // Cooler grass / dry earth
     }
     colorAttribute.setXYZ(i, color.r, color.g, color.b);
   }
@@ -249,7 +249,7 @@ export function createTerrain(scene) {
 
   let terrainMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
-    roughness: 0.9,
+    roughness: 0.94,
     metalness: 0.0,
     vertexColors: true,
   });
