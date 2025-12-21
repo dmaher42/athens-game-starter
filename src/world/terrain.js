@@ -6,6 +6,7 @@ import {
   HARBOR_CENTER,
   HARBOR_WATER_RADIUS,
   AGORA_CENTER_3D,
+  ISLAND_RADIUS,
 } from "./locations.js";
 import {
   createGroundTextureState,
@@ -55,9 +56,11 @@ const CITY_BOUNDARY_Z = -40;
 const OCEAN_DEPTH = -12.0;
 const CITY_HEIGHT = 4.0;
 const CITY_MIN_HEIGHT = 2.0;
-const ISLAND_RADIUS = 220;
-const COAST_BLEND_WIDTH = 70;
+const COAST_BLEND_WIDTH = 110;
 const MAX_ISLAND_HEIGHT = 7.5;
+const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
+const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
+const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
 
 const HARBOR_GROUND_HEIGHT = 1;
 const HARBOR_COAST_PADDING = 36;
@@ -66,6 +69,17 @@ const HARBOR_SLOPE_WIDTH = 6;
 const HARBOUR_RADIUS = HARBOR_WATER_RADIUS;
 const HARBOUR_TARGET_DEPTH = 2;
 const ISLAND_CENTER = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
+
+function computeCoastData(x, z) {
+  const dx = x - ISLAND_CENTER.x;
+  const dz = z - ISLAND_CENTER.z;
+  const distanceFromCenter = Math.hypot(dx, dz);
+  const coastStart = Math.max(ISLAND_RADIUS - COAST_BLEND_WIDTH, 0);
+  const rawT = (distanceFromCenter - coastStart) / COAST_BLEND_WIDTH;
+  const t = THREE.MathUtils.clamp(rawT, 0, 1);
+  const fade = THREE.MathUtils.smoothstep(0, 1, t);
+  return { distanceFromCenter, coastStart, rawT, t, fade };
+}
 
 function applyHarbourCarve(x, z, seaLevel, height) {
   const dx = x - HARBOR_CENTER.x;
@@ -108,7 +122,7 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   return THREE.MathUtils.lerp(seaLevel, harborGroundY, slopeFactor);
 }
 
-function getElevation(x, z, seaLevel) {
+function getElevation(x, z, seaLevel, coastData = null) {
   const oceanHeight = seaLevel + OCEAN_DEPTH;
   const cityHeight = seaLevel + CITY_HEIGHT;
 
@@ -123,7 +137,11 @@ function getElevation(x, z, seaLevel) {
   }
 
   const noise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE) * NOISE_AMPLITUDE;
-  let height = baseHeight + noise;
+  const coast = coastData ?? computeCoastData(x, z);
+  const coastalNoiseAttenuation = 1 - THREE.MathUtils.smoothstep(0.25, 1.0, coast.t);
+  const shapedNoise = noise * (0.4 + coastalNoiseAttenuation * 0.6);
+
+  let height = baseHeight + shapedNoise;
 
   height = applyHarbourCarve(x, z, seaLevel, height);
 
@@ -165,19 +183,11 @@ function getElevation(x, z, seaLevel) {
      height = THREE.MathUtils.lerp(height, targetY, blend);
   }
 
-  const dx = x - ISLAND_CENTER.x;
-  const dz = z - ISLAND_CENTER.z;
-  const distanceFromCenter = Math.hypot(dx, dz);
-  const coastStart = Math.max(ISLAND_RADIUS - COAST_BLEND_WIDTH, 0);
-  if (distanceFromCenter > coastStart) {
-    const t = THREE.MathUtils.clamp(
-      (distanceFromCenter - coastStart) / COAST_BLEND_WIDTH,
-      0,
-      1,
-    );
-    const fade = THREE.MathUtils.smoothstep(0, 1, t);
-    const coastalTarget = seaLevel - 1.5;
-    height = THREE.MathUtils.lerp(height, coastalTarget, fade);
+  if (coast.distanceFromCenter > coast.coastStart) {
+    const coastalTarget = seaLevel - 2.0;
+    height = THREE.MathUtils.lerp(height, coastalTarget, coast.fade);
+    const edgeSink = THREE.MathUtils.smoothstep(0.82, 1.0, coast.t);
+    height = THREE.MathUtils.lerp(height, coastalTarget - 0.6, edgeSink);
   }
 
   height = Math.min(height, seaLevel + MAX_ISLAND_HEIGHT);
@@ -219,15 +229,18 @@ export function createTerrain(scene) {
     const x = positionAttribute.getX(i);
     const z = positionAttribute.getY(i);
 
-    const height = getElevation(x, z, seaLevel);
+    const coastData = computeCoastData(x, z);
+    const height = getElevation(x, z, seaLevel, coastData);
     positionAttribute.setZ(i, height);
     baseHeights[i] = height;
 
-    if (height < seaLevel + 1.0) {
-      color.setRGB(0.68, 0.64, 0.55); // Cooler sand
-    } else {
-      color.setRGB(0.34, 0.46, 0.32); // Cooler grass / dry earth
-    }
+    const baseColor = height < seaLevel + 1.0 ? SAND_COLOR : GRASS_COLOR;
+    const shorelineWetness = THREE.MathUtils.smoothstep(0.25, 1.0, coastData.t);
+    const foamBand = THREE.MathUtils.smoothstep(0.7, 1.0, coastData.t);
+    color
+      .copy(baseColor)
+      .lerp(SHALLOW_WATER_COLOR, shorelineWetness * 0.65)
+      .lerp(SAND_COLOR, foamBand * 0.35);
     colorAttribute.setXYZ(i, color.r, color.g, color.b);
   }
 
