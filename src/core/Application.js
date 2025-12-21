@@ -1357,6 +1357,7 @@ export class Application {
     const npcBodyMat = new THREE.MeshStandardMaterial({
       color: 0x4e8ef7,
       roughness: 0.7,
+      fog: false,
     });
     const npcBody = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.35, 1.1, 4, 16),
@@ -1368,7 +1369,7 @@ export class Application {
 
     const npcHead = new THREE.Mesh(
       new THREE.SphereGeometry(0.3, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xeacdad }),
+      new THREE.MeshStandardMaterial({ color: 0xeacdad, fog: false }),
     );
     npcHead.position.y = 1.5;
     npcHead.castShadow = true;
@@ -1385,7 +1386,7 @@ export class Application {
     dockhand.name = "HarbourDockhand_NPC";
     const dockhandBody = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.3, 1.0, 4, 12),
-      new THREE.MeshStandardMaterial({ color: 0x9c7955, roughness: 0.8 }),
+      new THREE.MeshStandardMaterial({ color: 0x9c7955, roughness: 0.8, fog: false }),
     );
     dockhandBody.position.y = 0.95;
     dockhandBody.castShadow = true;
@@ -1393,7 +1394,7 @@ export class Application {
 
     const dockhandHead = new THREE.Mesh(
       new THREE.SphereGeometry(0.28, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xd9c4a1 }),
+      new THREE.MeshStandardMaterial({ color: 0xd9c4a1, fog: false }),
     );
     dockhandHead.position.y = 1.5;
     dockhandHead.castShadow = true;
@@ -1420,6 +1421,7 @@ export class Application {
     const crateMat = new THREE.MeshStandardMaterial({
       color: 0x8d6b45,
       roughness: 0.9,
+      fog: false,
     });
     const crateMesh = new THREE.Mesh(crateGeo, crateMat);
     crateMesh.castShadow = true;
@@ -1551,6 +1553,7 @@ export class Application {
         color: 0x4e8ef7,
         metalness: 0.2,
         roughness: 0.6,
+        fog: false,
       });
 
       const body = new THREE.Mesh(
@@ -1564,7 +1567,7 @@ export class Application {
 
       const head = new THREE.Mesh(
         new THREE.SphereGeometry(0.32, 16, 16),
-        new THREE.MeshStandardMaterial({ color: 0xf4f7ff, roughness: 0.4 }),
+        new THREE.MeshStandardMaterial({ color: 0xf4f7ff, roughness: 0.4, fog: false }),
       );
       head.castShadow = true;
       head.position.y = 1.32;
@@ -1749,6 +1752,7 @@ export class Application {
           metalness: 0.0,
           roughness: 0.68,
           color: new THREE.Color(0.95, 0.95, 0.95),
+          fog: false,
         });
 
       const baseRoughness =
@@ -1779,6 +1783,7 @@ export class Application {
             normalMap: textures.normalMap,
             aoMap: textures.aoMap,
             roughnessMap: textures.roughnessMap,
+            fog: false,
           });
         })();
 

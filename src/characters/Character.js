@@ -48,6 +48,13 @@ export class Character extends THREE.Object3D {
         o.castShadow = true;
         o.receiveShadow = true;
         o.frustumCulled = false;
+        if (o.material) {
+          if (Array.isArray(o.material)) {
+            o.material.forEach((m) => (m.fog = false));
+          } else {
+            o.material.fog = false;
+          }
+        }
       }
     });
 

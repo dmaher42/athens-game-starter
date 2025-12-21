@@ -66,6 +66,7 @@ function createCitizenModel(primaryColor, secondaryColor) {
     color: primaryColor,
     roughness: 0.6,
     metalness: 0.1,
+    fog: false,
   });
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.1, 8, 16), bodyMaterial);
   body.position.y = 1.1;
@@ -77,6 +78,7 @@ function createCitizenModel(primaryColor, secondaryColor) {
   const headMaterial = new THREE.MeshStandardMaterial({
     color: secondaryColor,
     roughness: 0.4,
+    fog: false,
   });
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), headMaterial);
   head.position.y = 2.0;
@@ -86,7 +88,7 @@ function createCitizenModel(primaryColor, secondaryColor) {
 
   const sash = new THREE.Mesh(
     new THREE.TorusGeometry(0.45, 0.08, 8, 18, Math.PI * 1.25),
-    new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.5 })
+    new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.5, fog: false })
   );
   sash.rotation.set(Math.PI / 2, Math.PI / 3, 0);
   sash.position.y = 1.3;
@@ -254,6 +256,15 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
 
     try {
       await character.load(prioritizedCandidates, scene.userData?.renderer, { targetHeight: 1.7 });
+      character.traverse((child) => {
+        if (child.isMesh && child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach((m) => (m.fog = false));
+          } else {
+            child.material.fog = false;
+          }
+        }
+      });
     } catch (error) {
       const message = error?.message || String(error);
       if (message && message.includes('Downloaded HTML instead of GLB')) {
