@@ -122,6 +122,8 @@ const DEFAULT_INLAND_CLIP = Number.isFinite(HARBOR_WATER_BOUNDS?.south)
 const TERRAIN_CLEARANCE_EPSILON = 0.02;
 const SHORE_PROBE_X_FRACTIONS = [0.2, 0.5, 0.8];
 const SHORE_PROBE_Z_FRACTIONS = [0.0, 0.5, 0.9];
+const DEFAULT_OCEAN_RADIUS = 1800;
+const OCEAN_SEGMENTS = 96;
 
 let cachedWaterNormalsTexture = null;
 let cachedWaterNormalsKey = null;
@@ -305,11 +307,9 @@ export async function createOcean(scene, options = {}) {
       ? getSeaLevelY()
       : SEA_LEVEL_Y;
 
-  // 2. CREATE MASSIVE GEOMETRY (The Fix)
-  // Instead of using HARBOR_WATER_BOUNDS, we use a fixed massive size
-  // to ensure it touches the horizon mountains.
-  const SIZE = 4000; 
-  const geometry = new THREE.PlaneGeometry(SIZE, SIZE);
+  // 2. CREATE CIRCULAR GEOMETRY ANCHORED TO THE SKYBOX HORIZON
+  const radius = Math.max(options.radius ?? DEFAULT_OCEAN_RADIUS, 400);
+  const geometry = new THREE.CircleGeometry(radius, OCEAN_SEGMENTS);
 
   // 3. CONFIGURE WATER SHADER
   const water = new Water(geometry, {
@@ -318,32 +318,37 @@ export async function createOcean(scene, options = {}) {
     waterNormals: waterNormals,
     sunDirection: new THREE.Vector3(),
     sunColor: 0xffffff,
-    waterColor: 0x001e0f,
-    distortionScale: 3.7,
+    waterColor: options.waterColor ?? 0x0f304c,
+    distortionScale: 2.4,
     fog: scene.fog !== undefined,
   });
 
   // 4. POSITIONING
   water.rotation.x = -Math.PI / 2;
-  // Center at (0, seaLevel, 0) so it extends equally in all directions
-  water.position.set(0, seaLevel, 0); 
-  
+  const horizonOffset = Number.isFinite(options.horizonOffset)
+    ? options.horizonOffset
+    : 0;
+  const horizonY = seaLevel + horizonOffset;
+  water.position.set(0, horizonY, 0);
+
   water.name = "AegeanOcean";
   water.userData.isWater = true;
   water.userData.seaLevel = seaLevel;
+  water.userData.oceanRadius = radius;
+  water.userData.horizonY = horizonY;
 
-  // Custom wave scaling
+  // Custom wave scaling keeps detail even on the circular expanse
   if (waterNormals) {
     waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping;
-    // Repeat texture 20 times across the massive plane so waves look detailed, not stretched
-    waterNormals.repeat.set(20, 20); 
+    const repeat = Math.max(radius / 90, 8);
+    waterNormals.repeat.set(repeat, repeat);
   }
 
   scene.add(water);
 
   // Debug info
   if (import.meta.env?.DEV) {
-    console.info(`[ocean] Created Global Ocean at Y=${seaLevel}`);
+    console.info(`[ocean] Created Global Ocean at Y=${seaLevel} with radius ${radius}`);
   }
 
   return water;

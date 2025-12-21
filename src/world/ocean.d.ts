@@ -49,6 +49,9 @@ export interface OceanOptions {
   maxTextureSize?: number;
   devicePixelRatio?: number;
   seaLevel?: number | null;
+  radius?: number | null;
+  horizonOffset?: number | null;
+  waterColor?: number | string | null;
   waterNormals?: WaterNormalSource | Texture | DataTexture | null;
   waterNormalsUrl?: string | null;
   waterNormalsCandidates?: string[] | null;
