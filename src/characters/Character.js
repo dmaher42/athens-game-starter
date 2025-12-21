@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createGLTFLoader, loadGLBWithFallbacks } from '../utils/glbSafeLoader.js';
+import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
 /** @typedef {'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump'} AnimName */
 
@@ -48,15 +49,10 @@ export class Character extends THREE.Object3D {
         o.castShadow = true;
         o.receiveShadow = true;
         o.frustumCulled = false;
-        if (o.material) {
-          if (Array.isArray(o.material)) {
-            o.material.forEach((m) => (m.fog = false));
-          } else {
-            o.material.fog = false;
-          }
-        }
       }
     });
+
+    applyForegroundFogPolicy(this.model);
 
     this.model.rotation.y = 0;
     this.add(this.model);
