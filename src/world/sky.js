@@ -100,7 +100,7 @@ function applySkySettings(sky, settings = {}) {
 }
 
 export function createSky(scene) {
-  const geometry = new SphereGeometry(2000, 32, 18);
+  const geometry = new SphereGeometry(4000, 32, 18);
   const material = new ShaderMaterial({
     side: BackSide,
     depthWrite: false,

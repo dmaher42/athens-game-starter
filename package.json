@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@gltf-transform/cli": "^4.2.1",
-    "@playwright/test": "^1.46.0",
+    "@playwright/test": "^1.57.0",
     "@types/node": "^24.7.2",
     "@types/three": "^0.180.0",
     "@types/web": "^0.0.279",
