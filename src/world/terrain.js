@@ -199,6 +199,78 @@ function getElevation(x, z, seaLevel, coastData = null) {
   return height;
 }
 
+function createSkirtGeometry(sourceGeometry, seaLevel) {
+  const posAttr = sourceGeometry.attributes.position;
+  const widthSegments = sourceGeometry.parameters.widthSegments;
+  const heightSegments = sourceGeometry.parameters.heightSegments;
+
+  const w = widthSegments;
+  const h = heightSegments;
+  const stride = w + 1;
+
+  // Indices of boundary vertices in CCW order around the perimeter
+  const boundaryIndices = [];
+
+  // Top edge (row 0): (0,0) -> (w,0)
+  for (let x = 0; x < w; x++) boundaryIndices.push(0 * stride + x);
+
+  // Right edge (col w): (w,0) -> (w,h)
+  for (let y = 0; y < h; y++) boundaryIndices.push(y * stride + w);
+
+  // Bottom edge (row h): (w,h) -> (0,h)
+  for (let x = w; x > 0; x--) boundaryIndices.push(h * stride + x);
+
+  // Left edge (col 0): (0,h) -> (0,0)
+  for (let y = h; y > 0; y--) boundaryIndices.push(y * stride + 0);
+
+  const vertices = [];
+  const colors = [];
+
+  const skirtDepth = -20.0;
+  const bottomZ = seaLevel + skirtDepth;
+
+  const topColor = SAND_COLOR;
+  const bottomColor = new THREE.Color().copy(SAND_COLOR).multiplyScalar(0.4);
+
+  for (let i = 0; i < boundaryIndices.length; i++) {
+    const idx = boundaryIndices[i];
+    const nextIdx = boundaryIndices[(i + 1) % boundaryIndices.length];
+
+    const x1 = posAttr.getX(idx);
+    const y1 = posAttr.getY(idx);
+    const z1 = posAttr.getZ(idx);
+
+    const x2 = posAttr.getX(nextIdx);
+    const y2 = posAttr.getY(nextIdx);
+    const z2 = posAttr.getZ(nextIdx);
+
+    // Create quad for this segment
+    // Tri 1: Top-Curr, Bottom-Curr, Top-Next
+    vertices.push(x1, y1, z1);
+    vertices.push(x1, y1, bottomZ);
+    vertices.push(x2, y2, z2);
+
+    colors.push(topColor.r, topColor.g, topColor.b);
+    colors.push(bottomColor.r, bottomColor.g, bottomColor.b);
+    colors.push(topColor.r, topColor.g, topColor.b);
+
+    // Tri 2: Top-Next, Bottom-Curr, Bottom-Next
+    vertices.push(x2, y2, z2);
+    vertices.push(x1, y1, bottomZ);
+    vertices.push(x2, y2, bottomZ);
+
+    colors.push(topColor.r, topColor.g, topColor.b);
+    colors.push(bottomColor.r, bottomColor.g, bottomColor.b);
+    colors.push(bottomColor.r, bottomColor.g, bottomColor.b);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  return geo;
+}
+
 export function createTerrain(scene) {
   const size = 420;
   const segments = 256;
@@ -224,6 +296,7 @@ export function createTerrain(scene) {
 
   const seaLevel = getSeaLevelY();
   const color = new THREE.Color();
+  const white = new THREE.Color(1, 1, 1);
 
   for (let i = 0; i < vertexCount; i++) {
     const x = positionAttribute.getX(i);
@@ -234,13 +307,29 @@ export function createTerrain(scene) {
     positionAttribute.setZ(i, height);
     baseHeights[i] = height;
 
-    const baseColor = height < seaLevel + 1.0 ? SAND_COLOR : GRASS_COLOR;
-    const shorelineWetness = THREE.MathUtils.smoothstep(0.25, 1.0, coastData.t);
-    const foamBand = THREE.MathUtils.smoothstep(0.7, 1.0, coastData.t);
-    color
-      .copy(baseColor)
-      .lerp(SHALLOW_WATER_COLOR, shorelineWetness * 0.65)
-      .lerp(SAND_COLOR, foamBand * 0.35);
+    // Shoreline/Beach Band Logic
+    const beachHeight = 2.5;
+    const beachFade = 2.0;
+    const beachLimit = seaLevel + beachHeight;
+
+    // Smooth blending for vertex color to match shader blend
+    // We want white (neutral) below beachLimit to let sand texture show
+    // We want GRASS_COLOR above (beachLimit + beachFade)
+
+    let beachFactor = 0.0;
+    if (height < beachLimit) {
+        beachFactor = 1.0;
+    } else if (height < beachLimit + beachFade) {
+        const t = (height - beachLimit) / beachFade;
+        beachFactor = 1.0 - t;
+    }
+
+    color.copy(GRASS_COLOR).lerp(white, beachFactor);
+
+    if (height < seaLevel) {
+       color.lerp(SHALLOW_WATER_COLOR, 0.5);
+    }
+
     colorAttribute.setXYZ(i, color.r, color.g, color.b);
   }
 
@@ -260,6 +349,19 @@ export function createTerrain(scene) {
     geometry.setAttribute("basePos", basePos);
   }
 
+  // Create skirt to hide edges
+  const skirtGeometry = createSkirtGeometry(geometry, seaLevel);
+  const skirtMaterial = new THREE.MeshStandardMaterial({
+     vertexColors: true,
+     side: THREE.FrontSide,
+     roughness: 1.0,
+     metalness: 0.0
+  });
+  const skirt = new THREE.Mesh(skirtGeometry, skirtMaterial);
+  skirt.name = "TerrainSkirt";
+  skirt.rotation.x = -Math.PI / 2;
+  scene.add(skirt);
+
   let terrainMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     roughness: 0.94,
@@ -277,18 +379,7 @@ export function createTerrain(scene) {
 
   // Pass sea level to shader uniforms
   if (groundTextureState.beach && groundTextureState.beach.uniforms) {
-    // We can't set the value on the uniform directly here because the shader
-    // hasn't been compiled/created yet. The uniforms object in state.beach
-    // is a placeholder ref that will be linked to the shader instance.
-    // Instead, we rely on onBeforeCompile to link them, but we need
-    // a way to update the value.
-    // Actually, injectGroundTextureShader CREATES the uniforms on the shader object.
-    // We can just store the sea level in the state so injectGroundTextureShader uses it?
-    // No, injectGroundTextureShader sets value: 0.0.
-    // We should update it after compilation or provide a mechanism.
-
-    // Simplest: The shader object passed to onBeforeCompile IS the material's shader.
-    // We can set the value there.
+    // Linked in onBeforeCompile
   }
 
   terrainMaterial.onBeforeCompile = (shader) => {

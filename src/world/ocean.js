@@ -126,7 +126,7 @@ const DEFAULT_INLAND_CLIP = Number.isFinite(HARBOR_WATER_BOUNDS?.south)
 const TERRAIN_CLEARANCE_EPSILON = 0.02;
 const SHORE_PROBE_X_FRACTIONS = [0.2, 0.5, 0.8];
 const SHORE_PROBE_Z_FRACTIONS = [0.0, 0.5, 0.9];
-const DEFAULT_OCEAN_RADIUS = 1800;
+const DEFAULT_OCEAN_RADIUS = 4000;
 const OCEAN_SEGMENTS = 96;
 
 let cachedWaterNormalsTexture = null;
@@ -339,19 +339,26 @@ export async function createOcean(scene, options = {}) {
 
     // Fade Constants
     shader.uniforms.uFadeStart = { value: 800.0 };
-    shader.uniforms.uFadeEnd = { value: 2900.0 };
+    shader.uniforms.uFadeEnd = { value: 3900.0 };
 
-    shader.vertexShader = shader.vertexShader.replace(
-      "void main() {",
-      /* glsl */ `
+    // VERTEX SHADER FIX: Ensure main exists and vWorldPosition is assigned
+    // We try to replace the 'void main() {' string.
+    const vertexHead = "void main() {";
+    const vertexBody = `
       varying vec3 vWorldPosition;
       void main() {
         vWorldPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
-      `
-    );
+      `;
 
-    shader.fragmentShader =
-      /* glsl */ `
+    if (shader.vertexShader.includes(vertexHead)) {
+      shader.vertexShader = shader.vertexShader.replace(vertexHead, vertexBody);
+    } else {
+      // Robust regex replace if formatting differs
+      shader.vertexShader = shader.vertexShader.replace(/void\s+main\s*\(\s*\)\s*\{/, vertexBody);
+    }
+
+    // FRAGMENT SHADER INJECTION
+    const fragmentHeader = /* glsl */ `
       uniform vec2 uIslandCenter;
       uniform float uIslandRadius;
       uniform vec2 uHarborCenter;
@@ -359,7 +366,23 @@ export async function createOcean(scene, options = {}) {
       uniform float uFadeStart;
       uniform float uFadeEnd;
       varying vec3 vWorldPosition;
-    ` + shader.fragmentShader;
+
+      // Renamed to avoid collisions
+      float oceanHash(vec2 p) {
+          return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+      }
+
+      float oceanNoise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          f = f * f * (3.0 - 2.0 * f);
+          return mix(mix(oceanHash(i + vec2(0.0, 0.0)), oceanHash(i + vec2(1.0, 0.0)), f.x),
+                     mix(oceanHash(i + vec2(0.0, 1.0)), oceanHash(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
+    `;
+
+    // Inject header at top (works because Three.js prepends defines/version)
+    shader.fragmentShader = fragmentHeader + "\n" + shader.fragmentShader;
 
     // Apply Shoreline Logic
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -374,14 +397,12 @@ export async function createOcean(scene, options = {}) {
       float distFromOuterCoast = max(0.0, distToIsland - uIslandRadius);
 
       // Harbor Coast: distance from Harbor Center < Harbor Radius (inside the cutout)
-      // Note: Harbor water is *inside* the island radius, so we prioritize harbor check if inside.
       float shoreDist = distFromOuterCoast;
 
       if (distToIsland < uIslandRadius) {
         // Inside island bounds
         if (distToHarbor < uHarborRadius) {
            // Inside Harbor basin
-           // Distance to harbor wall (shore) is radius - distance
            shoreDist = uHarborRadius - distToHarbor;
         } else {
            // Under terrain or near edge
@@ -390,21 +411,29 @@ export async function createOcean(scene, options = {}) {
       }
 
       // Visual Effects
-      float effectZone = 25.0; // Extend 25m from shore
+      float effectZone = 40.0;
       float shoreFactor = 1.0 - smoothstep(0.0, effectZone, shoreDist);
 
-      // 1. Darken water / Reduce reflection
-      // Mix with a dark, earthy tone to ground it
-      vec3 shoreColor = vec3(0.02, 0.05, 0.08); // Deep dark teal/black
-      vec3 mudTint = vec3(0.15, 0.12, 0.10); // Slight muddy variation
+      // Depth Cue: Darken water near shore
+      vec3 deepColor = color;
+      vec3 shallowColor = mix(color, vec3(0.0, 0.02, 0.05), 0.6); // Dark, murky near shore
+      vec3 finalColor = mix(deepColor, shallowColor, shoreFactor);
 
-      // Varies along shore for organic feel (using world pos)
-      float variation = sin(vWorldPosition.x * 0.1) * sin(vWorldPosition.z * 0.1) * 0.5 + 0.5;
-      vec3 targetShoreColor = mix(shoreColor, mudTint, variation * 0.4);
+      // Foam Logic
+      if (shoreFactor > 0.0) {
+        // Noise based on world position
+        float n = oceanNoise(vWorldPosition.xz * 0.5);
+        float foamThreshold = 0.85 - (shoreFactor * 0.3); // More foam near shore
 
-      // Apply mix: Stronger near shore
-      // Reduces reflection because we are mixing on top of the 'color' which contains reflection
-      vec3 finalColor = mix(color, targetShoreColor, shoreFactor * 0.75);
+        // Edge foam line
+        float foamLine = smoothstep(0.0, 3.0, shoreDist) * (1.0 - smoothstep(3.0, 6.0, shoreDist));
+
+        float foam = 0.0;
+        if (n > foamThreshold) foam = 0.4 * shoreFactor;
+
+        // Add subtle white foam
+        finalColor = mix(finalColor, vec3(0.9, 0.95, 1.0), foam + foamLine * 0.3);
+      }
 
       gl_FragColor = vec4( finalColor, 1.0 );
       `
