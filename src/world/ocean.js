@@ -12,6 +12,7 @@ import {
   AGORA_CENTER_3D,
   HARBOR_CENTER,
   HARBOR_WATER_RADIUS,
+  ISLAND_RADIUS,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
 
@@ -332,7 +333,7 @@ export async function createOcean(scene, options = {}) {
     shader.uniforms.uIslandCenter = {
       value: new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z),
     };
-    shader.uniforms.uIslandRadius = { value: 220.0 };
+    shader.uniforms.uIslandRadius = { value: ISLAND_RADIUS };
     shader.uniforms.uHarborCenter = { value: HARBOR_CENTER };
     shader.uniforms.uHarborRadius = { value: HARBOR_WATER_RADIUS };
 

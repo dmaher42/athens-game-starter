@@ -25,6 +25,7 @@ export const HARBOR_CENTER_3D = new THREE.Vector3(
 // All districts now sit on the same flat plane
 export const AGORA_CENTER_3D = new THREE.Vector3(-80, getCityGroundY(), 40);
 export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, getCityGroundY(), 10);
+export const ISLAND_RADIUS = 205;
 
 // Shrink exclusion zones to fit the tighter map
 export const HARBOR_EXCLUDE_RADIUS = 90;
