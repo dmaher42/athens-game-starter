@@ -144,8 +144,8 @@ function populateCityDetails(cityGroup, terrain, buildingPlacements, roadCurves)
   amphoraGeometry.scale(0.3, 0.6, 0.3);
   const crateGeometry = new THREE.BoxGeometry(0.4, 0.35, 0.4);
 
-  const amphoraMaterial = new THREE.MeshStandardMaterial({ color: "#c05621", roughness: 0.75 });
-  const crateMaterial = new THREE.MeshStandardMaterial({ color: "#8f6b45", roughness: 0.9 });
+  const amphoraMaterial = new THREE.MeshStandardMaterial({ color: "#c05621", roughness: 0.75, fog: false });
+  const crateMaterial = new THREE.MeshStandardMaterial({ color: "#8f6b45", roughness: 0.9, fog: false });
 
   const amphoraMatrices = [];
   const crateMatrices = [];
@@ -214,7 +214,7 @@ function populateCityDetails(cityGroup, terrain, buildingPlacements, roadCurves)
 
   // Wild Vegetation (Bushes)
   const bushGeometry = new THREE.DodecahedronGeometry(0.6, 0);
-  const bushMaterial = new THREE.MeshStandardMaterial({ color: "#5d6e52", roughness: 1.0 });
+  const bushMaterial = new THREE.MeshStandardMaterial({ color: "#5d6e52", roughness: 1.0, fog: false });
   const bushMatrices = [];
   const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(80));
 
@@ -412,6 +412,7 @@ export async function createCity(scene, terrain, options = {}) {
       roughness: 1.0,
       metalness: 0.0,
       side: THREE.DoubleSide,
+      fog: false,
     });
     const roadMesh = new THREE.Mesh(mergedRoads, roadMaterial);
     roadMesh.receiveShadow = true;
@@ -672,6 +673,7 @@ export async function createCity(scene, terrain, options = {}) {
       (await makeTiledPBR("textures/marble", { repeat: { x: 0.25, y: 0.25 } })) ||
       new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
     cityMaterial.vertexColors = true;
+    cityMaterial.fog = false;
     const cityMesh = new THREE.Mesh(mergedCity, cityMaterial);
     cityMesh.castShadow = true;
     cityMesh.receiveShadow = true;
@@ -685,7 +687,7 @@ export async function createCity(scene, terrain, options = {}) {
 
     const foundationGeo = new THREE.BoxGeometry(40, 20, 80);
     foundationGeo.translate(0, -10, 0);
-    const foundationMaterial = new THREE.MeshStandardMaterial({ color: "#7a7a7a", roughness: 0.9 });
+    const foundationMaterial = new THREE.MeshStandardMaterial({ color: "#7a7a7a", roughness: 0.9, fog: false });
     const foundation = new THREE.Mesh(foundationGeo, foundationMaterial);
     foundation.castShadow = true;
     foundation.receiveShadow = true;
@@ -695,7 +697,7 @@ export async function createCity(scene, terrain, options = {}) {
     monuments.add(parthenon);
 
     const gatewayGeo = generateTempleGeometry(16, 28, 8, 6, 12);
-    const gatewayMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.02 });
+    const gatewayMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.02, fog: false });
     const gateway = new THREE.Mesh(gatewayGeo, gatewayMaterial);
     gateway.castShadow = true;
     gateway.receiveShadow = true;

@@ -15,6 +15,7 @@ export function makeMarbleMaterial(three) {
     clearcoatRoughness: 0.5,
     sheen: 0.0,
     envMapIntensity: 0.9,
+    fog: false,
   });
 }
 
@@ -26,6 +27,7 @@ export function makeBronzeMaterial(three) {
     envMapIntensity: 1.0,
     clearcoat: 0.05,
     clearcoatRoughness: 0.6,
+    fog: false,
   });
 }
 
@@ -39,6 +41,7 @@ export function makeMediterraneanPlasterMaterial(three) {
     clearcoat: 0.08,
     clearcoatRoughness: 0.7,
     envMapIntensity: 0.85,
+    fog: false,
   });
 }
 
@@ -47,6 +50,7 @@ export function makeTreeMaterials(three) {
     color: 0x4f7f3b,
     roughness: 0.7,
     metalness: 0.08,
+    fog: false,
   });
   leafMaterial.name = "TreeLeaves";
 
@@ -54,6 +58,7 @@ export function makeTreeMaterials(three) {
     color: 0x7b5e42,
     roughness: 0.82,
     metalness: 0.12,
+    fog: false,
   });
   barkMaterial.name = "TreeBark";
 
