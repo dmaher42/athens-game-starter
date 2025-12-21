@@ -63,10 +63,10 @@ function sampleHeight(terrain, x, z) {
 export function createVegetationSystem(scene, terrain, cityGroup) {
     if (!scene || !terrain) return;
 
-    const materials = makeTreeMaterials(THREE);
-    // Darker leaf for cypress
-    materials.leafDark = materials.leaf.clone();
-    materials.leafDark.color.setHex(0x1a2b1a);
+  const materials = makeTreeMaterials(THREE);
+  // Darker leaf for cypress
+  materials.leafDark = materials.leaf.clone();
+  materials.leafDark.color.setHex(0x1b3523);
 
     const vegetationGroup = new THREE.Group();
     vegetationGroup.name = "VegetationSystem";

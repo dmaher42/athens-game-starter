@@ -13,7 +13,8 @@ const DEFAULT_SKY_SETTINGS = {
   zenith: "#2f6cb5",
   horizon: "#f2d3a5",
   sun: "#ffd8a6",
-  fogDensity: 0.0014,
+  fogNear: 220,
+  fogFar: 1600,
 };
 
 const SKY_PRESETS = {
@@ -21,25 +22,29 @@ const SKY_PRESETS = {
     zenith: "#1f3f78",
     horizon: "#6ca5ff",
     sun: "#ffd8a6",
-    fogDensity: 0.0016,
+    fogNear: 220,
+    fogFar: 1500,
   },
   golden_hour: {
     zenith: "#3d5f9f",
     horizon: "#f8bf82",
     sun: "#ffb86c",
-    fogDensity: 0.0012,
+    fogNear: 210,
+    fogFar: 1500,
   },
   high_noon: {
     zenith: "#2f6cb5",
     horizon: "#f2d3a5",
     sun: "#ffd8a6",
-    fogDensity: 0.0014,
+    fogNear: 220,
+    fogFar: 1650,
   },
   night_sky: {
     zenith: "#0b1d51",
     horizon: "#1b2a4f",
     sun: "#9fc4ff",
-    fogDensity: 0.0008,
+    fogNear: 240,
+    fogFar: 1800,
   },
 };
 
@@ -58,9 +63,12 @@ function applySkySettings(sky, settings = {}) {
   const zenith = new Color(settings.zenith ?? DEFAULT_SKY_SETTINGS.zenith);
   const horizon = new Color(settings.horizon ?? DEFAULT_SKY_SETTINGS.horizon);
   const sun = new Color(settings.sun ?? DEFAULT_SKY_SETTINGS.sun);
-  const fogDensity = Number.isFinite(settings.fogDensity)
-    ? Math.max(0, settings.fogDensity)
-    : DEFAULT_SKY_SETTINGS.fogDensity;
+  const fogNear = Number.isFinite(settings.fogNear)
+    ? Math.max(0, settings.fogNear)
+    : DEFAULT_SKY_SETTINGS.fogNear;
+  const fogFar = Number.isFinite(settings.fogFar)
+    ? Math.max(fogNear + 50, settings.fogFar)
+    : DEFAULT_SKY_SETTINGS.fogFar;
 
   const { uniforms } = sky.material;
   uniforms.zenithColor.value.copy(zenith);
@@ -70,10 +78,13 @@ function applySkySettings(sky, settings = {}) {
   if (scene) {
     const setFogOptions = scene.userData?.setFogOptions;
     if (typeof setFogOptions === "function") {
-      setFogOptions({ color: horizon, density: fogDensity });
-    } else if (scene.fog && scene.fog.isFogExp2) {
+      setFogOptions({ color: horizon, near: fogNear, far: fogFar });
+    } else if (scene.fog) {
       scene.fog.color.copy(horizon);
-      scene.fog.density = fogDensity;
+      if (scene.fog.isFog) {
+        scene.fog.near = fogNear;
+        scene.fog.far = fogFar;
+      }
     }
   }
 
@@ -83,7 +94,8 @@ function applySkySettings(sky, settings = {}) {
     zenith: zenith.getStyle(),
     horizon: horizon.getStyle(),
     sun: sun.getStyle(),
-    fogDensity,
+    fogNear,
+    fogFar,
   };
 }
 

@@ -5,17 +5,17 @@ import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils } from "th
 // --- COLORS CONFIGURATION ---
 
 const SUN_COLOR_DAWN = new Color("#ffb37f");
-// Slightly warmer noon sun to avoid washed-out light
-const SUN_COLOR_NOON = new Color("#ffe1b5");
-const SUN_COLOR_DUSK = new Color("#ff9f76");
+// Golden-leaning noon sun to add warmth to highlights
+const SUN_COLOR_NOON = new Color("#ffd2a1");
+const SUN_COLOR_DUSK = new Color("#ff9b6a");
 
 const SKY_COLOR_NIGHT = new Color("#0b1d51");
 // Cooler skylight to keep shadows blue-toned
-const SKY_COLOR_DAY = new Color("#a6c4ff");
+const SKY_COLOR_DAY = new Color("#9bb7ed");
 
 const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
 // Cooler ground bounce to reduce flatness
-const GROUND_COLOR_DAY = new Color("#d9dde3");
+const GROUND_COLOR_DAY = new Color("#ccd3dc");
 // ------------------------------------------------------------------
 
 const scratchColor = new Color();
@@ -27,8 +27,8 @@ function lerpColor(target, c0, c1, t) {
 }
 
 export function createLighting(scene) {
-  // Increased sun intensity for better contrast (2.2 -> 3.5)
-  const sunLight = new DirectionalLight(0xffffff, 3.5);
+  // Increased sun intensity for better contrast (2.2 -> 3.9)
+  const sunLight = new DirectionalLight(0xffffff, 3.9);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
   sunLight.shadow.radius = 2;
@@ -57,7 +57,7 @@ export function createLighting(scene) {
   scene.add(sunLight.target);
 
   // Reduced ambient intensity and cooler colors to keep contrast in shadows
-  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.35);
+  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.28);
   scene.add(hemiLight);
 
   return { sunLight, hemiLight, nightFactor: 0 };
@@ -89,16 +89,16 @@ export function updateLighting(lights, sunDir, options = {}) {
     sunLight.target.updateMatrixWorld();
   }
 
-  // Lerp sun intensity to new max (3.5)
-  const targetSunIntensity = MathUtils.lerp(0.0, 3.5, dayFactor);
+  // Lerp sun intensity to new max (3.9)
+  const targetSunIntensity = MathUtils.lerp(0.0, 3.9, dayFactor);
   sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
 
   const c0 = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, dayFactor);
   const sunColor = c0.lerp(SUN_COLOR_DUSK, nightFactor * 0.55);
   sunLight.color.copy(sunColor);
 
-  // Lerp hemi intensity to new max (0.4)
-  const hemiTarget = MathUtils.lerp(0.08, 0.4, dayFactor);
+  // Lerp hemi intensity to keep directional light dominant
+  const hemiTarget = MathUtils.lerp(0.06, 0.28, dayFactor);
   hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.1);
   lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
   lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);

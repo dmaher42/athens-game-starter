@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { createColorGradePass } from "../world/colorGradingPass.js";
 
 export const WORLD_ROOT_NAME = "WorldRoot";
 
@@ -41,13 +42,14 @@ export function createSceneContext({
 
   const fogState = {
     color: new THREE.Color(0xbfd5ff),
+    near: 220,
+    far: 1600,
     density: 0.0002,
   };
 
   const createSceneFog = () => {
-    // Atmospheric fog matching the sky tint (approx #dbeaff)
-    // Density tuned for gentle depth cues without binary pop-in
-    return new THREE.FogExp2(fogState.color.clone(), fogState.density);
+    // Distance-weighted fog keeps the town readable while still blending the horizon.
+    return new THREE.Fog(fogState.color.clone(), fogState.near, fogState.far);
   };
 
   let fogEnabled = false;
@@ -58,17 +60,32 @@ export function createSceneContext({
     }
   };
 
-  const setFogOptions = ({ color, density } = {}) => {
+  const setFogOptions = ({ color, density, near, far } = {}) => {
     if (color) {
       fogState.color.copy(color instanceof THREE.Color ? color : new THREE.Color(color));
     }
-    if (Number.isFinite(density)) {
-      fogState.density = Math.max(0, density);
+    if (Number.isFinite(near)) {
+      fogState.near = Math.max(0, near);
+    }
+    if (Number.isFinite(far)) {
+      fogState.far = Math.max(fogState.near + 10, far);
     }
 
-    if (scene.fog && scene.fog.isFogExp2) {
+    // Allow legacy density-driven calls by converting to a distant falloff.
+    if (Number.isFinite(density)) {
+      fogState.density = Math.max(0, density);
+      const suggestedFar = THREE.MathUtils.clamp(1 / Math.max(density, 1e-6), 400, 2600);
+      fogState.far = Math.max(fogState.near + 80, suggestedFar);
+    }
+
+    if (scene.fog) {
       scene.fog.color.copy(fogState.color);
-      scene.fog.density = fogState.density;
+      if (scene.fog.isFog) {
+        scene.fog.near = fogState.near;
+        scene.fog.far = fogState.far;
+      } else if (scene.fog.isFogExp2) {
+        scene.fog.density = fogState.density;
+      }
     }
   };
 
@@ -91,6 +108,8 @@ export function createSceneContext({
   scene.userData.getFogOptions = () => ({
     color: fogState.color.clone(),
     density: fogState.density,
+    near: fogState.near,
+    far: fogState.far,
   });
 
   const disposeMaterial = (material) => {
@@ -174,6 +193,8 @@ export function createSceneContext({
   );
   bloomPass.enabled = true;
   composer.addPass(bloomPass);
+  const colorGradePass = createColorGradePass();
+  composer.addPass(colorGradePass);
 
   const renderFrame = () => {
     if (composer) {
@@ -195,6 +216,7 @@ export function createSceneContext({
     camera,
     composer,
     bloomPass,
+    colorGradePass,
     renderFrame,
     refreshWorldRoot,
     setFogEnabled,

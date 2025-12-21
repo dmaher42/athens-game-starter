@@ -112,10 +112,10 @@ export function createHorizon(scene, options = {}) {
   // Soften distance falloff to better match the painted sea line of the skybox.
   const setFogOptions = scene?.userData?.setFogOptions;
   if (typeof setFogOptions === "function") {
-    const targetDensity = Math.max(scene?.fog?.density ?? 0.0002, 0.00035);
     setFogOptions({
       color: fogColor.lerp(horizonColor, 0.25),
-      density: targetDensity,
+      near: Math.max(scene?.fog?.near ?? 0, 180),
+      far: Math.max(scene?.fog?.far ?? 0, outerRadius * 0.9),
     });
   }
 
