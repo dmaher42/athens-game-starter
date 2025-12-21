@@ -107,8 +107,8 @@ function createProceduralWaterNormals(size = 256) {
   return texture;
 }
 
-const _dayWaterColor = new THREE.Color(0x1a4e80);
-const _nightWaterColor = new THREE.Color(0x091c2a);
+const _dayWaterColor = new THREE.Color(0x006b7c);
+const _nightWaterColor = new THREE.Color(0x001a21);
 const _moodWaterColor = new THREE.Color();
 
 const DEFAULT_SEAWARD_PADDING = 4;
@@ -318,8 +318,8 @@ export async function createOcean(scene, options = {}) {
     waterNormals: waterNormals,
     sunDirection: new THREE.Vector3(),
     sunColor: 0xffffff,
-    waterColor: options.waterColor ?? 0x0d2b45,
-    distortionScale: 2.4,
+    waterColor: options.waterColor ?? 0x006b7c,
+    distortionScale: 1.5,
     fog: scene.fog !== undefined,
   });
 
@@ -419,7 +419,7 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0) {
 
   const calmFactor = THREE.MathUtils.clamp(typeof mood === "number" ? mood : 0, 0, 1);
   if (uniforms.distortionScale) {
-    uniforms.distortionScale.value = THREE.MathUtils.lerp(3.2, 1.2, calmFactor);
+    uniforms.distortionScale.value = THREE.MathUtils.lerp(2.0, 0.8, calmFactor);
   }
   if (uniforms.waterColor) {
     uniforms.waterColor.value.copy(
