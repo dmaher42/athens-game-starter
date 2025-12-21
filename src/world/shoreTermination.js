@@ -147,7 +147,6 @@ function createWaterFadeRing({
     innerRadius: { value: innerRadius },
     outerRadius: { value: outerRadius },
     seaLevel: { value: seaLevel },
-    fogColor: { value: fogColor.clone() },
     horizonColor: { value: horizonColor.clone() },
   };
 
@@ -157,6 +156,7 @@ function createWaterFadeRing({
     depthWrite: false,
     side: THREE.DoubleSide,
     uniforms,
+    fog: true,
     vertexShader: /* glsl */ `
       varying vec3 vWorldPosition;
       void main() {
@@ -166,23 +166,27 @@ function createWaterFadeRing({
       }
     `,
     fragmentShader: /* glsl */ `
+      #include <fog_pars_fragment>
       varying vec3 vWorldPosition;
       uniform float innerRadius;
       uniform float outerRadius;
       uniform float seaLevel;
-      uniform vec3 fogColor;
       uniform vec3 horizonColor;
 
       void main() {
-        float dist = length(vWorldPosition.xz);
-        float t = clamp((dist - innerRadius) / max(outerRadius - innerRadius, 0.0001), 0.0, 1.0);
-        float fade = smoothstep(0.08, 0.96, t);
-        float heightFade = smoothstep(seaLevel + 0.4, seaLevel + 8.0, vWorldPosition.y);
-        float alpha = fade * (1.0 - heightFade) * 0.68;
-        if (alpha <= 0.003) discard;
+        #ifdef USE_FOG
+          float dist = length(vWorldPosition.xz);
+          float t = clamp((dist - innerRadius) / max(outerRadius - innerRadius, 0.0001), 0.0, 1.0);
+          float fade = smoothstep(0.08, 0.96, t);
+          float heightFade = smoothstep(seaLevel + 0.4, seaLevel + 8.0, vWorldPosition.y);
+          float alpha = fade * (1.0 - heightFade) * 0.68;
+          if (alpha <= 0.003) discard;
 
-        vec3 color = mix(horizonColor, fogColor, fade * 0.85);
-        gl_FragColor = vec4(color, alpha);
+          vec3 color = mix(horizonColor, fogColor, fade * 0.85);
+          gl_FragColor = vec4(color, alpha);
+        #else
+          discard;
+        #endif
       }
     `,
   });
