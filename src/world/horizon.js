@@ -1,21 +1,21 @@
 import * as THREE from "three";
+import { getSeaLevelY } from "./seaLevelState.js";
 
-const GEOMETRY_SIZE = 4000; // Larger to fill the distance
+const GEOMETRY_SIZE = 7200; // Larger to fill the distance
 const GEOMETRY_SEGMENTS = 128;
 const CITY_RADIUS = 400; // Flat area for the city
-const MAX_HEIGHT = 180; // Taller mountains
+const MAX_HEIGHT = 12; // Low rolling land silhouette
 
 const abyssColor = new THREE.Color(0x0b1d3a); // Deep Water
 const sandColor = new THREE.Color(0xcab89b);  // Beach
 const baseColor = new THREE.Color(0x2f4a3a);  // Forest
-const snowColor = new THREE.Color(0xffffff);  // Peaks
 
 function sampleNoise(x, z) {
-  // Composite noise for jagged rocks
-  const waveA = Math.sin(x * 0.005) + Math.cos(z * 0.005);
-  const waveB = Math.sin((x + z) * 0.01) * 0.5;
-  const waveC = Math.sin((x - z) * 0.02) * 0.2;
-  return (waveA + waveB + waveC + 2) * 0.25 * MAX_HEIGHT;
+  // Composite noise for distant, gentle landforms
+  const waveA = Math.sin(x * 0.0016) * 0.6 + Math.cos(z * 0.0016) * 0.6;
+  const waveB = Math.sin((x + z) * 0.0009) * 0.35;
+  const waveC = Math.sin((x - z) * 0.0006) * 0.2;
+  return (waveA + waveB + waveC + 1.3) * 0.45 * MAX_HEIGHT;
 }
 
 function bayMask(angle) {
@@ -40,18 +40,20 @@ function bayMask(angle) {
 }
 
 function assignVertexColor(target, height) {
-  if (height < 2) {
-    target.lerpColors(abyssColor, sandColor, Math.max(0, height) / 2);
-  } else if (height < 60) {
-    target.lerpColors(sandColor, baseColor, (height - 2) / 58);
-  } else if (height < 120) {
-    target.lerpColors(baseColor, snowColor, (height - 60) / 60);
+  const shallowBlend = Math.max(0, height);
+
+  if (height < 1) {
+    target.lerpColors(abyssColor, sandColor, shallowBlend);
+  } else if (height < 6) {
+    target.lerpColors(sandColor, baseColor, (height - 1) / 5);
   } else {
-    target.copy(snowColor);
+    target.copy(baseColor);
   }
 }
 
 export function createHorizon(scene) {
+  const seaLevel = getSeaLevelY();
+
   const geometry = new THREE.PlaneGeometry(
     GEOMETRY_SIZE,
     GEOMETRY_SIZE,
@@ -69,20 +71,23 @@ export function createHorizon(scene) {
     const y = positions.getY(i); // This becomes Z in world space
     const distance = Math.hypot(x, y);
 
-    let height = -10; // Default deep underwater
+    let height = -8; // Default shallow water below sea level
 
-    // Only raise mountains outside the city
+    // Only raise distant land outside the city
     if (distance >= CITY_RADIUS) {
       const angle = Math.atan2(y, x);
       const mask = bayMask(angle);
       
       // Calculate noise height
       const noise = sampleNoise(x, y);
-      
-      // Apply mask: If mask is 0 (North), height stays low (-10). 
+
+      // Apply mask: If mask is 0 (North), height stays low below sea level.
       // If mask is 1, height becomes noise.
-      height = -10 + (noise + 10) * mask; 
+      height = -8 + (noise + 8) * mask;
     }
+
+    const maxHeight = seaLevel + 12;
+    height = Math.min(height, maxHeight);
 
     positions.setZ(i, height); // Set Z because Plane is flat initially
     assignVertexColor(workingColor, height);
@@ -97,7 +102,42 @@ export function createHorizon(scene) {
     flatShading: true,
     roughness: 1.0,
     fog: true, // Important for depth
+    transparent: true,
+    depthWrite: false,
   });
+
+  const fadeHeight = 12;
+
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.seaLevel = { value: seaLevel };
+    shader.uniforms.fadeHeight = { value: fadeHeight };
+
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        "#include <common>\n varying float vWorldY;"
+      )
+      .replace(
+        "#include <fog_vertex>",
+        "vWorldY = (modelMatrix * vec4(position, 1.0)).y;\n#include <fog_vertex>"
+      );
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        "#include <common>\n varying float vWorldY;\n uniform float seaLevel;\n uniform float fadeHeight;"
+      )
+      .replace(
+        "gl_FragColor = vec4( outgoingLight, diffuseColor.a );",
+        [
+          "float heightT = clamp((vWorldY - seaLevel) / fadeHeight, 0.0, 1.0);",
+          "float alphaFade = mix(1.0, 0.35, heightT);",
+          "float darkness = mix(0.82, 1.0, heightT);",
+          "vec3 finalColor = outgoingLight * darkness;",
+          "gl_FragColor = vec4(finalColor, diffuseColor.a * alphaFade);",
+        ].join("\n")
+      );
+  };
 
   const horizon = new THREE.Mesh(geometry, material);
   horizon.name = "HorizonMesh";
