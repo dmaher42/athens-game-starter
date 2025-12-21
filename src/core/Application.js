@@ -41,6 +41,8 @@ import {
   CITY_AREA_RADIUS,
   ACROPOLIS_PEAK_3D,
   HARBOR_WATER_BOUNDS,
+  HARBOR_WATER_CENTER,
+  HARBOR_WATER_EAST_LIMIT,
   HARBOR_WATER_NORMAL_CANDIDATES,
   MAIN_ROAD_WIDTH,
   getSeaLevelY,
@@ -1231,12 +1233,21 @@ export class Application {
     dockhandHead.castShadow = true;
     dockhand.add(dockhandHead);
 
-    const dockhandPosition = new THREE.Vector3(-118, 0, 94);
+    const seaLevel = getSeaLevelY();
+
+    const dockhandPosition = new THREE.Vector3(
+      HARBOR_WATER_EAST_LIMIT + 6.0,
+      seaLevel,
+      HARBOR_WATER_CENTER.z - 2.0,
+    );
     const dockhandY =
       terrain?.userData?.getHeightAt?.(dockhandPosition.x, dockhandPosition.z) ??
       getSeaLevelY();
-    dockhand.position.set(dockhandPosition.x, dockhandY + 0.05, dockhandPosition.z);
-    worldRoot.add(dockhand);
+    dockhandGroup.position.set(
+      dockhandPosition.x,
+      dockhandY + 0.05,
+      dockhandPosition.z,
+    );
 
     const crateGroup = new THREE.Group();
     crateGroup.name = "HarbourQuestCrate";
@@ -1251,11 +1262,20 @@ export class Application {
     crateMesh.position.y = 0.45;
     crateGroup.add(crateMesh);
 
-    const cratePosition = new THREE.Vector3(-114, 0, 88);
-    const crateY =
-      terrain?.userData?.getHeightAt?.(cratePosition.x, cratePosition.z) ??
-      getSeaLevelY();
-    crateGroup.position.set(cratePosition.x, crateY + 0.05, cratePosition.z);
+    // Place on the harbor shoreline alongside the pier rows.
+    const cratePosition = new THREE.Vector3(
+      HARBOR_WATER_EAST_LIMIT + 10.0,
+      seaLevel,
+      HARBOR_WATER_CENTER.z - 2.0,
+    );
+    const harborY =
+      terrain?.userData?.getHeightAt?.(cratePosition.x, cratePosition.z) ?? getSeaLevelY();
+    crateGroup.position.set(
+      cratePosition.x,
+      harborY + 0.05,
+      cratePosition.z,
+    );
+
     worldRoot.add(crateGroup);
 
     let dockhandBriefed = false;

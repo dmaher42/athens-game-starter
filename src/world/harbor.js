@@ -261,6 +261,26 @@ export function createHarbor(scene) {
   }
   harbor.add(piersGroup);
 
+  const shorelineGroup = new THREE.Group();
+  shorelineGroup.name = "HarborShorelineDressing";
+
+  const dressingZ = [
+    HARBOR_WATER_CENTER.z - 18,
+    HARBOR_WATER_CENTER.z - 2,
+    HARBOR_WATER_CENTER.z + 16,
+  ];
+
+  for (let i = 0; i < dressingZ.length; i++) {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.25, 0.28, 2.4, 10),
+      new THREE.MeshStandardMaterial({ color: 0x5a4230, roughness: 0.85 }),
+    );
+    post.position.set(HARBOR_WATER_EAST_LIMIT + 4.0, seaLevel + 1.2, dressingZ[i]);
+    shorelineGroup.add(post);
+  }
+
+  harbor.add(shorelineGroup);
+
   const boatsGroup = new THREE.Group();
   boatsGroup.name = "HarborBoats";
   let boatStyleIndex = 0;
