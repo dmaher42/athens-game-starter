@@ -17,6 +17,8 @@ const BOAT_STYLES = [
   { hull: 0x2f6e8d, accent: 0xe2a86a },
   { hull: 0x2a5879, accent: 0xd08b58 },
   { hull: 0x3a7aa1, accent: 0xe9b46d },
+  { hull: 0x2e6f9d, accent: 0xffa040 }, // Added richer variant
+  { hull: 0x247792, accent: 0xffb350 }, // Added richer variant
 ];
 
 function enableShadows(mesh) {
@@ -52,9 +54,9 @@ function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOC
   const deck = new THREE.Mesh(
     new THREE.BoxGeometry(length, DOCK_THICKNESS, width),
     new THREE.MeshStandardMaterial({
-      color: 0x9b7b5d,
-      roughness: 0.62,
-      metalness: 0.06,
+      color: 0xbfa48a, // Lighter, more sunlit wood
+      roughness: 0.65,
+      metalness: 0.04,
     }),
   );
   deck.position.y = seaLevel - DOCK_THICKNESS * 0.5;
@@ -228,9 +230,9 @@ function createShed(size, groundY, position) {
   const base = new THREE.Mesh(
     new THREE.BoxGeometry(size.x, size.y, size.z),
     new THREE.MeshStandardMaterial({
-      color: 0x4e5661,
-      roughness: 0.54,
-      metalness: 0.18,
+      color: 0x7c756f, // Lighter, warmer stone/wood base
+      roughness: 0.6,
+      metalness: 0.1,
     }),
   );
   base.position.y = size.y * 0.5;
@@ -240,9 +242,9 @@ function createShed(size, groundY, position) {
   const roof = new THREE.Mesh(
     new THREE.BoxGeometry(size.x + 0.6, 0.9, size.z + 0.6),
     new THREE.MeshStandardMaterial({
-      color: 0xa35d3f,
-      roughness: 0.46,
-      metalness: 0.12,
+      color: 0xc45c3d, // Saturated reddish terracotta
+      roughness: 0.5,
+      metalness: 0.05,
     }),
   );
   roof.position.y = size.y + 0.45;

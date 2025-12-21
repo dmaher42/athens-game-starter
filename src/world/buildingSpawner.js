@@ -48,7 +48,40 @@ function createMaterial(key, rng, overrides = {}) {
       // However, we want to support color being passed as hex or string.
   }
 
-  return new THREE.MeshStandardMaterial({ ...base, ...overrides, color });
+  const mat = new THREE.MeshStandardMaterial({ ...base, ...overrides, color });
+  mat.userData = { ...mat.userData, materialType: key };
+  return mat;
+}
+
+function applyHarborColorPass(group) {
+  if (!group) return;
+  group.traverse((child) => {
+    if (!child.isMesh || !child.material) return;
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+    materials.forEach((mat) => {
+      const type = mat.userData?.materialType;
+      if (!type || mat.userData.harborPassApplied) return;
+
+      const hsl = { h: 0, s: 0, l: 0 };
+      mat.color.getHSL(hsl);
+
+      if (['stone', 'marble', 'plaster', 'trim'].includes(type)) {
+        // Brighter, sunlit, slightly more saturated
+        hsl.s = Math.min(1.0, hsl.s * 1.2 + 0.05);
+        hsl.l = Math.min(0.98, hsl.l * 1.05 + 0.02);
+        mat.color.setHSL(hsl.h, hsl.s, hsl.l);
+      } else if (['roof', 'clay', 'wood', 'accent'].includes(type)) {
+        // Richer colors, boost saturation
+        hsl.s = Math.min(0.9, hsl.s * 1.25 + 0.1);
+        hsl.l = Math.min(0.9, hsl.l * 1.05);
+        mat.color.setHSL(hsl.h, hsl.s, hsl.l);
+      }
+      // Paving/Ground remains neutral
+
+      mat.userData.harborPassApplied = true;
+    });
+  });
 }
 
 function applyBuildingRoughnessVariance(root, rng) {
@@ -504,6 +537,11 @@ export function spawnBuilding(options = {}) {
 
   const building = spawner(spawnOpts);
   building.userData = { ...building.userData, district, type };
+
+  if (district === 'harbor') {
+    applyHarborColorPass(building);
+  }
+
   return building;
 }
 
