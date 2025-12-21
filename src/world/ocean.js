@@ -9,6 +9,9 @@ import {
   HARBOR_WATER_NORMAL_CANDIDATES,
   getSeaLevelY,
   SEA_LEVEL_Y,
+  AGORA_CENTER_3D,
+  HARBOR_CENTER,
+  HARBOR_WATER_RADIUS,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
 
@@ -322,6 +325,83 @@ export async function createOcean(scene, options = {}) {
     distortionScale: 1.5,
     fog: scene.fog !== undefined,
   });
+
+  // Shader injection for shoreline interaction
+  water.material.onBeforeCompile = (shader) => {
+    // Shoreline Constants (matching terrain.js/locations.js)
+    shader.uniforms.uIslandCenter = {
+      value: new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z),
+    };
+    shader.uniforms.uIslandRadius = { value: 220.0 };
+    shader.uniforms.uHarborCenter = { value: HARBOR_CENTER };
+    shader.uniforms.uHarborRadius = { value: HARBOR_WATER_RADIUS };
+
+    shader.vertexShader = shader.vertexShader.replace(
+      "void main() {",
+      /* glsl */ `
+      varying vec3 vWorldPosition;
+      void main() {
+        vWorldPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
+      `
+    );
+
+    shader.fragmentShader =
+      /* glsl */ `
+      uniform vec2 uIslandCenter;
+      uniform float uIslandRadius;
+      uniform vec2 uHarborCenter;
+      uniform float uHarborRadius;
+      varying vec3 vWorldPosition;
+    ` + shader.fragmentShader;
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "gl_FragColor = vec4( color, 1.0 );",
+      /* glsl */ `
+      // Shoreline Interaction Logic
+      float distToIsland = distance(vWorldPosition.xz, uIslandCenter);
+      float distToHarbor = distance(vWorldPosition.xz, uHarborCenter);
+
+      // Determine proximity to shore
+      // Outer Coast: distance from Island Center > Island Radius
+      float distFromOuterCoast = max(0.0, distToIsland - uIslandRadius);
+
+      // Harbor Coast: distance from Harbor Center < Harbor Radius (inside the cutout)
+      // Note: Harbor water is *inside* the island radius, so we prioritize harbor check if inside.
+      float shoreDist = distFromOuterCoast;
+
+      if (distToIsland < uIslandRadius) {
+        // Inside island bounds
+        if (distToHarbor < uHarborRadius) {
+           // Inside Harbor basin
+           // Distance to harbor wall (shore) is radius - distance
+           shoreDist = uHarborRadius - distToHarbor;
+        } else {
+           // Under terrain or near edge
+           shoreDist = 0.0;
+        }
+      }
+
+      // Visual Effects
+      float effectZone = 25.0; // Extend 25m from shore
+      float shoreFactor = 1.0 - smoothstep(0.0, effectZone, shoreDist);
+
+      // 1. Darken water / Reduce reflection
+      // Mix with a dark, earthy tone to ground it
+      vec3 shoreColor = vec3(0.02, 0.05, 0.08); // Deep dark teal/black
+      vec3 mudTint = vec3(0.15, 0.12, 0.10); // Slight muddy variation
+
+      // Varies along shore for organic feel (using world pos)
+      float variation = sin(vWorldPosition.x * 0.1) * sin(vWorldPosition.z * 0.1) * 0.5 + 0.5;
+      vec3 targetShoreColor = mix(shoreColor, mudTint, variation * 0.4);
+
+      // Apply mix: Stronger near shore
+      // Reduces reflection because we are mixing on top of the 'color' which contains reflection
+      vec3 finalColor = mix(color, targetShoreColor, shoreFactor * 0.75);
+
+      gl_FragColor = vec4( finalColor, 1.0 );
+      `
+    );
+  };
 
   // 4. POSITIONING
   water.rotation.x = -Math.PI / 2;
