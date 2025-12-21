@@ -546,5 +546,7 @@ export function createHarborDecorations(parent, options = {}) {
     return null;
   }
 
+  applyForegroundFogPolicy(group);
+
   return group;
 }

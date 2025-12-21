@@ -97,6 +97,8 @@ function createCitizenModel(primaryColor, secondaryColor) {
   sash.userData.noCollision = true;
   group.add(sash);
 
+  applyForegroundFogPolicy(group);
+
   return { group, body };
 }
 
