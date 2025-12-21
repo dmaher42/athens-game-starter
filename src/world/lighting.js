@@ -10,11 +10,11 @@ const SUN_COLOR_DUSK = new Color("#ff9b6a");
 
 const SKY_COLOR_NIGHT = new Color("#0b1d51");
 // Cooler skylight to keep shadows blue-toned
-const SKY_COLOR_DAY = new Color("#9bb7ed");
+const SKY_COLOR_DAY = new Color("#8eaad8");
 
 const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
 // Cooler ground bounce to reduce flatness
-const GROUND_COLOR_DAY = new Color("#ccd3dc");
+const GROUND_COLOR_DAY = new Color("#b8c0ca");
 // ------------------------------------------------------------------
 
 const scratchColor = new Color();
@@ -26,8 +26,8 @@ function lerpColor(target, c0, c1, t) {
 }
 
 export function createLighting(scene) {
-  // Increased sun intensity for better contrast (2.2 -> 3.9)
-  const sunLight = new DirectionalLight(0xffffff, 3.9);
+  // Increased sun intensity for better contrast (2.2 -> 3.6)
+  const sunLight = new DirectionalLight(0xffffff, 3.6);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
   sunLight.shadow.radius = 2;
