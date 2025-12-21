@@ -143,12 +143,15 @@ function createWaterFadeRing({
   const geometry = new THREE.RingGeometry(innerRadius, outerRadius, 96, 1);
   geometry.rotateX(-Math.PI / 2);
 
-  const uniforms = {
-    innerRadius: { value: innerRadius },
-    outerRadius: { value: outerRadius },
-    seaLevel: { value: seaLevel },
-    horizonColor: { value: horizonColor.clone() },
-  };
+  const uniforms = THREE.UniformsUtils.merge([
+    THREE.UniformsLib.fog,
+    {
+      innerRadius: { value: innerRadius },
+      outerRadius: { value: outerRadius },
+      seaLevel: { value: seaLevel },
+      horizonColor: { value: horizonColor.clone() },
+    },
+  ]);
 
   const material = new THREE.ShaderMaterial({
     name: "WaterHorizonFade",
