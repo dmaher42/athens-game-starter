@@ -1254,10 +1254,8 @@ export class Application {
         distance: 4.0,
         onInteract: () => {
             if (questManager.currentQuest.status === 'Not Started') {
-                questManager.startQuest("The Harbour Run", "Find the Lost Crate at the Harbour.");
-                // Update label? For now we just keep "Talk" or change it.
-                // Simple state change:
-                templeNpcGroup.userData.interactable.label = "Current Objective: Find Crate";
+                questManager.startQuest("Harbour Run", "Meet the dockhand by the harbour.");
+                templeNpcGroup.userData.interactable.label = "Current Objective: Meet Dockhand";
             } else if (questManager.currentQuest.objective === "Return to the Temple.") {
                 questManager.completeQuest();
                 templeNpcGroup.userData.interactable.label = "Quest Completed";
@@ -1266,6 +1264,47 @@ export class Application {
             } else {
                 // In progress
                 // Could show dialog bubble
+            }
+        }
+    });
+
+    // === DOCKHAND NPC (HARBOR) ===
+    const dockhandGroup = new THREE.Group();
+    dockhandGroup.name = "Dockhand_NPC";
+
+    const dockhandBodyMat = new THREE.MeshStandardMaterial({
+      color: 0x8e6b3c,
+      roughness: 0.65,
+    });
+    const dockhandBody = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.32, 1.0, 4, 12),
+      dockhandBodyMat,
+    );
+    dockhandBody.position.y = 1.0 / 2 + 0.32;
+    dockhandBody.castShadow = true;
+    dockhandGroup.add(dockhandBody);
+
+    const dockhandHead = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 14, 14),
+      new THREE.MeshStandardMaterial({ color: 0xd8c3a5 }),
+    );
+    dockhandHead.position.y = 1.2;
+    dockhandHead.castShadow = true;
+    dockhandGroup.add(dockhandHead);
+
+    const dockhandPos = HARBOR_CENTER_3D.clone().add(new THREE.Vector3(6, 0, -4));
+    const dockhandY = terrain?.userData?.getHeightAt?.(dockhandPos.x, dockhandPos.z) ?? dockhandPos.y;
+    dockhandGroup.position.set(dockhandPos.x, dockhandY + 0.05, dockhandPos.z);
+
+    worldRoot.add(dockhandGroup);
+
+    interactionSystem.register(dockhandGroup, {
+        label: "Talk to Dockhand",
+        distance: 4.0,
+        onInteract: () => {
+            if (questManager.currentQuest.status === 'In Progress' &&
+                questManager.currentQuest.objective === "Meet the dockhand by the harbour.") {
+                questManager.updateObjective("Inspect the marked crate.");
             }
         }
     });
@@ -1295,7 +1334,7 @@ export class Application {
         distance: 3.5,
         onInteract: () => {
             if (questManager.currentQuest.status === 'In Progress' &&
-                questManager.currentQuest.objective.includes("Find the Lost Crate")) {
+                questManager.currentQuest.objective === "Inspect the marked crate.") {
 
                 questManager.updateObjective("Return to the Temple.");
                 // Maybe remove crate or change its label
