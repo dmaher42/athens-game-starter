@@ -275,8 +275,27 @@ export function createTerrain(scene) {
     GROUND_TEXTURE_CONFIG,
   );
 
+  // Pass sea level to shader uniforms
+  if (groundTextureState.beach && groundTextureState.beach.uniforms) {
+    // We can't set the value on the uniform directly here because the shader
+    // hasn't been compiled/created yet. The uniforms object in state.beach
+    // is a placeholder ref that will be linked to the shader instance.
+    // Instead, we rely on onBeforeCompile to link them, but we need
+    // a way to update the value.
+    // Actually, injectGroundTextureShader CREATES the uniforms on the shader object.
+    // We can just store the sea level in the state so injectGroundTextureShader uses it?
+    // No, injectGroundTextureShader sets value: 0.0.
+    // We should update it after compilation or provide a mechanism.
+
+    // Simplest: The shader object passed to onBeforeCompile IS the material's shader.
+    // We can set the value there.
+  }
+
   terrainMaterial.onBeforeCompile = (shader) => {
     injectGroundTextureShader(shader, groundTextureState);
+    if (shader.uniforms.uSeaLevel) {
+      shader.uniforms.uSeaLevel.value = getSeaLevelY();
+    }
   };
 
   terrainMaterial = applyTextureBudgetToMaterial(terrainMaterial, {
