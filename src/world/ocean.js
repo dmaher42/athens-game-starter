@@ -512,10 +512,19 @@ export function mountWaterClipDebug(
   return group;
 }
 
-export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor) {
+export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor, haze = {}) {
   if (!ocean) return;
   const uniforms = ocean.uniforms ?? ocean.mesh?.material?.uniforms;
   if (!uniforms) return;
+
+  if (haze) {
+    if (Number.isFinite(haze.start) && uniforms.uFadeStart) {
+      uniforms.uFadeStart.value = haze.start;
+    }
+    if (Number.isFinite(haze.end) && uniforms.uFadeEnd) {
+      uniforms.uFadeEnd.value = haze.end;
+    }
+  }
 
   if (Number.isFinite(deltaSeconds)) {
     uniforms.time.value += deltaSeconds;

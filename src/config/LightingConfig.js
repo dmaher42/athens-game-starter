@@ -19,13 +19,21 @@ export const DEFAULT_LIGHTING_CONFIG = {
       phase: 0.18,
       exposure: 0.82,
       label: "Blue Hour",
-      skyboxExposure: 0.5,
+      haze: {
+        start: 300,
+        end: 2000,
+        color: "#3b5278",
+      },
     },
     golden_hour: {
       phase: 0.62,
       exposure: 0.96,
       label: "Golden Hour",
-      skyboxExposure: 1.0,
+      haze: {
+        start: 400,
+        end: 2500,
+        color: "#ffcc99",
+      },
     },
     high_noon: {
       phase: 0.5,
@@ -40,12 +48,21 @@ export const DEFAULT_LIGHTING_CONFIG = {
         saturationBoost: 0.0,
         contrastStrength: 0.16,
       },
+      haze: {
+        start: 900,
+        end: 3500,
+        color: "#bfe5f9",
+      },
     },
     night_sky: {
       phase: 0.92,
       exposure: 0.55,
       label: "Deep Night",
-      skyboxExposure: 0.2,
+      haze: {
+        start: 200,
+        end: 1500,
+        color: "#0b1d51",
+      },
     },
   },
 };
