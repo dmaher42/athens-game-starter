@@ -203,6 +203,9 @@ function populateTile(tile, coordX, coordZ, state) {
   const originZ = (coordZ + 0.5) * TILE_SIZE;
   const rng = mulberry32(hashSeed(coordX, coordZ, baseSeed));
 
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
   for (let i = 0; i < BLADES_PER_TILE; i += 1) {
     const dx = (rng() - 0.5) * TILE_SIZE;
     const dz = (rng() - 0.5) * TILE_SIZE;
@@ -229,7 +232,25 @@ function populateTile(tile, coordX, coordZ, state) {
     );
     scales[i] = bladeScale;
     phases[i] = rng();
+
+    // Track bounds for frustum culling
+    if (worldX < minX) minX = worldX;
+    if (worldX > maxX) maxX = worldX;
+    if (worldY < minY) minY = worldY;
+    if (worldY + bladeScale > maxY) maxY = worldY + bladeScale;
+    if (worldZ < minZ) minZ = worldZ;
+    if (worldZ > maxZ) maxZ = worldZ;
   }
+
+  // Update bounding volume to match the new instance positions
+  const padding = 0.5; // Account for blade width and wind sway
+  geometry.boundingBox.min.set(minX - padding, minY, minZ - padding);
+  geometry.boundingBox.max.set(maxX + padding, maxY, maxZ + padding);
+
+  if (!geometry.boundingSphere) {
+    geometry.boundingSphere = new THREE.Sphere();
+  }
+  geometry.boundingBox.getBoundingSphere(geometry.boundingSphere);
 
   geometry.instanceCount = BLADES_PER_TILE;
   geometry.attributes.instanceOffset.needsUpdate = true;
@@ -251,7 +272,7 @@ function createTile(state) {
     phases,
     coord: new THREE.Vector2(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY),
   };
-  tile.mesh.frustumCulled = false;
+  tile.mesh.frustumCulled = true;
   tile.mesh.name = "GrassTile";
   tile.mesh.userData.isGrassTile = true;
   return tile;

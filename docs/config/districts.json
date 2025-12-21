@@ -45,7 +45,7 @@
       "buildingDensity": "high",
       "minSeparation": 12,
       "allowedTypes": ["warehouse", "market", "workshop", "pier"],
-      "roofColors": ["#5d4037", "#4e342e", "#3e2723", "#6d4c41"],
+      "roofColors": ["#8d5e4d", "#a66e5c", "#b4553c", "#8f4b3a"],
       "courtyardChance": 0.05,
       "road": { "width": 5.0, "color": 11579568 }
     },
