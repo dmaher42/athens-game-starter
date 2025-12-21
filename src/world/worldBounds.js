@@ -24,11 +24,11 @@ export function createWorldFloorCap(scene, options = {}) {
     color: FLOOR_COLOR,
     side: THREE.DoubleSide,
     depthWrite: true,
-    transparent: true,
-    opacity: 0,
+    transparent: false,
+    opacity: 1,
     fog: true,
   });
-  material.colorWrite = false;
+  material.colorWrite = true;
   material.depthTest = true;
 
   const cap = new THREE.Mesh(geometry, material);
@@ -37,6 +37,8 @@ export function createWorldFloorCap(scene, options = {}) {
   cap.position.y = seaLevel - depth;
   cap.renderOrder = -10;
   cap.frustumCulled = false;
+  cap.receiveShadow = false;
+  cap.castShadow = false;
 
   scene?.add(cap);
   return cap;
