@@ -365,8 +365,8 @@ export async function createOcean(scene, options = {}) {
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */ `
       // Shoreline Interaction Logic
-      float distToIsland = distance(vWorldPosition.xz, uIslandCenter);
-      float distToHarbor = distance(vWorldPosition.xz, uHarborCenter);
+      float distToIsland = length(vWorldPosition.xz - uIslandCenter);
+      float distToHarbor = length(vWorldPosition.xz - uHarborCenter);
 
       // Determine proximity to shore
       // Outer Coast: distance from Island Center > Island Radius
@@ -413,7 +413,7 @@ export async function createOcean(scene, options = {}) {
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <fog_fragment>",
       /* glsl */ `
-      float dist = distance(vWorldPosition, cameraPosition);
+      float dist = length(vWorldPosition - cameraPosition);
       float fadeFactor = smoothstep(uFadeStart, uFadeEnd, dist);
 
       vec3 targetColor = waterColor;
