@@ -15,9 +15,27 @@ export const DEFAULT_LIGHTING_CONFIG = {
     step: 0.01,
   },
   presets: {
-    blue_hour: { phase: 0.18, exposure: 0.82, label: "Blue Hour" },
-    golden_hour: { phase: 0.62, exposure: 0.96, label: "Golden Hour" },
-    high_noon: { phase: 0.5, exposure: 1.12, label: "Bright Noon" },
+    blue_hour: {
+      phase: 0.77,
+      exposure: 0.82,
+      label: "Blue Hour",
+      sunAzimuthDeg: 110,
+      sunElevationDeg: 0,
+    },
+    golden_hour: {
+      phase: 0.73,
+      exposure: 0.96,
+      label: "Golden Hour",
+      sunAzimuthDeg: 110,
+      sunElevationDeg: 12,
+    },
+    high_noon: {
+      phase: 0.48,
+      exposure: 1.2,
+      label: "Bright Noon",
+      sunAzimuthDeg: 180,
+      sunElevationDeg: 83,
+    },
     night_sky: { phase: 0.92, exposure: 0.55, label: "Deep Night" },
   },
 };

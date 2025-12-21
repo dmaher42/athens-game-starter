@@ -5,16 +5,16 @@ import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils } from "th
 // --- COLORS CONFIGURATION ---
 
 const SUN_COLOR_DAWN = new Color("#ffb37f");
-const SUN_COLOR_NOON = new Color("#ffe6c6");
+const SUN_COLOR_NOON = new Color("#ffffff");
 const SUN_COLOR_DUSK = new Color("#ff9b6a");
 
 const SKY_COLOR_NIGHT = new Color("#0b1d51");
 // Cooler skylight to keep shadows blue-toned
-const SKY_COLOR_DAY = new Color("#8eaad8");
+const SKY_COLOR_DAY = new Color("#9bb5db");
 
 const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
 // Cooler ground bounce to reduce flatness
-const GROUND_COLOR_DAY = new Color("#b8c0ca");
+const GROUND_COLOR_DAY = new Color("#c2cad4");
 // ------------------------------------------------------------------
 
 const scratchColor = new Color();
@@ -100,7 +100,7 @@ export function updateLighting(lights, sunDir, options = {}) {
   }
 
   // Lerp sun intensity to new max (3.9)
-  const targetSunIntensity = MathUtils.lerp(0.05, 3.9, directLightFactor);
+  const targetSunIntensity = MathUtils.lerp(0.05, 4.25, directLightFactor);
   sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
 
   const c0 = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, dayFactor);
