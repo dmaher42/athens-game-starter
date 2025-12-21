@@ -417,13 +417,11 @@ export async function createOcean(scene, options = {}) {
       float dist = length(vWorldPosition - cameraPosition);
       float fadeFactor = smoothstep(uFadeStart, uFadeEnd, dist);
 
-      vec3 targetColor = waterColor;
       #ifdef USE_FOG
-         targetColor = fogColor;
+        vec3 targetColor = fogColor;
+        // Mix existing color (reflection/refraction) with target color to reduce contrast and detail
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, targetColor, fadeFactor * 0.9);
       #endif
-
-      // Mix existing color (reflection/refraction) with target color to reduce contrast and detail
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, targetColor, fadeFactor * 0.9);
 
       #include <fog_fragment>
       `
