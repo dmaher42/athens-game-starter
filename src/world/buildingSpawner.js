@@ -11,27 +11,27 @@ const scratchSize = new THREE.Vector3();
 const scratchCenter = new THREE.Vector3();
 
 const MATERIAL_BASE = {
-  stone: { color: 0xded6c0, roughness: 0.9, metalness: 0.02 },
-  marble: { color: 0xe7d7c1, roughness: 0.7, metalness: 0.05 },
-  clay: { color: 0xc9a77c, roughness: 0.95, metalness: 0.0 },
-  wood: { color: 0x8f6a4a, roughness: 0.85, metalness: 0.0 },
-  roof: { color: 0x9a4631, roughness: 0.75, metalness: 0.0 },
-  plaster: { color: 0xf3efe4, roughness: 0.9, metalness: 0.01 },
-  paving: { color: 0xbdb6a2, roughness: 0.92, metalness: 0.02 },
-  accent: { color: 0xb27c44, roughness: 0.8, metalness: 0.03 },
-  trim: { color: 0xe2dac3, roughness: 0.8, metalness: 0.02 },
+  stone: { color: 0xcfc7b1, roughness: 0.82, metalness: 0.03 },
+  marble: { color: 0xe9dcc6, roughness: 0.62, metalness: 0.06 },
+  clay: { color: 0xc7966b, roughness: 0.88, metalness: 0.0 },
+  wood: { color: 0x8b5e3e, roughness: 0.8, metalness: 0.0 },
+  roof: { color: 0xb24f32, roughness: 0.68, metalness: 0.0 },
+  plaster: { color: 0xf6f1e6, roughness: 0.78, metalness: 0.015 },
+  paving: { color: 0xb2aa95, roughness: 0.86, metalness: 0.025 },
+  accent: { color: 0xb97a3a, roughness: 0.76, metalness: 0.035 },
+  trim: { color: 0xe4d8c0, roughness: 0.78, metalness: 0.025 },
 };
 
 const MATERIAL_VARIANTS = {
-  stone: [0xded6c0, 0xd2c2ab, 0xe2d9c6],
-  marble: [0xe7d7c1, 0xf2e4cf, 0xdacad0],
-  clay: [0xc9a77c, 0xc49a6d, 0xd0b18e],
-  wood: [0x8f6a4a, 0x7a5a3f, 0x9e7650],
-  roof: [0x9a4631, 0x8b3728, 0xaf4d2f],
-  plaster: [0xf3efe4, 0xe9e2d4, 0xf8f2e7],
-  paving: [0xbdb6a2, 0xa19886, 0xc8c1af],
-  accent: [0xb27c44, 0xa66d38, 0xbd864d],
-  trim: [0xe2dac3, 0xd7cdb5, 0xeae1cd],
+  stone: [0xcfc7b1, 0xc6beaa, 0xd8d1bc],
+  marble: [0xe9dcc6, 0xf3e6d1, 0xded2c5],
+  clay: [0xc7966b, 0xc1865e, 0xd3a57a],
+  wood: [0x8b5e3e, 0x7b5338, 0x966842],
+  roof: [0xb24f32, 0xa4412a, 0xbf5c39],
+  plaster: [0xf6f1e6, 0xece3d8, 0xf9f4ea],
+  paving: [0xb2aa95, 0xa49987, 0xc0b6a4],
+  accent: [0xb97a3a, 0xac6d32, 0xc28b48],
+  trim: [0xe4d8c0, 0xd8c9b3, 0xede2cb],
 };
 
 function createMaterial(key, rng, overrides = {}) {
