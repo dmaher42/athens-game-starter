@@ -194,6 +194,7 @@ function addTerrainSkirt(scene, worldRoot, terrain) {
     color: 0xb59a76,
     roughness: 1.0,
     metalness: 0.0,
+    side: THREE.FrontSide,
   });
 
   const createSkirt = (width, depth, x, z, label) => {
@@ -217,6 +218,31 @@ function addTerrainSkirt(scene, worldRoot, terrain) {
   createSkirt(widthEW, outer, -centerX, 0, "W");
 
   worldRoot.add(skirtGroup);
+}
+
+function syncFogToSky(scene, radius) {
+  if (!scene) return;
+  const getFogOptions = scene.userData?.getFogOptions;
+  const setFogOptions = scene.userData?.setFogOptions;
+  if (typeof setFogOptions !== "function") return;
+
+  const fogState = typeof getFogOptions === "function" ? getFogOptions() : null;
+  const skySettings = scene.userData?.sky?.settings;
+  const horizonColor = skySettings?.horizon
+    ? new THREE.Color(skySettings.horizon)
+    : fogState?.color ?? new THREE.Color(0xbfd5ff);
+
+  const fogNear = Math.max(140, Math.min(fogState?.near ?? 200, 260));
+  const fogFar = Math.max(
+    fogNear + 420,
+    Math.min(radius * 0.92, fogState?.far ?? radius * 0.92),
+  );
+
+  setFogOptions({
+    color: horizonColor,
+    near: fogNear,
+    far: fogFar,
+  });
 }
 
 export class Application {
@@ -593,6 +619,7 @@ export class Application {
         color: 0xc2a57a,
         roughness: 1,
         metalness: 0,
+        side: THREE.FrontSide,
       });
       const skirtGroup = new THREE.Group();
       skirtGroup.name = "TerrainSkirt";
@@ -646,9 +673,10 @@ export class Application {
       this.worldFloorCap = createWorldFloorCap(this.scene, {
         seaLevel,
         radius: oceanRadius,
-        depth: 90,
+        depth: 160,
       });
     }
+    syncFogToSky(scene, oceanRadius);
     if (!this.killPlane) {
       this.killPlane = applyKillPlane(this.renderer, seaLevel - 75);
     }
