@@ -326,7 +326,7 @@ export async function createOcean(scene, options = {}) {
     fog: scene.fog !== undefined,
   });
 
-  // Shader injection for shoreline interaction
+  // Shader injection for shoreline interaction and distance fade
   water.material.onBeforeCompile = (shader) => {
     // Shoreline Constants (matching terrain.js/locations.js)
     shader.uniforms.uIslandCenter = {
@@ -335,6 +335,10 @@ export async function createOcean(scene, options = {}) {
     shader.uniforms.uIslandRadius = { value: 220.0 };
     shader.uniforms.uHarborCenter = { value: HARBOR_CENTER };
     shader.uniforms.uHarborRadius = { value: HARBOR_WATER_RADIUS };
+
+    // Fade Constants
+    shader.uniforms.uFadeStart = { value: 300.0 };
+    shader.uniforms.uFadeEnd = { value: 1800.0 };
 
     shader.vertexShader = shader.vertexShader.replace(
       "void main() {",
@@ -351,9 +355,12 @@ export async function createOcean(scene, options = {}) {
       uniform float uIslandRadius;
       uniform vec2 uHarborCenter;
       uniform float uHarborRadius;
+      uniform float uFadeStart;
+      uniform float uFadeEnd;
       varying vec3 vWorldPosition;
     ` + shader.fragmentShader;
 
+    // Apply Shoreline Logic
     shader.fragmentShader = shader.fragmentShader.replace(
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */ `
@@ -401,6 +408,25 @@ export async function createOcean(scene, options = {}) {
       gl_FragColor = vec4( finalColor, 1.0 );
       `
     );
+
+    // Apply Fade Logic
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <fog_fragment>",
+      /* glsl */ `
+      float dist = distance(vWorldPosition, cameraPosition);
+      float fadeFactor = smoothstep(uFadeStart, uFadeEnd, dist);
+
+      vec3 targetColor = waterColor;
+      #ifdef USE_FOG
+         targetColor = fogColor;
+      #endif
+
+      // Mix existing color (reflection/refraction) with target color to reduce contrast and detail
+      gl_FragColor.rgb = mix(gl_FragColor.rgb, targetColor, fadeFactor * 0.9);
+
+      #include <fog_fragment>
+      `
+    );
   };
 
   // 4. POSITIONING
@@ -423,35 +449,6 @@ export async function createOcean(scene, options = {}) {
     const repeat = Math.max(radius / 90, 8);
     waterNormals.repeat.set(repeat, repeat);
   }
-
-  // Distance-based fade to blend water into horizon/fog
-  water.material.onBeforeCompile = function (shader) {
-    shader.uniforms.uFadeStart = { value: 300.0 };
-    shader.uniforms.uFadeEnd = { value: 1800.0 };
-
-    shader.fragmentShader = `
-      uniform float uFadeStart;
-      uniform float uFadeEnd;
-    ` + shader.fragmentShader;
-
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <fog_fragment>",
-      `
-      float dist = length(vToEye);
-      float fadeFactor = smoothstep(uFadeStart, uFadeEnd, dist);
-
-      vec3 targetColor = waterColor;
-      #ifdef USE_FOG
-         targetColor = fogColor;
-      #endif
-
-      // Mix existing color (reflection/refraction) with target color to reduce contrast and detail
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, targetColor, fadeFactor * 0.9);
-
-      #include <fog_fragment>
-      `
-    );
-  };
 
   scene.add(water);
 
