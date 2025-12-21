@@ -2251,6 +2251,16 @@ export class Application {
       const preset = LIGHTING_PRESETS[presetName];
       if (!preset) return;
 
+      if (preset.sunAzimuthDeg != null || preset.sunElevationDeg != null) {
+        if (preset.sunAzimuthDeg != null) {
+          sunAlignmentState.azimuthDeg = wrapAzimuth(preset.sunAzimuthDeg);
+        }
+        if (preset.sunElevationDeg != null) {
+          sunAlignmentState.elevationDeg = clampElevation(preset.sunElevationDeg);
+        }
+        persistSunAlignment();
+      }
+
       const phase = setTimeOfDayPhase(timeOfDayState, preset.phase);
       renderer.toneMappingExposure = preset.exposure;
       applyEnvironmentIntensity(preset.environmentIntensity);

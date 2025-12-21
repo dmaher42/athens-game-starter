@@ -33,11 +33,11 @@ const SKY_PRESETS = {
     fogFar: 1825,
   },
   high_noon: {
-    zenith: "#2f6cb5",
-    horizon: "#f2d3a5",
-    sun: "#ffd8a6",
-    fogNear: 300,
-    fogFar: 1950,
+    zenith: "#3c7fd1",
+    horizon: "#dfe7f0",
+    sun: "#ffffff",
+    fogNear: 320,
+    fogFar: 2000,
   },
   night_sky: {
     zenith: "#0b1d51",
