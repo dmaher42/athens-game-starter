@@ -252,6 +252,7 @@ export function createTerrain(scene) {
     roughness: 0.94,
     metalness: 0.0,
     vertexColors: true,
+    side: THREE.FrontSide,
   });
 
   terrainMaterial.userData.textureBudget = "skip";

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { getSeaLevelY } from "./seaLevelState.js";
 
-const DEFAULT_FLOOR_DEPTH = 80;
+const DEFAULT_FLOOR_DEPTH = 140;
 const DEFAULT_WORLD_RADIUS = 2000;
 const FLOOR_COLOR = new THREE.Color(0x05070b);
 
@@ -25,15 +25,18 @@ export function createWorldFloorCap(scene, options = {}) {
     side: THREE.DoubleSide,
     depthWrite: true,
     transparent: true,
-    opacity: 0.95,
+    opacity: 0,
     fog: true,
   });
+  material.colorWrite = false;
+  material.depthTest = true;
 
   const cap = new THREE.Mesh(geometry, material);
   cap.name = "WorldFloorCap";
   cap.rotation.x = -Math.PI / 2;
   cap.position.y = seaLevel - depth;
   cap.renderOrder = -10;
+  cap.frustumCulled = false;
 
   scene?.add(cap);
   return cap;
