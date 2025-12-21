@@ -118,6 +118,7 @@ import {
   disposeSkybox,
   loadEquirectangularSkybox,
 } from "../world/skybox/SkyboxManager.js";
+import { createSkyDome } from "../world/skybox/SkyDome.js";
 
 console.info("[build]", engineConfig.build || {});
 
@@ -477,6 +478,13 @@ export class Application {
       );
       if (skyObj?.mesh) {
         skyObj.mesh.visible = false;
+      }
+      const USE_SKY_DOME = true;
+      if (USE_SKY_DOME && this.skyboxTexture) {
+        scene.background = null;
+        const skyDome = createSkyDome(this.skyboxTexture);
+        scene.add(skyDome);
+        scene.userData.skyDome = skyDome;
       }
     } catch (error) {
       console.warn(
@@ -2071,8 +2079,13 @@ export class Application {
       const sunDirForCycle = getSunDirection(timeOfDayState);
       const alignedSunDir = syncSunLighting(sunDirForCycle?.y);
 
+      const skyDome = scene?.userData?.skyDome;
+      if (skyDome) {
+        skyDome.position.copy(camera.position);
+      }
+
       // Update sky dome and atmospheric lighting each frame.
-      
+
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, {
         timeOfDayPhase: phase,
