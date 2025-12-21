@@ -1,7 +1,7 @@
 // src/world/buildingSpawner.js
 import * as THREE from "three";
 import { getSeaLevelY, HARBOR_WATER_EAST_LIMIT } from "./locations.js";
-import { disableFog } from "../utils/materialUtils.js";
+import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
 // Procedural generation logic only - GLB loading removed as per user request.
 
@@ -544,7 +544,7 @@ export function spawnBuilding(options = {}) {
     applyHarborColorPass(building);
   }
 
-  disableFog(building);
+  applyForegroundFogPolicy(building);
   return building;
 }
 
@@ -721,7 +721,7 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     if (chosen) chosen.shouldGlow = true;
   }
 
-  disableFog(buildingsGroup);
+  applyForegroundFogPolicy(buildingsGroup);
   return { count, group: buildingsGroup };
 }
 

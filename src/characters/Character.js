@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createGLTFLoader, loadGLBWithFallbacks } from '../utils/glbSafeLoader.js';
-import { disableFog } from '../utils/materialUtils.js';
+import { applyForegroundFogPolicy } from '../utils/materialUtils.js';
 
 /** @typedef {'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump'} AnimName */
 
@@ -52,7 +52,7 @@ export class Character extends THREE.Object3D {
       }
     });
 
-    disableFog(this.model);
+    applyForegroundFogPolicy(this.model);
 
     this.model.rotation.y = 0;
     this.add(this.model);

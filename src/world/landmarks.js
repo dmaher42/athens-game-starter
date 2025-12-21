@@ -17,7 +17,7 @@ import {
 } from "./materials.js";
 import { queueSceneInteractable } from "./interactions.js";
 import { buildTemple } from "../features/temples.js";
-import { disableFog } from "../utils/materialUtils.js";
+import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
 /**
  * Example usage:
@@ -702,7 +702,7 @@ export async function loadLandmark(scene, url, options = {}) {
 
     const finalized = finalizeLandmarkObject(entry, finalObject, scene, options, materialPreset);
     if (finalized) {
-      disableFog(finalized);
+      applyForegroundFogPolicy(finalized);
       return finalized;
     }
     return null;

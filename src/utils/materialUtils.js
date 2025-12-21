@@ -1,4 +1,4 @@
-export function disableFog(object) {
+export function applyForegroundFogPolicy(object) {
   if (!object || typeof object.traverse !== 'function') return;
   object.traverse((child) => {
     if (child.isMesh && child.material) {
@@ -12,3 +12,6 @@ export function disableFog(object) {
   });
   return object;
 }
+
+// Alias for backward compatibility
+export const disableFog = applyForegroundFogPolicy;
