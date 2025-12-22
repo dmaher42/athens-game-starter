@@ -264,11 +264,15 @@ function createWaterFadeRing({
 
           float alpha = fade * (1.0 - heightFade) * 0.68 * taper;
 
-          if (alpha <= 0.003) discard;
+          if (alpha <= 0.003) {
+            gl_FragColor = vec4(0.0);
+            discard;
+          }
 
           vec3 color = mix(horizonColor, fogColor, fade * 0.85);
           gl_FragColor = vec4(color, alpha);
         #else
+          gl_FragColor = vec4(0.0);
           discard;
         #endif
       }

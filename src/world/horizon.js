@@ -120,7 +120,10 @@ function createHorizonRing({
         float heightFade = smoothstep(seaLevel + 2.0, seaLevel + 14.0, vWorldPosition.y);
         alpha *= (1.0 - heightFade);
 
-        if (alpha <= 0.01) discard;
+        if (alpha <= 0.01) {
+          gl_FragColor = vec4(0.0);
+          discard;
+        }
 
         float skyBlend = smoothstep(0.35, 1.0, vRadialMix);
         vec3 color = mix(horizonColor, fogColor, skyBlend);
