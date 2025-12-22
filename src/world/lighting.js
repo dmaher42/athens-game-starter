@@ -71,6 +71,12 @@ export function updateLighting(lights, sunDir, options = {}) {
     sunDistance = 100,
     sunTarget = { x: 0, y: 0, z: 0 },
     sunHeightOverride,
+    // Overrides for Look Profile system
+    overrideSunColor = null,
+    overrideSunIntensity = null,
+    overrideAmbientColor = null,
+    overrideGroundColor = null,
+    overrideAmbientIntensity = null,
   } = options;
 
   const norm = scratchDir.copy(sunDir).normalize();
@@ -99,19 +105,41 @@ export function updateLighting(lights, sunDir, options = {}) {
     sunLight.target.updateMatrixWorld();
   }
 
-  // Lerp sun intensity to new max (3.9)
-  const targetSunIntensity = MathUtils.lerp(0.05, 4.25, directLightFactor);
-  sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
+  if (overrideSunIntensity != null) {
+    sunLight.intensity = overrideSunIntensity;
+  } else {
+    // Lerp sun intensity to new max (3.9)
+    const targetSunIntensity = MathUtils.lerp(0.05, 4.25, directLightFactor);
+    sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
+  }
 
-  const c0 = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, dayFactor);
-  const sunColor = c0.lerp(SUN_COLOR_DUSK, nightFactor * 0.55);
-  sunLight.color.copy(sunColor);
+  if (overrideSunColor) {
+    sunLight.color.copy(overrideSunColor);
+  } else {
+    const c0 = lerpColor(scratchColor, SUN_COLOR_DAWN, SUN_COLOR_NOON, dayFactor);
+    const sunColor = c0.lerp(SUN_COLOR_DUSK, nightFactor * 0.55);
+    sunLight.color.copy(sunColor);
+  }
 
-  // Lerp hemi intensity to keep directional light dominant
-  const hemiTarget = MathUtils.lerp(0.12, 0.35, ambientFactor);
-  hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.12);
-  lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
-  lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
+  if (overrideAmbientIntensity != null) {
+    hemiLight.intensity = overrideAmbientIntensity;
+  } else {
+    // Lerp hemi intensity to keep directional light dominant
+    const hemiTarget = MathUtils.lerp(0.12, 0.35, ambientFactor);
+    hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.12);
+  }
+
+  if (overrideAmbientColor) {
+    hemiLight.color.copy(overrideAmbientColor);
+  } else {
+    lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
+  }
+
+  if (overrideGroundColor) {
+    hemiLight.groundColor.copy(overrideGroundColor);
+  } else {
+    lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
+  }
 
   lights.nightFactor = nightFactor;
 }
