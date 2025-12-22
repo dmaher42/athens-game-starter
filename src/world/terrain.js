@@ -46,7 +46,7 @@ function gradientNoise(x, z) {
 }
 
 const NOISE_SCALE = 0.05;
-const NOISE_AMPLITUDE = 0.7;
+const NOISE_AMPLITUDE = 0.45;
 const OCEAN_DEPTH = -12.0;
 const CITY_HEIGHT = 2.5; // Base city height (above sea level)
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
@@ -61,8 +61,9 @@ const HARBOUR_TARGET_DEPTH = 2;
 const EAST_HARBOR_CENTER = new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z);
 
 // New Mainland/Coastal Constants
-const INLAND_ELEVATION_SCALE = 300.0; // Significant rise in the west
+const INLAND_ELEVATION_SCALE = 220.0; // West rise dominates over noise
 const TERRAIN_SIZE = 2400; // Large terrain for mainland
+const HALF_TERRAIN_SIZE = TERRAIN_SIZE * 0.5;
 const COAST_X_START = 80; // Fade to ocean starts here (East)
 const INLAND_X_START = -50; // Rise to hills starts here (West)
 
@@ -86,6 +87,14 @@ function computeCoastData(x, z) {
   const fade = THREE.MathUtils.smoothstep(0, 1, t);
 
   return { t, fade };
+}
+
+function computeWestBias(x) {
+  // Normalized X in [-1, 1]; east is +1, west is -1
+  const normalizedX = THREE.MathUtils.clamp(x / HALF_TERRAIN_SIZE, -1, 1);
+  const westBias = THREE.MathUtils.clamp(-normalizedX, 0, 1);
+  // Ease-in curve so the inland rise feels gradual near the city and stronger far west
+  return Math.pow(westBias, 1.55);
 }
 
 function applyHarbourCarve(x, z, seaLevel, height) {
@@ -136,18 +145,14 @@ function getElevation(x, z, seaLevel, coastData = null) {
   // Base Height calculation
   let h = seaLevel + CITY_HEIGHT;
 
-  // Apply Westward Rise (Inland Bias)
-  if (x < INLAND_X_START) {
-      const dist = INLAND_X_START - x;
-      // Power curve for smooth rise: Start slow, get steep
-      // At x = -1000, dist = 950.
-      // rise = (950 / 1200)^2 * 300 = 0.6 * 300 = 180m.
-      const rise = Math.pow(dist / 1200.0, 2.0) * INLAND_ELEVATION_SCALE;
-      h += rise;
-  }
+  // Directional inland elevation that gently increases toward the west (-X)
+  const westBias = computeWestBias(x);
+  h += westBias * INLAND_ELEVATION_SCALE;
 
   // Apply Noise
-  const noise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE) * NOISE_AMPLITUDE;
+  const rawNoise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE);
+  // Keep noise below the inland bias so geography reads clearly
+  const noise = rawNoise * NOISE_AMPLITUDE * (0.65 + (1 - westBias) * 0.35);
 
   // Attenuate noise near coast (East)
   const coast = coastData ?? computeCoastData(x, z);

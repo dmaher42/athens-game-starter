@@ -228,6 +228,61 @@ const applyHazePreset = (scene, haze, setFogOptions) => {
   }
 };
 
+function createCoastalSkirt(scene, terrainSize, seaLevel) {
+  const skirtWidth = terrainSize * 0.9;
+  const skirtDepth = terrainSize * 1.6;
+  const geometry = new THREE.PlaneGeometry(skirtWidth, skirtDepth, 24, 6);
+  geometry.rotateX(-Math.PI / 2);
+
+  const pos = geometry.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const t = THREE.MathUtils.clamp(x / skirtWidth + 0.5, 0, 1);
+    const falloff = THREE.MathUtils.smoothstep(0.0, 1.0, t);
+    const drop = THREE.MathUtils.lerp(1.5, -3.0, falloff);
+    pos.setY(i, seaLevel + drop * Math.pow(falloff, 0.85));
+  }
+  pos.needsUpdate = true;
+  geometry.computeVertexNormals();
+
+  geometry.translate(terrainSize * 0.5 + skirtWidth * 0.5 - 6, seaLevel, 0);
+
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x5a6b59,
+    roughness: 1.0,
+    metalness: 0.0,
+  });
+
+  const skirt = new THREE.Mesh(geometry, material);
+  skirt.name = "CoastalSkirtExtension";
+  skirt.receiveShadow = true;
+  scene.add(skirt);
+  return skirt;
+}
+
+function createFarOceanPlane(scene, seaLevel, terrainSize) {
+  const radius = Math.max(terrainSize * 2.4, 3200);
+  const geometry = new THREE.CircleGeometry(radius, 64);
+  geometry.rotateX(-Math.PI / 2);
+  geometry.translate(terrainSize * 0.45, 0, 0);
+
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x0a3a4a,
+    roughness: 0.9,
+    metalness: 0.0,
+    transparent: true,
+    opacity: 0.65,
+  });
+
+  const plane = new THREE.Mesh(geometry, material);
+  plane.name = "FarOceanPlane";
+  plane.position.y = seaLevel + 0.05;
+  plane.receiveShadow = false;
+  plane.renderOrder = -4;
+  scene.add(plane);
+  return plane;
+}
+
 export class Application {
   constructor({
     baseUrl = DEFAULT_BASE_URL,
@@ -255,6 +310,8 @@ export class Application {
     this.devHud = null;
     this.ocean = null;
     this.pendingOceanStatus = null;
+    this.coastalSkirt = null;
+    this.farOceanPlane = null;
     this.shoreTermination = null;
     this.skyboxTexture = null;
   }
@@ -663,7 +720,10 @@ export class Application {
     const terrainSize = terrain?.geometry?.userData?.size;
 
     const seaLevel = getSeaLevelY();
-    const oceanRadius = 1800;
+    const oceanRadius = Math.max(
+      Number.isFinite(terrainSize) ? terrainSize * 2.2 : 0,
+      2600,
+    );
     const horizonColor = 0x2a3f5c;
     const shorelineInnerRadius = Math.max(
       Number.isFinite(terrainSize) ? terrainSize * 0.5 + 4 : 0,
@@ -677,6 +737,9 @@ export class Application {
         radius: oceanRadius,
         fadeWidth: 320,
         horizonColor,
+        westHeight: 12,
+        eastHeight: 1.2,
+        westRadiusScale: 1.25,
       });
     }
     if (!this.ocean) {
@@ -688,6 +751,9 @@ export class Application {
       });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
     }
+    if (!this.farOceanPlane && Number.isFinite(terrainSize)) {
+      this.farOceanPlane = createFarOceanPlane(this.scene, seaLevel, terrainSize);
+    }
     if (!this.shoreTermination) {
       this.shoreTermination = createShorelineTermination(this.scene, {
         seaLevel,
@@ -698,6 +764,9 @@ export class Application {
         horizonColor,
       });
     }
+    if (!this.coastalSkirt && Number.isFinite(terrainSize)) {
+      this.coastalSkirt = createCoastalSkirt(this.scene, terrainSize, seaLevel);
+    }
     if (!this.worldFloorCap) {
       this.worldFloorCap = createWorldFloorCap(this.scene, {
         seaLevel,
@@ -706,6 +775,13 @@ export class Application {
       });
     }
     syncFogToSky(scene, oceanRadius);
+    const setFogOptions = scene?.userData?.setFogOptions;
+    if (typeof setFogOptions === "function") {
+      const fogColor = scene?.fog?.color ?? new THREE.Color(horizonColor);
+      const near = Math.max(scene?.fog?.near ?? 180, 180);
+      const far = Math.max(near + 640, oceanRadius * 0.8);
+      setFogOptions({ color: fogColor, near, far });
+    }
     if (!this.killPlane) {
       this.killPlane = applyKillPlane(this.renderer, seaLevel - 75);
     }
