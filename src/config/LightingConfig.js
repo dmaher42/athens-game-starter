@@ -30,8 +30,8 @@ export const DEFAULT_LIGHTING_CONFIG = {
       exposure: 0.9,
       label: "Golden Hour",
       haze: {
-        start: 500,
-        end: 2700,
+        start: 420,
+        end: 2100,
         color: "#ffddaa",
       },
     },
@@ -49,8 +49,8 @@ export const DEFAULT_LIGHTING_CONFIG = {
         contrastStrength: 0.12,
       },
       haze: {
-        start: 1500,
-        end: 4800,
+        start: 900,
+        end: 3200,
         color: "#cfe7f7",
       },
     },

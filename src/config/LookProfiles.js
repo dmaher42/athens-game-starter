@@ -21,8 +21,8 @@ export const LOOK_PROFILES = {
     fog: {
       enabled: true,
       color: "#cfe7f7", // Cooler distance separation without haze wall
-      near: 1500,
-      far: 4800,
+      near: 900,
+      far: 3200,
       density: 0.00018, // Unused if linear fog, but good for exp
     },
     skybox: {
@@ -62,8 +62,8 @@ export const LOOK_PROFILES = {
     fog: {
       enabled: true,
       color: "#ffddaa", // Warm haze with brighter sky glow
-      near: 500,
-      far: 2700,
+      near: 420,
+      far: 2100,
     },
     skybox: {
       exposureMultiplier: 1.0,
