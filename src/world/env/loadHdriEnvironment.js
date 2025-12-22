@@ -6,19 +6,29 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
   pmremGenerator.compileEquirectangularShader();
 
   return new Promise((resolve, reject) => {
-    new HDRLoader().load(
-      path,
-      (hdrTexture) => {
-        try {
-          const envMap = pmremGenerator.fromEquirectangular(hdrTexture).texture;
-          scene.environment = envMap;
-          hdrTexture.dispose();
+    new RGBELoader()
+      .setDataType(THREE.UnsignedByteType)
+      .load(
+        path,
+        (hdrTexture) => {
+          try {
+            const envMap = pmremGenerator.fromEquirectangular(hdrTexture).texture;
+            scene.environment = envMap;
+            hdrTexture.dispose();
+            pmremGenerator.dispose();
+            console.log('[HDRI] Environment map applied');
+            resolve(envMap);
+          } catch (err) {
+            console.warn('[HDRI] Failed to apply environment:', err);
+            pmremGenerator.dispose();
+            reject(err);
+          }
+        },
+        undefined,
+        (error) => {
+          console.warn('[HDRI] Load failed:', error);
           pmremGenerator.dispose();
-          console.log('[HDRI] Environment map applied using HDRLoader');
-          resolve(envMap);
-        } catch (err) {
-          console.warn('[HDRI] Failed to apply environment:', err);
-          reject(err);
+          reject(error);
         }
       },
       undefined,

@@ -206,6 +206,48 @@ function syncFogToSky(scene, radius) {
   });
 }
 
+function createDefaultSky(scene, skyInstance = null) {
+  if (!scene) return null;
+
+  const fallbackSky = skyInstance || new DynamicSky(scene);
+  const defaultDirection = azElToDirection(90, 45);
+
+  if (typeof fallbackSky.setSunDirection === "function") {
+    fallbackSky.setSunDirection(defaultDirection);
+  } else if (fallbackSky.sunLight) {
+    fallbackSky.sunLight.position.copy(defaultDirection).multiplyScalar(320);
+  }
+
+  scene.background = fallbackSky.sky ?? fallbackSky;
+
+  let sunLight = fallbackSky.sunLight;
+  if (!sunLight) {
+    sunLight = new THREE.DirectionalLight(0xffffff, 2);
+    sunLight.position.set(1, 1, 0).normalize();
+    scene.add(sunLight);
+  } else if (!sunLight.parent) {
+    scene.add(sunLight);
+  }
+
+  const horizonColor = fallbackSky.settings?.horizon
+    ? new THREE.Color(fallbackSky.settings.horizon)
+    : scene.userData?.sky?.settings?.horizon
+      ? new THREE.Color(scene.userData.sky.settings.horizon)
+      : null;
+
+  if (scene.userData?.setFogOptions) {
+    scene.userData.setFogOptions({
+      color: horizonColor ?? new THREE.Color(0xbfd5ff),
+      near: 40,
+      far: 300,
+    });
+  }
+
+  syncFogToSky(scene, 320);
+
+  return { sky: fallbackSky, sunLight };
+}
+
 const applyHazePreset = (scene, haze, setFogOptions) => {
   if (!scene || !haze) return;
   if (!haze.color || !Number.isFinite(haze.start) || !Number.isFinite(haze.end)) return;
@@ -656,7 +698,8 @@ export class Application {
         path: hdrPath,
       });
     } catch (error) {
-      console.warn("HDRI load skipped:", error);
+      console.warn("[HDRI] Failed, using fallback sky", error);
+      createDefaultSky(scene, dynamicSky);
     }
 
     const alignSunLight = () => {
