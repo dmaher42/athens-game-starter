@@ -487,7 +487,12 @@ export async function createOcean(scene, options = {}) {
       // Depth Cue: Darken water near shore
       vec3 deepColor = color;
       vec3 shallowColor = mix(color, vec3(0.0, 0.02, 0.05), 0.6); // Dark, murky near shore
-      vec3 finalColor = mix(deepColor, shallowColor, shoreFactor);
+      float eastDistance = max(0.0, vWorldPosition.x - uIslandCenter.x);
+      float openSea = clamp(eastDistance / 1600.0, 0.0, 1.0);
+      vec3 horizonTone = mix(vec3(0.08, 0.13, 0.15), vec3(0.03, 0.07, 0.10), openSea);
+      vec3 finalColor = mix(mix(deepColor, shallowColor, shoreFactor), horizonTone, 0.35);
+      finalColor = mix(finalColor, finalColor * 0.85, openSea * 0.35);
+      finalColor = mix(finalColor, finalColor * 1.05, (1.0 - openSea) * 0.15);
 
       // Foam Logic
       if (shoreFactor > 0.0) {
@@ -499,10 +504,10 @@ export async function createOcean(scene, options = {}) {
         float foamLine = smoothstep(0.0, 3.0, shoreDist) * (1.0 - smoothstep(3.0, 6.0, shoreDist));
 
         float foam = 0.0;
-        if (n > foamThreshold) foam = 0.4 * shoreFactor;
+        if (n > foamThreshold) foam = 0.35 * shoreFactor;
 
         // Add subtle white foam
-        finalColor = mix(finalColor, vec3(0.9, 0.95, 1.0), foam + foamLine * 0.3);
+        finalColor = mix(finalColor, vec3(0.86, 0.92, 0.98), foam + foamLine * 0.22);
       }
 
       float distanceDarken = smoothstep(uIslandRadius + 220.0, uIslandRadius + 1400.0, distToIsland);
