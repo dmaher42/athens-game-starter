@@ -2,46 +2,46 @@
 export const LOOK_PROFILES = {
   "Bright Noon": {
     renderer: {
-      toneMappingExposure: 1.15,
+      toneMappingExposure: 1.05,
       // Using 'Standard' or 'ACESFilmic' is handled in renderer setup,
       // but usually exposure is the main variable here.
       // We assume ACESFilmic is the default.
     },
     sun: {
-      color: "#ffffff", // Pure white
-      intensity: 4.5,
+      color: "#fff7e0", // Warm white to avoid harsh glare
+      intensity: 3.8,
       azimuth: -45,    // 315 deg, slightly from the left/front
-      elevation: 70,   // High noon
+      elevation: 70,   // High noon for short shadows
     },
     ambient: {
-      color: "#b0c4de", // Light steel blue
-      groundColor: "#e6dccf", // Warm beige bounce
-      intensity: 0.5,
+      color: "#c5b7a3", // Gentle warm fill for readable foregrounds
+      groundColor: "#e8d8c3", // Warm bounce without bleaching ground
+      intensity: 0.6,
     },
     fog: {
       enabled: true,
-      color: "#bfe5f9", // Subtle bluish
-      near: 900,
-      far: 3500,
-      density: 0.00025, // Unused if linear fog, but good for exp
+      color: "#cfe7f7", // Cooler distance separation without haze wall
+      near: 1500,
+      far: 4800,
+      density: 0.00018, // Unused if linear fog, but good for exp
     },
     skybox: {
-      exposureMultiplier: 1.5,
-      saturationMultiplier: 1.0,
+      exposureMultiplier: 1.3,
+      saturationMultiplier: 1.05,
       // If we need to change texture, we might need a key here.
       // The current system uses 'high_noon' key for sky texture.
       // We might need to map 'Bright Noon' -> 'high_noon' in sky module or here.
       skyKey: "high_noon"
     },
     grade: {
-      contrast: 0.16,
-      saturation: 0.0,
-      shadowTint: "#f3f6ff",
-      midTint: "#ffffff",
-      highlightTint: "#f7fbff",
+      contrast: 0.12,
+      saturation: 0.06,
+      shadowTint: "#eef5ff",
+      midTint: "#fff4e6",
+      highlightTint: "#f8fbff",
     },
     env: {
-      envMapIntensity: 0.8
+      envMapIntensity: 0.65
     }
   },
   "Golden Hour": {
