@@ -1,9 +1,9 @@
 import type { Vector3 } from "three";
 
+import { createHudPanel, startThrottledLoop, updateTextIfChanged } from "./hudShared.js";
 import { getUISlot } from "./uiRoot.js";
 
 type Vector3Like = Pick<Vector3, "x" | "y" | "z">;
-type ImportMetaWithEnv = ImportMeta & { env?: { DEV?: boolean } };
 type WindowWithHudFlag = Window & typeof globalThis & { SHOW_HUD?: boolean };
 
 export interface LightingPresetMeta {
@@ -60,54 +60,7 @@ function ensureStyles(): void {
   style.textContent = `
     .dev-hud-panel {
       width: 260px;
-      background: rgba(9, 12, 18, 0.72);
-      border-radius: 12px;
-      padding: 12px;
-      color: #fff;
-      font: 12px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
-      backdrop-filter: blur(6px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      pointer-events: auto;
-      display: flex;
-      flex-direction: column;
       gap: 12px;
-      transition: width 160ms ease;
-    }
-    .dev-hud-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .dev-hud-title {
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-size: 11px;
-      opacity: 0.85;
-    }
-    .dev-hud-toggle {
-      appearance: none;
-      border: 0;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-weight: 600;
-      font-size: 11px;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      background: rgba(31, 135, 214, 0.18);
-      color: #a8dfff;
-      cursor: pointer;
-      transition: background 120ms ease, color 120ms ease;
-    }
-    .dev-hud-toggle:hover {
-      background: rgba(31, 135, 214, 0.32);
-      color: #e7f6ff;
-    }
-    .dev-hud-content {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
     }
     .dev-hud-compass-container {
       display: flex;
@@ -184,37 +137,29 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     onToggleFog,
     sunAlignment,
   } = options;
-  const isDevBuild = Boolean(
-    (import.meta as ImportMetaWithEnv).env?.DEV,
-  );
   const runtimeWindow: WindowWithHudFlag | null =
     typeof window !== "undefined" ? (window as WindowWithHudFlag) : null;
-  const allowHud = isDevBuild || runtimeWindow?.SHOW_HUD === true;
+  const allowHud = runtimeWindow?.SHOW_HUD === true;
   if (!allowHud) return null;
 
   ensureStyles();
 
   // --- DOM Structure ---
-  const wrap = document.createElement("div") as HudRootElement;
-  wrap.className = "dev-hud-panel";
+  const wrapRef: { current: HudRootElement | null } = { current: null };
+  const panel = createHudPanel({
+    title: "Debug Info",
+    className: "dev-hud-panel",
+    toggleLabels: { expanded: "Minimize", collapsed: "Expand" },
+    onToggle: (collapsed) => {
+      if (!wrapRef.current) return;
+      wrapRef.current.style.width = collapsed ? "auto" : "260px";
+    },
+  });
 
-  // Header
-  const header = document.createElement("div");
-  header.className = "dev-hud-header";
-  const title = document.createElement("div");
-  title.className = "dev-hud-title";
-  title.textContent = "Debug Info";
-  const toggleBtn = document.createElement("button");
-  toggleBtn.className = "dev-hud-toggle";
-  toggleBtn.textContent = "Minimize";
-  header.appendChild(title);
-  header.appendChild(toggleBtn);
-  wrap.appendChild(header);
-
-  // Content Container (collapsible)
-  const content = document.createElement("div");
-  content.className = "dev-hud-content";
-  wrap.appendChild(content);
+  const wrap = panel.root as HudRootElement;
+  wrapRef.current = wrap;
+  const content = panel.content;
+  wrap.style.width = "260px";
 
   // 1. Compass
   const compassContainer = document.createElement("div");
@@ -236,7 +181,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     comp.appendChild(el);
   });
   compassContainer.appendChild(comp);
-  content.appendChild(compassContainer);
+  compassContainer.style.display = "none"; // Minimaps expose compass; avoid duplication here
 
   // 2. Readout (Pos, Bear, Pin)
   const readout = document.createElement("div");
@@ -252,15 +197,6 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
   statusSection.className = "dev-hud-section";
   statusSection.style.display = "none";
   content.appendChild(statusSection);
-
-  // Toggle Logic
-  let isMinimized = false;
-  toggleBtn.addEventListener("click", () => {
-    isMinimized = !isMinimized;
-    content.style.display = isMinimized ? "none" : "flex";
-    toggleBtn.textContent = isMinimized ? "Expand" : "Minimize";
-    wrap.style.width = isMinimized ? "auto" : "260px";
-  });
 
   // --- Helpers & Logic ---
   const statusEntries = new Map<string, HTMLDivElement>();
@@ -291,7 +227,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       statusEntries.set(id, entry);
       statusSection.appendChild(entry);
     }
-    entry.textContent = message;
+    updateTextIfChanged(entry, message);
     updateStatusVisibility();
   };
 
@@ -519,25 +455,34 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     return { deg: Math.round(deg), label: dirs[idx] };
   };
 
-  let rafId = 0;
-  let running = true;
-  const loop = () => {
-    if (!running) return;
+  let lastPosText = "";
+  let lastBearText = "";
+  let lastNeedleDeg = 0;
+  const stopLoop = startThrottledLoop(() => {
     try {
       const p = getPosition?.();
-      const d = getDirection?.();
       if (p && elPos) {
-        elPos.textContent = `(${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)})`;
+        const posText = `(${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)})`;
+        if (posText !== lastPosText) {
+          updateTextIfChanged(elPos, posText);
+          lastPosText = posText;
+        }
       }
+      const d = getDirection?.();
       if (d && elBear) {
         const b = toBearing(d);
-        elBear.textContent = `${b.deg}° ${b.label}`;
-        needle.style.transform = `translate(-1px, -40px) rotate(${b.deg}deg)`;
+        const bearText = `${b.deg}° ${b.label}`;
+        if (bearText !== lastBearText) {
+          updateTextIfChanged(elBear, bearText);
+          lastBearText = bearText;
+        }
+        if (b.deg !== lastNeedleDeg) {
+          needle.style.transform = `translate(-1px, -40px) rotate(${b.deg}deg)`;
+          lastNeedleDeg = b.deg;
+        }
       }
     } catch {}
-    rafId = requestAnimationFrame(loop);
-  };
-  loop();
+  });
 
   const getPresetKeyBindings = (): Map<string, string> | null => {
     return wrap?._presetKeyBindings ?? null;
@@ -564,8 +509,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
 
   const handle: DevHudHandle = {
     dispose() {
-      running = false;
-      cancelAnimationFrame(rafId);
+      stopLoop();
       window.removeEventListener("keydown", onKey);
       wrap.remove();
     },

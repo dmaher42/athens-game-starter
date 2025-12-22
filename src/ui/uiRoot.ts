@@ -54,6 +54,7 @@ function ensureStyles(): void {
       z-index: 1200;
     }
     .ui-slot { display: flex; gap: 10px; align-items: flex-start; }
+    .ui-slot--topLeft, .ui-slot--topRight { flex-direction: column; align-items: flex-start; }
     .ui-slot > * { pointer-events: auto; }
     .ui-slot--topLeft    { grid-row: 1; grid-column: 1; justify-self: start; }
     .ui-slot--topRight   { grid-row: 1; grid-column: 2; justify-self: end; }

@@ -1,3 +1,4 @@
+import { createHudPanel } from "./hudShared.js";
 import { getUISlot } from "./uiRoot.js";
 
 // Basic interface for what we expect from QuestManager (avoiding circular imports or complex types for now)
@@ -17,34 +18,24 @@ export class QuestHud {
   private objectiveEl: HTMLElement;
 
   constructor(questManager: QuestManager) {
-    this.root = document.createElement("div");
-    Object.assign(this.root.style, {
-      background: "rgba(0, 0, 0, 0.6)",
-      color: "#fff",
-      padding: "12px",
-      borderRadius: "8px",
-      backdropFilter: "blur(4px)",
-      fontFamily: "ui-sans-serif, system-ui, sans-serif",
-      minWidth: "200px",
-      display: "none" // Hidden by default until a quest starts
+    ensureQuestStyles();
+
+    const panel = createHudPanel({
+      title: "Active Quest",
+      className: "quest-hud",
+      toggleLabels: { expanded: "Hide", collapsed: "Show" },
     });
+
+    this.root = panel.root;
+    this.root.style.display = "none"; // Hidden by default until a quest starts
 
     this.titleEl = document.createElement("div");
-    Object.assign(this.titleEl.style, {
-      fontWeight: "bold",
-      fontSize: "14px",
-      marginBottom: "4px",
-      color: "#fbbf24" // Amber-400
-    });
-    this.root.appendChild(this.titleEl);
+    this.titleEl.className = "quest-hud__title";
+    panel.content.appendChild(this.titleEl);
 
     this.objectiveEl = document.createElement("div");
-    Object.assign(this.objectiveEl.style, {
-      fontSize: "13px",
-      lineHeight: "1.4",
-      opacity: "0.9"
-    });
-    this.root.appendChild(this.objectiveEl);
+    this.objectiveEl.className = "quest-hud__objective";
+    panel.content.appendChild(this.objectiveEl);
 
     const slot = getUISlot("topLeft");
     if (slot) slot.appendChild(this.root);
@@ -66,9 +57,33 @@ export class QuestHud {
     this.objectiveEl.textContent = questState.objective || "";
 
     if (questState.status === 'Completed') {
-        this.titleEl.style.color = "#4ade80"; // Green
+        this.root.classList.add("quest-hud--completed");
     } else {
-        this.titleEl.style.color = "#fbbf24";
+        this.root.classList.remove("quest-hud--completed");
     }
   }
+}
+
+function ensureQuestStyles(): void {
+  if (typeof document === "undefined") return;
+  const existing = document.getElementById("quest-hud-style");
+  if (existing) return;
+  const style = document.createElement("style");
+  style.id = "quest-hud-style";
+  style.textContent = `
+    .quest-hud { min-width: 220px; }
+    .quest-hud__title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 4px;
+      color: #fbbf24;
+    }
+    .quest-hud__objective {
+      font-size: 13px;
+      line-height: 1.4;
+      opacity: 0.9;
+    }
+    .quest-hud--completed .quest-hud__title { color: #4ade80; }
+  `;
+  document.head.appendChild(style);
 }

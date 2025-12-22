@@ -8,6 +8,7 @@ import {
   HARBOR_CENTER_3D,
 } from "../world/locations.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
+import { createHudPanel, startThrottledLoop } from "./hudShared.js";
 import { getUISlot } from "./uiRoot.js";
 
 const STYLE_ID = "mini-map-style";
@@ -57,49 +58,10 @@ function ensureStyles(): void {
       gap: 8px;
       width: 230px;
       color: #f5f5f5;
-      font: 12px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto;
-      background: rgba(9, 12, 18, 0.72);
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      pointer-events: auto;
-      backdrop-filter: blur(6px);
-      transition: width 160ms ease, box-shadow 160ms ease;
     }
     .mini-map-panel--expanded {
       width: 360px;
       box-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
-    }
-    .mini-map__header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .mini-map__title {
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-size: 11px;
-      opacity: 0.85;
-    }
-    .mini-map__toggle {
-      appearance: none;
-      border: 0;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-weight: 600;
-      font-size: 11px;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      background: rgba(31, 135, 214, 0.18);
-      color: #a8dfff;
-      cursor: pointer;
-      transition: background 120ms ease, color 120ms ease;
-    }
-    .mini-map__toggle:hover {
-      background: rgba(31, 135, 214, 0.32);
-      color: #e7f6ff;
     }
     .mini-map__canvas {
       width: 100%;
@@ -507,24 +469,34 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
   const list = document.createElement("ul");
   legend.appendChild(list);
 
-  const wrap = document.createElement("div");
-  wrap.className = "mini-map-panel";
+  let wrap: HTMLDivElement | null = null;
+  let isExpanded = false;
+  const applyExpandedState = () => {
+    const targetSize = isExpanded ? 360 : 260;
+    canvas.width = targetSize;
+    canvas.height = targetSize;
+    if (wrap) {
+      wrap.classList.toggle("mini-map-panel--expanded", isExpanded);
+    }
+  };
 
-  const header = document.createElement("div");
-  header.className = "mini-map__header";
-  const title = document.createElement("div");
-  title.className = "mini-map__title";
-  title.textContent = "City Mini Map";
-  const toggle = document.createElement("button");
-  toggle.className = "mini-map__toggle";
-  toggle.type = "button";
-  toggle.textContent = "Expand";
-  header.appendChild(title);
-  header.appendChild(toggle);
+  const panel = createHudPanel({
+    title: "City Mini Map",
+    className: "mini-map-panel",
+    initialCollapsed: true,
+    collapseContent: false,
+    toggleLabels: { collapsed: "Expand", expanded: "Collapse" },
+    onToggle: (collapsed: boolean) => {
+      isExpanded = !collapsed;
+      applyExpandedState();
+    },
+  });
 
-  wrap.appendChild(header);
-  wrap.appendChild(canvas);
-  wrap.appendChild(legend);
+  const wrapElement = panel.root;
+  wrap = wrapElement;
+  panel.content.appendChild(canvas);
+  panel.content.appendChild(legend);
+  applyExpandedState();
 
   const ctx = canvas.getContext("2d");
   if (!ctx) {
@@ -533,67 +505,69 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
   }
   const bounds = computeBounds(features);
 
-  let isExpanded = false;
-  const updateToggle = () => {
-    toggle.textContent = isExpanded ? "Collapse" : "Expand";
-    wrap.classList.toggle("mini-map-panel--expanded", isExpanded);
-    const targetSize = isExpanded ? 360 : 260;
-    canvas.width = targetSize;
-    canvas.height = targetSize;
-  };
-  toggle.addEventListener("click", (event) => {
-    event.preventDefault();
-    isExpanded = !isExpanded;
-    updateToggle();
-  });
-  updateToggle();
-
-  let rafId = 0;
   let disposed = false;
   let lastLegendUpdate = 0;
   const legendInterval = 500; // ms
+  let lastLegendKey = "";
+  let lastDrawKey = "";
+
+  const buildPositionKey = (
+    position: MiniMapPoint | Vector3Like | null | undefined,
+  ) => {
+    if (!position) return "";
+    return `${position.x.toFixed(1)}|${position.z.toFixed(1)}`;
+  };
 
   const loop = () => {
     if (disposed) return;
     try {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      bg.addColorStop(0, "#0b1728");
-      bg.addColorStop(1, "#09101a");
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      drawGrid(ctx, canvas);
-      drawFeatures(ctx, canvas, features, bounds);
-
       const rawPosition = getPosition?.();
       const position = normalizePosition(rawPosition);
       const direction = getDirection?.();
+      const drawKey = `${buildPositionKey(position)}::${buildPositionKey(direction)}`;
+
+      if (drawKey !== lastDrawKey) {
+        lastDrawKey = drawKey;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        bg.addColorStop(0, "#0b1728");
+        bg.addColorStop(1, "#09101a");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawGrid(ctx, canvas);
+        drawFeatures(ctx, canvas, features, bounds);
+
+        if (position) {
+          drawPlayer(ctx, canvas, position, direction, bounds);
+        }
+        drawCompass(ctx, direction, canvas.width);
+      }
+
       if (position) {
-        drawPlayer(ctx, canvas, position, direction, bounds);
         const now = performance.now?.() ?? Date.now();
-        if (now - lastLegendUpdate > legendInterval) {
+        const legendKey = buildPositionKey(position);
+        if (legendKey !== lastLegendKey && now - lastLegendUpdate > legendInterval) {
           updateLegend(list, position, features);
+          lastLegendKey = legendKey;
           lastLegendUpdate = now;
         }
       }
-      drawCompass(ctx, direction, canvas.width);
     } catch (error) {
       console.warn("[MiniMap] update failed", error);
     }
-    rafId = requestAnimationFrame(loop);
   };
-  loop();
+  const stopLoop = startThrottledLoop(loop);
 
   const slot = getUISlot("topLeft");
-  slot?.appendChild(wrap);
+  slot?.appendChild(wrapElement);
 
   const handle: MiniMapHandle = {
-    rootElement: wrap,
+    rootElement: wrapElement,
     dispose() {
       disposed = true;
-      if (rafId) cancelAnimationFrame(rafId);
-      wrap.remove();
+      stopLoop();
+      wrapElement.remove();
     },
   };
   return handle;

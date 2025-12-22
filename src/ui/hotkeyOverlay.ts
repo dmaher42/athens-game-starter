@@ -4,6 +4,7 @@ import type {
   HotkeyOverlayOptions,
 } from "@app/types";
 
+import { createHudPanel } from "./hudShared.js";
 import { getUISlot } from "./uiRoot.js";
 
 const STYLE_ID = "hotkey-overlay-style" as const;
@@ -69,6 +70,8 @@ export function mountHotkeyOverlay(
 
   const showButton = options.showButton !== false;
 
+  const initialOpen = loadOpenState();
+
   const root = document.createElement("div");
   root.className = ROOT_CLASS;
   root.setAttribute("role", "dialog");
@@ -76,7 +79,7 @@ export function mountHotkeyOverlay(
 
   const toggleButton = document.createElement("button");
   toggleButton.type = "button";
-  toggleButton.className = `${ROOT_CLASS}__toggle`;
+  toggleButton.className = `${ROOT_CLASS}__toggle hud-toggle`;
   toggleButton.innerHTML = `
     <svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" aria-hidden=\"true\">
       <path fill=\"currentColor\"
@@ -89,16 +92,20 @@ export function mountHotkeyOverlay(
   toggleButton.setAttribute("aria-expanded", "false");
   toggleButton.setAttribute("aria-controls", `${ROOT_CLASS}-panel`);
 
-  const panel = document.createElement("div");
-  panel.className = `${ROOT_CLASS}__panel`;
-  panel.id = `${ROOT_CLASS}-panel`;
-  panel.setAttribute("role", "document");
-  panel.setAttribute("aria-hidden", "true");
-
-  const heading = document.createElement("h2");
-  heading.textContent = "Controls";
-  heading.className = `${ROOT_CLASS}__title`;
-  panel.appendChild(heading);
+  const panelHandle = createHudPanel({
+    title: "Controls",
+    className: `${ROOT_CLASS}__panel`,
+    initialCollapsed: !initialOpen,
+    toggleLabels: { collapsed: "Show", expanded: "Hide" },
+    onToggle: (collapsed) => {
+      const open = !collapsed;
+      saveOpenState(open);
+      root.classList.toggle(HIDDEN_MOD, !open);
+    },
+  });
+  panelHandle.root.id = `${ROOT_CLASS}-panel`;
+  panelHandle.root.setAttribute("role", "document");
+  panelHandle.root.setAttribute("aria-hidden", String(!initialOpen));
 
   const list = document.createElement("dl");
   list.className = `${ROOT_CLASS}__list`;
@@ -131,14 +138,13 @@ export function mountHotkeyOverlay(
     list.appendChild(dd);
   }
 
-  panel.appendChild(list);
+  panelHandle.content.appendChild(list);
 
   const hint = document.createElement("p");
   hint.className = `${ROOT_CLASS}__hint`;
   hint.textContent = `Press ${resolveKeyLabel(toggleKey)} to toggle`;
-  panel.appendChild(hint);
+  panelHandle.content.appendChild(hint);
 
-  const initialOpen = loadOpenState();
   if (!initialOpen) {
     root.classList.add(HIDDEN_MOD);
   } else {
@@ -148,7 +154,7 @@ export function mountHotkeyOverlay(
   if (showButton) {
     root.appendChild(toggleButton);
   }
-  root.appendChild(panel);
+  root.appendChild(panelHandle.root);
 
   const slot = getUISlot("topRight");
   if (!slot) {
@@ -157,15 +163,11 @@ export function mountHotkeyOverlay(
   slot.appendChild(root);
 
   const applyVisibility = (shouldOpen: boolean): void => {
-    if (shouldOpen) {
-      root.classList.remove(HIDDEN_MOD);
-    } else {
-      root.classList.add(HIDDEN_MOD);
-    }
-    const isOpen = !root.classList.contains(HIDDEN_MOD);
-    toggleButton.setAttribute("aria-expanded", String(isOpen));
-    panel.setAttribute("aria-hidden", String(!isOpen));
-    saveOpenState(isOpen);
+    panelHandle.setCollapsed(!shouldOpen);
+    root.classList.toggle(HIDDEN_MOD, !shouldOpen);
+    toggleButton.setAttribute("aria-expanded", String(shouldOpen));
+    panelHandle.root.setAttribute("aria-hidden", String(!shouldOpen));
+    saveOpenState(shouldOpen);
   };
 
   applyVisibility(initialOpen);
