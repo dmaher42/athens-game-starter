@@ -229,9 +229,9 @@ const applyHazePreset = (scene, haze, setFogOptions) => {
 };
 
 function createCoastalSkirt(scene, terrainSize, seaLevel) {
-  const skirtWidth = terrainSize * 0.9;
-  const skirtDepth = terrainSize * 1.6;
-  const geometry = new THREE.PlaneGeometry(skirtWidth, skirtDepth, 24, 6);
+  const skirtWidth = terrainSize * 1.3;
+  const skirtDepth = terrainSize * 1.75;
+  const geometry = new THREE.PlaneGeometry(skirtWidth, skirtDepth, 28, 8);
   geometry.rotateX(-Math.PI / 2);
 
   const pos = geometry.attributes.position;
@@ -748,7 +748,7 @@ export class Application {
         seaLevel,
         radius: oceanRadius,
         horizonOffset: 0,
-        waterColor: 0x006b7c,
+        waterColor: 0x0a5566,
       });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
     }

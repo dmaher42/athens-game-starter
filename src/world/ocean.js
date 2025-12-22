@@ -111,7 +111,7 @@ function createProceduralWaterNormals(size = 256) {
   return texture;
 }
 
-const _dayWaterColor = new THREE.Color(0x006b7c);
+const _dayWaterColor = new THREE.Color(0x0a5566);
 const _nightWaterColor = new THREE.Color(0x001a21);
 const _moodWaterColor = new THREE.Color();
 
@@ -509,6 +509,14 @@ export async function createOcean(scene, options = {}) {
         // Add subtle white foam
         finalColor = mix(finalColor, vec3(0.86, 0.92, 0.98), foam + foamLine * 0.22);
       }
+
+      float distanceDarken = smoothstep(uIslandRadius + 220.0, uIslandRadius + 1400.0, distToIsland);
+      vec3 horizonShade = mix(finalColor, finalColor * vec3(0.55, 0.62, 0.7), distanceDarken);
+
+      float nearShelf = 1.0 - clamp(distFromOuterCoast / 180.0, 0.0, 1.0);
+      vec3 shelfLift = mix(horizonShade, mix(horizonShade, vec3(0.82, 0.86, 0.88), 0.25), nearShelf);
+
+      finalColor = shelfLift * mix(0.92, 1.0, shoreFactor);
 
       gl_FragColor = vec4( finalColor, 1.0 );
       `
