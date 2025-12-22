@@ -46,38 +46,38 @@ export const LOOK_PROFILES = {
   },
   "Golden Hour": {
     renderer: {
-      toneMappingExposure: 0.96,
+      toneMappingExposure: 0.9,
     },
     sun: {
-      color: "#ffaa66", // Warm orange
-      intensity: 3.5,
-      azimuth: -60,
-      elevation: 15,   // Low sun
+      color: "#ffb36b", // Warm amber
+      intensity: 3.9,
+      azimuth: -105,
+      elevation: 8,   // Near-horizon sun
     },
     ambient: {
-      color: "#7d6b56", // Warm brownish grey
-      groundColor: "#4a4036",
-      intensity: 0.4,
+      color: "#6c5945", // Muted warm to keep silhouettes readable
+      groundColor: "#3c2f27",
+      intensity: 0.28,
     },
     fog: {
       enabled: true,
-      color: "#ffcc99", // Warm haze
-      near: 400,
-      far: 2500,
+      color: "#ffddaa", // Warm haze with brighter sky glow
+      near: 500,
+      far: 2700,
     },
     skybox: {
       exposureMultiplier: 1.0,
       skyKey: "golden_hour"
     },
     grade: {
-      contrast: 0.2,
-      saturation: 0.1,
-      shadowTint: "#3d3024",
-      midTint: "#ffecd6",
-      highlightTint: "#fff0e0",
+      contrast: 0.24,
+      saturation: 0.12,
+      shadowTint: "#2f241b",
+      midTint: "#ffe2c4",
+      highlightTint: "#fff3e4",
     },
     env: {
-      envMapIntensity: 1.0
+      envMapIntensity: 0.9
     }
   },
   "Blue Hour": {
