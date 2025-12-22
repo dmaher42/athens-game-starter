@@ -312,6 +312,10 @@ export async function createOcean(scene, options = {}) {
       : SEA_LEVEL_Y;
 
   // 2. CREATE CIRCULAR GEOMETRY ANCHORED TO THE SKYBOX HORIZON
+  // Update: We want a larger ocean to support the "Expand to East" look.
+  // The user says "Bigger than the terrain footprint", "Open and expansive".
+  // DEFAULT_OCEAN_RADIUS is 4000. Terrain is 420.
+  // So 4000 is plenty large.
   const radius = Math.max(options.radius ?? DEFAULT_OCEAN_RADIUS, 400);
   const geometry = new THREE.CircleGeometry(radius, OCEAN_SEGMENTS);
 
@@ -394,6 +398,14 @@ export async function createOcean(scene, options = {}) {
 
       // Determine proximity to shore
       // Outer Coast: distance from Island Center > Island Radius
+      // Modified: We want NO shoreline foam/darkening in the East to simulate open sea.
+      // East is +X.
+
+      float dx = vWorldPosition.x - uIslandCenter.x;
+      float dz = vWorldPosition.z - uIslandCenter.y;
+      // If dx > 50 (East), assume open sea, no shore effects.
+      // Or rather, shore effects should be minimal.
+
       float distFromOuterCoast = max(0.0, distToIsland - uIslandRadius);
 
       // Harbor Coast: distance from Harbor Center < Harbor Radius (inside the cutout)
@@ -410,9 +422,67 @@ export async function createOcean(scene, options = {}) {
         }
       }
 
-      // Visual Effects
+      // Force open sea in East: if X is very large positive, we shouldn't see foam lines unless there's land.
+      // But shoreDist is calculated from IslandRadius.
+      // If distToIsland > IslandRadius, we are outside.
+      // We want to remove the "Coastline" circle effect in the East.
+      // Only show coast if X is negative (West)?
+
+      // Let's use the same 'westFactor' idea or simply verify if we are near the actual terrain mesh edge.
+      // Since we can't easily sample terrain here, we use the radius approximation.
+      // If we simply fade out the 'shoreFactor' based on angle?
+      // East angle = 0.
+      // float angle = atan(dz, dx);
+      // float eastMask = 0.5 * (1.0 - cos(angle)); // 0 at East, 1 at West.
+      // shoreDist = mix(1000.0, shoreDist, eastMask); // Push shore away in East?
+
+      // Actually, if we just let the water be, it will look like open water.
+      // The issue is if the water shader draws a 'foam line' at IslandRadius everywhere.
+      // Current logic: shoreFactor is based on distance from IslandRadius.
+      // If we are at X=500, distToIsland ~ 500 > 220 (radius).
+      // shoreDist = 280.
+      // shoreFactor = 1.0 - smoothstep(0.0, 40.0, 280) = 0.
+      // So no foam at distance. That is correct.
+      // Foam is only near the radius.
+
+      // So we only need to suppress foam at the radius in the East (since there is no land there now).
+      // Yes.
+
+      float angle = atan(dz, dx);
+      // Fixed: smoothstep order must be edge0 < edge1
+      float eastMask = 1.0 - smoothstep(-0.5, 0.5, cos(angle)); // 0 at East, 1 at West.
+
+      // Mask the shore distance logic. If East, pretend we are far from shore.
+      // But we still want the harbor (which is West-ish) to work.
+
+      // If we are in the East sector, we don't want the circular island coast.
+      // If we are West, we do.
+
+      // Let's just modulate shoreFactor.
       float effectZone = 40.0;
-      float shoreFactor = 1.0 - smoothstep(0.0, effectZone, shoreDist);
+      float rawShoreFactor = 1.0 - smoothstep(0.0, effectZone, shoreDist);
+      float shoreFactor = rawShoreFactor * eastMask;
+
+      // However, Harbor is at (-120, 80).
+      // Harbor logic is separate?
+      // shoreDist handles both.
+
+      // If we are inside the harbor radius, we definitely want foam.
+      // Harbor is West. So eastMask should be high there.
+      // Harbor X is negative (-120). Angle is near PI. cos(angle) ~ -1. eastMask ~ 1.
+      // So Harbor is protected.
+
+      // What about North/South? Angle +/- PI/2. cos = 0. eastMask ~ 0.5.
+      // We might lose some foam at North/South tips.
+      // Let's adjust the mask to be tighter around East.
+      // We only want to remove it strictly in the East where we opened the ocean.
+      // say +/- 45 degrees around East (0).
+      // cos(angle) > 0.707.
+
+      float eastSuppress = smoothstep(0.5, 0.8, cos(angle)); // 0 to 1 as we get closer to pure East.
+      float directionalMask = 1.0 - eastSuppress;
+
+      shoreFactor = rawShoreFactor * directionalMask;
 
       // Depth Cue: Darken water near shore
       vec3 deepColor = color;
