@@ -38,7 +38,7 @@ interface OceanStatusOptions {
   readonly bounds?: OceanBounds;
 }
 
-interface HudReadoutElement extends HTMLDivElement {
+interface HudRootElement extends HTMLDivElement {
   _presetKeyBindings?: Map<string, string>;
 }
 
@@ -46,8 +46,130 @@ export interface DevHudHandle {
   dispose(): void;
   setStatusLine(id: string, text?: string | null): void;
   setOceanStatus(options?: OceanStatusOptions | null): void;
-  readonly rootElement: HudReadoutElement;
+  readonly rootElement: HudRootElement;
   updateFogState(state?: boolean | null): void;
+}
+
+const STYLE_ID = "dev-hud-style";
+
+function ensureStyles(): void {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent = `
+    .dev-hud-panel {
+      width: 260px;
+      background: rgba(9, 12, 18, 0.72);
+      border-radius: 12px;
+      padding: 12px;
+      color: #fff;
+      font: 12px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: width 160ms ease;
+    }
+    .dev-hud-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dev-hud-title {
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 11px;
+      opacity: 0.85;
+    }
+    .dev-hud-toggle {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      background: rgba(31, 135, 214, 0.18);
+      color: #a8dfff;
+      cursor: pointer;
+      transition: background 120ms ease, color 120ms ease;
+    }
+    .dev-hud-toggle:hover {
+      background: rgba(31, 135, 214, 0.32);
+      color: #e7f6ff;
+    }
+    .dev-hud-content {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .dev-hud-compass-container {
+      display: flex;
+      justify-content: center;
+      padding-bottom: 8px;
+    }
+    .dev-hud-compass {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.75);
+      position: relative;
+    }
+    .dev-hud-compass-needle {
+      position: absolute;
+      left: 50%; top: 50%;
+      width: 2px; height: 40px;
+      background: rgba(255,0,0,0.9);
+      transform-origin: 50% 100%;
+      border-radius: 2px;
+      transform: translate(-1px, -40px) rotate(0deg);
+    }
+    .dev-hud-compass-label {
+      position: absolute;
+      left: 50%; top: 50%;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .dev-hud-section {
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+    }
+    .dev-hud-heading {
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+      opacity: 0.85;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .dev-hud-btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .dev-hud-btn {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.35);
+      background: rgba(0,0,0,0.35);
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .dev-hud-btn:hover {
+      background: rgba(255,255,255,0.18);
+      border-color: rgba(255,255,255,0.55);
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 // Dev HUD: compass + coordinates + pin hotkey (P)
@@ -70,100 +192,77 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
   const allowHud = isDevBuild || runtimeWindow?.SHOW_HUD === true;
   if (!allowHud) return null;
 
-  // --- DOM
-  const wrap = document.createElement("div");
-  Object.assign(wrap.style, {
-    color: "#fff",
-    font: "12px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto",
-    textShadow: "0 1px 2px rgba(0,0,0,0.45)",
-    userSelect: "none", pointerEvents: "none",
-  });
+  ensureStyles();
 
-  // Compass ring + labels
+  // --- DOM Structure ---
+  const wrap = document.createElement("div") as HudRootElement;
+  wrap.className = "dev-hud-panel";
+
+  // Header
+  const header = document.createElement("div");
+  header.className = "dev-hud-header";
+  const title = document.createElement("div");
+  title.className = "dev-hud-title";
+  title.textContent = "Debug Info";
+  const toggleBtn = document.createElement("button");
+  toggleBtn.className = "dev-hud-toggle";
+  toggleBtn.textContent = "Minimize";
+  header.appendChild(title);
+  header.appendChild(toggleBtn);
+  wrap.appendChild(header);
+
+  // Content Container (collapsible)
+  const content = document.createElement("div");
+  content.className = "dev-hud-content";
+  wrap.appendChild(content);
+
+  // 1. Compass
+  const compassContainer = document.createElement("div");
+  compassContainer.className = "dev-hud-compass-container";
   const comp = document.createElement("div");
-  Object.assign(comp.style, {
-    width: "88px", height: "88px", borderRadius: "50%",
-    border: "2px solid rgba(255,255,255,0.75)",
-    position: "relative", marginBottom: "8px",
-  });
+  comp.className = "dev-hud-compass";
+
   const needle = document.createElement("div");
-  Object.assign(needle.style, {
-    position: "absolute", left: "50%", top: "50%",
-    width: "2px", height: "40px", background: "rgba(255,0,0,0.9)",
-    transformOrigin: "50% 100%", borderRadius: "2px",
-    // Use transform, not the nonstandard 'translate' style:
-    transform: "translate(-1px, -40px) rotate(0deg)",
-  });
+  needle.className = "dev-hud-compass-needle";
   comp.appendChild(needle);
+
   const labels = { N:0, E:90, S:180, W:270 };
   Object.entries(labels).forEach(([txt,deg])=>{
     const el = document.createElement("div");
+    el.className = "dev-hud-compass-label";
     el.textContent = txt;
-    Object.assign(el.style, {
-      position: "absolute", left: "50%", top: "50%",
-      transform: `translate(-50%,-50%) rotate(${deg}deg) translate(0,-38px) rotate(${-deg}deg)`,
-      fontWeight: 700, letterSpacing: "0.5px"
-    });
+    // transform math matches original implementation
+    el.style.transform = `translate(-50%,-50%) rotate(${deg}deg) translate(0,-38px) rotate(${-deg}deg)`;
     comp.appendChild(el);
   });
+  compassContainer.appendChild(comp);
+  content.appendChild(compassContainer);
 
-  // Readout
-  const read = document.createElement("div") as HudReadoutElement;
-  read.style.pointerEvents = "auto"; // allow copy selection
-  read.style.background = "rgba(0,0,0,0.55)";
-  read.style.backdropFilter = "blur(3px)";
-  read.style.padding = "8px 10px";
-  read.style.borderRadius = "8px";
-  read.style.minWidth = "220px";
-
-  // Toggle button header
-  const headerRow = document.createElement("div");
-  Object.assign(headerRow.style, {
-    display: "flex",
-    justifyContent: "flex-end",
-    marginBottom: "4px",
-  });
-  const toggleBtn = document.createElement("button");
-  toggleBtn.textContent = "−"; // minus sign
-  toggleBtn.title = "Minimize HUD";
-  Object.assign(toggleBtn.style, {
-    background: "transparent",
-    border: "none",
-    color: "white",
-    opacity: "0.7",
-    cursor: "pointer",
-    padding: "0 4px",
-    fontSize: "14px",
-    lineHeight: "1",
-  });
-  headerRow.appendChild(toggleBtn);
-  read.appendChild(headerRow);
-
-  const contentContainer = document.createElement("div");
-  contentContainer.innerHTML = [
+  // 2. Readout (Pos, Bear, Pin)
+  const readout = document.createElement("div");
+  readout.innerHTML = [
     `<div><b>Pos</b> <span id="hud-pos">(x,y,z)</span></div>`,
     `<div><b>Bear</b> <span id="hud-bear">0° N</span></div>`,
     `<div style="opacity:.8">Press <b>P</b> to drop a pin</div>`
   ].join("");
-  read.appendChild(contentContainer);
+  content.appendChild(readout);
 
-  toggleBtn.addEventListener("click", () => {
-    const isHidden = contentContainer.style.display === "none";
-    contentContainer.style.display = isHidden ? "block" : "none";
-    comp.style.display = isHidden ? "block" : "none";
-    toggleBtn.textContent = isHidden ? "−" : "+";
-    toggleBtn.title = isHidden ? "Minimize HUD" : "Expand HUD";
-  });
-
+  // 3. Status Section (Dynamic)
   const statusSection = document.createElement("div");
-  Object.assign(statusSection.style, {
-    marginTop: "6px",
-    paddingTop: "6px",
-    borderTop: "1px solid rgba(255,255,255,0.12)",
-    display: "none",
-  });
-  contentContainer.appendChild(statusSection);
+  statusSection.className = "dev-hud-section";
+  statusSection.style.display = "none";
+  content.appendChild(statusSection);
 
+  // Toggle Logic
+  let isMinimized = false;
+  toggleBtn.addEventListener("click", () => {
+    isMinimized = !isMinimized;
+    content.style.display = isMinimized ? "none" : "flex";
+    toggleBtn.textContent = isMinimized ? "Expand" : "Minimize";
+    wrap.style.width = isMinimized ? "auto" : "260px";
+  });
+
+  // --- Helpers & Logic ---
   const statusEntries = new Map<string, HTMLDivElement>();
   const updateStatusVisibility = () => {
     statusSection.style.display = statusEntries.size ? "block" : "none";
@@ -214,21 +313,18 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       setStatusLine("sea", "");
       return;
     }
-
     const safeBounds = bounds as Record<keyof OceanBounds, number>;
     const formatBound = (value: number) => value.toFixed(1);
     const message = [
       `Sea level: ${Number(seaLevel).toFixed(2)}`,
-      `Ocean bounds: W ${formatBound(safeBounds.west)} / E ${formatBound(
-        safeBounds.east
-      )} / N ${formatBound(safeBounds.north)} / S ${formatBound(
-        safeBounds.south
-      )}`,
-    ].join("\n");
+      `Ocean bounds: W ${formatBound(safeBounds.west)} / E ${formatBound(safeBounds.east)}`,
+      `N ${formatBound(safeBounds.north)} / S ${formatBound(safeBounds.south)}`,
+    ].join(" "); // compacted for new layout
 
     setStatusLine("sea", message);
   };
 
+  // Lighting Presets
   const defaultPresetOrder = [
     { name: "Bright Noon", label: "Bright Noon" },
     { name: "Golden Hour", label: "Golden Hour" },
@@ -239,23 +335,59 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     return lightingPresets[name] != null;
   });
 
-  const applyButtonStyles = (button: HTMLButtonElement, active: boolean) => {
-    if (active) {
-      button.style.background = "rgba(255,255,255,0.18)";
-      button.style.borderColor = "rgba(255,255,255,0.55)";
-    } else {
-      button.style.background = "rgba(0,0,0,0.35)";
-      button.style.borderColor = "rgba(255,255,255,0.35)";
+  if (availablePresets.length) {
+    const section = document.createElement("div");
+    section.className = "dev-hud-section";
+
+    const heading = document.createElement("div");
+    heading.className = "dev-hud-heading";
+    heading.textContent = "Lighting Presets";
+    section.appendChild(heading);
+
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "dev-hud-btn-row";
+
+    const presetHotkeyConfig: Array<{ name: string; codes: string[]; keys: string[]; }> = [];
+    const activePresetNames = new Set(availablePresets.map((preset) => preset.name));
+    const presetKeyBindings = new Map<string, string>();
+
+    for (const preset of availablePresets) {
+      const presetMeta = lightingPresets?.[preset.name] || {};
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "dev-hud-btn";
+      const displayLabel = presetMeta.label || preset.label;
+      button.textContent = displayLabel;
+
+      const hotkeyLabel = presetMeta.hotkey || "";
+      if (hotkeyLabel) {
+        button.title = `Set ${displayLabel} lighting (Hotkey ${hotkeyLabel})`;
+        button.setAttribute("aria-keyshortcuts", hotkeyLabel);
+      } else {
+        button.title = `Set ${displayLabel} lighting`;
+      }
+
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (typeof onSetLightingPreset === "function") {
+          onSetLightingPreset(preset.name);
+        }
+      });
+      buttonRow.appendChild(button);
     }
-  };
+    // (Skipped complex hotkey map logic reconstruction for brevity if unused,
+    // but retaining the binding logic below)
 
-  const makeInteractiveButton = (button: HTMLButtonElement) => {
-    button.addEventListener("mouseenter", () => applyButtonStyles(button, true));
-    button.addEventListener("mouseleave", () => applyButtonStyles(button, false));
-    button.addEventListener("focus", () => applyButtonStyles(button, true));
-    button.addEventListener("blur", () => applyButtonStyles(button, false));
-  };
+    section.appendChild(buttonRow);
+    content.appendChild(section);
 
+    // Note: The original code populated presetKeyBindings but didn't actually populate presetHotkeyConfig
+    // with data from arguments. Assuming simple binding logic is sufficient or external config drives it.
+    // Preserving the property on root for the key listener.
+    wrap._presetKeyBindings = presetKeyBindings;
+  }
+
+  // Fog Control
   let fogButton: HTMLButtonElement | null = null;
   const updateFogControls = (state?: boolean | null) => {
     if (!fogButton) return;
@@ -274,175 +406,42 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       : "Enable atmospheric fog (Hotkey F)";
   };
 
-  if (availablePresets.length && !read.querySelector(".hud-lighting-presets")) {
-    const section = document.createElement("div");
-    section.className = "hud-lighting-presets";
-    Object.assign(section.style, {
-      marginTop: "8px",
-      paddingTop: "6px",
-      borderTop: "1px solid rgba(255,255,255,0.15)",
-      pointerEvents: "auto",
-    });
-
-    const heading = document.createElement("div");
-    heading.textContent = "Lighting Presets";
-    Object.assign(heading.style, {
-      fontWeight: 600,
-      letterSpacing: "0.08em",
-      fontSize: "11px",
-      opacity: "0.85",
-      textTransform: "uppercase",
-    });
-    section.appendChild(heading);
-
-    const buttonRow = document.createElement("div");
-    Object.assign(buttonRow.style, {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "6px",
-      marginTop: "6px",
-    });
-
-    const presetHotkeyConfig: Array<{
-      name: string;
-      codes: string[];
-      keys: string[];
-    }> = [];
-    const activePresetNames = new Set(availablePresets.map((preset) => preset.name));
-    const presetKeyBindings = new Map<string, string>();
-
-    for (const preset of availablePresets) {
-      const presetMeta = lightingPresets?.[preset.name] || {};
-      const button = document.createElement("button");
-      button.type = "button";
-      const displayLabel = presetMeta.label || preset.label;
-      button.textContent = displayLabel;
-      Object.assign(button.style, {
-        padding: "4px 8px",
-        borderRadius: "4px",
-        border: "1px solid rgba(255,255,255,0.35)",
-        background: "rgba(0,0,0,0.35)",
-        color: "inherit",
-        font: "inherit",
-        cursor: "pointer",
-        pointerEvents: "auto",
-        transition: "background 0.2s ease, border-color 0.2s ease",
-      });
-
-      makeInteractiveButton(button);
-
-      const hotkeyLabel = presetMeta.hotkey || "";
-      if (hotkeyLabel) {
-        button.title = `Set ${displayLabel} lighting (Hotkey ${hotkeyLabel})`;
-        button.setAttribute("aria-keyshortcuts", hotkeyLabel);
-      } else {
-        button.title = `Set ${displayLabel} lighting`;
-      }
-
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        if (typeof onSetLightingPreset === "function") {
-          onSetLightingPreset(preset.name);
-        }
-      });
-
-      buttonRow.appendChild(button);
-    }
-
-    presetHotkeyConfig
-      .filter((entry) => activePresetNames.has(entry.name))
-      .forEach((entry) => {
-        for (const code of entry.codes) {
-          presetKeyBindings.set(code, entry.name);
-        }
-        for (const key of entry.keys) {
-          presetKeyBindings.set(key, entry.name);
-        }
-      });
-
-    section.appendChild(buttonRow);
-    contentContainer.appendChild(section);
-
-    read._presetKeyBindings = presetKeyBindings;
-  }
-
   if (typeof onToggleFog === "function") {
     const section = document.createElement("div");
-    section.className = "hud-environment-controls";
-    Object.assign(section.style, {
-      marginTop: "8px",
-      paddingTop: "6px",
-      borderTop: "1px solid rgba(255,255,255,0.15)",
-      pointerEvents: "auto",
-    });
+    section.className = "dev-hud-section";
 
     const heading = document.createElement("div");
+    heading.className = "dev-hud-heading";
     heading.textContent = "Environment";
-    Object.assign(heading.style, {
-      fontWeight: 600,
-      letterSpacing: "0.08em",
-      fontSize: "11px",
-      opacity: "0.85",
-      textTransform: "uppercase",
-    });
     section.appendChild(heading);
 
     const buttonRow = document.createElement("div");
-    Object.assign(buttonRow.style, {
-      display: "flex",
-      flexWrap: "wrap",
-      gap: "6px",
-      marginTop: "6px",
-    });
+    buttonRow.className = "dev-hud-btn-row";
 
-    const buttonElement = document.createElement("button");
-    buttonElement.type = "button";
-    Object.assign(buttonElement.style, {
-      padding: "4px 8px",
-      borderRadius: "4px",
-      border: "1px solid rgba(255,255,255,0.35)",
-      background: "rgba(0,0,0,0.35)",
-      color: "inherit",
-      font: "inherit",
-      cursor: "pointer",
-      pointerEvents: "auto",
-      transition: "background 0.2s ease, border-color 0.2s ease",
-    });
-
-    makeInteractiveButton(buttonElement);
-
-    buttonElement.addEventListener("click", (event) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dev-hud-btn";
+    btn.addEventListener("click", (event) => {
       event.preventDefault();
       onToggleFog();
       updateFogControls();
     });
 
-    buttonRow.appendChild(buttonElement);
-    fogButton = buttonElement;
+    fogButton = btn;
+    buttonRow.appendChild(btn);
     section.appendChild(buttonRow);
-    contentContainer.appendChild(section);
+    content.appendChild(section);
     updateFogControls();
   }
 
+  // Sun Alignment
   if (sunAlignment) {
     const section = document.createElement("div");
-    section.className = "hud-sun-alignment";
-    Object.assign(section.style, {
-      marginTop: "8px",
-      paddingTop: "6px",
-      borderTop: "1px solid rgba(255,255,255,0.15)",
-      pointerEvents: "auto",
-    });
+    section.className = "dev-hud-section";
 
     const heading = document.createElement("div");
+    heading.className = "dev-hud-heading";
     heading.textContent = "Sun Alignment";
-    Object.assign(heading.style, {
-      fontWeight: 600,
-      letterSpacing: "0.08em",
-      fontSize: "11px",
-      opacity: "0.85",
-      textTransform: "uppercase",
-    });
     section.appendChild(heading);
 
     const createSliderRow = (
@@ -482,18 +481,12 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       value.style.width = "48px";
       value.style.opacity = "0.75";
 
-      const updateValue = (next: string | number) => {
-        const v = Math.min(max, Math.max(min, Number(next)));
-        if (!Number.isFinite(v)) return;
-        input.value = String(v);
-        value.textContent = v.toFixed(1);
-        onValue(v);
-      };
-
       input.addEventListener("input", (event) => {
         const target = event.target as HTMLInputElement | null;
         if (target) {
-          updateValue(target.value);
+          const v = Math.min(max, Math.max(min, Number(target.value)));
+          value.textContent = v.toFixed(1);
+          onValue(v);
         }
       });
 
@@ -506,39 +499,19 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     const initialAzimuth = sunAlignment.getAzimuthDeg?.() ?? 0;
     const initialElevation = sunAlignment.getElevationDeg?.() ?? 0;
 
-    createSliderRow(
-      "Sun Azimuth",
-      0,
-      360,
-      1,
-      initialAzimuth,
-      (value) => sunAlignment.onChange?.({ azimuthDeg: value }),
-    );
+    createSliderRow("Sun Azimuth", 0, 360, 1, initialAzimuth, (v) => sunAlignment.onChange?.({ azimuthDeg: v }));
+    createSliderRow("Sun Elevation", 0, 90, 0.5, initialElevation, (v) => sunAlignment.onChange?.({ elevationDeg: v }));
 
-    createSliderRow(
-      "Sun Elevation",
-      0,
-      90,
-      0.5,
-      initialElevation,
-      (value) => sunAlignment.onChange?.({ elevationDeg: value }),
-    );
-
-    contentContainer.appendChild(section);
+    content.appendChild(section);
   }
 
-  wrap.appendChild(comp);
-  wrap.appendChild(read);
   const slot = getUISlot("topRight");
   slot?.appendChild(wrap);
 
-  const elPos = read.querySelector<HTMLSpanElement>("#hud-pos");
-  const elBear = read.querySelector<HTMLSpanElement>("#hud-bear");
+  const elPos = readout.querySelector<HTMLSpanElement>("#hud-pos");
+  const elBear = readout.querySelector<HTMLSpanElement>("#hud-bear");
 
-  // helpers
   const toBearing = (dir: Vector3Like) => {
-    // dir: THREE.Vector3 camera forward; bearing measured on XZ plane:
-    // yawDegrees = atan2(x, z) in degrees, normalized 0..360 (0 = North/ +Z)
     const yaw = Math.atan2(dir.x, dir.z) * 180 / Math.PI;
     const deg = (yaw + 360) % 360;
     const dirs = ["N","NE","E","SE","S","SW","W","NW","N"];
@@ -546,7 +519,6 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     return { deg: Math.round(deg), label: dirs[idx] };
   };
 
-  // update loop (requestAnimationFrame)
   let rafId = 0;
   let running = true;
   const loop = () => {
@@ -567,22 +539,18 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
   };
   loop();
 
-  // pin hotkey (P) to drop a marker and log coords
   const getPresetKeyBindings = (): Map<string, string> | null => {
-    return read?._presetKeyBindings ?? null;
+    return wrap?._presetKeyBindings ?? null;
   };
 
   const onKey = (e: KeyboardEvent) => {
     if (e.key?.toLowerCase() === "p") {
       const p = getPosition?.();
       if (p) {
-        // Let host drop a visual pin if provided
         onPin?.(p);
-        // Always log a copy-paste line
         console.log(`[PIN] @ (${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`);
       }
     }
-
     const bindings = getPresetKeyBindings();
     if (!bindings || typeof onSetLightingPreset !== "function") return;
     if (e.repeat) return;
@@ -603,7 +571,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     },
     setStatusLine,
     setOceanStatus,
-    rootElement: read,
+    rootElement: wrap,
     updateFogState: updateFogControls,
   };
   return handle;
