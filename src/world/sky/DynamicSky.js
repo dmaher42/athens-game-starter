@@ -188,6 +188,8 @@ export class DynamicSky {
     uniforms.rayleigh.value = preset.rayleigh;
     uniforms.mieCoefficient.value = preset.mieCoefficient;
     uniforms.mieDirectionalG.value = preset.mieDirectionalG;
+    uniforms.sunPosition.value.copy(this.sunDirection);
+    this.sky.material.needsUpdate = true;
     this.settings.horizon = preset.horizon;
     this.settings.zenith = preset.zenith;
   }
@@ -283,6 +285,11 @@ export class DynamicSky {
   _applySunDirection(direction) {
     this.sunDirection.copy(direction).normalize();
     this.moonDirection.copy(direction).multiplyScalar(-1).normalize();
+    const uniforms = this.sky.material.uniforms;
+    if (uniforms?.sunPosition?.value) {
+      uniforms.sunPosition.value.copy(this.sunDirection);
+    }
+    this.sky.material.needsUpdate = true;
     const scaled = this.sunDirection.clone().multiplyScalar(this.sunDistance);
     this.sunLight.position.copy(this.sunTarget).add(scaled);
     this.sunLight.target.position.copy(this.sunTarget);
