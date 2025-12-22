@@ -27,12 +27,12 @@ export const DEFAULT_LIGHTING_CONFIG = {
     },
     golden_hour: {
       phase: 0.62,
-      exposure: 0.96,
+      exposure: 0.9,
       label: "Golden Hour",
       haze: {
-        start: 400,
-        end: 2500,
-        color: "#ffcc99",
+        start: 500,
+        end: 2700,
+        color: "#ffddaa",
       },
     },
     high_noon: {
