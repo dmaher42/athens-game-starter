@@ -1,9 +1,9 @@
 import type { Vector3 } from "three";
 
+import { startThrottledLoop, updateTextIfChanged } from "./hudShared.js";
 import { getUISlot } from "./uiRoot.js";
 
 type Vector3Like = Pick<Vector3, "x" | "y" | "z">;
-type ImportMetaWithEnv = ImportMeta & { env?: { DEV?: boolean } };
 type WindowWithHudFlag = Window & typeof globalThis & { SHOW_HUD?: boolean };
 
 export interface LightingPresetMeta {
@@ -184,12 +184,9 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     onToggleFog,
     sunAlignment,
   } = options;
-  const isDevBuild = Boolean(
-    (import.meta as ImportMetaWithEnv).env?.DEV,
-  );
   const runtimeWindow: WindowWithHudFlag | null =
     typeof window !== "undefined" ? (window as WindowWithHudFlag) : null;
-  const allowHud = isDevBuild || runtimeWindow?.SHOW_HUD === true;
+  const allowHud = runtimeWindow?.SHOW_HUD === true;
   if (!allowHud) return null;
 
   ensureStyles();
@@ -236,7 +233,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     comp.appendChild(el);
   });
   compassContainer.appendChild(comp);
-  content.appendChild(compassContainer);
+  compassContainer.style.display = "none"; // Minimaps expose compass; avoid duplication here
 
   // 2. Readout (Pos, Bear, Pin)
   const readout = document.createElement("div");
@@ -291,7 +288,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       statusEntries.set(id, entry);
       statusSection.appendChild(entry);
     }
-    entry.textContent = message;
+    updateTextIfChanged(entry, message);
     updateStatusVisibility();
   };
 
@@ -519,25 +516,34 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     return { deg: Math.round(deg), label: dirs[idx] };
   };
 
-  let rafId = 0;
-  let running = true;
-  const loop = () => {
-    if (!running) return;
+  let lastPosText = "";
+  let lastBearText = "";
+  let lastNeedleDeg = 0;
+  const stopLoop = startThrottledLoop(() => {
     try {
       const p = getPosition?.();
-      const d = getDirection?.();
       if (p && elPos) {
-        elPos.textContent = `(${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)})`;
+        const posText = `(${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)})`;
+        if (posText !== lastPosText) {
+          updateTextIfChanged(elPos, posText);
+          lastPosText = posText;
+        }
       }
+      const d = getDirection?.();
       if (d && elBear) {
         const b = toBearing(d);
-        elBear.textContent = `${b.deg}° ${b.label}`;
-        needle.style.transform = `translate(-1px, -40px) rotate(${b.deg}deg)`;
+        const bearText = `${b.deg}° ${b.label}`;
+        if (bearText !== lastBearText) {
+          updateTextIfChanged(elBear, bearText);
+          lastBearText = bearText;
+        }
+        if (b.deg !== lastNeedleDeg) {
+          needle.style.transform = `translate(-1px, -40px) rotate(${b.deg}deg)`;
+          lastNeedleDeg = b.deg;
+        }
       }
     } catch {}
-    rafId = requestAnimationFrame(loop);
-  };
-  loop();
+  });
 
   const getPresetKeyBindings = (): Map<string, string> | null => {
     return wrap?._presetKeyBindings ?? null;
@@ -564,8 +570,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
 
   const handle: DevHudHandle = {
     dispose() {
-      running = false;
-      cancelAnimationFrame(rafId);
+      stopLoop();
       window.removeEventListener("keydown", onKey);
       wrap.remove();
     },
