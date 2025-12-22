@@ -8,7 +8,7 @@ import {
   HARBOR_CENTER_3D,
 } from "../world/locations.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
-import { startThrottledLoop } from "./hudShared.js";
+import { createHudPanel, startThrottledLoop } from "./hudShared.js";
 import { getUISlot } from "./uiRoot.js";
 
 const STYLE_ID = "mini-map-style";
@@ -58,49 +58,10 @@ function ensureStyles(): void {
       gap: 8px;
       width: 230px;
       color: #f5f5f5;
-      font: 12px/1.35 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto;
-      background: rgba(9, 12, 18, 0.72);
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      pointer-events: auto;
-      backdrop-filter: blur(6px);
-      transition: width 160ms ease, box-shadow 160ms ease;
     }
     .mini-map-panel--expanded {
       width: 360px;
       box-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
-    }
-    .mini-map__header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .mini-map__title {
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-size: 11px;
-      opacity: 0.85;
-    }
-    .mini-map__toggle {
-      appearance: none;
-      border: 0;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-weight: 600;
-      font-size: 11px;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      background: rgba(31, 135, 214, 0.18);
-      color: #a8dfff;
-      cursor: pointer;
-      transition: background 120ms ease, color 120ms ease;
-    }
-    .mini-map__toggle:hover {
-      background: rgba(31, 135, 214, 0.32);
-      color: #e7f6ff;
     }
     .mini-map__canvas {
       width: 100%;
@@ -508,24 +469,34 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
   const list = document.createElement("ul");
   legend.appendChild(list);
 
-  const wrap = document.createElement("div");
-  wrap.className = "mini-map-panel";
+  let wrap: HTMLDivElement | null = null;
+  let isExpanded = false;
+  const applyExpandedState = () => {
+    const targetSize = isExpanded ? 360 : 260;
+    canvas.width = targetSize;
+    canvas.height = targetSize;
+    if (wrap) {
+      wrap.classList.toggle("mini-map-panel--expanded", isExpanded);
+    }
+  };
 
-  const header = document.createElement("div");
-  header.className = "mini-map__header";
-  const title = document.createElement("div");
-  title.className = "mini-map__title";
-  title.textContent = "City Mini Map";
-  const toggle = document.createElement("button");
-  toggle.className = "mini-map__toggle";
-  toggle.type = "button";
-  toggle.textContent = "Expand";
-  header.appendChild(title);
-  header.appendChild(toggle);
+  const panel = createHudPanel({
+    title: "City Mini Map",
+    className: "mini-map-panel",
+    initialCollapsed: true,
+    collapseContent: false,
+    toggleLabels: { collapsed: "Expand", expanded: "Collapse" },
+    onToggle: (collapsed: boolean) => {
+      isExpanded = !collapsed;
+      applyExpandedState();
+    },
+  });
 
-  wrap.appendChild(header);
-  wrap.appendChild(canvas);
-  wrap.appendChild(legend);
+  const wrapElement = panel.root;
+  wrap = wrapElement;
+  panel.content.appendChild(canvas);
+  panel.content.appendChild(legend);
+  applyExpandedState();
 
   const ctx = canvas.getContext("2d");
   if (!ctx) {
@@ -533,24 +504,6 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
     return null;
   }
   const bounds = computeBounds(features);
-
-  let isExpanded = false;
-  const updateToggle = () => {
-    const nextLabel = isExpanded ? "Collapse" : "Expand";
-    if (toggle.textContent !== nextLabel) {
-      toggle.textContent = nextLabel;
-    }
-    wrap.classList.toggle("mini-map-panel--expanded", isExpanded);
-    const targetSize = isExpanded ? 360 : 260;
-    canvas.width = targetSize;
-    canvas.height = targetSize;
-  };
-  toggle.addEventListener("click", (event) => {
-    event.preventDefault();
-    isExpanded = !isExpanded;
-    updateToggle();
-  });
-  updateToggle();
 
   let disposed = false;
   let lastLegendUpdate = 0;
@@ -607,14 +560,14 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
   const stopLoop = startThrottledLoop(loop);
 
   const slot = getUISlot("topLeft");
-  slot?.appendChild(wrap);
+  slot?.appendChild(wrapElement);
 
   const handle: MiniMapHandle = {
-    rootElement: wrap,
+    rootElement: wrapElement,
     dispose() {
       disposed = true;
       stopLoop();
-      wrap.remove();
+      wrapElement.remove();
     },
   };
   return handle;

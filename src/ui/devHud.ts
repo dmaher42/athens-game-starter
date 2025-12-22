@@ -1,6 +1,6 @@
 import type { Vector3 } from "three";
 
-import { startThrottledLoop, updateTextIfChanged } from "./hudShared.js";
+import { createHudPanel, startThrottledLoop, updateTextIfChanged } from "./hudShared.js";
 import { getUISlot } from "./uiRoot.js";
 
 type Vector3Like = Pick<Vector3, "x" | "y" | "z">;
@@ -60,54 +60,7 @@ function ensureStyles(): void {
   style.textContent = `
     .dev-hud-panel {
       width: 260px;
-      background: rgba(9, 12, 18, 0.72);
-      border-radius: 12px;
-      padding: 12px;
-      color: #fff;
-      font: 12px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
-      backdrop-filter: blur(6px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      pointer-events: auto;
-      display: flex;
-      flex-direction: column;
       gap: 12px;
-      transition: width 160ms ease;
-    }
-    .dev-hud-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .dev-hud-title {
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-size: 11px;
-      opacity: 0.85;
-    }
-    .dev-hud-toggle {
-      appearance: none;
-      border: 0;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-weight: 600;
-      font-size: 11px;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      background: rgba(31, 135, 214, 0.18);
-      color: #a8dfff;
-      cursor: pointer;
-      transition: background 120ms ease, color 120ms ease;
-    }
-    .dev-hud-toggle:hover {
-      background: rgba(31, 135, 214, 0.32);
-      color: #e7f6ff;
-    }
-    .dev-hud-content {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
     }
     .dev-hud-compass-container {
       display: flex;
@@ -192,26 +145,21 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
   ensureStyles();
 
   // --- DOM Structure ---
-  const wrap = document.createElement("div") as HudRootElement;
-  wrap.className = "dev-hud-panel";
+  const wrapRef: { current: HudRootElement | null } = { current: null };
+  const panel = createHudPanel({
+    title: "Debug Info",
+    className: "dev-hud-panel",
+    toggleLabels: { expanded: "Minimize", collapsed: "Expand" },
+    onToggle: (collapsed) => {
+      if (!wrapRef.current) return;
+      wrapRef.current.style.width = collapsed ? "auto" : "260px";
+    },
+  });
 
-  // Header
-  const header = document.createElement("div");
-  header.className = "dev-hud-header";
-  const title = document.createElement("div");
-  title.className = "dev-hud-title";
-  title.textContent = "Debug Info";
-  const toggleBtn = document.createElement("button");
-  toggleBtn.className = "dev-hud-toggle";
-  toggleBtn.textContent = "Minimize";
-  header.appendChild(title);
-  header.appendChild(toggleBtn);
-  wrap.appendChild(header);
-
-  // Content Container (collapsible)
-  const content = document.createElement("div");
-  content.className = "dev-hud-content";
-  wrap.appendChild(content);
+  const wrap = panel.root as HudRootElement;
+  wrapRef.current = wrap;
+  const content = panel.content;
+  wrap.style.width = "260px";
 
   // 1. Compass
   const compassContainer = document.createElement("div");
@@ -249,15 +197,6 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
   statusSection.className = "dev-hud-section";
   statusSection.style.display = "none";
   content.appendChild(statusSection);
-
-  // Toggle Logic
-  let isMinimized = false;
-  toggleBtn.addEventListener("click", () => {
-    isMinimized = !isMinimized;
-    content.style.display = isMinimized ? "none" : "flex";
-    toggleBtn.textContent = isMinimized ? "Expand" : "Minimize";
-    wrap.style.width = isMinimized ? "auto" : "260px";
-  });
 
   // --- Helpers & Logic ---
   const statusEntries = new Map<string, HTMLDivElement>();
