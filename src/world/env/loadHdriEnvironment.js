@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 
 export async function loadHdriEnvironment({ renderer, scene, path }) {
   const pmremGenerator = new THREE.PMREMGenerator(renderer);
@@ -30,6 +30,12 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
           pmremGenerator.dispose();
           reject(error);
         }
-      );
+      },
+      undefined,
+      (error) => {
+        console.warn('[HDRI] Load failed:', error);
+        reject(error);
+      },
+    );
   });
 }
