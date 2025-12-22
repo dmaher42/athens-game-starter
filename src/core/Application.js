@@ -96,6 +96,7 @@ import {
   parseBooleanQuery,
 } from "../config/EngineConfig.js";
 import { lightingConfig } from "../config/LightingConfig.js";
+import { LOOK_PROFILES } from "../config/LookProfiles.js";
 import { skyboxLightingConfig } from "../config/skyboxLightingConfig.js";
 import { CollectiblesManager } from "../world/collectibles.js";
 import { QuestManager, QuestStatus } from "../state/QuestManager.js";
@@ -130,7 +131,8 @@ const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
 
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 
-const LIGHTING_PRESETS = lightingConfig.presets || {};
+// Use Look Profiles as the primary presets
+const LIGHTING_PRESETS = LOOK_PROFILES;
 const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
 const SUN_ELEVATION_STORAGE_KEY = "skybox.sunElevationDeg";
 
@@ -2192,77 +2194,142 @@ export class Application {
       }
     };
 
-    const applyLightingPreset = (presetName) => {
-      const preset = LIGHTING_PRESETS[presetName];
-      if (!preset) return;
+    // Current Look Profile State
+    let currentLookProfile = null;
 
-      if (preset.sunAzimuthDeg != null || preset.sunElevationDeg != null) {
-        if (preset.sunAzimuthDeg != null) {
-          sunAlignmentState.azimuthDeg = wrapAzimuth(preset.sunAzimuthDeg);
+    const applyLookProfile = (profileName) => {
+      const profile = LOOK_PROFILES[profileName];
+      if (!profile) {
+        console.warn(`[LookProfile] Profile '${profileName}' not found`);
+        return;
+      }
+      currentLookProfile = profile;
+      console.log(`[LookProfile] Applying: ${profileName}`);
+
+      // 1. Renderer Updates
+      if (profile.renderer) {
+        if (Number.isFinite(profile.renderer.toneMappingExposure)) {
+          renderer.toneMappingExposure = profile.renderer.toneMappingExposure;
         }
-        if (preset.sunElevationDeg != null) {
-          sunAlignmentState.elevationDeg = clampElevation(preset.sunElevationDeg);
+      }
+
+      // 2. Sun & Ambient
+      if (profile.sun) {
+        if (Number.isFinite(profile.sun.azimuth)) {
+          sunAlignmentState.azimuthDeg = wrapAzimuth(profile.sun.azimuth);
         }
+        if (Number.isFinite(profile.sun.elevation)) {
+          sunAlignmentState.elevationDeg = clampElevation(profile.sun.elevation);
+        }
+        // Persist only if intended, but profiles are usually ephemeral/presets.
+        // We'll update state so the sun moves.
         persistSunAlignment();
       }
 
-      const phase = setTimeOfDayPhase(timeOfDayState, preset.phase);
-      renderer.toneMappingExposure = preset.exposure;
-      applyEnvironmentIntensity(preset.environmentIntensity);
-      applyColorGradeSettings(preset.colorGrade);
-      console.log(`[HUD] preset: ${presetName}`);
+      // 3. Fog
+      if (profile.fog) {
+        const { enabled, color, near, far } = profile.fog;
+        // Update fog state
+        onFogChange(!!enabled);
+        if (enabled && color && Number.isFinite(near) && Number.isFinite(far)) {
+          const fogColor = new THREE.Color(color);
+          if (typeof setFogOptions === "function") {
+             setFogOptions({ color: fogColor, near, far });
+          } else {
+             scene.fog.color.copy(fogColor);
+             scene.fog.near = near;
+             scene.fog.far = far;
+          }
+        }
+      }
 
-      const sunDirForCycle = getSunDirection(timeOfDayState);
-      const alignedSunDir = syncSunLighting(sunDirForCycle?.y);
-      updateSky(scene, presetName);
-
+      // 4. Skybox
       const skyDome = scene.userData.skyDome;
-      if (skyDome && skyDome.material) {
-        const skyExp = Number.isFinite(preset.skyboxExposure)
-          ? preset.skyboxExposure
-          : 1.0;
-        skyDome.material.color.setScalar(skyExp);
+      if (profile.skybox) {
+         if (skyDome && skyDome.material) {
+           const exposure = Number.isFinite(profile.skybox.exposureMultiplier)
+             ? profile.skybox.exposureMultiplier
+             : 1.0;
+           // Assuming material.color controls exposure for now as per previous logic
+           skyDome.material.color.setScalar(exposure);
+         }
+         // Update sky texture/uniforms if needed using legacy system for now
+         if (profile.skybox.skyKey) {
+            updateSky(scene, profile.skybox.skyKey);
+         }
       }
 
-      updateHarborLighting(harbor, lights.nightFactor);
-      updateCityLighting(harborCity, lights.nightFactor, {
-        timeOfDayPhase: phase,
-      });
-      updateCityLighting(hillCity, lights.nightFactor, {
-        timeOfDayPhase: phase,
-      });
-      updateMainHillRoadLighting(roadGroup, lights.nightFactor);
-
-      if (preset.haze) {
-        applyHazePreset(scene, preset.haze, sceneContext?.setFogOptions);
+      // 5. Grade / Post-process
+      if (profile.grade) {
+         applyColorGradeSettings(profile.grade);
       }
+
+      // 6. Environment
+      if (profile.env && Number.isFinite(profile.env.envMapIntensity)) {
+         applyEnvironmentIntensity(profile.env.envMapIntensity);
+      }
+
+      // Force an immediate update
+      const sunDir = getAlignedSunDirection();
+      // Calculate derived nightFactor or use one from profile?
+      // We can derive nightFactor roughly from elevation or force it.
+      // For now, let's trigger lighting update with overrides.
+      const sunColor = profile.sun?.color ? new THREE.Color(profile.sun.color) : null;
+      const sunIntensity = profile.sun?.intensity;
+      const ambColor = profile.ambient?.color ? new THREE.Color(profile.ambient.color) : null;
+      const gndColor = profile.ambient?.groundColor ? new THREE.Color(profile.ambient.groundColor) : null;
+      const ambIntensity = profile.ambient?.intensity;
+
+      updateLighting(lights, sunDir, {
+        applyPosition: true,
+        overrideSunColor: sunColor,
+        overrideSunIntensity: sunIntensity,
+        overrideAmbientColor: ambColor,
+        overrideGroundColor: gndColor,
+        overrideAmbientIntensity: ambIntensity
+      });
+
+      // Update ocean to match new look
+      // We need a 'haze' object structure for updateOcean
+      const hazeStruct = profile.fog ? {
+         start: profile.fog.near,
+         end: profile.fog.far,
+         color: profile.fog.color
+      } : null;
+
+      // We need to estimate a 'nightFactor' if not provided.
+      // If elevation < 0, it's night?
+      // For presets, let's assume day unless specified.
+      // Or derive from lighting colors intensity?
+      // updateLighting calculates it, but we overrode it.
+      // Let's rely on lights.nightFactor which updateLighting sets (although we might need to tweak updateLighting to set it correctly even when overriden)
+      // Actually updateLighting sets nightFactor based on sun height.
+      // Since we set sun elevation, nightFactor should be correct.
 
       updateOcean(
         ocean,
         0,
-        alignedSunDir,
+        sunDir,
         lights.nightFactor,
         lights.sunLight.color,
-        preset.haze
+        hazeStruct
       );
 
-      if (grassRoot) {
-        setGrassNightFactor(lights.nightFactor);
-        updateGrass(0, player?.position ?? null);
-      }
-
-      const formattedTime = formatPhaseAsTime(phase);
-      if (formattedTime !== lastDisplayedTime) {
-        timeOfDayDisplay.textContent = `Time: ${formattedTime}`;
-        lastDisplayedTime = formattedTime;
-      }
+      // Other updates
+      updateHarborLighting(harbor, lights.nightFactor);
+      updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: 0 }); // Phase irrelevant if overriding
+      updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: 0 });
+      updateMainHillRoadLighting(roadGroup, lights.nightFactor);
 
       renderFrame();
     };
 
+    // Alias for HUD compatibility
+    const applyLightingPreset = applyLookProfile;
+
     const onFrame = (deltaTime, elapsed) => {
       // Keep track of time for smooth animation and frame-independent movement.
-      if (dayCycle.secondsPerDay > 0) {
+      if (dayCycle.secondsPerDay > 0 && !currentLookProfile) {
         const deltaPhase = deltaTime / dayCycle.secondsPerDay;
         const nextPhase = (timeOfDayState.timeOfDayPhase ?? 0) + deltaPhase;
         const wrappedPhase = nextPhase - Math.floor(nextPhase);
@@ -2271,8 +2338,34 @@ export class Application {
 
       const phase = timeOfDayState.timeOfDayPhase ?? 0;
       timeOfDayState.elapsedSeconds = elapsed;
-      const sunDirForCycle = getSunDirection(timeOfDayState);
-      const alignedSunDir = syncSunLighting(sunDirForCycle?.y);
+
+      let alignedSunDir;
+      if (currentLookProfile) {
+         // If a profile is active, enforce its lighting values every frame
+         // to prevent drift or other systems overriding it.
+         alignedSunDir = getAlignedSunDirection(); // Based on static azimuth/elevation
+         const profile = currentLookProfile;
+
+         const sunColor = profile.sun?.color ? new THREE.Color(profile.sun.color) : null;
+         const sunIntensity = profile.sun?.intensity;
+         const ambColor = profile.ambient?.color ? new THREE.Color(profile.ambient.color) : null;
+         const gndColor = profile.ambient?.groundColor ? new THREE.Color(profile.ambient.groundColor) : null;
+         const ambIntensity = profile.ambient?.intensity;
+
+         updateLighting(lights, alignedSunDir, {
+            applyPosition: true, // Keep sun position updated (e.g. shadows)
+            overrideSunColor: sunColor,
+            overrideSunIntensity: sunIntensity,
+            overrideAmbientColor: ambColor,
+            overrideGroundColor: gndColor,
+            overrideAmbientIntensity: ambIntensity,
+            sunDistance: sunDistance,
+            sunTarget: sunTargetVector
+         });
+      } else {
+         const sunDirForCycle = getSunDirection(timeOfDayState);
+         alignedSunDir = syncSunLighting(sunDirForCycle?.y);
+      }
 
       const skyDome = scene.userData.skyDome;
       if (skyDome) skyDome.position.copy(camera.position);
