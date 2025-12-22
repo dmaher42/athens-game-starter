@@ -197,8 +197,8 @@ function syncFogToSky(scene, radius) {
 
   const fogNear = Math.max(140, Math.min(fogState?.near ?? 200, 260));
   const fogFar = Math.max(
-    fogNear + 420,
-    Math.min(radius * 0.92, fogState?.far ?? radius * 0.92),
+    fogNear + 600,
+    Math.min(radius * 0.98, fogState?.far ?? radius * 0.98),
   );
 
   setFogOptions({
@@ -229,9 +229,9 @@ const applyHazePreset = (scene, haze, setFogOptions) => {
 };
 
 function createCoastalSkirt(scene, terrainSize, seaLevel) {
-  const skirtWidth = terrainSize * 0.9;
-  const skirtDepth = terrainSize * 1.6;
-  const geometry = new THREE.PlaneGeometry(skirtWidth, skirtDepth, 24, 6);
+  const skirtWidth = terrainSize * 1.3;
+  const skirtDepth = terrainSize * 1.75;
+  const geometry = new THREE.PlaneGeometry(skirtWidth, skirtDepth, 28, 8);
   geometry.rotateX(-Math.PI / 2);
 
   const pos = geometry.attributes.position;
@@ -239,8 +239,9 @@ function createCoastalSkirt(scene, terrainSize, seaLevel) {
     const x = pos.getX(i);
     const t = THREE.MathUtils.clamp(x / skirtWidth + 0.5, 0, 1);
     const falloff = THREE.MathUtils.smoothstep(0.0, 1.0, t);
-    const drop = THREE.MathUtils.lerp(1.5, -3.0, falloff);
-    pos.setY(i, seaLevel + drop * Math.pow(falloff, 0.85));
+    const drop = THREE.MathUtils.lerp(0.8, -1.2, falloff);
+    const gentleSlope = Math.pow(falloff, 0.65);
+    pos.setY(i, seaLevel + drop * gentleSlope);
   }
   pos.needsUpdate = true;
   geometry.computeVertexNormals();
@@ -248,7 +249,7 @@ function createCoastalSkirt(scene, terrainSize, seaLevel) {
   geometry.translate(terrainSize * 0.5 + skirtWidth * 0.5 - 6, seaLevel, 0);
 
   const material = new THREE.MeshStandardMaterial({
-    color: 0x5a6b59,
+    color: 0x9a8b6d,
     roughness: 1.0,
     metalness: 0.0,
   });
@@ -747,7 +748,7 @@ export class Application {
         seaLevel,
         radius: oceanRadius,
         horizonOffset: 0,
-        waterColor: 0x006b7c,
+        waterColor: 0x0a5566,
       });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
     }
@@ -778,8 +779,8 @@ export class Application {
     const setFogOptions = scene?.userData?.setFogOptions;
     if (typeof setFogOptions === "function") {
       const fogColor = scene?.fog?.color ?? new THREE.Color(horizonColor);
-      const near = Math.max(scene?.fog?.near ?? 180, 180);
-      const far = Math.max(near + 640, oceanRadius * 0.8);
+      const near = Math.max(scene?.fog?.near ?? 160, 160);
+      const far = Math.max(near + 780, oceanRadius * 0.95);
       setFogOptions({ color: fogColor, near, far });
     }
     if (!this.killPlane) {
