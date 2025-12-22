@@ -540,7 +540,7 @@ export class Application {
       toggleFog,
     } = sceneContext;
     this.scene = scene;
-    setFogEnabled(true);
+    setFogEnabled(false);
 
     const colorGradeUniforms = colorGradePass?.material?.uniforms || null;
     const defaultColorGradeSettings = colorGradeUniforms
