@@ -650,9 +650,13 @@ export class Application {
 
     const hdrPath = joinPath(BASE_URL, "hdr/clear_midday.hdr");
     try {
-      await loadHdriEnvironment(renderer, scene, hdrPath);
+      await loadHdriEnvironment({
+        renderer,
+        scene,
+        path: hdrPath,
+      });
     } catch (error) {
-      console.warn(`[hdri] Failed to load environment from ${hdrPath}`, error);
+      console.warn("HDRI load skipped:", error);
     }
 
     const alignSunLight = () => {
