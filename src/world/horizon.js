@@ -64,34 +64,28 @@ function createHorizonRing({
         vec2 xz = vWorldPosition.xz;
         float dist = length(xz);
 
-        // Directional Fade Logic
-        // We want opacity in the West (-X) but fade it out in the East (+X).
-        // East is angle 0. West is angle PI.
-        float angle = atan(xz.y, xz.x); // Range -PI to PI
+        // Directional Fade Logic (Mainland)
+        // East (+X) is open sea -> Horizon Ring VISIBLE.
+        // West (-X) is inland hills -> Horizon Ring INVISIBLE (hidden by terrain or masked).
 
-        // Normalize angle so East=0, West=1.
-        // We want opacity high at West (cos(angle) near -1)
-        // and low at East (cos(angle) near 1).
-        // Let's use smooth transition.
-        float eastness = cos(angle); // 1 at East, -1 at West.
+        float angle = atan(xz.y, xz.x); // Range -PI to PI. East is 0. West is PI.
+        float eastness = cos(angle); // 1.0 at East, -1.0 at West.
 
-        // Asymmetric Opacity Factor
-        // If eastness > 0 (East), reduce opacity.
-        // If eastness < 0 (West), keep opacity high.
-        // smoothstep(edge0, edge1, x): results are undefined if edge0 >= edge1.
-        // We want 1.0 at -0.5 and 0.0 at 0.5.
-        // x is eastness.
-        // standard smoothstep(-0.5, 0.5, eastness) gives 0 at -0.5 (Westish) and 1 at 0.5 (Eastish).
-        // So we invert it.
-        float asymmetricAlpha = 1.0 - smoothstep(-0.5, 0.5, eastness);
-        // This gives 1.0 at West (cos=-1) down to 0.0 at East (cos=1).
+        // We want opacity:
+        // East (1.0) -> High opacity (Sea)
+        // West (-1.0) -> Low opacity (Land)
 
-        // Add a base minimum so it's not totally invisible in East?
-        // No, task says "open and expansive toward the east".
-        // Let's keep a tiny bit (0.1) for continuity, but mostly fade.
-        asymmetricAlpha = 0.0 + asymmetricAlpha * 1.0;
+        // smoothstep:
+        // edge0 = -0.2 (Start fading near West-ish)
+        // edge1 = 0.5 (Full opacity in East)
+        float directionalAlpha = smoothstep(-0.5, 0.5, eastness);
+
+        // Make West completely gone to avoid cutting through mountains
+        if (directionalAlpha < 0.05) discard;
 
         float radialFade = clamp((dist - innerRadius) / max(outerRadius - innerRadius, 0.0001), 0.0, 1.0);
+
+        // Base alpha from radial fade
         float alpha = 1.0 - smoothstep(0.0, 1.0, radialFade);
 
         // Gently fade out if the band is ever viewed from above sea level.
@@ -99,7 +93,7 @@ function createHorizonRing({
         alpha *= (1.0 - heightFade);
 
         // Apply directional asymmetry
-        alpha *= asymmetricAlpha;
+        alpha *= directionalAlpha;
 
         if (alpha <= 0.01) discard;
 
