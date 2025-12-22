@@ -151,8 +151,8 @@ function getElevation(x, z, seaLevel, coastData = null) {
 
   // Apply Noise
   const rawNoise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE);
-  // Keep noise below the inland bias so geography reads clearly
-  const noise = rawNoise * NOISE_AMPLITUDE * (0.65 + (1 - westBias) * 0.35);
+  // Keep noise below the inland bias so geography reads clearly and stay calmer to the east
+  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + westBias * 0.65);
 
   // Attenuate noise near coast (East)
   const coast = coastData ?? computeCoastData(x, z);
