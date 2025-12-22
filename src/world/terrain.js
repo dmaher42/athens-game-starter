@@ -73,7 +73,54 @@ const ISLAND_CENTER = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
 function computeCoastData(x, z) {
   const dx = x - ISLAND_CENTER.x;
   const dz = z - ISLAND_CENTER.z;
-  const distanceFromCenter = Math.hypot(dx, dz);
+
+  // Directional bias: Extend the coast indefinitely in the East direction (positive X).
+  // We use atan2(dz, dx). East is 0. West is PI.
+  // We want to suppress the coast fade if we are looking East.
+  // Let's project the point onto the West-East axis.
+
+  // If dx > -50 (East of the harbor area), we treat it as inland.
+  // Actually, we want a radial fade only in the West sector.
+
+  const angle = Math.atan2(dz, dx);
+  // East is 0. Range -PI to PI.
+  // We want to preserve the island circularity in the West (PI) but open it up in the East.
+
+  // Simple approach: Use an elliptical distance or shifted center?
+  // Or just clamp distance if angle is within East sector?
+
+  let effectiveDistance = Math.hypot(dx, dz);
+
+  // If we are "Inland" (East of center), we fake the distance to be small so it doesn't fade.
+  // Let's say if x > ISLAND_CENTER.x - 50, we clamp effective distance?
+  // But we want smooth transition.
+
+  // Let's use a "distance to coast" metric where the coast is a line in the East, and a circle in the West.
+  // "Mainland" implies the land continues East.
+
+  if (dx > -40) {
+      // We are in the city or east of it.
+      // Reduce effective distance based on eastwardness.
+      // If we are far East, distance should stay small (near 0).
+      // If we are North/South, we should eventually fade?
+      // Requirement: "Mainland coast". So North/South should fade to water if we go far enough?
+      // Or should it be a strip of land?
+      // "Backdrop mountains defining boundaries".
+      // Let's keep North/South fading but remove East fading.
+
+      // Elliptical distortion: Scale down the X component for distance calc if X > 0.
+      effectiveDistance = Math.hypot(Math.min(dx, 0), dz);
+      // If dx > 0, effectiveDistance depends only on dz.
+      // This means the land forms a strip extending East.
+      // But we still want it to look somewhat natural.
+
+      // Let's scale dx by 0.2 if positive.
+      if (dx > 0) {
+          effectiveDistance = Math.hypot(dx * 0.1, dz);
+      }
+  }
+
+  const distanceFromCenter = effectiveDistance;
   const coastStart = Math.max(ISLAND_RADIUS - COAST_BLEND_WIDTH, 0);
   const rawT = (distanceFromCenter - coastStart) / COAST_BLEND_WIDTH;
   const t = THREE.MathUtils.clamp(rawT, 0, 1);
