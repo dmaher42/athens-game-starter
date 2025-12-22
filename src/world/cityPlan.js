@@ -18,16 +18,10 @@ export function inHarborBand(
   shorelineCenter = { x: HARBOR_CENTER_3D.x, z: HARBOR_CENTER_3D.z }
 ) {
   if (!pos) return false;
-  // New Directional Logic: Harbor is East (+X)
-  // We check if X > Threshold.
-  // We ignore shorelineCenter which is likely West (-120).
-  // If center is -80, then gridX=0 is -80.
-  // East Harbor starts at X=+120 in terrain.js.
-  // Water Edge at X=50 (120-70).
-  // Land ends at X=80 (approx).
-  // So X > 50 is close to water.
-
-  return pos.x > 50;
+  // Directional Logic: Harbor is East (+X)
+  // Treat tiles east of the harbor center (minus a small setback) as harbor frontage.
+  const harborStartX = shorelineCenter.x - HARBOR_ZONE.bandWidth;
+  return pos.x >= harborStartX;
 }
 
 function createPavedStrip(width, length, color = 0x888888) {
@@ -59,8 +53,11 @@ function generateCityGrid() {
 
       // District Logic (Directional + Radial)
 
+      const worldX = cell.position.x;
+
       // Harbor: East side (High X)
-      if (gridX > 1) {
+      const harborThresholdX = HARBOR_CENTER_3D.x - BLOCK_SIZE * 1.5;
+      if (worldX >= harborThresholdX) {
         cell.district = 'harbor';
       } else if (distance < 60) {
         cell.district = 'sacred';
