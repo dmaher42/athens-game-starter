@@ -115,11 +115,45 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
   read.style.padding = "8px 10px";
   read.style.borderRadius = "8px";
   read.style.minWidth = "220px";
-  read.innerHTML = [
+
+  // Toggle button header
+  const headerRow = document.createElement("div");
+  Object.assign(headerRow.style, {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginBottom: "4px",
+  });
+  const toggleBtn = document.createElement("button");
+  toggleBtn.textContent = "−"; // minus sign
+  toggleBtn.title = "Minimize HUD";
+  Object.assign(toggleBtn.style, {
+    background: "transparent",
+    border: "none",
+    color: "white",
+    opacity: "0.7",
+    cursor: "pointer",
+    padding: "0 4px",
+    fontSize: "14px",
+    lineHeight: "1",
+  });
+  headerRow.appendChild(toggleBtn);
+  read.appendChild(headerRow);
+
+  const contentContainer = document.createElement("div");
+  contentContainer.innerHTML = [
     `<div><b>Pos</b> <span id="hud-pos">(x,y,z)</span></div>`,
     `<div><b>Bear</b> <span id="hud-bear">0° N</span></div>`,
     `<div style="opacity:.8">Press <b>P</b> to drop a pin</div>`
   ].join("");
+  read.appendChild(contentContainer);
+
+  toggleBtn.addEventListener("click", () => {
+    const isHidden = contentContainer.style.display === "none";
+    contentContainer.style.display = isHidden ? "block" : "none";
+    comp.style.display = isHidden ? "block" : "none";
+    toggleBtn.textContent = isHidden ? "−" : "+";
+    toggleBtn.title = isHidden ? "Minimize HUD" : "Expand HUD";
+  });
 
   const statusSection = document.createElement("div");
   Object.assign(statusSection.style, {
@@ -128,7 +162,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     borderTop: "1px solid rgba(255,255,255,0.12)",
     display: "none",
   });
-  read.appendChild(statusSection);
+  contentContainer.appendChild(statusSection);
 
   const statusEntries = new Map<string, HTMLDivElement>();
   const updateStatusVisibility = () => {
@@ -327,7 +361,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       });
 
     section.appendChild(buttonRow);
-    read.appendChild(section);
+    contentContainer.appendChild(section);
 
     read._presetKeyBindings = presetKeyBindings;
   }
@@ -386,7 +420,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     buttonRow.appendChild(buttonElement);
     fogButton = buttonElement;
     section.appendChild(buttonRow);
-    read.appendChild(section);
+    contentContainer.appendChild(section);
     updateFogControls();
   }
 
@@ -490,7 +524,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       (value) => sunAlignment.onChange?.({ elevationDeg: value }),
     );
 
-    read.appendChild(section);
+    contentContainer.appendChild(section);
   }
 
   wrap.appendChild(comp);
