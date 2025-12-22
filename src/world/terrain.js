@@ -2,7 +2,7 @@ import * as THREE from "three";
 import {
   getSeaLevelY,
   AGORA_CENTER_3D,
-  ISLAND_RADIUS,
+  HARBOR_CENTER_3D,
 } from "./locations.js";
 import {
   createGroundTextureState,
@@ -49,62 +49,42 @@ const NOISE_SCALE = 0.05;
 const NOISE_AMPLITUDE = 0.7;
 const OCEAN_DEPTH = -12.0;
 const CITY_HEIGHT = 2.5; // Base city height (above sea level)
-const COAST_BLEND_WIDTH = 110;
-// Increased max height to accommodate inland rise
-const MAX_INLAND_HEIGHT = 80.0;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
 
 // Harbor configuration (East Facing)
 const HARBOR_GROUND_HEIGHT = 1;
-const HARBOR_COAST_PADDING = 36;
-const HARBOR_LONGITUDINAL_PADDING = 12;
-const HARBOR_SLOPE_WIDTH = 6;
 const HARBOUR_RADIUS = 70;
 const HARBOUR_TARGET_DEPTH = 2;
-// Place Harbor at +X (East)
-const EAST_HARBOR_CENTER = new THREE.Vector2(120, 80);
-
-const ISLAND_CENTER = new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
+// Use imported location
+const EAST_HARBOR_CENTER = new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z);
 
 // New Mainland/Coastal Constants
-const INLAND_ELEVATION_SCALE = 55.0; // Significant rise in the west
-const TERRAIN_SIZE = 420;
+const INLAND_ELEVATION_SCALE = 300.0; // Significant rise in the west
+const TERRAIN_SIZE = 2400; // Large terrain for mainland
 const COAST_X_START = 80; // Fade to ocean starts here (East)
-const INLAND_X_START = -20; // Rise to hills starts here (West)
+const INLAND_X_START = -50; // Rise to hills starts here (West)
 
 function computeCoastData(x, z) {
   // Mainland Logic:
   // East (+X) -> Sea
   // West (-X) -> Inland (Land)
-  // North/South -> Optional fade to keep map bounded, or continuous land.
-  // We'll fade North/South gently to water to avoid "infinite land" glitchiness at edges,
-  // but West will be SOLID LAND.
+  // No North/South fade (Mainland extends indefinitely N/S visually, or covered by horizon)
 
   // 1. East Fade
   let coastFactor = 0.0;
 
   if (x > COAST_X_START) {
     const dist = x - COAST_X_START;
-    const fade = dist / 80.0; // Fade over 80m
+    const fade = dist / 120.0; // Gentle slope to sea
     coastFactor = Math.max(coastFactor, fade);
-  }
-
-  // 2. North/South Fade (Optional, to cap the strip)
-  const zAbs = Math.abs(z);
-  const zLimit = 160;
-  if (zAbs > zLimit) {
-      const dist = zAbs - zLimit;
-      const fade = dist / 50.0;
-      coastFactor = Math.max(coastFactor, fade);
   }
 
   // Clamp
   const t = THREE.MathUtils.clamp(coastFactor, 0, 1);
   const fade = THREE.MathUtils.smoothstep(0, 1, t);
 
-  // For noise attenuation, we use 't'
   return { t, fade };
 }
 
@@ -125,13 +105,11 @@ function applyHarbourCarve(x, z, seaLevel, height) {
 
 function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   // Define a bounding box for the East Harbor water area
-  // Center: EAST_HARBOR_CENTER (160, 0)
-  // Size: similar to original logic
   const halfWidth = 70;
   const halfDepth = 60;
 
   const west = EAST_HARBOR_CENTER.x - halfWidth;
-  const east = EAST_HARBOR_CENTER.x + halfWidth + 100; // Extend indefinitely east
+  const east = EAST_HARBOR_CENTER.x + halfWidth + 400; // Extend indefinitely east
   const north = EAST_HARBOR_CENTER.y - halfDepth;
   const south = EAST_HARBOR_CENTER.y + halfDepth;
 
@@ -143,16 +121,11 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   }
 
   // Slope up to land on the West side of the harbor
-  // The 'Coastal' edge is at 'west' (since harbor is to the East, land is to the West)
   const slopeWidth = 20;
   const landStart = west - slopeWidth;
 
   if (x >= landStart && x < west && z >= north - 10 && z <= south + 10) {
       const t = (x - landStart) / slopeWidth;
-      // t=0 -> land, t=1 -> water
-      // Wait, we want height.
-      // At landStart, height = baseHeight (or harborGroundY).
-      // At west, height = seaLevel.
       return THREE.MathUtils.lerp(harborGroundY, seaLevel, t);
   }
 
@@ -161,15 +134,15 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
 
 function getElevation(x, z, seaLevel, coastData = null) {
   // Base Height calculation
-  // Start with City Height
   let h = seaLevel + CITY_HEIGHT;
 
   // Apply Westward Rise (Inland Bias)
   if (x < INLAND_X_START) {
-      // e.g. x = -50 -> dist = 0. x = -250 -> dist = 200.
       const dist = INLAND_X_START - x;
-      // Exponential rise
-      const rise = Math.pow(dist / 200.0, 1.5) * INLAND_ELEVATION_SCALE;
+      // Power curve for smooth rise: Start slow, get steep
+      // At x = -1000, dist = 950.
+      // rise = (950 / 1200)^2 * 300 = 0.6 * 300 = 180m.
+      const rise = Math.pow(dist / 1200.0, 2.0) * INLAND_ELEVATION_SCALE;
       h += rise;
   }
 
@@ -188,36 +161,17 @@ function getElevation(x, z, seaLevel, coastData = null) {
   h = clampHarborBandHeight(x, z, seaLevel, h);
 
   // Agora Flattening
-  // Keep the Agora area somewhat flat/consistent even if it's on a hill?
-  // Agora is at (-80, 0, 40).
-  // If we rise significantly, Agora will be tilted.
-  // We should flatten the terrain *to the local hill height* or to the absolute Agora height?
-  // If we use absolute, we get a shelf.
-  // Let's create a shelf at the expected Agora height if x is near -80?
-  // Or just let it slope. City streets handle slope (step-down).
-  // But the "Civic District" (Temples) might look weird on a steep slope.
-  // Let's flatten a small radius around Agora Center to establish a "Upper City" plateau.
-
   const agoraDist = Math.hypot(x - AGORA_CENTER_3D.x, z - AGORA_CENTER_3D.z);
   if (agoraDist < 60) {
-      // Calculate what the "Hill" height is roughly at Agora Center
-      // At x=-80: dist = -20 - (-80) = 60. rise = (60/200)^1.5 * 55 = 0.16 * 55 = ~9m.
-      // So Agora is at ~11.5m.
-      // We'll flatten locally to that height (or blend noise out).
-      // Actually, just reducing noise is enough to make it buildable.
-      // We won't force a specific Y, just suppress noise.
-      h = h * 0.5 + (seaLevel + CITY_HEIGHT + 9) * 0.5; // Soft pull to expected height
+      // Gentle flattening
+      h = h * 0.7 + (seaLevel + CITY_HEIGHT) * 0.3;
   }
 
-  // Coast Fade (East/N/S)
+  // Coast Fade (East only)
   if (coast.t > 0) {
       const deepOcean = seaLevel + OCEAN_DEPTH;
-      // Lerp from current height to deep ocean based on fade
       h = THREE.MathUtils.lerp(h, deepOcean, coast.fade);
   }
-
-  // Cap max height
-  h = Math.min(h, seaLevel + MAX_INLAND_HEIGHT);
 
   return h;
 }
@@ -284,7 +238,9 @@ function createSkirtGeometry(sourceGeometry, seaLevel) {
 
 export function createTerrain(scene) {
   const size = TERRAIN_SIZE;
-  const segments = 256;
+  // Reduced segments to optimize performance (260k verts instead of 1M)
+  // 2400 / 512 ~= 4.7 meters per vertex, reasonable resolution.
+  const segments = 512;
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
   if (geometry.attributes.uv && !geometry.attributes.uv2) {
