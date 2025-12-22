@@ -2235,7 +2235,21 @@ export class Application {
         persistSunAlignment();
       }
 
-      // 3. Fog
+      // 3. Skybox (Update texture first, as it might reset defaults)
+      const skyDome = scene.userData.skyDome;
+      if (profile.skybox) {
+         if (profile.skybox.skyKey) {
+            updateSky(scene, profile.skybox.skyKey);
+         }
+         if (skyDome && skyDome.material) {
+           const exposure = Number.isFinite(profile.skybox.exposureMultiplier)
+             ? profile.skybox.exposureMultiplier
+             : 1.0;
+           skyDome.material.color.setScalar(exposure);
+         }
+      }
+
+      // 4. Fog (Apply AFTER skybox to enforce profile overrides)
       if (profile.fog) {
         const { enabled, color, near, far } = profile.fog;
         // Update fog state
@@ -2244,28 +2258,15 @@ export class Application {
           const fogColor = new THREE.Color(color);
           if (typeof setFogOptions === "function") {
              setFogOptions({ color: fogColor, near, far });
-          } else {
+          } else if (scene.fog && scene.fog.isFog) {
              scene.fog.color.copy(fogColor);
              scene.fog.near = near;
              scene.fog.far = far;
+          } else {
+             // Fallback if scene.fog isn't instantiated yet
+             scene.fog = new THREE.Fog(fogColor, near, far);
           }
         }
-      }
-
-      // 4. Skybox
-      const skyDome = scene.userData.skyDome;
-      if (profile.skybox) {
-         if (skyDome && skyDome.material) {
-           const exposure = Number.isFinite(profile.skybox.exposureMultiplier)
-             ? profile.skybox.exposureMultiplier
-             : 1.0;
-           // Assuming material.color controls exposure for now as per previous logic
-           skyDome.material.color.setScalar(exposure);
-         }
-         // Update sky texture/uniforms if needed using legacy system for now
-         if (profile.skybox.skyKey) {
-            updateSky(scene, profile.skybox.skyKey);
-         }
       }
 
       // 5. Grade / Post-process
@@ -2280,6 +2281,18 @@ export class Application {
 
       // Force an immediate update
       const sunDir = getAlignedSunDirection();
+
+      // Update Time of Day Phase immediately to match lighting if Day/Night
+      // This prevents the HUD from showing "01:14" when it's Bright Noon.
+      // Use the elevation from the profile definition if available, otherwise rely on alignment state.
+      const el = profile.sun?.elevation ?? sunAlignmentState.elevationDeg;
+      // Default to Noon (0.5) unless explicitly Night (<= 0)
+      if (typeof el === 'number' && el <= 0) {
+          setTimeOfDayPhase(timeOfDayState, 0.0); // Midnight
+      } else {
+          setTimeOfDayPhase(timeOfDayState, 0.5); // Noon
+      }
+
       // Calculate derived nightFactor or use one from profile?
       // We can derive nightFactor roughly from elevation or force it.
       // For now, let's trigger lighting update with overrides.
@@ -2305,6 +2318,12 @@ export class Application {
          end: profile.fog.far,
          color: profile.fog.color
       } : null;
+
+      // Ensure sky shader uniforms are updated to match locked sun
+      // The sky shader (in src/world/sky.js) uses 'sunDirection' uniform.
+      if (scene.userData.sky && scene.userData.sky.material) {
+          scene.userData.sky.material.uniforms.sunDirection.value.copy(sunDir);
+      }
 
       // We need to estimate a 'nightFactor' if not provided.
       // If elevation < 0, it's night?
@@ -2336,6 +2355,9 @@ export class Application {
     // Alias for HUD compatibility
     const applyLightingPreset = applyLookProfile;
 
+    // Apply default profile on startup to lock the look immediately
+    applyLookProfile("Bright Noon");
+
     const onFrame = (deltaTime, elapsed) => {
       // Keep track of time for smooth animation and frame-independent movement.
       if (dayCycle.secondsPerDay > 0 && !currentLookProfile) {
@@ -2345,7 +2367,10 @@ export class Application {
         setTimeOfDayPhase(timeOfDayState, wrappedPhase);
       }
 
-      const phase = timeOfDayState.timeOfDayPhase ?? 0;
+      // If a profile is active, freeze the phase to NOON (0.5) for day profiles or MIDNIGHT (0.0) for night?
+      // Actually, we should just let the phase drift but ensure rendering ignores it.
+      // Or better, freeze the phase display in HUD if locked.
+      const phase = currentLookProfile ? 0.5 : (timeOfDayState.timeOfDayPhase ?? 0);
       timeOfDayState.elapsedSeconds = elapsed;
 
       let alignedSunDir;
@@ -2371,6 +2396,12 @@ export class Application {
             sunDistance: sunDistance,
             sunTarget: sunTargetVector
          });
+
+         // Fix: Ensure Sky Shader receives the updated sun direction
+         // Otherwise the sky remains dark (night texture default?) if not updated.
+         if (scene.userData.sky && scene.userData.sky.material) {
+             scene.userData.sky.material.uniforms.sunDirection.value.copy(alignedSunDir);
+         }
       } else {
          const sunDirForCycle = getSunDirection(timeOfDayState);
          alignedSunDir = syncSunLighting(sunDirForCycle?.y);
@@ -2424,6 +2455,25 @@ export class Application {
         player.velocity.set(0, 0, 0);
       }
       const playerRoot = player?.object;
+
+      // Kill Floor / Void Respawn Logic
+      if (playerRoot && playerRoot.position.y < seaLevel - 15.0) {
+        const respawnPos = findSafePlayerSpawn({
+          envCollider,
+          terrain,
+          searchCenter: AGORA_CENTER_3D,
+          fallback: AGORA_CENTER_3D,
+          playerHeight: player.height,
+          playerRadius: player.radius,
+          verticalClearance: 0.5,
+          seaLevel: seaLevel, // Use local seaLevel (which comes from getSeaLevelY in constructor)
+        });
+        player.velocity.set(0, 0, 0);
+        playerRoot.position.copy(respawnPos);
+        player.syncCapsuleToObject();
+        console.warn("[Player] Fell into void; respawned at Agora.");
+      }
+
       const terrainSize = terrain?.geometry?.userData?.size;
       if (playerRoot && Number.isFinite(terrainSize)) {
         const halfSize = terrainSize * 0.5;
