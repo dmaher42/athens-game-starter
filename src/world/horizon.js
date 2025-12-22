@@ -73,7 +73,7 @@ function createHorizonRing({
         vRadialMix = radialFade;
 
         float heightBias = mix(eastHeight, westHeight, westness);
-        float heightFalloff = 1.0 - pow(radialFade, 0.4);
+        float heightFalloff = 1.0 - pow(radialFade, 0.75);
         worldPosition.y = seaLevel + heightBias * heightFalloff;
 
         vWorldPosition = worldPosition.xyz;
@@ -117,9 +117,11 @@ function createHorizonRing({
 
         if (alpha <= 0.01) discard;
 
-        float skyBlend = smoothstep(0.35, 1.0, vRadialMix);
-        vec3 color = mix(horizonColor, fogColor, skyBlend);
-        gl_FragColor = vec4(color, alpha * 0.65);
+        float skyBlend = smoothstep(0.25, 1.0, vRadialMix);
+        vec3 depthTint = mix(horizonColor, fogColor, mix(0.55, 0.85, vRadialMix));
+        vec3 color = mix(horizonColor, depthTint, westness);
+        float edgeFeather = smoothstep(0.0, 0.45, 1.0 - vRadialMix);
+        gl_FragColor = vec4(color, alpha * 0.55 * edgeFeather);
       }
     `,
   });
@@ -139,9 +141,9 @@ export function createHorizon(scene, options = {}) {
   const innerRadius = Math.max(radius - fadeWidth, 10);
   const outerRadius = radius + fadeWidth;
 
-  const westHeight = Math.min(options.westHeight ?? 12.0, 15.0);
-  const eastHeight = Math.max(options.eastHeight ?? 1.5, 0.0);
-  const westRadiusScale = THREE.MathUtils.clamp(options.westRadiusScale ?? 1.2, 1.0, 1.6);
+  const westHeight = Math.min(options.westHeight ?? 8.0, 12.0);
+  const eastHeight = Math.max(options.eastHeight ?? 1.2, 0.0);
+  const westRadiusScale = THREE.MathUtils.clamp(options.westRadiusScale ?? 1.85, 1.0, 2.0);
 
   const fogColor = resolveFogColor(scene);
   const horizonColor = options.horizonColor
