@@ -20,12 +20,14 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
             resolve(envMap);
           } catch (err) {
             console.warn('[HDRI] Failed to apply environment:', err);
+            pmremGenerator.dispose();
             reject(err);
           }
         },
         undefined,
         (error) => {
           console.warn('[HDRI] Load failed:', error);
+          pmremGenerator.dispose();
           reject(error);
         }
       );
