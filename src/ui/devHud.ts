@@ -196,10 +196,9 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
   };
 
   const defaultPresetOrder = [
-    { name: "blue_hour", label: "Blue Hour" },
-    { name: "golden_hour", label: "Golden Hour" },
-    { name: "high_noon", label: "Bright Noon" },
-    { name: "night_sky", label: "Deep Night" },
+    { name: "Bright Noon", label: "Bright Noon" },
+    { name: "Golden Hour", label: "Golden Hour" },
+    { name: "Blue Hour", label: "Blue Hour" },
   ];
   const availablePresets = defaultPresetOrder.filter(({ name }) => {
     if (!lightingPresets) return true;
