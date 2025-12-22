@@ -8,6 +8,7 @@ import {
   HARBOR_CENTER_3D,
 } from "../world/locations.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
+import { startThrottledLoop } from "./hudShared.js";
 import { getUISlot } from "./uiRoot.js";
 
 const STYLE_ID = "mini-map-style";
@@ -535,7 +536,10 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
 
   let isExpanded = false;
   const updateToggle = () => {
-    toggle.textContent = isExpanded ? "Collapse" : "Expand";
+    const nextLabel = isExpanded ? "Collapse" : "Expand";
+    if (toggle.textContent !== nextLabel) {
+      toggle.textContent = nextLabel;
+    }
     wrap.classList.toggle("mini-map-panel--expanded", isExpanded);
     const targetSize = isExpanded ? 360 : 260;
     canvas.width = targetSize;
@@ -548,42 +552,59 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
   });
   updateToggle();
 
-  let rafId = 0;
   let disposed = false;
   let lastLegendUpdate = 0;
   const legendInterval = 500; // ms
+  let lastLegendKey = "";
+  let lastDrawKey = "";
+
+  const buildPositionKey = (
+    position: MiniMapPoint | Vector3Like | null | undefined,
+  ) => {
+    if (!position) return "";
+    return `${position.x.toFixed(1)}|${position.z.toFixed(1)}`;
+  };
 
   const loop = () => {
     if (disposed) return;
     try {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      bg.addColorStop(0, "#0b1728");
-      bg.addColorStop(1, "#09101a");
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      drawGrid(ctx, canvas);
-      drawFeatures(ctx, canvas, features, bounds);
-
       const rawPosition = getPosition?.();
       const position = normalizePosition(rawPosition);
       const direction = getDirection?.();
+      const drawKey = `${buildPositionKey(position)}::${buildPositionKey(direction)}`;
+
+      if (drawKey !== lastDrawKey) {
+        lastDrawKey = drawKey;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const bg = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        bg.addColorStop(0, "#0b1728");
+        bg.addColorStop(1, "#09101a");
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawGrid(ctx, canvas);
+        drawFeatures(ctx, canvas, features, bounds);
+
+        if (position) {
+          drawPlayer(ctx, canvas, position, direction, bounds);
+        }
+        drawCompass(ctx, direction, canvas.width);
+      }
+
       if (position) {
-        drawPlayer(ctx, canvas, position, direction, bounds);
         const now = performance.now?.() ?? Date.now();
-        if (now - lastLegendUpdate > legendInterval) {
+        const legendKey = buildPositionKey(position);
+        if (legendKey !== lastLegendKey && now - lastLegendUpdate > legendInterval) {
           updateLegend(list, position, features);
+          lastLegendKey = legendKey;
           lastLegendUpdate = now;
         }
       }
-      drawCompass(ctx, direction, canvas.width);
     } catch (error) {
       console.warn("[MiniMap] update failed", error);
     }
-    rafId = requestAnimationFrame(loop);
   };
-  loop();
+  const stopLoop = startThrottledLoop(loop);
 
   const slot = getUISlot("topLeft");
   slot?.appendChild(wrap);
@@ -592,7 +613,7 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
     rootElement: wrap,
     dispose() {
       disposed = true;
-      if (rafId) cancelAnimationFrame(rafId);
+      stopLoop();
       wrap.remove();
     },
   };
