@@ -131,6 +131,7 @@ const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
 
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 
+// Use Look Profiles as the primary presets
 const LIGHTING_PRESETS = LOOK_PROFILES;
 const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
 const SUN_ELEVATION_STORAGE_KEY = "skybox.sunElevationDeg";
@@ -2220,12 +2221,15 @@ export class Application {
         if (Number.isFinite(profile.sun.elevation)) {
           sunAlignmentState.elevationDeg = clampElevation(profile.sun.elevation);
         }
+        // Persist only if intended, but profiles are usually ephemeral/presets.
+        // We'll update state so the sun moves.
         persistSunAlignment();
       }
 
       // 3. Fog
       if (profile.fog) {
         const { enabled, color, near, far } = profile.fog;
+        // Update fog state
         onFogChange(!!enabled);
         if (enabled && color && Number.isFinite(near) && Number.isFinite(far)) {
           const fogColor = new THREE.Color(color);
@@ -2246,8 +2250,10 @@ export class Application {
            const exposure = Number.isFinite(profile.skybox.exposureMultiplier)
              ? profile.skybox.exposureMultiplier
              : 1.0;
+           // Assuming material.color controls exposure for now as per previous logic
            skyDome.material.color.setScalar(exposure);
          }
+         // Update sky texture/uniforms if needed using legacy system for now
          if (profile.skybox.skyKey) {
             updateSky(scene, profile.skybox.skyKey);
          }
@@ -2263,7 +2269,11 @@ export class Application {
          applyEnvironmentIntensity(profile.env.envMapIntensity);
       }
 
+      // Force an immediate update
       const sunDir = getAlignedSunDirection();
+      // Calculate derived nightFactor or use one from profile?
+      // We can derive nightFactor roughly from elevation or force it.
+      // For now, let's trigger lighting update with overrides.
       const sunColor = profile.sun?.color ? new THREE.Color(profile.sun.color) : null;
       const sunIntensity = profile.sun?.intensity;
       const ambColor = profile.ambient?.color ? new THREE.Color(profile.ambient.color) : null;
@@ -2279,11 +2289,22 @@ export class Application {
         overrideAmbientIntensity: ambIntensity
       });
 
+      // Update ocean to match new look
+      // We need a 'haze' object structure for updateOcean
       const hazeStruct = profile.fog ? {
          start: profile.fog.near,
          end: profile.fog.far,
          color: profile.fog.color
       } : null;
+
+      // We need to estimate a 'nightFactor' if not provided.
+      // If elevation < 0, it's night?
+      // For presets, let's assume day unless specified.
+      // Or derive from lighting colors intensity?
+      // updateLighting calculates it, but we overrode it.
+      // Let's rely on lights.nightFactor which updateLighting sets (although we might need to tweak updateLighting to set it correctly even when overriden)
+      // Actually updateLighting sets nightFactor based on sun height.
+      // Since we set sun elevation, nightFactor should be correct.
 
       updateOcean(
         ocean,
@@ -2294,14 +2315,16 @@ export class Application {
         hazeStruct
       );
 
+      // Other updates
       updateHarborLighting(harbor, lights.nightFactor);
-      updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: 0 });
+      updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: 0 }); // Phase irrelevant if overriding
       updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: 0 });
       updateMainHillRoadLighting(roadGroup, lights.nightFactor);
 
       renderFrame();
     };
 
+    // Alias for HUD compatibility
     const applyLightingPreset = applyLookProfile;
 
     const onFrame = (deltaTime, elapsed) => {
@@ -2318,7 +2341,9 @@ export class Application {
 
       let alignedSunDir;
       if (currentLookProfile) {
-         alignedSunDir = getAlignedSunDirection();
+         // If a profile is active, enforce its lighting values every frame
+         // to prevent drift or other systems overriding it.
+         alignedSunDir = getAlignedSunDirection(); // Based on static azimuth/elevation
          const profile = currentLookProfile;
 
          const sunColor = profile.sun?.color ? new THREE.Color(profile.sun.color) : null;
@@ -2328,7 +2353,7 @@ export class Application {
          const ambIntensity = profile.ambient?.intensity;
 
          updateLighting(lights, alignedSunDir, {
-            applyPosition: true,
+            applyPosition: true, // Keep sun position updated (e.g. shadows)
             overrideSunColor: sunColor,
             overrideSunIntensity: sunIntensity,
             overrideAmbientColor: ambColor,
