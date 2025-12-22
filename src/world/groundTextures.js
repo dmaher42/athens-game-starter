@@ -254,7 +254,9 @@ export function createGroundTextureState(
   const state = {
     detailLayers: [],
     baseBlend: null,
-    beach: null, // New beach state
+    stoneBlend: null,
+    beach: null,
+    macro: null,
   };
 
   const baseConfig = config?.base;
@@ -306,64 +308,6 @@ export function createGroundTextureState(
       material.map = baseTexture;
       material.needsUpdate = true;
     }
-
-    const normalTexture = loadAdditionalTexture(baseConfig.normalUrl, baseConfig, {
-      colorSpace: "linear",
-    });
-    if (normalTexture) {
-      material.normalMap = normalTexture;
-      const scale = baseConfig.normalScale;
-      if (Array.isArray(scale)) {
-        const x = Number.isFinite(scale[0]) ? scale[0] : 1;
-        const y = Number.isFinite(scale[1]) ? scale[1] : x;
-        material.normalScale = new THREE.Vector2(x, y);
-      } else if (Number.isFinite(scale)) {
-        material.normalScale = new THREE.Vector2(scale, scale);
-      }
-      material.needsUpdate = true;
-    }
-
-    const bumpTexture = loadAdditionalTexture(baseConfig.bumpUrl, baseConfig, {
-      colorSpace: "linear",
-    });
-    if (bumpTexture) {
-      material.bumpMap = bumpTexture;
-      if (Number.isFinite(baseConfig.bumpScale)) {
-        material.bumpScale = baseConfig.bumpScale;
-      }
-      material.needsUpdate = true;
-    }
-
-    const roughnessTexture = loadAdditionalTexture(
-      baseConfig.roughnessUrl,
-      baseConfig,
-      { colorSpace: "linear" },
-    );
-    if (roughnessTexture) {
-      material.roughnessMap = roughnessTexture;
-      material.needsUpdate = true;
-    }
-
-    const metalnessTexture = loadAdditionalTexture(
-      baseConfig.metalnessUrl,
-      baseConfig,
-      { colorSpace: "linear" },
-    );
-    if (metalnessTexture) {
-      material.metalnessMap = metalnessTexture;
-      material.needsUpdate = true;
-    }
-
-    const aoTexture = loadAdditionalTexture(baseConfig.aoUrl, baseConfig, {
-      colorSpace: "linear",
-    });
-    if (aoTexture) {
-      material.aoMap = aoTexture;
-      if (Number.isFinite(baseConfig.aoIntensity)) {
-        material.aoMapIntensity = baseConfig.aoIntensity;
-      }
-      material.needsUpdate = true;
-    }
   }
 
   const detailConfigs = Array.isArray(config?.details) ? config.details : [];
@@ -382,8 +326,14 @@ export function createGroundTextureState(
       ? loadTexture(blendConfig.dirt.url, blendConfig.dirt)
       : null;
 
+    // Stone texture loading
+    const stoneTex = blendConfig.stone?.url
+      ? loadTexture(blendConfig.stone.url, blendConfig.stone)
+      : null;
+
     if (grassTex) configureTexture(grassTex, blendConfig.grass);
     if (dirtTex) configureTexture(dirtTex, blendConfig.dirt);
+    if (stoneTex) configureTexture(stoneTex, blendConfig.stone);
 
     const maskSize = Math.max(
       8,
@@ -402,11 +352,28 @@ export function createGroundTextureState(
     maskTexture.magFilter = THREE.LinearFilter;
     maskTexture.minFilter = THREE.LinearMipMapLinearFilter;
 
+    // Helper for tint
+    const stoneTint = new THREE.Color(1, 1, 1);
+    if (blendConfig.stone?.tint) {
+      if (Array.isArray(blendConfig.stone.tint)) {
+        stoneTint.fromArray(blendConfig.stone.tint);
+      } else {
+        stoneTint.set(blendConfig.stone.tint);
+      }
+    }
+
     state.baseBlend = {
       grassTexture: grassTex,
       dirtTexture: dirtTex,
+      stoneTexture: stoneTex,
+      stoneTint: stoneTint,
+
       noiseScale: blendConfig.noiseScale ?? 16,
       noiseContrast: Math.max(0.0001, blendConfig.noiseContrast ?? 1.2),
+
+      slopeThreshold: blendConfig.slopeThreshold ?? 0.7,
+      slopeBlend: blendConfig.slopeBlend ?? 0.2,
+
       maskTexture,
       maskData,
       maskSize,
@@ -424,15 +391,26 @@ export function createGroundTextureState(
     };
   }
 
+  // Parse Macro Config
+  if (config?.macro) {
+    state.macro = {
+      scale: config.macro.scale ?? 0.05,
+      strength: config.macro.strength ?? 0.15,
+      uniforms: {},
+    }
+  }
+
   return state;
 }
 
 export function injectGroundTextureShader(shader, state) {
   const hasDetails = state?.detailLayers?.length > 0;
   const hasBlend = !!state?.baseBlend?.dirtTexture;
+  const hasStone = !!state?.baseBlend?.stoneTexture;
   const hasBeach = !!state?.beach;
+  const hasMacro = !!state?.macro;
 
-  if (!hasDetails && !hasBlend && !hasBeach) {
+  if (!hasDetails && !hasBlend && !hasBeach && !hasMacro) {
     return;
   }
 
@@ -442,6 +420,10 @@ export function injectGroundTextureShader(shader, state) {
   if (shader.defines.USE_UV === undefined) {
     shader.defines.USE_UV = "";
   }
+
+  // Need derivative functions for normal calc
+  if (!shader.extensions) shader.extensions = {};
+  shader.extensions.derivatives = true;
 
   if (!shader.vertexShader.includes("#include <uv_pars_vertex>")) {
     shader.vertexShader = shader.vertexShader.replace(
@@ -459,8 +441,8 @@ export function injectGroundTextureShader(shader, state) {
 
   const varyings = [];
 
-  // ALWAYS inject vGroundHeight if we have details OR beach
-  if (hasDetails || hasBeach) {
+  // ALWAYS inject vGroundHeight if we have details OR beach OR blend (for slope)
+  if (hasDetails || hasBeach || hasBlend || hasMacro) {
     const groundHeightVarying = "varying float vGroundHeight;";
     if (!shader.vertexShader.includes(groundHeightVarying)) {
       shader.vertexShader = shader.vertexShader.replace(
@@ -478,7 +460,33 @@ export function injectGroundTextureShader(shader, state) {
     varyings.push(groundHeightVarying);
   }
 
+  // Inject vWorldNormal to calculate slope
   if (hasBlend) {
+    const worldNormalVarying = "varying vec3 vWorldNormal;";
+    if (!shader.vertexShader.includes(worldNormalVarying)) {
+       shader.vertexShader = shader.vertexShader.replace(
+        "#include <uv_pars_vertex>",
+        `#include <uv_pars_vertex>\n${worldNormalVarying}`,
+      );
+    }
+    // We need object normal transformed to world space
+    // Three.js 'begin_normal' computes 'objectNormal'
+    // 'default_normal' transforms it to 'transformedNormal' (view space)
+    // We want world space.
+    // 'worldNormal' is often available in some chunks but best to compute our own to be safe.
+    // modelMatrix * vec4(objectNormal, 0.0)
+
+    // We can inject it after default_normal to ensure objectNormal is populated
+    if (!shader.vertexShader.includes("vWorldNormal = normalize(")) {
+       shader.vertexShader = shader.vertexShader.replace(
+        "#include <defaultnormal_vertex>",
+        `#include <defaultnormal_vertex>\n vWorldNormal = normalize( mat3( modelMatrix ) * objectNormal );`
+       );
+    }
+    varyings.push(worldNormalVarying);
+  }
+
+  if (hasBlend || hasMacro) {
     const worldXZVarying = "varying vec2 vWorldXZ;";
     if (!shader.vertexShader.includes(worldXZVarying)) {
       shader.vertexShader = shader.vertexShader.replace(
@@ -500,6 +508,10 @@ export function injectGroundTextureShader(shader, state) {
     : varyings;
   const mixCode = [];
 
+  // Debug Uniform
+  shader.uniforms.uDebugTerrain = { value: 0.0 };
+  header.push("uniform float uDebugTerrain;");
+
   // Beach Uniforms
   let beachHeader = "";
   if (hasBeach) {
@@ -515,14 +527,29 @@ export function injectGroundTextureShader(shader, state) {
     beachHeader = `uniform float uSeaLevel;\nuniform float uBeachHeight;\nuniform float uBeachFade;`;
   }
 
+  // Macro Uniforms
+  let macroHeader = "";
+  if (hasMacro) {
+    shader.uniforms.uGroundMacroParams = { value: new THREE.Vector2(state.macro.scale, state.macro.strength) };
+    macroHeader = `uniform vec2 uGroundMacroParams;`;
+  }
+
   if (hasBlend) {
     shader.uniforms.uGroundDirtMap = { value: state.baseBlend.dirtTexture };
+    shader.uniforms.uGroundStoneMap = { value: state.baseBlend.stoneTexture || fallbackMask };
+    shader.uniforms.uGroundStoneTint = { value: state.baseBlend.stoneTint };
+
     shader.uniforms.uGroundBlendNoise = {
       value: new THREE.Vector2(
         state.baseBlend.noiseScale ?? 16,
         state.baseBlend.noiseContrast ?? 1.2,
       ),
     };
+
+    shader.uniforms.uGroundSlopeParams = {
+        value: new THREE.Vector2(state.baseBlend.slopeThreshold, state.baseBlend.slopeBlend)
+    };
+
     shader.uniforms.uGroundBlendMask = {
       value: state.baseBlend.maskTexture || fallbackMask,
     };
@@ -580,7 +607,7 @@ export function injectGroundTextureShader(shader, state) {
         float strength = clamp(${paramName}.w, 0.0, 1.0);
         float mask = 1.0;
         if (maxH > minH) {
-          mask = smoothstep(minH, minH + fade, vGroundHeight); // Use vGroundHeight explicitly
+          mask = smoothstep(minH, minH + fade, vGroundHeight);
           mask *= 1.0 - smoothstep(maxH - fade, maxH, vGroundHeight);
         }
         float layerStrength = strength * mask;
@@ -627,7 +654,14 @@ float groundNoise(vec2 p) {
 `;
 
   const blendHeader = hasBlend
-    ? `uniform sampler2D uGroundDirtMap;\nuniform sampler2D uGroundBlendMask;\nuniform vec2 uGroundBlendNoise;\nuniform float uGroundBlendMaskStrength;\nuniform sampler2D uGroundGrassMap;`
+    ? `uniform sampler2D uGroundDirtMap;
+       uniform sampler2D uGroundStoneMap;
+       uniform vec3 uGroundStoneTint;
+       uniform sampler2D uGroundBlendMask;
+       uniform vec2 uGroundBlendNoise;
+       uniform vec2 uGroundSlopeParams;
+       uniform float uGroundBlendMaskStrength;
+       uniform sampler2D uGroundGrassMap;`
     : "";
 
   const commonInjection = [
@@ -636,7 +670,8 @@ float groundNoise(vec2 p) {
     ...header,
     groundNoiseFn,
     blendHeader,
-    beachHeader, // Add beach uniforms
+    beachHeader,
+    macroHeader
   ]
     .filter(Boolean)
     .join("\n");
@@ -647,32 +682,66 @@ float groundNoise(vec2 p) {
   );
 
   if (hasBlend) {
-    // Modified blend logic to include beach factor
+    // TRI-BLEND LOGIC: Grass vs Dirt vs Stone
     let blendLogic = `
-      vec4 grassTexel = vec4(1.0);
+      vec3 grassTexel = vec3(1.0);
       vec3 baseDiffuse = diffuseColor.rgb;
       #ifdef USE_MAP
-        vec4 texelColor = texture2D(uGroundGrassMap, vUv);
-        grassTexel = texelColor;
+        grassTexel = texture2D(uGroundGrassMap, vUv).rgb;
       #endif
+
       vec3 dirtTexel = texture2D(uGroundDirtMap, vUv).rgb;
+      vec3 stoneTexel = texture2D(uGroundStoneMap, vUv).rgb * uGroundStoneTint;
+
+      // 1. Compute Base Dirt Noise Blend
       float noiseWeight = clamp(groundNoise(vWorldXZ * uGroundBlendNoise.x), 0.0, 1.0);
       noiseWeight = pow(noiseWeight, max(uGroundBlendNoise.y, 0.0001));
       float maskWeight = texture2D(uGroundBlendMask, vUv).r * uGroundBlendMaskStrength;
       float dirtWeight = clamp(max(noiseWeight, maskWeight), 0.0, 1.0);
-    `;
 
-    // Inject beach calculation
-    if (hasBeach) {
-       blendLogic += `
+      // 2. Beach Override (Low Height -> Sand/Dirt)
       float beachLimit = uSeaLevel + uBeachHeight;
       float beachFactor = 1.0 - smoothstep(beachLimit, beachLimit + uBeachFade, vGroundHeight);
       dirtWeight = clamp(max(dirtWeight, beachFactor), 0.0, 1.0);
-       `;
-    }
 
-    blendLogic += `
-      vec3 mixed = mix(grassTexel.rgb, dirtTexel, dirtWeight);
+      // 3. Slope Override (High Slope -> Stone)
+      // vWorldNormal.y is 1.0 for flat ground, 0.0 for vertical.
+      // Slope = 1.0 - vWorldNormal.y.
+      float slope = 1.0 - clamp(vWorldNormal.y, 0.0, 1.0);
+      float slopeThresh = uGroundSlopeParams.x;
+      float slopeBlendWidth = uGroundSlopeParams.y;
+      float stoneWeight = smoothstep(slopeThresh, slopeThresh + slopeBlendWidth, slope);
+
+      // 4. Combine
+      // Stone is top layer, then Dirt, then Grass
+      vec3 mixed = mix(grassTexel, dirtTexel, dirtWeight);
+      mixed = mix(mixed, stoneTexel, stoneWeight);
+
+      // Apply Macro Variation
+      #ifdef USE_UV
+         vec2 macroUv = vWorldXZ * uGroundMacroParams.x;
+         float macroNoise = groundNoise(macroUv);
+         // Remap 0..1 to (1-strength)..(1+strength)
+         float macroFactor = 1.0 + (macroNoise - 0.5) * 2.0 * uGroundMacroParams.y;
+         mixed *= macroFactor;
+      #endif
+
+      // Debug Visualization
+      if (uDebugTerrain > 0.5) {
+         if (uDebugTerrain < 1.5) {
+            // Mode 1: Weights (R=Grass, G=Dirt, B=Stone)
+            // Note: This is an approximation since they overlap
+            float grassW = (1.0 - stoneWeight) * (1.0 - dirtWeight);
+            float dirtW = (1.0 - stoneWeight) * dirtWeight;
+            mixed = vec3(grassW, dirtW, stoneWeight);
+         } else {
+            // Mode 2: Height/Slope
+            // R = Height (normalized), G = Slope, B = 0
+            float h = (vGroundHeight - uSeaLevel) / 20.0;
+            mixed = vec3(h, slope, 0.0);
+         }
+      }
+
       diffuseColor = vec4(mixed * baseDiffuse, diffuseColor.a);
     `;
 
@@ -683,14 +752,6 @@ float groundNoise(vec2 p) {
   }
 
   if (hasDetails) {
-    // If no blend, we need vGroundHeight declaration injection? No, handled in header.
-    // If no blend, we still need the 'varying float vGroundHeight' available if mixed code uses it.
-    // Wait, mixCode uses 'vGroundHeight' now instead of 'groundHeight'.
-    // Original code: float groundHeight = vGroundHeight;
-
-    // Check if we need to declare groundHeight local var or just use vGroundHeight
-    // Using vGroundHeight directly is fine.
-
     const injection = `vec4 diffuseColor = vec4( diffuse, opacity );\n${mixCode.join("\n")}`;
 
     shader.fragmentShader = shader.fragmentShader.replace(

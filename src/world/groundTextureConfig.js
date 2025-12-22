@@ -53,8 +53,8 @@ export const GROUND_TEXTURE_CONFIG = {
     url: textureUrl("grass-albedo.jpg"),
     colorSpace: "srgb",
 
-    // Lower repeat => larger texture features (less “tiny tiles”).
-    repeat: [24, 24],
+    // Higher repeat => Higher density (texture looks correct at walking height)
+    repeat: [64, 64],
 
     // Small rotation prevents obvious grid tiling.
     rotation: 0.08,
@@ -67,7 +67,7 @@ export const GROUND_TEXTURE_CONFIG = {
     grass: {
       url: textureUrl("grass-albedo.jpg"),
       colorSpace: "srgb",
-      repeat: [24, 24],
+      repeat: [64, 64],
       rotation: 0.00,
     },
 
@@ -75,8 +75,17 @@ export const GROUND_TEXTURE_CONFIG = {
       url: textureUrl("dirt-albedo.jpg"),
       colorSpace: "srgb",
       // Dirt should be slightly less tiled so patches feel broad and natural.
-      repeat: [18, 18],
+      repeat: [48, 48],
       rotation: 0.13,
+    },
+
+    // New Stone Layer (reuses dirt texture but will be tinted in shader)
+    stone: {
+      url: textureUrl("dirt-albedo.jpg"),
+      colorSpace: "srgb",
+      repeat: [32, 32],
+      rotation: 0.7,
+      tint: [0.65, 0.65, 0.7], // Rock-like tint
     },
 
     /**
@@ -87,8 +96,12 @@ export const GROUND_TEXTURE_CONFIG = {
      * If your shader uses different names (e.g. `maskScale`, `maskContrast`),
      * rename these to exactly what the shader/material reads.
      */
-    noiseScale: 2.0,
+    noiseScale: 4.0, // Increased slightly for more variation
     noiseContrast: 0.8,
+
+    // Tri-blend settings
+    slopeThreshold: 0.5, // Slope > 0.5 starts becoming rock
+    slopeBlend: 0.2, // Blend width
 
     /**
      * Optional: if your loader supports these, they help break repetition further.
@@ -97,6 +110,15 @@ export const GROUND_TEXTURE_CONFIG = {
      */
     noiseOffset: [0.0, 0.0],
     noiseRotation: 0.0,
+  },
+
+  /**
+   * Macro variation
+   * Adds large scale color noise to avoid "repeating carpet" look
+   */
+  macro: {
+    scale: 0.05,
+    strength: 0.15,
   },
 
   /**
