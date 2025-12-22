@@ -273,7 +273,7 @@ function createSkirtGeometry(sourceGeometry, seaLevel) {
   const vertices = [];
   const colors = [];
 
-  const skirtDepth = -20.0;
+  const skirtDepth = -150.0;
   const bottomZ = seaLevel + skirtDepth;
 
   const topColor = SAND_COLOR;

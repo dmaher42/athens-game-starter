@@ -132,17 +132,37 @@ export class BackdropMountains {
 
   createMainlandExtension() {
       // Create a flat(ish) mesh to cover the water in the inland direction.
-      // Radius from ~200 (end of terrain) to ~1200 (mountains).
+      // Radius from ~200 (end of terrain) to ~2200 (beyond mountains).
       // Sector: East.
 
+      // Extended inland mass to block horizon gaps
       const innerRadius = 180;
-      const outerRadius = 1600;
-      const thetaStart = -Math.PI / 1.5; // North-West-ish start
-      const thetaLength = Math.PI * 1.33; // Cover East sector
+      const outerRadius = 2400;
+      const thetaStart = -Math.PI / 1.35; // Wider start (approx -133 deg)
+      const thetaLength = Math.PI * 1.5;  // Wider arc (approx 270 deg)
 
       const geometry = new THREE.RingGeometry(innerRadius, outerRadius, 32, 8, thetaStart, thetaLength);
 
-      // Rotate to flat
+      // Perturb heights slightly to avoid z-fighting with distant water/fog
+      // Modify Z (which becomes Y after rotation) to create a rise
+      const pos = geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i); // Y in RingGeometry corresponds to Z in world space (before rotation)
+        const r = Math.hypot(x, y);
+
+        // Slight rise at distance to block horizon
+        // We modify the Z attribute (which is 0 for a flat ring) to create height relative to the ring plane.
+        const rise = (r - innerRadius) * 0.025;
+        pos.setZ(i, rise);
+      }
+
+      // Rotate to flat (X-axis rotation maps XY plane to XZ plane, and Z axis to -Y axis)
+      // Actually, rotateX(-PI/2):
+      // y' = y*cos - z*sin = 0 - z*(-1) = z
+      // z' = y*sin + z*cos = y*(-1) + 0 = -y
+      // So Ring(x, y, z_height) -> World(x, z_height, -y)
+      // This means our 'rise' (set in Z) becomes World Y (Height). This is correct.
       geometry.rotateX(-Math.PI / 2);
 
       // Vertex colors or texture?
