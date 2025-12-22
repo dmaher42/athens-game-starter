@@ -705,6 +705,17 @@ export async function loadLandmark(scene, url, options = {}) {
 
     const finalized = finalizeLandmarkObject(entry, finalObject, scene, options, materialPreset);
     if (finalized) {
+      // LANDMARK VISIBILITY: Explicitly disable fog on landmarks so they remain
+      // legible at distance while the surrounding city fades (Prompt 3 Hierarchy).
+      finalized.traverse((child) => {
+        if (child.isMesh && child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach(m => { if(m) m.fog = false; });
+          } else {
+            child.material.fog = false;
+          }
+        }
+      });
       applyForegroundFogPolicy(finalized);
       return finalized;
     }

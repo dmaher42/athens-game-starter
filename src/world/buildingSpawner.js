@@ -49,7 +49,9 @@ function createMaterial(key, rng, overrides = {}) {
       // However, we want to support color being passed as hex or string.
   }
 
-  const mat = new THREE.MeshStandardMaterial({ ...base, ...overrides, color, fog: false });
+  // ENABLE FOG: We want the city fabric (houses, shops) to participate in atmospheric
+  // perspective so they fade at distance, reducing visual noise (Prompt 3).
+  const mat = new THREE.MeshStandardMaterial({ ...base, ...overrides, color, fog: true });
   mat.userData = { ...mat.userData, materialType: key };
   return mat;
 }

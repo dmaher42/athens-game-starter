@@ -1,4 +1,9 @@
 export function applyForegroundFogPolicy(object) {
+  // Originally disabled fog on foreground objects.
+  // We now leave fog enabled to support depth fading and atmospheric perspective.
+  // This function is kept for API compatibility but performs no operations.
+
+  /*
   if (!object || typeof object.traverse !== 'function') return;
   object.traverse((child) => {
     if (child.isMesh && child.material) {
@@ -11,6 +16,7 @@ export function applyForegroundFogPolicy(object) {
       }
     }
   });
+  */
 }
 
 // Alias for backward compatibility
