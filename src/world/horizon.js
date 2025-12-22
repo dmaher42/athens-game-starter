@@ -89,6 +89,7 @@ function createHorizonRing({
       uniform float seaLevel;
       uniform vec3 horizonColor;
       uniform vec3 fogColor;
+      uniform float westRadiusScale;
 
       #define PI 3.14159265
 
