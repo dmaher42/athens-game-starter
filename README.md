@@ -1,281 +1,192 @@
-# athens-game-starter
+Overview
 
-## Development & Deployment
+This project is an experimental, walkable 3D interpretation of Athens as a coastal mainland city.
 
-### How to update (Lane A — Preview first)
+The goal is not to build a large open-world game or a technical terrain demo.
+The goal is to create a place — a city that feels enjoyable to walk around, explore, and return to.
 
-1. In GitHub, open the file you want to change → **Edit** → “Commit changes” → **Create a new branch** (GitHub will make a PR).
-2. On the PR page, wait for **Deployments** to show a **GitHub Pages** preview → **click the link** to play and test.
-   - If you like it: click **Merge** → the live site updates automatically.
-   - If you don’t: just **Close** the PR. No harm done.
+If someone remembers this project, the ideal outcome is simple:
 
-> You do **not** need Codespaces or a dev server for this flow.
+They remember how much they enjoyed walking around — and they want to come back.
 
-### Quick start
+This repository serves as both:
 
-To run the project locally:
+a living world-building experiment, and
 
-1. Install dependencies with `npm install`.
-2. Start the Vite dev server with `npm run dev`.
+a testbed for AI-assisted development using tools like Codex and Jules.
 
-The build step outputs self-contained static assets under `docs/`, suitable for
-hosting on GitHub Pages or any static site provider.
+Core Vision (Authoritative)
 
-### TypeScript migration checklist
+This is NOT an island
 
-Stage 5 of the TypeScript rollout targets the state store, shared input helpers,
-and the UI runtime. Track progress and confirm that any legacy `@ts-ignore`
-directives are removed as modules convert to `.ts` in the
-[TypeScript migration checklist](docs/typescript-migration.md).
+This is a mainland coastal city with a harbour, similar in spirit to Athens
 
-> ℹ️ Drop a hero character model at `public/models/character/hero.glb` to see the
-> fully animated avatar. When the file is missing the runtime first tries the
-> bundled `astronaut.glb` sample before falling back to a simple capsule so
-> movement and interactions remain testable. Large binary GLB assets are not
-> tracked in this repository; download or supply your own models locally before
-> building or deploying the project.
+The sea is open on one side
 
-### Custom plaza, road, and grass textures
+The land rises inland behind the city
 
-The starter scene ships with procedural fallbacks, but every surface can be
-retargeted to your own image sets. The workflow varies slightly depending on
-which meshes you want to replace:
+Hills and mountains define the skyline and form natural boundaries
 
-#### Civic plaza pads and promenades
+The world should feel contained and intentional, not infinite or flat
 
-The agora plazas and promenade strips are generated in
-`src/world/cityPlan.js`. Each pad is a `THREE.MeshStandardMaterial` built by
-`createPavedStrip()`, so you can either change the solid color swatch or swap in
-a full PBR material. To attach a texture set:
+Design Priorities (In Order)
 
-1. Drop your tiling maps under `public/textures/plaza/` using the
-   `basecolor/normal/roughness/ao` naming convention (for example,
-   `public/textures/plaza/basecolor.jpg`).
-2. Import the helper at the top of `cityPlan.js`:
-   ```js
-   import { makeTiledPBR } from "../materials/pbr-utils.js";
-   ```
-3. When you build the civic district (inside `createCivicDistrict()`), resolve
-   the material once with the helper and assign it to the strips the helper
-   returns. A simple pattern is:
-   ```js
-   const plazaMat =
-     (await makeTiledPBR("textures/plaza", [4, 4])) ??
-     new THREE.MeshStandardMaterial({ color: 0xc3c2bb });
-   const promenade = createPavedStrip(promenadeWidth, plazaLength, 0xc3c2bb);
-   promenade.material = plazaMat;
-   ```
-   (Keep the solid-color fallback in case the JPGs are missing during
-   development.) The helper already enables polygon offsets so the pads avoid
-   z-fighting with the underlying terrain.
+Walking feels good
 
-#### Lot pads and foundation discs
+Movement should be smooth, readable, and inviting
 
-The procedural "lot pads" that reserve space for new buildings and the optional
-foundation discs rendered around plazas now attempt to load tiling PBR sets at
-runtime. Drop your images into `public/textures/plaza/lot-pads/` or
-`public/textures/plaza/foundation-pads/` using the same `basecolor`, `normal`,
-`roughness`, and `ao` stem names as the plaza materials. If any maps are
-missing, the engine falls back to the legacy solid colors so development builds
-continue to run without custom assets. Hill-city foundations reuse the same
-material bundle passed back from the harbor city, keeping both districts in
-sync.
+Terrain should guide the player naturally, not trap or punish
 
-#### Roads, paths, and gravel lots
+Views feel intentional
 
-Procedural and imported roads are retargeted through the
-`applyGravelToRoads()` feature in `src/features/roads-gravel.js`. The helper
-looks for textures in `public/textures/gravel/` and applies them to any mesh
-named or tagged like a street. Provide at least a `basecolor` map (normal,
-roughness, and ambient-occlusion maps are optional but recommended) and the
-runtime will tile them across every road segment. Adjust the `repeat` option
-when calling `applyGravelToRoads({ repeat: [u, v] })` if the scale feels off.
+No empty horizons, voids, or visible seams
 
-#### Terrain grass and dirt
+Every direction should offer visual interest
 
-Large-scale hillsides use the layered material configured in
-`src/world/groundTextureConfig.js`. Drop JPGs or PNGs into
-`public/textures/ground/` (mirrored in `docs/textures/ground/` on build) and
-reference them from the config via relative URLs such as
-`textures/ground/lush-grass.jpg`. Each entry lets you tune repeat counts, tint,
-blend mode (`"mix"` or `"multiply"`), height ranges, slopes, and procedural
-noise seeds so grass can fade into rocky ridges automatically. Refresh the dev
-server or rebuild after editing to recompile the custom shader.
+Natural boundaries
 
-### Controls
+Coastline + sea = open boundary
 
-- **W / A / S / D** (or arrow keys) – Move across the terrain.
-- **Shift** – Sprint while grounded or flying.
-- **Space** – Jump when on the ground; ascend while flying.
-- **Ctrl** – Descend while flying.
-- **F** – Toggle flight mode on or off.
+Inland hills/mountains = soft physical boundary
 
-### Verifying custom hero models without the CLI
+No circular rims, bowls, or “disk world” artifacts
 
-If you do not have access to a local terminal you can still confirm the runtime
-loads your custom `hero.glb`:
+Atmosphere over spectacle
 
-1. Use your file manager to copy the model to
-   `public/models/character/hero.glb`. Keep the filename—`Character.ts` requests
-   that exact path when the app starts.
-2. Open the project folder in an editor with an integrated dev server (for
-   example VS Code + the Vite extension) or upload the repository to a platform
-   such as StackBlitz that can run Vite in the browser. Both options replicate
-   the standard `npm run dev` workflow without relying on your own terminal.
-3. Start the preview and watch the browser console. If the runtime cannot reach
-   your file it logs a warning about the placeholder capsule; seeing the fully
-   animated character without that warning confirms the GLB loaded correctly.
-4. When preparing a production build, make sure the same file ends up at
-   `docs/models/character/hero.glb` or an equivalent CDN bucket that your
-   deployment workflow publishes alongside the static site.
+Mood, light, and silhouette matter more than scale
 
-> ⚠️ Opening `index.html` directly from the filesystem will not work. The source
-> imports bare modules (such as `three`) and TypeScript entry points that must be
-> processed by Vite before they can run in the browser.
+Illusions are acceptable if they improve the experience
 
-### Downloading Aristotle's Tomb
+World Geography Rules
 
-The main scene now features Aristotle's Tomb from Sketchfab. Because the model
-is distributed under a free license, you still need a Sketchfab API token to
-pull the binary. Run the helper script and pass your token via the environment:
+Terrain is directional, not radial
 
-```bash
-SKETCHFAB_TOKEN=<your token> npm run download:aristotle
-```
+One defined sea-facing direction (harbour)
 
-The GLB is saved to `public/models/landmarks/aristotle_tomb.glb`. Because binary
-assets are ignored by Git, keep the downloaded file outside of commits—your
-deployment workflow should copy it into `public/` (and therefore `docs/`) at
-build time. If the file is missing when the app boots the runtime now renders a
-bundled placeholder glTF and, when that is not available, spawns a lightweight
-procedural monument so you can continue exploring even before fetching the
-premium asset.
+Inland terrain rises progressively into hills and mountains
 
-### Sample landmark buildings
+Mountains exist to:
 
-Two sample landmarks – `akropol.glb` and `poseidon_temple.glb` – can be
-downloaded and placed in **`public/models/landmarks/`** to replace the Acropolis
-and seaside placeholders. Keep the canonical filenames shown above so the
-runtime can locate them automatically. The loader still supports legacy names
-such as `Akropol.glb` and `poseidon_temple_at_sounion_greece.glb`, but new
-uploads should follow the canonical naming scheme.
+break the skyline
 
-Place landmark GLBs under **`public/models/landmarks/`** using the canonical
-names:
+catch light and cast shadows
 
-```
+visually anchor the city
+
+Skybox mountains are supportive only — real geometry defines the world
+
+AI-Assisted Development Rules
+
+This project is actively developed with AI tools.
+
+AI tools must:
+
+Treat the vision in this README as authoritative
+
+Avoid introducing island logic, radial bowls, or circular terrain rims
+
+Prefer incremental changes over wholesale rewrites
+
+Optimize for how the world feels to walk around, not mathematical purity
+
+When unsure:
+
+Favor comfort, clarity, and atmosphere over technical cleverness.
+
+Controls
+
+W / A / S / D – Move
+
+Shift – Sprint
+
+Space – Jump / ascend while flying
+
+Ctrl – Descend while flying
+
+F – Interact
+
+G – Toggle fly mode (dev/debug only)
+
+Development & Deployment
+Quick Start (Local)
+npm install
+npm run dev
+
+Preview-First Workflow (Recommended)
+
+Edit files directly in GitHub → create a PR
+
+Wait for the GitHub Pages preview
+
+Play the build
+
+Merge if it feels right — or close the PR
+
+No local dev environment is required for this flow.
+
+Assets Overview
+Models
+
+public/models/character/hero.glb
+
 public/models/landmarks/
-  aristotle_tomb.glb
-  poseidon_temple.glb
-  akropol.glb
-```
 
-Legacy filenames are still supported as fallbacks (e.g.,
-`poseidon_temple_at_sounion_greece.glb`, `Akropol.glb`) but **new uploads should
-use the canonical names**. Update the placement list in `src/main.js` after
-adding assets.
+Procedural fallbacks exist if assets are missing
 
-By default the flattened city plateau hosts two procedurally generated
-monuments that stand in for the Acropolis and the Temple of Poseidon. Supplying
-the matching GLB files swaps those placeholders for the full landmarks while
-keeping their positions atop the leveled ground.
+Textures
 
-## Draco meshes
+Ground textures: public/textures/ground/
 
-Many third-party GLB files ship with [Draco mesh compression](https://google.github.io/draco/). The runtime now boots a
-`DRACOLoader` alongside the existing Meshopt/KTX2 support so those assets decode automatically instead of falling back to the
-capsule placeholder.
+Skyboxes: public/assets/skyboxes/
 
-The loader tries decoder paths in this order:
+Water normals auto-load if present
 
-1. Environment variable `VITE_DRACO_DECODER_PATH` (set during build)
-2. Global variable `window.__DRACO_DECODER_PATH__` (set before app boots)
-3. Local path `draco/` (relative to your deployment)
-4. Google's hosted CDN (fallback)
+Audio
 
-To self-host the decoder (recommended to avoid ad blocker issues), run
-`npm install` (or `npm run download:draco`) to pull down the official
-decoder bundle into `public/draco/`. You can override the download source by
-setting `DRACO_DECODER_URL` before invoking the script. After the files exist,
-either:
+Ambient soundscape lives under public/audio/
 
-1. Set the environment variable `VITE_DRACO_DECODER_PATH=/draco/` when running
-   the dev server or build.
-2. Expose a global in your HTML before the app boots:
+Missing files are safely ignored
 
-   ```html
-   <script>
-     window.__DRACO_DECODER_PATH__ = "/path/to/draco/";
-   </script>
-   ```
+Technical Notes
 
-Ensure the path ends with a trailing slash so the loader can locate
-`draco_decoder.js` and `draco_decoder.wasm`.
+Built with Three.js + Vite
 
-## KTX2 textures
+Static build outputs to docs/ for GitHub Pages
 
-Models loaded through `GLTFLoader` expect textures in the KTX2 (Basis Universal)
-format for optimal GPU upload and streaming performance. At runtime the
-`KTX2Loader` automatically detects whether the current browser supports GPU
-decoding. When decoding is unavailable, assets are transcoded on the fly and
-fall back to standard uncompressed textures so the scene continues to render.
+Draco and KTX2 loaders are supported and configurable
 
-By default the loader pulls the Basis transcoder worker and WASM binary from the
-[three.js CDN](https://unpkg.com/three@0.180.0/examples/jsm/libs/basis/). If you
-prefer to host the decoder assets yourself you can either:
+Terrain, lighting, and materials are designed to be tunable and experimental
 
-1. Download `basis_transcoder.js` and `basis_transcoder.wasm` from the same CDN
-   and place them in `public/basis/`, then set the environment variable
-   `VITE_BASIS_TRANSCODER_PATH=/basis/` when running the dev server or build.
-2. Expose a global in your HTML before the app boots:
+What This Project Is Not
 
-   ```html
-   <script>
-     window.__BASIS_TRANSCODER_PATH__ = "/path/to/basis/";
-   </script>
-   ```
+Not a procedural survival world
 
-Make sure the configured path ends with a trailing slash so the loader can find
-both files.
+Not an infinite sandbox
 
-### Converting textures
+Not an island map
 
-Two common workflows for preparing KTX2 textures are:
+Not a realism simulation
 
-1. **Basis Universal CLI** – Convert source images directly:
+Not aiming for AAA production
 
-   ```bash
-   basisu -ktx2 -uastc_level 2 -y_flip -output texture.ktx2 texture.png
-   ```
+This is a crafted walking experience.
 
-   Adjust compression flags to balance size and quality. The `-y_flip` flag is
-   useful when your UVs expect the OpenGL texture origin.
+Success Criteria
 
-2. **gltfpack** – Repack an existing glTF/GLB scene and transcode all embedded
-   textures:
+A change is successful if:
 
-   ```bash
-   gltfpack -i scene.gltf -o scene.glb -tc
-   ```
+Walking feels better
 
-   The `-tc` switch enables texture compression (KTX2 + Basis Universal) and
-   will also generate mesh optimizations.
+Views feel more complete
 
-After conversion, ensure the resulting `.ktx2` files are referenced by your
-glTF/glb assets before importing them into the project.
+The city feels grounded and believable
 
-## Deployment — GitHub Pages
+The player wants to keep exploring
 
-This project deploys automatically on **push to `main`** and now also provides **PR preview links**.
+A change should be questioned if:
 
-- Vite builds with `base: '/'` in `vite.config.ts` to publish assets directly to `docs/`.
-- All runtime asset URLs are relative to that base (no leading '/').
-- Workflow: `.github/workflows/deploy.yml` builds with Vite and publishes `docs/` to GitHub Pages.
-- For PRs, the same workflow attaches a **preview deployment** to the PR under “Deployments”.
+It adds scale without purpose
 
-After the first successful run, the site will be available at:
-`https://<your-username>.github.io/athens-game-starter/`
+It harms walkability
 
-## Asset credits
-
-- **Hero character** – [Robot Hero (Poly Pizza)](https://poly.pizza/m/y9KWOVG21R) by [Quaternius](https://poly.pizza/u/Quaternius), licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+It exposes seams or technical artifacts
