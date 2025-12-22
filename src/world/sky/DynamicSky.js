@@ -23,8 +23,8 @@ const SKY_PRESETS = {
     rayleigh: 1.2,
     mieCoefficient: 0.0035,
     mieDirectionalG: 0.82,
-    horizon: "#9fc4e8",
-    zenith: "#2f6db5",
+    horizon: "#7aa6d8",
+    zenith: "#275c9f",
   },
   golden_hour: {
     turbidity: 5.2,
@@ -146,7 +146,7 @@ export class DynamicSky {
     this.sunDirection = new Vector3(0.3, 0.9, 0.2).normalize();
     this.moonDirection = new Vector3();
 
-    this.sunLight = new DirectionalLight(0xffffff, 3.6);
+    this.sunLight = new DirectionalLight(0xffffff, 3.0);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.set(2048, 2048);
     this.sunLight.shadow.bias = -0.0002;
