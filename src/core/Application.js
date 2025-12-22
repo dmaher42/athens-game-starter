@@ -20,6 +20,8 @@ import { createOcean, updateOcean } from "../world/ocean.js";
 import { createWorldFloorCap, applyKillPlane } from "../world/worldBounds.js";
 import { createHarbor, updateHarborLighting } from "../world/harbor.js";
 import { createHarborDecorations } from "../world/decoration.js";
+import { BackdropMountains } from "../world/backdrop/BackdropMountains.js";
+import { createShorelineDressing } from "../world/backdrop/ShorelineDressing.js";
 import {
   createMainHillRoad,
   updateMainHillRoadLighting,
@@ -998,6 +1000,13 @@ export class Application {
       terrain,
       seaLevel: resolvedSeaLevel,
     });
+
+    const backdrop = new BackdropMountains(worldRoot, {
+      seaLevel: resolvedSeaLevel,
+    });
+    backdrop.create();
+
+    createShorelineDressing(worldRoot, terrain, resolvedSeaLevel);
 
     // Rebuild the collider again now that the civic district geometry exists so the
     // player can stand on the new plazas instead of falling through them.
