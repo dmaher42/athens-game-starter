@@ -1,20 +1,16 @@
 // src/world/lighting.js
 
-import { DirectionalLight, HemisphereLight, Color, Vector3, MathUtils } from "three";
+import { DirectionalLight, AmbientLight, Color, Vector3, MathUtils } from "three";
 
 // --- COLORS CONFIGURATION ---
 
-const SUN_COLOR_DAWN = new Color("#ffb37f");
-const SUN_COLOR_NOON = new Color("#fff8f2");
-const SUN_COLOR_DUSK = new Color("#ff9b6a");
+const SUN_COLOR_DAWN = new Color("#ffd1a3");
+const SUN_COLOR_NOON = new Color("#ffffff");
+const SUN_COLOR_DUSK = new Color("#ffb182");
 
-const SKY_COLOR_NIGHT = new Color("#0b1d51");
-// Cooler skylight to keep shadows blue-toned
-const SKY_COLOR_DAY = new Color("#9bb5db");
-
-const GROUND_COLOR_NIGHT = new Color("#1f1f2e");
-// Cooler ground bounce to reduce flatness
-const GROUND_COLOR_DAY = new Color("#c2cad4");
+const AMBIENT_COLOR_NIGHT = new Color("#1c2438");
+const AMBIENT_COLOR_DAY = new Color("#d7e0ea");
+const AMBIENT_COLOR_SUNSET = new Color("#f2b886");
 // ------------------------------------------------------------------
 
 const scratchColor = new Color();
@@ -25,13 +21,12 @@ function lerpColor(target, c0, c1, t) {
   return target;
 }
 
-export function createLighting(scene) {
-  // Increased sun intensity for better contrast (2.2 -> 3.6)
-  const sunLight = new DirectionalLight(0xffffff, 3.6);
+export function createLighting(scene, sunLightOverride = null, ambientOverride = null) {
+  const sunLight = sunLightOverride || new DirectionalLight(0xffffff, 3.6);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(2048, 2048);
   sunLight.shadow.radius = 2;
-  sunLight.shadow.bias = -0.0005;
+  sunLight.shadow.bias = -0.0002;
 
   // Setup initial sun position
   const sunElevation = MathUtils.degToRad(35);
@@ -52,19 +47,18 @@ export function createLighting(scene) {
   cam.top  = 120;  cam.bottom = -120;
   sunLight.shadow.normalBias = 0.02;
   sunLight.shadow.camera.updateProjectionMatrix();
-  scene.add(sunLight);
-  scene.add(sunLight.target);
+  if (scene && !sunLight.parent) scene.add(sunLight);
+  if (scene && !sunLight.target.parent) scene.add(sunLight.target);
 
-  // Reduced ambient intensity and cooler colors to keep contrast in shadows
-  const hemiLight = new HemisphereLight(SKY_COLOR_DAY, GROUND_COLOR_DAY, 0.35);
-  scene.add(hemiLight);
+  const ambientLight = ambientOverride || new AmbientLight(0xffffff, 0.18);
+  if (scene && !ambientLight.parent) scene.add(ambientLight);
 
-  return { sunLight, hemiLight, nightFactor: 0 };
+  return { sunLight, ambientLight, nightFactor: 0 };
 }
 
 export function updateLighting(lights, sunDir, options = {}) {
-  if (!lights || !lights.sunLight || !lights.hemiLight) return;
-  const { sunLight, hemiLight } = lights;
+  if (!lights || !lights.sunLight || !lights.ambientLight) return;
+  const { sunLight, ambientLight } = lights;
 
   const {
     applyPosition = true,
@@ -108,8 +102,7 @@ export function updateLighting(lights, sunDir, options = {}) {
   if (overrideSunIntensity != null) {
     sunLight.intensity = overrideSunIntensity;
   } else {
-    // Lerp sun intensity to new max (3.9)
-    const targetSunIntensity = MathUtils.lerp(0.05, 4.25, directLightFactor);
+    const targetSunIntensity = MathUtils.lerp(0.06, 4.2, directLightFactor);
     sunLight.intensity = MathUtils.lerp(sunLight.intensity, targetSunIntensity, 0.1);
   }
 
@@ -122,23 +115,20 @@ export function updateLighting(lights, sunDir, options = {}) {
   }
 
   if (overrideAmbientIntensity != null) {
-    hemiLight.intensity = overrideAmbientIntensity;
+    ambientLight.intensity = overrideAmbientIntensity;
   } else {
-    // Lerp hemi intensity to keep directional light dominant
-    const hemiTarget = MathUtils.lerp(0.12, 0.35, ambientFactor);
-    hemiLight.intensity = MathUtils.lerp(hemiLight.intensity, hemiTarget, 0.12);
+    const ambientTarget = MathUtils.lerp(0.08, 0.28, ambientFactor);
+    ambientLight.intensity = MathUtils.lerp(ambientLight.intensity, ambientTarget, 0.16);
   }
 
   if (overrideAmbientColor) {
-    hemiLight.color.copy(overrideAmbientColor);
+    ambientLight.color.copy(overrideAmbientColor);
+  } else if (overrideGroundColor) {
+    ambientLight.color.copy(overrideGroundColor);
   } else {
-    lerpColor(hemiLight.color, SKY_COLOR_NIGHT, SKY_COLOR_DAY, dayFactor);
-  }
-
-  if (overrideGroundColor) {
-    hemiLight.groundColor.copy(overrideGroundColor);
-  } else {
-    lerpColor(hemiLight.groundColor, GROUND_COLOR_NIGHT, GROUND_COLOR_DAY, dayFactor);
+    const warmBlend = lerpColor(scratchColor, AMBIENT_COLOR_DAY, AMBIENT_COLOR_SUNSET, 1 - Math.abs(0.5 - dayFactor) * 2);
+    const ambientColor = warmBlend.lerp(AMBIENT_COLOR_NIGHT, nightFactor);
+    ambientLight.color.copy(ambientColor);
   }
 
   lights.nightFactor = nightFactor;

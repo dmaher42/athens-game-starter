@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { Soundscape } from "../audio/soundscape.js";
 import { mountAudioMixer } from "../ui/audioMixer.ts";
-import { createSky, updateSky, getSunDirection, setTimeOfDayPhase } from "../world/sky.js";
+import { setTimeOfDayPhase } from "../world/sky.js";
+import { DynamicSky } from "../world/sky/DynamicSky.js";
 import { createLighting, updateLighting } from "../world/lighting.js";
-import { azElToDirection, applySunAlignment } from "../world/lighting/sunAlignment.js";
+import { azElToDirection } from "../world/lighting/sunAlignment.js";
 import {
   createInteractor,
   queueSceneInteractable,
@@ -100,6 +101,7 @@ import {
 import { lightingConfig } from "../config/LightingConfig.js";
 import { LOOK_PROFILES } from "../config/LookProfiles.js";
 import { skyboxLightingConfig } from "../config/skyboxLightingConfig.js";
+import { loadHdriEnvironment } from "../world/env/loadHdriEnvironment.js";
 import { CollectiblesManager } from "../world/collectibles.js";
 import { QuestManager, QuestStatus } from "../state/QuestManager.js";
 import { InteractionSystem } from "../interactions/InteractionSystem.js";
@@ -119,11 +121,7 @@ import { GameLoop } from "./GameLoop.js";
 import { VillagerSystem } from "../world/traffic.js";
 import { createAtmosphericParticles } from "../world/particles.js";
 import { scatterGroundProps } from "../world/groundProps.js";
-import {
-  disposeSkybox,
-  loadEquirectangularSkybox,
-} from "../world/skybox/SkyboxManager.js";
-import { createSkyDome } from "../world/skybox/SkyDome.js";
+import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
 
 console.info("[build]", engineConfig.build || {});
 
@@ -641,47 +639,30 @@ export class Application {
     };
 
     // Sky & lighting
-    const skyObj = createSky(scene);
-    const lights = createLighting(scene);
+    const dynamicSky = new DynamicSky(scene, {
+      sunDistance,
+      sunTarget: sunTargetVector,
+      azimuthOffsetDeg: sunAlignmentState.azimuthDeg,
+    });
+    scene.background = dynamicSky.sky;
+    const lights = createLighting(scene, dynamicSky.sunLight);
+    this.dynamicSky = dynamicSky;
 
-    const normalizedSkyboxPath = (skyboxLightingConfig.skyboxUrl || "")
-      .toString()
-      .replace(/^\/+/, "");
-    const resolvedSkyboxUrl = joinPath(BASE_URL, normalizedSkyboxPath);
-    const USE_SKY_DOME = true;
-
+    const hdrPath = joinPath(BASE_URL, "hdr/clear_midday.hdr");
     try {
-      const texture = await loadEquirectangularSkybox(
-        renderer,
-        scene,
-        resolvedSkyboxUrl,
-      );
-      this.skyboxTexture = texture;
-      if (skyObj?.mesh) {
-        skyObj.mesh.visible = false;
-      }
-      if (USE_SKY_DOME && texture) {
-        scene.background = null;
-        const skyDome = createSkyDome(texture, 2500);
-        scene.add(skyDome);
-        scene.userData.skyDome = skyDome;
-      }
-      scene.environment = texture;
+      await loadHdriEnvironment(renderer, scene, hdrPath);
     } catch (error) {
-      console.warn(
-        `[skybox] Failed to load equirectangular skybox. Ensure the asset exists at ${resolvedSkyboxUrl}`,
-        error,
-      );
+      console.warn(`[hdri] Failed to load environment from ${hdrPath}`, error);
     }
 
-    const alignSunLight = () =>
-      applySunAlignment(
-        lights.sunLight,
-        sunTargetVector,
+    const alignSunLight = () => {
+      const direction = azElToDirection(
         sunAlignmentState.azimuthDeg,
         sunAlignmentState.elevationDeg,
-        sunDistance,
       );
+      dynamicSky.setSunDirection(direction);
+      return direction;
+    };
 
     alignSunLight();
     // ---- Living City Soundscape ----
@@ -2252,8 +2233,8 @@ export class Application {
     const getAlignedSunDirection = () =>
       azElToDirection(sunAlignmentState.azimuthDeg, sunAlignmentState.elevationDeg);
 
-    const syncSunLighting = (sunHeightOverride) => {
-      const direction = alignSunLight() || getAlignedSunDirection();
+    const syncSunLighting = (sunHeightOverride, directionOverride) => {
+      const direction = directionOverride || dynamicSky.getSunDirection();
       const height = Number.isFinite(sunHeightOverride)
         ? sunHeightOverride
         : direction.y;
@@ -2282,8 +2263,10 @@ export class Application {
 
       if (changed) {
         persistSunAlignment();
-        const cycleDir = getSunDirection(timeOfDayState);
-        syncSunLighting(cycleDir?.y);
+        dynamicSky.setAzimuthOffsetDegrees(sunAlignmentState.azimuthDeg);
+        const cycleDir = dynamicSky.getSunDirection();
+        dynamicSky.setSunDirection(getAlignedSunDirection());
+        syncSunLighting(cycleDir?.y, cycleDir);
         renderFrame();
       }
     };
@@ -2320,18 +2303,9 @@ export class Application {
         persistSunAlignment();
       }
 
-      // 3. Skybox (Update texture first, as it might reset defaults)
-      const skyDome = scene.userData.skyDome;
-      if (profile.skybox) {
-         if (profile.skybox.skyKey) {
-            updateSky(scene, profile.skybox.skyKey);
-         }
-         if (skyDome && skyDome.material) {
-           const exposure = Number.isFinite(profile.skybox.exposureMultiplier)
-             ? profile.skybox.exposureMultiplier
-             : 1.0;
-           skyDome.material.color.setScalar(exposure);
-         }
+      // 3. Sky
+      if (profile.skybox?.skyKey && dynamicSky) {
+        dynamicSky.applyPreset(profile.skybox.skyKey);
       }
 
       // 4. Fog (Apply AFTER skybox to enforce profile overrides)
@@ -2404,10 +2378,8 @@ export class Application {
          color: profile.fog.color
       } : null;
 
-      // Ensure sky shader uniforms are updated to match locked sun
-      // The sky shader (in src/world/sky.js) uses 'sunDirection' uniform.
-      if (scene.userData.sky && scene.userData.sky.material) {
-          scene.userData.sky.material.uniforms.sunDirection.value.copy(sunDir);
+      if (dynamicSky) {
+        dynamicSky.setSunDirection(sunDir);
       }
 
       // We need to estimate a 'nightFactor' if not provided.
@@ -2460,9 +2432,10 @@ export class Application {
 
       let alignedSunDir;
       if (currentLookProfile) {
-         // If a profile is active, enforce its lighting values every frame
-         // to prevent drift or other systems overriding it.
-         alignedSunDir = getAlignedSunDirection(); // Based on static azimuth/elevation
+         alignedSunDir = getAlignedSunDirection();
+         if (dynamicSky) {
+           dynamicSky.setSunDirection(alignedSunDir);
+         }
          const profile = currentLookProfile;
 
          const sunColor = profile.sun?.color ? new THREE.Color(profile.sun.color) : null;
@@ -2472,7 +2445,7 @@ export class Application {
          const ambIntensity = profile.ambient?.intensity;
 
          updateLighting(lights, alignedSunDir, {
-            applyPosition: true, // Keep sun position updated (e.g. shadows)
+            applyPosition: false,
             overrideSunColor: sunColor,
             overrideSunIntensity: sunIntensity,
             overrideAmbientColor: ambColor,
@@ -2481,19 +2454,19 @@ export class Application {
             sunDistance: sunDistance,
             sunTarget: sunTargetVector
          });
-
-         // Fix: Ensure Sky Shader receives the updated sun direction
-         // Otherwise the sky remains dark (night texture default?) if not updated.
-         if (scene.userData.sky && scene.userData.sky.material) {
-             scene.userData.sky.material.uniforms.sunDirection.value.copy(alignedSunDir);
-         }
       } else {
-         const sunDirForCycle = getSunDirection(timeOfDayState);
-         alignedSunDir = syncSunLighting(sunDirForCycle?.y);
+         if (dynamicSky) {
+           dynamicSky.setAzimuthOffsetDegrees(sunAlignmentState.azimuthDeg);
+           dynamicSky.setTimeOfDay(phase * 24);
+           alignedSunDir = dynamicSky.getSunDirection();
+         }
+         alignedSunDir = alignedSunDir || getAlignedSunDirection();
+         syncSunLighting(alignedSunDir?.y, alignedSunDir);
       }
 
-      const skyDome = scene.userData.skyDome;
-      if (skyDome) skyDome.position.copy(camera.position);
+      if (dynamicSky) {
+        dynamicSky.update(deltaTime);
+      }
 
       // Update sky dome and atmospheric lighting each frame.
 
