@@ -632,7 +632,7 @@ export class Application {
       camera,
       { getNightFactor: () => lights.nightFactor },
       {
-        harbor: HARBOR_CENTER_3D,
+        harbor: new THREE.Vector3(120, 0, 80),
         agora: AGORA_CENTER_3D,
         acropolis: ACROPOLIS_PEAK_3D,
       },
@@ -750,6 +750,14 @@ export class Application {
     let harbor = null;
 
     harbor = createHarbor(scene);
+
+    // Relocate harbor to East for Mainland Coast logic (Rotate 180 and move)
+    if (harbor) {
+        harbor.rotation.y = Math.PI;
+        // Rotated 180 around (0,0). Original (-120, 80) becomes (120, -80).
+        // We want (120, 80). So offset Z by +160.
+        harbor.position.set(0, 0, 160);
+    }
 
     if (typeof harborSampler === "function") {
       const { west, east, north, south } = HARBOR_WATER_BOUNDS;
@@ -1413,9 +1421,9 @@ export class Application {
     dockhand.add(dockhandHead);
 
     const dockhandPosition = new THREE.Vector3(
-      HARBOR_WATER_EAST_LIMIT + 6.0,
+      126.0, // Adjusted for East Harbor
       seaLevel,
-      HARBOR_WATER_CENTER.z - 2.0,
+      HARBOR_WATER_CENTER.z + 2.0, // Adjusted for rotation
     );
     const dockhandY =
       terrain?.userData?.getHeightAt?.(dockhandPosition.x, dockhandPosition.z) ??
@@ -1443,9 +1451,9 @@ export class Application {
 
     // Place on the harbor shoreline alongside the pier rows.
     const cratePosition = new THREE.Vector3(
-      HARBOR_WATER_EAST_LIMIT + 10.0,
+      130.0, // Adjusted for East Harbor
       seaLevel,
-      HARBOR_WATER_CENTER.z - 2.0,
+      HARBOR_WATER_CENTER.z + 2.0, // Adjusted for rotation
     );
     const harborY =
       terrain?.userData?.getHeightAt?.(cratePosition.x, cratePosition.z) ?? getSeaLevelY();
