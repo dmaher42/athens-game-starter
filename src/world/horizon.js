@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { getSeaLevelY } from "./seaLevelState.js";
 
-const DEFAULT_HORIZON_RADIUS = 1800;
+const DEFAULT_HORIZON_RADIUS = 1700;
 const DEFAULT_FADE_WIDTH = 320;
 const SKYBOX_SEA_TINT = new THREE.Color(0x2a3f5c);
 const SKYBOX_SKY_BLEND = new THREE.Color(0x6b7f9c);
@@ -24,6 +24,9 @@ function createHorizonRing({
   seaLevel,
   horizonColor,
   fogColor,
+  eastHeight,
+  westHeight,
+  westRadiusScale,
 }) {
   const geometry = new THREE.RingGeometry(innerRadius, outerRadius, 128, 1);
   geometry.rotateX(-Math.PI / 2);
@@ -34,6 +37,9 @@ function createHorizonRing({
     seaLevel: { value: seaLevel },
     horizonColor: { value: horizonColor.clone() },
     fogColor: { value: fogColor.clone() },
+    eastHeight: { value: eastHeight },
+    westHeight: { value: westHeight },
+    westRadiusScale: { value: westRadiusScale },
   };
 
   const material = new THREE.ShaderMaterial({
@@ -44,14 +50,40 @@ function createHorizonRing({
     uniforms,
     vertexShader: /* glsl */ `
       varying vec3 vWorldPosition;
+      varying float vWestness;
+      varying float vRadialMix;
+      uniform float innerRadius;
+      uniform float outerRadius;
+      uniform float seaLevel;
+      uniform float eastHeight;
+      uniform float westHeight;
+      uniform float westRadiusScale;
       void main() {
         vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vec2 xz = worldPosition.xz;
+        float dist = length(xz);
+        vec2 dir = dist > 0.0 ? (xz / dist) : vec2(0.0, 0.0);
+        float westness = smoothstep(0.0, 0.9, -dir.x);
+        vWestness = westness;
+
+        float radiusBlend = mix(1.0, westRadiusScale, westness);
+        float dynamicInner = innerRadius * radiusBlend;
+        float dynamicOuter = mix(outerRadius, outerRadius * westRadiusScale, westness);
+        float radialFade = clamp((dist - dynamicInner) / max(dynamicOuter - dynamicInner, 0.0001), 0.0, 1.0);
+        vRadialMix = radialFade;
+
+        float heightBias = mix(eastHeight, westHeight, westness);
+        float heightFalloff = 1.0 - pow(radialFade, 0.4);
+        worldPosition.y = seaLevel + heightBias * heightFalloff;
+
         vWorldPosition = worldPosition.xyz;
         gl_Position = projectionMatrix * viewMatrix * worldPosition;
       }
     `,
     fragmentShader: /* glsl */ `
       varying vec3 vWorldPosition;
+      varying float vWestness;
+      varying float vRadialMix;
       uniform float innerRadius;
       uniform float outerRadius;
       uniform float seaLevel;
@@ -63,41 +95,29 @@ function createHorizonRing({
       void main() {
         vec2 xz = vWorldPosition.xz;
         float dist = length(xz);
+        vec2 dir = dist > 0.0 ? (xz / dist) : vec2(0.0, 0.0);
+        float eastness = smoothstep(0.0, 0.9, dir.x);
+        float westness = vWestness;
 
-        // Directional Fade Logic (Mainland)
-        // East (+X) is open sea -> Horizon Ring VISIBLE.
-        // West (-X) is inland hills -> Horizon Ring INVISIBLE (hidden by terrain or masked).
+        float radiusBlend = mix(1.0, westRadiusScale, westness);
+        float dynamicInner = innerRadius * radiusBlend;
+        float dynamicOuter = mix(outerRadius, outerRadius * westRadiusScale, westness);
+        float radialFade = clamp((dist - dynamicInner) / max(dynamicOuter - dynamicInner, 0.0001), 0.0, 1.0);
 
-        float angle = atan(xz.y, xz.x); // Range -PI to PI. East is 0. West is PI.
-        float eastness = cos(angle); // 1.0 at East, -1.0 at West.
-
-        // We want opacity:
-        // East (1.0) -> High opacity (Sea)
-        // West (-1.0) -> Low opacity (Land)
-
-        // smoothstep:
-        // edge0 = -0.2 (Start fading near West-ish)
-        // edge1 = 0.5 (Full opacity in East)
-        float directionalAlpha = smoothstep(-0.5, 0.5, eastness);
-
-        // Make West completely gone to avoid cutting through mountains
-        if (directionalAlpha < 0.05) discard;
-
-        float radialFade = clamp((dist - innerRadius) / max(outerRadius - innerRadius, 0.0001), 0.0, 1.0);
-
-        // Base alpha from radial fade
         float alpha = 1.0 - smoothstep(0.0, 1.0, radialFade);
 
-        // Gently fade out if the band is ever viewed from above sea level.
-        float heightFade = smoothstep(seaLevel, seaLevel + 12.0, vWorldPosition.y);
-        alpha *= (1.0 - heightFade);
-
-        // Apply directional asymmetry
+        // Sea side stays light and low; land side fades softly into haze
+        float directionalAlpha = mix(0.25, 1.0, eastness);
         alpha *= directionalAlpha;
+
+        // Gently fade out if the band is ever viewed from above sea level.
+        float heightFade = smoothstep(seaLevel + 2.0, seaLevel + 14.0, vWorldPosition.y);
+        alpha *= (1.0 - heightFade);
 
         if (alpha <= 0.01) discard;
 
-        vec3 color = mix(horizonColor, fogColor, radialFade * 0.7);
+        float skyBlend = smoothstep(0.35, 1.0, vRadialMix);
+        vec3 color = mix(horizonColor, fogColor, skyBlend);
         gl_FragColor = vec4(color, alpha * 0.65);
       }
     `,
@@ -118,6 +138,10 @@ export function createHorizon(scene, options = {}) {
   const innerRadius = Math.max(radius - fadeWidth, 10);
   const outerRadius = radius + fadeWidth;
 
+  const westHeight = Math.min(options.westHeight ?? 12.0, 15.0);
+  const eastHeight = Math.max(options.eastHeight ?? 1.5, 0.0);
+  const westRadiusScale = THREE.MathUtils.clamp(options.westRadiusScale ?? 1.2, 1.0, 1.6);
+
   const fogColor = resolveFogColor(scene);
   const horizonColor = options.horizonColor
     ? new THREE.Color(options.horizonColor)
@@ -132,6 +156,9 @@ export function createHorizon(scene, options = {}) {
     seaLevel,
     horizonColor,
     fogColor,
+    eastHeight,
+    westHeight,
+    westRadiusScale,
   });
   ring.position.y = seaLevel;
   group.add(ring);
