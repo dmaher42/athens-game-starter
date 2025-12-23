@@ -49,6 +49,7 @@ export interface DevHudHandle {
   setOceanStatus(options?: OceanStatusOptions | null): void;
   readonly rootElement: HudRootElement;
   updateFogState(state?: boolean | null): void;
+  setActivePreset?(name?: string | null): void;
 }
 
 // Dev HUD: compass + coordinates + pin hotkey (P)
@@ -191,10 +192,13 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     { name: "Blue Hour", label: "Blue Hour" },
     { name: "Night", label: "Night" },
   ];
+  const defaultPresetHotkeys = ["Digit1", "Digit2", "Digit3", "Digit4"];
   const availablePresets = defaultPresetOrder.filter(({ name }) => {
     if (!lightingPresets) return true;
     return lightingPresets[name] != null;
   });
+  let setActivePreset: ((name?: string | null) => void) | undefined;
+  let cyclePreset: (() => void) | undefined;
 
   if (availablePresets.length) {
     const section = document.createElement("div");
@@ -205,12 +209,32 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     heading.textContent = "Lighting Presets";
     section.appendChild(heading);
 
+    const presetStatus = document.createElement("div");
+    presetStatus.className = "dev-hud-subtext";
+    presetStatus.style.marginBottom = "4px";
+    presetStatus.textContent = "Select a preset to apply";
+    section.appendChild(presetStatus);
+
     const buttonRow = document.createElement("div");
     buttonRow.className = "dev-hud-btn-row";
 
-    const presetHotkeyConfig: Array<{ name: string; codes: string[]; keys: string[]; }> = [];
-    const activePresetNames = new Set(availablePresets.map((preset) => preset.name));
     const presetKeyBindings = new Map<string, string>();
+    const presetButtons = new Map<string, HTMLButtonElement>();
+    let activePresetName: string | null = null;
+
+    setActivePreset = (name?: string | null) => {
+      activePresetName = name ?? null;
+      presetButtons.forEach((btn, key) => {
+        const isActive = name === key;
+        btn.classList.toggle("dev-hud-btn--active", isActive);
+        btn.setAttribute("aria-pressed", String(isActive));
+      });
+      if (name && presetStatus) {
+        presetStatus.textContent = `Active preset: ${name}`;
+      } else if (presetStatus) {
+        presetStatus.textContent = "Select a preset to apply";
+      }
+    };
 
     for (const preset of availablePresets) {
       const presetMeta = lightingPresets?.[preset.name] || {};
@@ -220,10 +244,15 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       const displayLabel = presetMeta.label || preset.label;
       button.textContent = displayLabel;
 
-      const hotkeyLabel = presetMeta.hotkey || "";
+      const hotkeyLabel = presetMeta.hotkey || defaultPresetHotkeys[presetButtons.size] || "";
       if (hotkeyLabel) {
         button.title = `Set ${displayLabel} lighting (Hotkey ${hotkeyLabel})`;
         button.setAttribute("aria-keyshortcuts", hotkeyLabel);
+        presetKeyBindings.set(hotkeyLabel, preset.name);
+        const simpleKey = hotkeyLabel.startsWith("Digit")
+          ? hotkeyLabel.replace("Digit", "")
+          : hotkeyLabel;
+        presetKeyBindings.set(simpleKey, preset.name);
       } else {
         button.title = `Set ${displayLabel} lighting`;
       }
@@ -233,8 +262,10 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
         if (typeof onSetLightingPreset === "function") {
           onSetLightingPreset(preset.name);
         }
+        setActivePreset?.(preset.name);
       });
       buttonRow.appendChild(button);
+      presetButtons.set(preset.name, button);
     }
     // (Skipped complex hotkey map logic reconstruction for brevity if unused,
     // but retaining the binding logic below)
@@ -246,6 +277,16 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     // with data from arguments. Assuming simple binding logic is sufficient or external config drives it.
     // Preserving the property on root for the key listener.
     wrap._presetKeyBindings = presetKeyBindings;
+
+    cyclePreset = () => {
+      if (!availablePresets.length) return;
+      const names = availablePresets.map((preset) => preset.name);
+      const currentIndex = activePresetName ? names.indexOf(activePresetName) : -1;
+      const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % names.length : 0;
+      const nextName = names[nextIndex];
+      setActivePreset?.(nextName);
+      onSetLightingPreset?.(nextName);
+    };
   }
 
   // Fog Control
@@ -424,6 +465,11 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
         console.log(`[PIN] @ (${p.x.toFixed(2)}, ${p.y.toFixed(2)}, ${p.z.toFixed(2)})`);
       }
     }
+    if (e.code === "KeyT" && !e.repeat) {
+      e.preventDefault();
+      cyclePreset?.();
+      return;
+    }
     const bindings = getPresetKeyBindings();
     if (!bindings || typeof onSetLightingPreset !== "function") return;
     if (e.repeat) return;
@@ -431,6 +477,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     if (presetName) {
       e.preventDefault();
       onSetLightingPreset(presetName);
+      setActivePreset?.(presetName);
     }
   };
   window.addEventListener("keydown", onKey);
@@ -445,6 +492,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     setOceanStatus,
     rootElement: wrap,
     updateFogState: updateFogControls,
+    setActivePreset: (name) => setActivePreset?.(name),
   };
   return handle;
 }

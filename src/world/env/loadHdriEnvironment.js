@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 
-export async function loadHdriEnvironment({ renderer, scene, path }) {
+export async function loadHdriEnvironment({ renderer, scene, path, onFallback }) {
   const pmremGenerator = new THREE.PMREMGenerator(renderer);
   pmremGenerator.compileEquirectangularShader();
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const loader = new EXRLoader();
     const fallbackWarning = '[HDRI] HDRI file missing or unsupported: falling back to procedural sky';
 
@@ -20,7 +20,8 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
           if (!exrTexture || !exrTexture.image) {
             console.warn(fallbackWarning);
             pmremGenerator.dispose();
-            reject(new Error('Invalid EXR texture'));
+            onFallback?.();
+            resolve(null);
             return;
           }
 
@@ -28,7 +29,8 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
             console.warn(fallbackWarning);
             pmremGenerator.dispose();
             exrTexture.dispose();
-            reject(new Error('Invalid EXR texture'));
+            onFallback?.();
+            resolve(null);
             return;
           }
 
@@ -36,7 +38,8 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
             console.warn(fallbackWarning);
             pmremGenerator.dispose();
             exrTexture.dispose();
-            reject(new Error('Unsupported EXR format'));
+            onFallback?.();
+            resolve(null);
             return;
           }
 
@@ -51,7 +54,8 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
             console.warn('[HDRI] Failed to apply environment. Falling back to default lighting.', err);
             exrTexture.dispose();
             pmremGenerator.dispose();
-            reject(new Error('Failed to generate HDR environment map'));
+            onFallback?.();
+            resolve(null);
             return;
           }
         },
@@ -62,14 +66,16 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
             console.warn(fallbackWarning);
             console.warn('[HDRI] Unsupported EXR type:', message);
             pmremGenerator.dispose();
-            reject(new Error('Unsupported EXR format'));
+            onFallback?.();
+            resolve(null);
             return;
           }
 
           console.warn(fallbackWarning);
           console.warn('[HDRI] Load failed:', error);
           pmremGenerator.dispose();
-          reject(new Error('Failed to load HDRI environment'));
+          onFallback?.();
+          resolve(null);
         }
       );
   });
