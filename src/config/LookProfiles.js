@@ -2,7 +2,7 @@
 export const LOOK_PROFILES = {
   "Bright Noon": {
     renderer: {
-      toneMappingExposure: 1.0, // Midday exposure aligned to neutral noon brightness
+      toneMappingExposure: 0.95, // Slightly under 1; midday brightness comes from sun/ambient levels
     },
     starsVisible: 0.0,
     moonElevation: -10,
@@ -49,7 +49,7 @@ export const LOOK_PROFILES = {
   },
   "Golden Hour": {
     renderer: {
-      toneMappingExposure: 0.95,
+      toneMappingExposure: 0.98, // Kept near neutral; warmth comes from lighting/ambient balance
     },
     starsVisible: 0.08,
     moonElevation: 10,
@@ -94,7 +94,7 @@ export const LOOK_PROFILES = {
   },
   "Blue Hour": {
     renderer: {
-      toneMappingExposure: 1.05,
+      toneMappingExposure: 1.02, // Slight lift while relying on cooler fill to set mood
     },
     starsVisible: 0.55,
     moonElevation: 8,
@@ -139,7 +139,7 @@ export const LOOK_PROFILES = {
   },
   "Night": {
     renderer: {
-      toneMappingExposure: 1.0,
+      toneMappingExposure: 1.05, // Night uses added ambient instead of high exposure to preserve contrast/stars
     },
     starsVisible: 1.0,
     moonElevation: 25,
