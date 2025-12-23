@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
+import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
   base: "/athens-game-starter/",
@@ -22,6 +23,15 @@ export default defineConfig({
     rollupOptions: {
       // Ensure no externals that would leave bare imports at runtime
       external: [], // keep empty unless you have a good reason
+      plugins: [
+        visualizer({
+          filename: "docs/stats.html",
+          open: false,
+          gzipSize: true,
+          brotliSize: true,
+          template: "treemap", // or "sunburst", "network"
+        }),
+      ],
     },
   },
   optimizeDeps: {

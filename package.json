@@ -27,6 +27,8 @@
     "@types/three": "^0.180.0",
     "@types/web": "^0.0.279",
     "playwright": "^1.57.0",
+    "rollup-plugin-visualizer": "^6.0.5",
+    "source-map-explorer": "^2.5.3",
     "typescript": "^5.0.0",
     "vite": "^7.1.9"
   }
