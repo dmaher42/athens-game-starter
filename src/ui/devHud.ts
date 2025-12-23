@@ -201,7 +201,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     if (!lightingPresets) return true;
     return lightingPresets[name] != null;
   });
-  let setActivePreset: ((name?: string | null) => void) | undefined;
+  let setActivePresetFn: ((name?: string | null) => void) | undefined;
   let cyclePreset: (() => void) | undefined;
 
   let syncActivePreset = () => {};
@@ -228,7 +228,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     const presetButtons = new Map<string, HTMLButtonElement>();
     let activePresetName: string | null = null;
 
-    setActivePreset = (name?: string | null) => {
+    setActivePresetFn = (name?: string | null) => {
       activePresetName = name ?? null;
       presetButtons.forEach((btn, key) => {
         const isActive = name === key;
@@ -268,26 +268,13 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
         if (typeof onSetLightingPreset === "function") {
           onSetLightingPreset(preset.name);
         }
-        setActivePreset?.(preset.name);
+        setActivePresetFn?.(preset.name);
       });
       buttonRow.appendChild(button);
       presetButtons.set(preset.name, button);
     }
     // (Skipped complex hotkey map logic reconstruction for brevity if unused,
     // but retaining the binding logic below)
-
-    // Function to cycle through presets
-    const cyclePreset = () => {
-      if (!availablePresets.length) return;
-      const names = availablePresets.map((preset) => preset.name);
-      const activePresetName = getActivePresetName?.();
-      const currentIndex = activePresetName ? names.indexOf(activePresetName) : -1;
-      const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % names.length : 0;
-      const nextName = names[nextIndex];
-      if (nextName !== undefined) {
-        selectPreset(nextName);
-      }
-    };
 
     section.appendChild(buttonRow);
     content.appendChild(section);
@@ -303,8 +290,10 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       const currentIndex = activePresetName ? names.indexOf(activePresetName) : -1;
       const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % names.length : 0;
       const nextName = names[nextIndex];
-      setActivePreset?.(nextName);
-      onSetLightingPreset?.(nextName);
+      if (nextName !== undefined) {
+        setActivePresetFn?.(nextName);
+        onSetLightingPreset?.(nextName);
+      }
     };
   }
 
@@ -497,7 +486,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     if (presetName) {
       e.preventDefault();
       onSetLightingPreset(presetName);
-      setActivePreset?.(presetName);
+      setActivePresetFn?.(presetName);
     }
   };
   window.addEventListener("keydown", onKey);
@@ -512,7 +501,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     setOceanStatus,
     rootElement: wrap,
     updateFogState: updateFogControls,
-    setActivePreset: (name) => setActivePreset?.(name),
+    setActivePreset: (name) => setActivePresetFn?.(name),
   };
   return handle;
 }
