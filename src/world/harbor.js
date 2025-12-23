@@ -11,7 +11,7 @@ const DOCK_SECTION_WIDTH = 5.8;
 const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
-const HARBOR_GROUND_HEIGHT = 1;
+const HARBOR_GROUND_HEIGHT = 2.5;
 
 const BOAT_STYLES = [
   { hull: 0x2f6e8d, accent: 0xe2a86a },
