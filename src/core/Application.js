@@ -2514,6 +2514,64 @@ export class Application {
       }
     };
 
+    const presetNames = Object.keys(LIGHTING_PRESETS);
+    const isDevBuild =
+      (typeof import.meta !== "undefined" && import.meta.env?.DEV === true) ||
+      (typeof process !== "undefined" && process?.env?.NODE_ENV === "development");
+
+    let presetOverlay = null;
+    let presetOverlayTimer = null;
+
+    const ensurePresetOverlay = () => {
+      if (!isDevBuild || typeof document === "undefined") return null;
+      if (presetOverlay) return presetOverlay;
+      const el = document.createElement("div");
+      el.id = "lighting-preset-overlay";
+      el.style.position = "fixed";
+      el.style.bottom = "16px";
+      el.style.right = "16px";
+      el.style.padding = "8px 12px";
+      el.style.background = "rgba(0,0,0,0.65)";
+      el.style.color = "#f6f8fb";
+      el.style.fontFamily = "sans-serif";
+      el.style.fontSize = "12px";
+      el.style.borderRadius = "6px";
+      el.style.pointerEvents = "none";
+      el.style.boxShadow = "0 2px 10px rgba(0,0,0,0.35)";
+      document.body.appendChild(el);
+      presetOverlay = el;
+      return presetOverlay;
+    };
+
+    const getNextPresetName = (name) => {
+      if (!presetNames.length) return null;
+      const currentIndex = presetNames.indexOf(name);
+      const baseIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = (baseIndex + 1) % presetNames.length;
+      return presetNames[nextIndex];
+    };
+
+    const showPresetOverlay = (activeName, nextName) => {
+      const overlay = ensurePresetOverlay();
+      if (!overlay || !activeName) return;
+      overlay.textContent = nextName
+        ? `Lighting: ${activeName} (next: ${nextName})`
+        : `Lighting: ${activeName}`;
+      overlay.style.opacity = "1";
+      if (presetOverlayTimer) {
+        clearTimeout(presetOverlayTimer);
+        presetOverlayTimer = null;
+      }
+      presetOverlayTimer = setTimeout(() => {
+        if (overlay) overlay.style.opacity = "0.5";
+      }, 1800);
+    };
+
+    const getActivePresetName = () => {
+      const phasePreset = getPresetForPhase(timeOfDayState.timeOfDayPhase ?? 0);
+      return lastAppliedLightingPreset || phasePreset || presetNames[0] || null;
+    };
+
     const getFogState = () => {
       const getFogOptions = scene?.userData?.getFogOptions;
       const fog = typeof getFogOptions === "function" ? getFogOptions() : null;
@@ -2698,6 +2756,8 @@ export class Application {
       updateMainHillRoadLighting(roadGroup, lights.nightFactor);
 
       renderFrame();
+
+      showPresetOverlay(profileName, getNextPresetName(profileName));
     };
 
     const applyLookProfile = (profileName, options = {}) => {
@@ -2717,6 +2777,8 @@ export class Application {
       currentLookProfile = profile;
       lastAppliedLightingPreset = profileName;
       userPresetActive = source !== "auto";
+
+      showPresetOverlay(profileName, getNextPresetName(profileName));
 
       // Apply static elements immediately
       if (profile.skybox?.skyKey && dynamicSky) {
@@ -3023,6 +3085,37 @@ export class Application {
         visible: visibility > 0.05,
       });
     };
+
+    const cycleLightingPreset = (step = 1) => {
+      if (!presetNames.length) return null;
+      const activeName = getActivePresetName();
+      const baseIndex = activeName ? presetNames.indexOf(activeName) : -1;
+      const currentIndex = baseIndex >= 0 ? baseIndex : 0;
+      const nextIndex = (currentIndex + step + presetNames.length) % presetNames.length;
+      const nextName = presetNames[nextIndex];
+      if (nextName) {
+        applyLookProfile(nextName, { forceReapply: true, source: "hotkey" });
+        showPresetOverlay(nextName, getNextPresetName(nextName));
+      }
+      return nextName || null;
+    };
+
+    const registerPresetDebugHelpers = () => {
+      if (!isDevBuild || typeof window === "undefined") return;
+      const globalWindow = window;
+      globalWindow.setLightingPreset = (name) => {
+        if (typeof name !== "string" || !name.trim()) {
+          console.warn("[LookProfile] Provide a preset name string");
+          return null;
+        }
+        applyLookProfile(name, { forceReapply: true, source: "console" });
+        showPresetOverlay(name, getNextPresetName(name));
+        return name;
+      };
+      globalWindow.cycleLightingPreset = (step = 1) => cycleLightingPreset(step);
+    };
+
+    registerPresetDebugHelpers();
 
     // Alias for HUD compatibility
     const applyLightingPreset = applyLookProfile;
@@ -3359,7 +3452,7 @@ export class Application {
         interactor.useObject();
       } else if (event.code === "KeyG" && !event.repeat) {
         toggleFog();
-      } else if (event.code === "KeyT" && !event.repeat) {
+      } else if (isDevBuild && event.code === "KeyT" && !event.repeat) {
         cycleLightingPreset();
       } else if (event.code === "F8" && !event.repeat) {
         const position = player?.object?.position;
