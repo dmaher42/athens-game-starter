@@ -767,8 +767,7 @@ export class Application {
     lights.moonLight = moonLight;
     this.dynamicSky = dynamicSky;
 
-    const hdrPath =
-      "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/clear_noon_1k.exr";
+    const hdrPath = "/hdr/clear_midday.exr";
     const loadEnvironmentWithFallback = async () => {
       try {
         const envMap = await loadHdriEnvironment({
@@ -785,7 +784,7 @@ export class Application {
 
         return envMap;
       } catch (error) {
-        console.warn("[HDRI] Failed, using fallback sky", error);
+        console.warn(`[HDRI] Failed to load ${hdrPath}, using fallback sky`, error);
         createDefaultSky(scene, dynamicSky);
         return null;
       }
