@@ -120,7 +120,7 @@ export function createHudPanel(options: HudPanelOptions): HudPanelHandle {
 
   const content = document.createElement("div");
   content.className = "hud-panel__content";
-  content.dataset.canCollapse = collapseContent ? "1" : "0";
+  content.dataset['canCollapse'] = collapseContent ? "1" : "0";
 
   root.appendChild(header);
   root.appendChild(content);
