@@ -7,6 +7,7 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
 
   return new Promise((resolve, reject) => {
     const loader = new EXRLoader();
+    const fallbackWarning = '[HDRI] HDRI file missing or unsupported: falling back to procedural sky';
 
     loader
       .setCrossOrigin('anonymous')
@@ -15,12 +16,14 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
         path,
         (exrTexture) => {
           if (!exrTexture || !exrTexture.image) {
+            console.warn(fallbackWarning);
             pmremGenerator.dispose();
             reject(new Error('Invalid EXR texture'));
             return;
           }
 
           if (!exrTexture.image.data) {
+            console.warn(fallbackWarning);
             pmremGenerator.dispose();
             exrTexture.dispose();
             reject(new Error('Invalid EXR texture'));
@@ -28,6 +31,7 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
           }
 
           if (exrTexture.type !== THREE.HalfFloatType && exrTexture.type !== THREE.FloatType) {
+            console.warn(fallbackWarning);
             pmremGenerator.dispose();
             exrTexture.dispose();
             reject(new Error('Unsupported EXR format'));
@@ -53,12 +57,14 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
         (error) => {
           const message = error?.message || '';
           if (message.toLowerCase().includes('unsupported type')) {
+            console.warn(fallbackWarning);
             console.warn('[HDRI] Unsupported EXR type:', message);
             pmremGenerator.dispose();
             reject(new Error('Unsupported EXR format'));
             return;
           }
 
+          console.warn(fallbackWarning);
           console.warn('[HDRI] Load failed:', error);
           pmremGenerator.dispose();
           reject(new Error('Failed to load HDRI environment'));
