@@ -2789,6 +2789,15 @@ export class Application {
 
       onFogChange(!!profile.fog?.enabled);
 
+      // If the target preset disables fog, clear any existing fog immediately
+      // so the transition doesn't keep the previous profile's haze.
+      if (!targetState.fog) {
+        setFogEnabled(false);
+        if (scene) {
+          scene.fog = null;
+        }
+      }
+
       if (immediate) {
         applyLookProfileImmediate(profileName);
         return;
