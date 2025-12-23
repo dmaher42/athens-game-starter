@@ -1,21 +1,28 @@
 import * as THREE from 'three';
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 
 export async function loadHdriEnvironment({ renderer, scene, path }) {
   const pmremGenerator = new THREE.PMREMGenerator(renderer);
   pmremGenerator.compileEquirectangularShader();
 
   return new Promise((resolve, reject) => {
-    const loader = new RGBELoader();
+    const loader = new HDRLoader();
 
     loader
-      .setDataType(THREE.UnsignedByteType)
+      .setDataType(THREE.HalfFloatType)
       .load(
         path,
         (hdrTexture) => {
           if (!hdrTexture || !hdrTexture.image || !hdrTexture.image.data) {
             pmremGenerator.dispose();
-            reject(new Error('Invalid HDR texture'));
+            reject(new Error('Unsupported HDR format'));
+            return;
+          }
+
+          if (hdrTexture.type !== THREE.HalfFloatType && hdrTexture.type !== THREE.FloatType) {
+            pmremGenerator.dispose();
+            hdrTexture.dispose();
+            reject(new Error('Unsupported HDR format'));
             return;
           }
 
@@ -40,7 +47,7 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
           if (message.toLowerCase().includes('unsupported type')) {
             console.warn('[HDRI] Unsupported HDR type:', message);
             pmremGenerator.dispose();
-            reject(error);
+            reject(new Error('Unsupported HDR format'));
             return;
           }
 
