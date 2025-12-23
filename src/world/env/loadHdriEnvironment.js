@@ -34,6 +34,14 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
         },
         undefined,
         (error) => {
+          const message = error?.message || '';
+          if (message.toLowerCase().includes('unsupported type')) {
+            console.warn('[HDRI] Unsupported HDR type:', message);
+            pmremGenerator.dispose();
+            reject(error);
+            return;
+          }
+
           console.warn('[HDRI] Load failed:', error);
           pmremGenerator.dispose();
           reject(error);
