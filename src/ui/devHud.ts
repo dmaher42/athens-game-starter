@@ -483,7 +483,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
         }
       }
     } catch {}
-  });
+  }, 100);
 
   const getPresetKeyBindings = (): Map<string, string> | null => {
     return wrap?._presetKeyBindings ?? null;
