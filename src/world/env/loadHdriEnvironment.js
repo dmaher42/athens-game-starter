@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 
 export async function loadHdriEnvironment({ renderer, scene, path }) {
   const pmremGenerator = new THREE.PMREMGenerator(renderer);
   pmremGenerator.compileEquirectangularShader();
 
   return new Promise((resolve, reject) => {
-    const loader = new HDRLoader();
+    const loader = new RGBELoader();
 
     loader
       .setDataType(THREE.UnsignedByteType)
