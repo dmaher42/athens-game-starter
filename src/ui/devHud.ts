@@ -18,6 +18,8 @@ export interface DevHudOptions {
   readonly onPin?: (position: Vector3Like) => void;
   readonly onSetLightingPreset?: (name: string) => void;
   readonly lightingPresets?: Record<string, LightingPresetMeta | null | undefined>;
+  readonly getActivePresetName?: () => string | null | undefined;
+  readonly setActivePreset?: (name: string) => void;
   readonly getFogEnabled?: () => boolean;
   readonly onToggleFog?: () => void;
   readonly sunAlignment?: {
@@ -59,6 +61,8 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     onPin,
     onSetLightingPreset,
     lightingPresets,
+    getActivePresetName,
+    setActivePreset,
     getFogEnabled,
     onToggleFog,
     sunAlignment,
@@ -238,6 +242,20 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     }
     // (Skipped complex hotkey map logic reconstruction for brevity if unused,
     // but retaining the binding logic below)
+
+    // Function to cycle through presets
+    const cyclePreset = () => {
+      if (!availablePresets.length) return;
+      const names = availablePresets.map((preset) => preset.name);
+      const activePresetName = getActivePresetName?.();
+      const currentIndex = activePresetName ? names.indexOf(activePresetName) : -1;
+      const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % names.length : 0;
+      const nextName = names[nextIndex];
+      if (nextName !== undefined) {
+        setActivePreset?.(nextName);
+        onSetLightingPreset?.(nextName);
+      }
+    };
 
     section.appendChild(buttonRow);
     content.appendChild(section);
