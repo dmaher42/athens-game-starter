@@ -3400,7 +3400,10 @@ export class Application {
         onChange: setSunAlignment,
       },
     });
-    registerLightingDebugCommands();
+    // The following line is commented out to prevent a ReferenceError at runtime.
+    // The definition for 'registerLightingDebugCommands' could not be found in the codebase.
+    // This appears to be a missing file or an unresolved dependency.
+    // registerLightingDebugCommands();
     this.devHud = devHud;
     devHud?.setActivePreset?.(lastAppliedLightingPreset);
     mountMiniMap({ getPosition, getDirection });
