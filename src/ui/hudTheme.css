@@ -163,6 +163,12 @@
   border-color: var(--hud-button-border-hover);
 }
 
+.dev-hud-btn--active {
+  background: var(--hud-button-bg-hover);
+  border-color: var(--hud-button-border-hover);
+  box-shadow: 0 0 0 1px var(--hud-button-border-hover);
+}
+
 .mini-map-panel {
   display: grid;
   grid-template-columns: auto;
