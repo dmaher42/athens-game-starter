@@ -134,6 +134,12 @@ const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 
 // Use Look Profiles as the primary presets
 const LIGHTING_PRESETS = LOOK_PROFILES;
+const LIGHTING_PRESET_ORDER = [
+  "Bright Noon",
+  "Golden Hour",
+  "Blue Hour",
+  "Night",
+];
 const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
 const SUN_ELEVATION_STORAGE_KEY = "skybox.sunElevationDeg";
 
@@ -2588,6 +2594,14 @@ export class Application {
       return { color: new THREE.Color(0xcfe7f7), near: 200, far: 2000 };
     };
 
+    const clampExposure = (value) => {
+      const base = Number.isFinite(value)
+        ? value
+        : renderer.toneMappingExposure ?? 1.0;
+      // Keep tone mapping stable across presets without drifting into clipped or banded ranges.
+      return THREE.MathUtils.clamp(base, 0.85, 1.15);
+    };
+
     const updateFogState = (color, near, far) => {
       const setFogOptions = scene?.userData?.setFogOptions;
       if (typeof setFogOptions === "function") {
@@ -2638,7 +2652,9 @@ export class Application {
       // 1. Renderer Updates
       if (profile.renderer) {
         if (Number.isFinite(profile.renderer.toneMappingExposure)) {
-          renderer.toneMappingExposure = profile.renderer.toneMappingExposure;
+          renderer.toneMappingExposure = clampExposure(
+            profile.renderer.toneMappingExposure,
+          );
         }
       }
 
@@ -2809,7 +2825,7 @@ export class Application {
           visible: moonState.visible,
         },
         fog: getFogState(),
-        exposure: renderer.toneMappingExposure,
+        exposure: clampExposure(renderer.toneMappingExposure),
         starsOpacity: getStarsOpacity(),
         moonDirection: getMoonDirection().clone(),
         moonIntensity: moonLight?.intensity ?? 0,
@@ -2842,7 +2858,7 @@ export class Application {
             }
           : null,
         exposure: Number.isFinite(profile.renderer?.toneMappingExposure)
-          ? profile.renderer.toneMappingExposure
+          ? clampExposure(profile.renderer.toneMappingExposure)
           : startState.exposure,
         starsOpacity: targetStarsOpacity,
         moonDirection: targetMoonDir ? targetMoonDir.clone() : getMoonDirection(),
@@ -3024,11 +3040,12 @@ export class Application {
           haze,
         );
 
-        renderer.toneMappingExposure = THREE.MathUtils.lerp(
+        const blendedExposure = THREE.MathUtils.lerp(
           startState.exposure,
           targetState.exposure,
           eased,
         );
+        renderer.toneMappingExposure = clampExposure(blendedExposure);
 
         updateHarborLighting(harbor, lights.nightFactor);
         updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: 0 });
@@ -3102,6 +3119,45 @@ export class Application {
 
     // Alias for HUD compatibility
     const applyLightingPreset = applyLookProfile;
+
+    const presetOrder = LIGHTING_PRESET_ORDER.filter(
+      (name) => LIGHTING_PRESETS[name],
+    );
+    const getActiveLightingPresetName = () => lastAppliedLightingPreset;
+    const setLightingPreset = (name, source = "user") =>
+      applyLightingPreset(name, { forceReapply: true, source });
+    const cycleLightingPreset = (direction = 1) => {
+      if (!presetOrder.length) return null;
+      const activeName = getActiveLightingPresetName();
+      const currentIndex =
+        activeName && presetOrder.includes(activeName)
+          ? presetOrder.indexOf(activeName)
+          : -1;
+      const nextIndex =
+        currentIndex >= 0
+          ? (currentIndex + direction + presetOrder.length) % presetOrder.length
+          : 0;
+      const nextName = presetOrder[nextIndex];
+      if (nextName) {
+        setLightingPreset(nextName, "user");
+      }
+      return nextName;
+    };
+
+    const registerLightingDebugCommands = () => {
+      if (typeof window === "undefined") return;
+      const debugApi = {
+        setLightingPreset: (name) => setLightingPreset(name, "debug"),
+        cycleLightingPreset: (direction = 1) => cycleLightingPreset(direction),
+        listLightingPresets: () => [...presetOrder],
+        getActivePreset: () => getActiveLightingPresetName(),
+      };
+      Object.assign(window, debugApi);
+      console.info(
+        "[Lighting] Debug helpers available:",
+        Object.keys(debugApi).join(", "),
+      );
+    };
 
     // Apply default profile on startup to lock the look immediately
     const initialPreset =
@@ -3344,8 +3400,10 @@ export class Application {
       getDirection,
       onPin,
       onSetLightingPreset: (name) =>
-        applyLightingPreset(name, { forceReapply: true, source: "user" }),
+        setLightingPreset(name, "user"),
       lightingPresets: LIGHTING_PRESETS,
+      getActivePresetName: () => getActiveLightingPresetName(),
+      setActivePreset: (name) => setLightingPreset(name, "user"),
       getFogEnabled: () => fogEnabled,
       onToggleFog: toggleFog,
       sunAlignment: {
@@ -3354,6 +3412,7 @@ export class Application {
         onChange: setSunAlignment,
       },
     });
+    registerLightingDebugCommands();
     this.devHud = devHud;
     mountMiniMap({ getPosition, getDirection });
     proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
