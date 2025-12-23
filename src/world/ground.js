@@ -1,4 +1,4 @@
-export const GROUND_EPSILON = 0.05;
+export const GROUND_EPSILON = 0.2;
 
 export function groundY(
   terrain,
