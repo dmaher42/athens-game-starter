@@ -2355,6 +2355,13 @@ export class Application {
     const timeOfDayState = { timeOfDayPhase: 0 };
     setTimeOfDayPhase(timeOfDayState, 0);
 
+    const LIGHTING_PHASE_WINDOWS = [
+      { name: "Blue Hour", start: 0.0, end: 0.12 },
+      { name: "Bright Noon", start: 0.25, end: 0.7 },
+      { name: "Golden Hour", start: 0.7, end: 0.85 },
+      { name: "Night", start: 0.85, end: 1.0 },
+    ];
+
     const persistSunAlignment = () => {
       writeStoredNumber(SUN_AZIMUTH_STORAGE_KEY, sunAlignmentState.azimuthDeg);
       writeStoredNumber(
@@ -2365,6 +2372,70 @@ export class Application {
 
     const getAlignedSunDirection = () =>
       azElToDirection(sunAlignmentState.azimuthDeg, sunAlignmentState.elevationDeg);
+
+    const resolveStarsOpacity = (value) => {
+      if (value === true) return 1;
+      if (value === false) return 0;
+      const n = Number(value);
+      return Number.isFinite(n) ? THREE.MathUtils.clamp(n, 0, 1) : 0;
+    };
+
+    const getStarsOpacity = () => {
+      const stars = dynamicSky?.stars;
+      if (!stars?.material) return 0;
+      return stars.material.opacity ?? 0;
+    };
+
+    const setStarsOpacity = (opacity) => {
+      const stars = dynamicSky?.stars;
+      if (!stars?.material) return;
+      const safeOpacity = THREE.MathUtils.clamp(opacity ?? 0, 0, 1);
+      stars.material.opacity = safeOpacity;
+      stars.visible = safeOpacity > 0.001;
+      stars.userData = stars.userData || {};
+      stars.userData.overrideOpacity = safeOpacity;
+    };
+
+    const setMoonLight = (intensity, direction) => {
+      if (!moonLight) return;
+      const dir = direction?.clone?.() ?? null;
+      if (dir) {
+        dir.normalize();
+        const scaled = dir.multiplyScalar(sunDistance * 0.65);
+        moonLight.position.copy(sunTargetVector).add(scaled);
+        moonLight.target.position.copy(sunTargetVector);
+        moonLight.target.updateMatrixWorld();
+      }
+      if (Number.isFinite(intensity)) {
+        moonLight.intensity = intensity;
+      }
+    };
+
+    const getMoonDirection = () => {
+      const dir = new THREE.Vector3();
+      if (moonLight) {
+        dir
+          .copy(moonLight.position)
+          .sub(sunTargetVector)
+          .normalize();
+        if (dir.lengthSq() > 0) {
+          return dir;
+        }
+      }
+      if (typeof dynamicSky?.getMoonDirection === "function") {
+        return dynamicSky.getMoonDirection(dir);
+      }
+      return dir.set(0, 1, 0);
+    };
+
+    const getPresetForPhase = (phase) => {
+      for (const window of LIGHTING_PHASE_WINDOWS) {
+        const within =
+          phase >= window.start && (phase < window.end || window.end === 1.0);
+        if (within) return window.name;
+      }
+      return null;
+    };
 
     const syncSunLighting = (sunHeightOverride, directionOverride) => {
       const direction = directionOverride || dynamicSky.getSunDirection();
@@ -2407,6 +2478,7 @@ export class Application {
 
     // Current Look Profile State
     let currentLookProfile = null;
+    let lastAppliedLightingPreset = null;
     let activeLightingTransition = null;
 
     const stopLightingTransition = () => {
@@ -2474,7 +2546,16 @@ export class Application {
         return;
       }
       currentLookProfile = profile;
+      lastAppliedLightingPreset = profileName;
       console.log(`[LookProfile] Applying: ${profileName}`);
+
+      const targetStarsOpacity = resolveStarsOpacity(profile.starsVisible);
+      const targetMoonDir = Number.isFinite(profile.moonElevation)
+        ? azElToDirection(sunAlignmentState.azimuthDeg, profile.moonElevation)
+        : null;
+      const targetMoonIntensity = Number.isFinite(profile.moonLightIntensity)
+        ? profile.moonLightIntensity
+        : null;
 
       // 1. Renderer Updates
       if (profile.renderer) {
@@ -2569,6 +2650,12 @@ export class Application {
         hazeStruct,
       );
 
+      setStarsOpacity(targetStarsOpacity);
+      setMoonLight(targetMoonIntensity, targetMoonDir || getMoonDirection());
+      if (profile.soundscapeMode && soundscape?.setMode) {
+        soundscape.setMode(profile.soundscapeMode);
+      }
+
       updateHarborLighting(harbor, lights.nightFactor);
       updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: 0 });
       updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: 0 });
@@ -2578,15 +2665,20 @@ export class Application {
     };
 
     const applyLookProfile = (profileName, options = {}) => {
-      const { immediate = false } = options;
+      const { immediate = false, forceReapply = false } = options;
       const profile = LOOK_PROFILES[profileName];
       if (!profile) {
         console.warn(`[LookProfile] Profile '${profileName}' not found`);
         return;
       }
 
+      if (!forceReapply && lastAppliedLightingPreset === profileName) {
+        return;
+      }
+
       stopLightingTransition();
       currentLookProfile = profile;
+      lastAppliedLightingPreset = profileName;
 
       // Apply static elements immediately
       if (profile.skybox?.skyKey && dynamicSky) {
@@ -2606,6 +2698,18 @@ export class Application {
         ? clampElevation(profile.sun.elevation)
         : sunAlignmentState.elevationDeg;
 
+      const targetStarsOpacity = resolveStarsOpacity(profile.starsVisible);
+      const targetMoonDir = Number.isFinite(profile.moonElevation)
+        ? azElToDirection(sunAlignmentState.azimuthDeg, profile.moonElevation)
+        : getMoonDirection();
+      const targetMoonIntensity = Number.isFinite(profile.moonLightIntensity)
+        ? profile.moonLightIntensity
+        : moonLight?.intensity ?? 0;
+
+      if (profile.soundscapeMode && soundscape?.setMode) {
+        soundscape.setMode(profile.soundscapeMode);
+      }
+
       const startState = {
         azimuthDeg: sunAlignmentState.azimuthDeg,
         elevationDeg: sunAlignmentState.elevationDeg,
@@ -2622,6 +2726,9 @@ export class Application {
         },
         fog: getFogState(),
         exposure: renderer.toneMappingExposure,
+        starsOpacity: getStarsOpacity(),
+        moonDirection: getMoonDirection().clone(),
+        moonIntensity: moonLight?.intensity ?? 0,
       };
 
       const targetState = {
@@ -2653,6 +2760,9 @@ export class Application {
         exposure: Number.isFinite(profile.renderer?.toneMappingExposure)
           ? profile.renderer.toneMappingExposure
           : startState.exposure,
+        starsOpacity: targetStarsOpacity,
+        moonDirection: targetMoonDir ? targetMoonDir.clone() : getMoonDirection(),
+        moonIntensity: targetMoonIntensity,
       };
 
       onFogChange(!!profile.fog?.enabled);
@@ -2774,6 +2884,23 @@ export class Application {
           haze = { start: fogNear, end: fogFar, color: fogColor };
         }
 
+        const starsOpacity = THREE.MathUtils.lerp(
+          startState.starsOpacity,
+          targetState.starsOpacity,
+          eased,
+        );
+        setStarsOpacity(starsOpacity);
+
+        const startMoonDir = startState.moonDirection?.clone?.() ?? getMoonDirection();
+        const targetMoonDir = targetState.moonDirection?.clone?.() ?? startMoonDir;
+        const moonDir = startMoonDir.clone().normalize().slerp(targetMoonDir.normalize(), eased);
+        const moonIntensity = THREE.MathUtils.lerp(
+          startState.moonIntensity,
+          targetState.moonIntensity,
+          eased,
+        );
+        setMoonLight(moonIntensity, moonDir);
+
         updateOcean(
           ocean,
           0,
@@ -2832,11 +2959,13 @@ export class Application {
     const applyLightingPreset = applyLookProfile;
 
     // Apply default profile on startup to lock the look immediately
-    applyLookProfile("Bright Noon", { immediate: true });
+    const initialPreset =
+      getPresetForPhase(timeOfDayState.timeOfDayPhase ?? 0) || "Bright Noon";
+    applyLookProfile(initialPreset, { immediate: true, forceReapply: true });
 
     const onFrame = (deltaTime, elapsed) => {
       // Keep track of time for smooth animation and frame-independent movement.
-      if (dayCycle.secondsPerDay > 0 && !currentLookProfile) {
+      if (dayCycle.secondsPerDay > 0) {
         const deltaPhase = deltaTime / dayCycle.secondsPerDay;
         const nextPhase = (timeOfDayState.timeOfDayPhase ?? 0) + deltaPhase;
         const wrappedPhase = nextPhase - Math.floor(nextPhase);
@@ -2846,8 +2975,16 @@ export class Application {
       // If a profile is active, freeze the phase to NOON (0.5) for day profiles or MIDNIGHT (0.0) for night?
       // Actually, we should just let the phase drift but ensure rendering ignores it.
       // Or better, freeze the phase display in HUD if locked.
-      const phase = currentLookProfile ? 0.5 : (timeOfDayState.timeOfDayPhase ?? 0);
+      const phase = timeOfDayState.timeOfDayPhase ?? 0;
       timeOfDayState.elapsedSeconds = elapsed;
+
+      const activePresetForPhase = getPresetForPhase(phase);
+      if (
+        activePresetForPhase &&
+        activePresetForPhase !== lastAppliedLightingPreset
+      ) {
+        applyLightingPreset(activePresetForPhase, { source: "auto" });
+      }
 
       let alignedSunDir;
       if (currentLookProfile) {
