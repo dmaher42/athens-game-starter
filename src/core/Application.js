@@ -801,15 +801,24 @@ export class Application {
       }
     };
 
-    const hdrPath = joinPath(
+    const url = joinPath(
       BASE_URL || DEFAULT_BASE_URL,
-      "hdr/clear_midday.exr",
+      "assets/hdr/clear_midday_converted.exr",
     );
     const loadEnvironmentWithFallback = async () => {
-      // Force procedural sky to prevent GPU stalls from HDRI loading
-      createDefaultSky(scene, dynamicSky);
-      applyEnvironmentFallbackForProfile();
-      return null;
+      // Attempt to load the HDRI, but keep fallback ready
+      const envMap = await loadHdriEnvironment({
+        renderer,
+        scene,
+        path: url,
+        onFallback: () => {
+          createDefaultSky(scene, dynamicSky);
+          applyEnvironmentFallbackForProfile();
+        },
+      });
+
+      // If loadHdriEnvironment returns null, it already called onFallback
+      return envMap;
     };
 
     await loadEnvironmentWithFallback();
@@ -2611,7 +2620,7 @@ export class Application {
         ? value
         : renderer.toneMappingExposure ?? 1.0;
       // Keep tone mapping stable across presets without drifting into clipped or banded ranges.
-      return THREE.MathUtils.clamp(base, 0.5, 2.0);
+      return THREE.MathUtils.clamp(base, 0.6, 1.4);
     };
 
     const updateFogState = (color, near, far) => {
