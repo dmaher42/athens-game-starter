@@ -27,7 +27,7 @@ export const LOOK_PROFILES = {
       density: 0.00006,
     },
     skybox: {
-      exposureMultiplier: 1.12,
+      exposureMultiplier: 0.8,
       saturationMultiplier: 1.08,
       skyKey: "high_noon"
     },
@@ -39,7 +39,7 @@ export const LOOK_PROFILES = {
       highlightTint: "#fff7eb", // Warm highlights for sunlit sparkle
     },
     env: {
-      envMapIntensity: 1.0 // Reflections tuned to noon brightness
+      envMapIntensity: 0.8 // Reflections tuned to noon brightness
     },
     moon: {
       visible: false,
