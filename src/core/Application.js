@@ -768,21 +768,29 @@ export class Application {
     this.dynamicSky = dynamicSky;
 
     const hdrPath = joinPath(BASE_URL, "hdr/clear_midday.hdr");
-    try {
-      const envMap = await loadHdriEnvironment({
-        renderer,
-        scene,
-        path: hdrPath,
-      });
+    const loadEnvironmentWithFallback = async () => {
+      try {
+        const envMap = await loadHdriEnvironment({
+          renderer,
+          scene,
+          path: hdrPath,
+        });
 
-      if (!envMap) {
-        console.warn("[HDRI] No environment map returned, using fallback sky");
+        if (!envMap) {
+          console.warn("[HDRI] No environment map returned, using fallback sky");
+          createDefaultSky(scene, dynamicSky);
+          return null;
+        }
+
+        return envMap;
+      } catch (error) {
+        console.warn("[HDRI] Failed, using fallback sky", error);
         createDefaultSky(scene, dynamicSky);
+        return null;
       }
-    } catch (error) {
-      console.warn("[HDRI] Failed, using fallback sky", error);
-      createDefaultSky(scene, dynamicSky);
-    }
+    };
+
+    await loadEnvironmentWithFallback();
 
     const alignSunLight = () => {
       const direction = azElToDirection(

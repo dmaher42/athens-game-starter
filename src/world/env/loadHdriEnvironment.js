@@ -13,9 +13,16 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
       .load(
         path,
         (hdrTexture) => {
-          if (!hdrTexture || !hdrTexture.image || !hdrTexture.image.data) {
+          if (!hdrTexture || !hdrTexture.image) {
             pmremGenerator.dispose();
-            reject(new Error('Unsupported HDR format'));
+            reject(new Error('Invalid HDR texture'));
+            return;
+          }
+
+          if (!hdrTexture.image.data) {
+            pmremGenerator.dispose();
+            hdrTexture.dispose();
+            reject(new Error('Invalid HDR texture'));
             return;
           }
 
