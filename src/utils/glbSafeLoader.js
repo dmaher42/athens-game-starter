@@ -24,7 +24,7 @@ export async function createGLTFLoader(renderer) {
 
   if (renderer) {
     try {
-      const ktx2 = createKTX2Loader(renderer);
+      const ktx2 = await createKTX2Loader(renderer);
       if (ktx2) {
         loader.setKTX2Loader(ktx2);
       }

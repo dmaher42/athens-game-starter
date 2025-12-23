@@ -1,4 +1,4 @@
-import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
+// KTX2Loader will be dynamically imported only if needed
 
 export const DEFAULT_BASIS_TRANSCODER_PATH =
   "https://unpkg.com/three@0.180.0/examples/jsm/libs/basis/";
@@ -117,7 +117,8 @@ export function resolveKTX2TranscoderPath() {
   return DEFAULT_BASIS_TRANSCODER_PATH;
 }
 
-export function createKTX2Loader(renderer) {
+export async function createKTX2Loader(renderer) {
+  const { KTX2Loader } = await import("three/examples/jsm/loaders/KTX2Loader.js");
   const loader = new KTX2Loader();
   const path = resolveKTX2TranscoderPath();
   loader.setTranscoderPath(path);
