@@ -10,8 +10,7 @@ import {
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 import { createHudPanel, startThrottledLoop } from "./hudShared.js";
 import { registerPanel, unregisterPanel } from "./HudManager.js";
-
-const STYLE_ID = "mini-map-style";
+import "./hudTheme.css";
 
 type Vector3Like = Pick<Vector3, "x" | "y" | "z">;
 
@@ -43,75 +42,6 @@ export interface MiniMapOptions {
 export interface MiniMapHandle {
   readonly rootElement: HTMLDivElement;
   dispose(): void;
-}
-
-function ensureStyles(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    .mini-map-panel {
-      display: grid;
-      grid-template-columns: auto;
-      grid-template-rows: auto auto;
-      gap: 8px;
-      width: 230px;
-      color: #f5f5f5;
-    }
-    .mini-map-panel--expanded {
-      width: 360px;
-      box-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
-    }
-    .mini-map__canvas {
-      width: 100%;
-      height: auto;
-      border-radius: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: rgba(4, 7, 10, 0.85);
-    }
-    .mini-map__legend {
-      background: rgba(0, 0, 0, 0.35);
-      border-radius: 10px;
-      padding: 10px 12px;
-    }
-    .mini-map__legend h4 {
-      margin: 0 0 6px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      opacity: 0.7;
-    }
-    .mini-map__legend ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: grid;
-      gap: 4px;
-    }
-    .mini-map__legend li {
-      display: flex;
-      justify-content: space-between;
-      gap: 6px;
-      font-size: 11px;
-      opacity: 0.85;
-    }
-    .mini-map__legend li span {
-      opacity: 0.65;
-      font-size: 10px;
-      letter-spacing: 0.02em;
-    }
-    @media (max-width: 640px) {
-      .mini-map-panel {
-        width: min(100vw - 32px, 240px);
-      }
-      .mini-map-panel--expanded {
-        width: min(100vw - 24px, 320px);
-      }
-    }
-  `;
-  document.head.appendChild(style);
 }
 
 function normalizePosition(position: unknown): MiniMapPoint | null {
@@ -451,7 +381,6 @@ function updateLegend(
 
 export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null {
   if (typeof document === "undefined") return null;
-  ensureStyles();
 
   const {
     getPosition = () => null,

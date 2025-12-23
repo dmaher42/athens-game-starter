@@ -1,5 +1,6 @@
 import { createHudPanel } from "./hudShared.js";
 import { registerPanel } from "./HudManager.js";
+import "./hudTheme.css";
 
 // Basic interface for what we expect from QuestManager (avoiding circular imports or complex types for now)
 interface QuestState {
@@ -18,8 +19,6 @@ export class QuestHud {
   private objectiveEl: HTMLElement;
 
   constructor(questManager: QuestManager) {
-    ensureQuestStyles();
-
     const panel = createHudPanel({
       title: "Active Quest",
       className: "quest-hud",
@@ -61,28 +60,4 @@ export class QuestHud {
         this.root.classList.remove("quest-hud--completed");
     }
   }
-}
-
-function ensureQuestStyles(): void {
-  if (typeof document === "undefined") return;
-  const existing = document.getElementById("quest-hud-style");
-  if (existing) return;
-  const style = document.createElement("style");
-  style.id = "quest-hud-style";
-  style.textContent = `
-    .quest-hud { min-width: 220px; }
-    .quest-hud__title {
-      font-weight: 700;
-      font-size: 14px;
-      margin-bottom: 4px;
-      color: #fbbf24;
-    }
-    .quest-hud__objective {
-      font-size: 13px;
-      line-height: 1.4;
-      opacity: 0.9;
-    }
-    .quest-hud--completed .quest-hud__title { color: #4ade80; }
-  `;
-  document.head.appendChild(style);
 }
