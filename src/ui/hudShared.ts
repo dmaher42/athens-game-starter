@@ -79,9 +79,14 @@ function ensurePanelStyles(): void {
       display: flex;
       flex-direction: column;
       gap: 10px;
+      overflow: hidden;
+      opacity: 1;
+      height: auto;
+      transition: height 240ms ease, opacity 240ms ease;
     }
-    .hud-panel--collapsed .hud-panel__content {
-      display: none;
+    .hud-panel--collapsed .hud-panel__content[data-can-collapse="1"] {
+      opacity: 0;
+      height: 0;
     }
   `;
   document.head.appendChild(style);
@@ -115,25 +120,54 @@ export function createHudPanel(options: HudPanelOptions): HudPanelHandle {
 
   const content = document.createElement("div");
   content.className = "hud-panel__content";
+  content.dataset.canCollapse = collapseContent ? "1" : "0";
 
   root.appendChild(header);
   root.appendChild(content);
 
   let collapsed = Boolean(options.initialCollapsed);
 
-  const applyState = () => {
-    toggleButton.textContent = collapsed ? labels.collapsed : labels.expanded;
-    root.classList.toggle("hud-panel--collapsed", collapseContent && collapsed);
+  const animateContent = (nextCollapsed: boolean, animate: boolean): void => {
+    const contentElement = content;
     if (!collapseContent) {
-      root.classList.toggle("hud-panel--collapsed", collapsed);
+      contentElement.style.height = "auto";
+      contentElement.style.opacity = "1";
+      return;
     }
+    const startHeight = contentElement.getBoundingClientRect().height;
+    const targetHeight = nextCollapsed ? 0 : contentElement.scrollHeight;
+
+    if (!animate) {
+      contentElement.style.height = nextCollapsed ? "0px" : "auto";
+      contentElement.style.opacity = nextCollapsed ? "0" : "1";
+      return;
+    }
+
+    contentElement.style.height = `${startHeight}px`;
+    contentElement.style.opacity = nextCollapsed ? "1" : "0";
+    void contentElement.getBoundingClientRect();
+    contentElement.style.height = `${targetHeight}px`;
+    contentElement.style.opacity = nextCollapsed ? "0" : "1";
+  };
+
+  const applyState = (animate = false) => {
+    toggleButton.textContent = collapsed ? labels.collapsed : labels.expanded;
+    root.classList.toggle("hud-panel--collapsed", collapsed);
+    animateContent(collapsed, animate);
     options.onToggle?.(collapsed);
   };
+
+  content.addEventListener("transitionend", (event) => {
+    if (event.target !== content || event.propertyName !== "height") return;
+    if (!collapsed) {
+      content.style.height = "auto";
+    }
+  });
 
   toggleButton.addEventListener("click", (event) => {
     event.preventDefault();
     collapsed = !collapsed;
-    applyState();
+    applyState(true);
   });
 
   applyState();
