@@ -53,6 +53,21 @@ function ensureStyles(): void {
       gap: 12px;
       z-index: 1200;
     }
+    .hud-small-toggle {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      pointer-events: auto;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.55);
+      color: white;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
     .ui-slot { display: flex; gap: 10px; align-items: flex-start; }
     .ui-slot--topLeft, .ui-slot--topRight { flex-direction: column; align-items: flex-start; }
     .ui-slot > * { pointer-events: auto; }

@@ -21,10 +21,20 @@ const DEFAULT_POSITIONS: Record<string, HudQuadrant> = {
   interactionHud: "center",
 };
 
-const SMALL_SCREEN_MAX = 720;
+const SMALL_SCREEN_WIDTH = 1024;
+const SMALL_SCREEN_HEIGHT = 768;
+const COLLAPSIBLE_PANELS = new Set([
+  "questHud",
+  "devHud",
+  "audioMixer",
+  "exposureSlider",
+  "hotkeyOverlay",
+]);
 
 class HudManager {
   private panels = new Map<string, HudPanelRegistration>();
+  private showCollapsedPanels = false;
+  private toggleButton: HTMLButtonElement | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -63,16 +73,81 @@ class HudManager {
     this.updateLayout();
   }
 
+  private hidePanel(registration: HudPanelRegistration): void {
+    registration.previousDisplay = registration.element.style.display;
+    registration.layoutHidden = true;
+    registration.element.style.display = "none";
+  }
+
+  private ensureToggleButton(): HTMLButtonElement | null {
+    if (typeof document === "undefined") return null;
+
+    if (this.toggleButton) return this.toggleButton;
+
+    const root = ensureUIRoot();
+    if (!root) return null;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "hud-small-toggle";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      this.showCollapsedPanels = !this.showCollapsedPanels;
+      this.updateLayout();
+    });
+
+    root.appendChild(button);
+    this.toggleButton = button;
+    return button;
+  }
+
+  private updateToggleButton(isSmallScreen: boolean): void {
+    const button = this.ensureToggleButton();
+    if (!button) return;
+
+    if (!isSmallScreen) {
+      button.style.display = "none";
+      this.showCollapsedPanels = false;
+      return;
+    }
+
+    button.style.display = "block";
+    button.textContent = this.showCollapsedPanels
+      ? "Hide HUD panels"
+      : "Show HUD panels";
+  }
+
   updateLayout(): void {
     if (typeof document === "undefined") return;
     ensureUIRoot();
 
     const isSmallScreen =
-      typeof window !== "undefined" && window.innerWidth <= SMALL_SCREEN_MAX;
+      typeof window !== "undefined" &&
+      (window.innerWidth <= SMALL_SCREEN_WIDTH ||
+        window.innerHeight <= SMALL_SCREEN_HEIGHT);
     const maxPerQuadrant = isSmallScreen ? 1 : Number.POSITIVE_INFINITY;
+    this.updateToggleButton(isSmallScreen);
+
+    const allowCollapsedPanels = !isSmallScreen || this.showCollapsedPanels;
 
     const grouped = new Map<HudQuadrant, HudPanelRegistration[]>();
+    const visiblePanels: HudPanelRegistration[] = [];
+
     this.panels.forEach((panel) => {
+      const shouldHideForSize =
+        isSmallScreen &&
+        !allowCollapsedPanels &&
+        COLLAPSIBLE_PANELS.has(panel.name);
+
+      if (shouldHideForSize) {
+        this.hidePanel(panel);
+        return;
+      }
+
+      visiblePanels.push(panel);
+    });
+
+    visiblePanels.forEach((panel) => {
       const list = grouped.get(panel.quadrant) ?? [];
       list.push(panel);
       grouped.set(panel.quadrant, list);
