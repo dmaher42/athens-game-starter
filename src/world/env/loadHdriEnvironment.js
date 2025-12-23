@@ -6,19 +6,19 @@ const FALLBACK_PRESETS = {
     sky: '#3b4f79',
     ground: '#b5763a',
     background: '#0f1a2b',
-    intensity: 0.45,
+    intensity: 0.5,
   },
   brightNoon: {
     sky: '#bcd7ff',
     ground: '#e9d5b5',
     background: '#d8ecff',
-    intensity: 0.75,
+    intensity: 0.8,
   },
   goldenHour: {
     sky: '#ffd9a3',
     ground: '#7a4b32',
     background: '#fff2d6',
-    intensity: 0.6,
+    intensity: 0.65,
   },
   default: {
     sky: '#c3c8d1',
@@ -30,10 +30,33 @@ const FALLBACK_PRESETS = {
 
 function getFallbackPreset(path = '') {
   const lowerPath = path.toLowerCase();
-  if (lowerPath.includes('blue') || lowerPath.includes('dusk')) return FALLBACK_PRESETS.blueHour;
-  if (lowerPath.includes('noon') || lowerPath.includes('midday') || lowerPath.includes('day')) return FALLBACK_PRESETS.brightNoon;
-  if (lowerPath.includes('sunset') || lowerPath.includes('golden') || lowerPath.includes('dawn')) return FALLBACK_PRESETS.goldenHour;
+  if (lowerPath.includes('blue') || lowerPath.includes('dusk')) {
+    return FALLBACK_PRESETS.blueHour;
+  }
+  if (
+    lowerPath.includes('noon') ||
+    lowerPath.includes('midday') ||
+    lowerPath.includes('day')
+  ) {
+    return FALLBACK_PRESETS.brightNoon;
+  }
+  if (
+    lowerPath.includes('sunset') ||
+    lowerPath.includes('golden') ||
+    lowerPath.includes('dawn')
+  ) {
+    return FALLBACK_PRESETS.goldenHour;
+  }
   return FALLBACK_PRESETS.default;
+}
+
+function removeFallbackEnvironment(scene) {
+  const fallbackKey = 'fallbackHemisphereLight';
+  const userData = scene?.userData;
+  const hemiLight = userData?.[fallbackKey];
+  if (hemiLight) {
+    scene.remove(hemiLight);
+  }
 }
 
 function applyFallbackEnvironment(scene, path) {
@@ -59,6 +82,7 @@ function applyFallbackEnvironment(scene, path) {
 
   scene.environment = null;
   scene.background = new THREE.Color(preset.background);
+  // Documented defaults: tuned per time-of-day preset to avoid pitch-black scenes when HDRI is unavailable.
 
   return hemiLight;
 }
@@ -83,6 +107,11 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
     };
 
     try {
+      if (!path) {
+        handleFallback(new Error('HDRI path missing'));
+        return;
+      }
+
       loader
         .setCrossOrigin('anonymous')
         // Use full float precision to avoid clamping bright HDR values to half-float range
@@ -103,6 +132,7 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
               }
 
               const envMap = pmremGenerator.fromEquirectangular(exrTexture).texture;
+              removeFallbackEnvironment(scene);
               scene.environment = envMap;
               exrTexture.dispose();
               pmremGenerator.dispose();

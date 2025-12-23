@@ -2,7 +2,7 @@
 export const LOOK_PROFILES = {
   "Bright Noon": {
     renderer: {
-      toneMappingExposure: 0.95, // Slightly under 1; midday brightness comes from sun/ambient levels
+      toneMappingExposure: 0.9, // Slightly under neutral to avoid washed-out mids
     },
     starsVisible: 0.0,
     moonElevation: -10,
@@ -10,14 +10,14 @@ export const LOOK_PROFILES = {
     soundscapeMode: "day",
     sun: {
       color: "#ffffff", // Neutral white sun for true midday balance
-      intensity: 1.0,
+      intensity: 0.9,
       azimuth: 0,      // Centered azimuth for high noon feel
       elevation: 75,   // Slightly higher midday sun
     },
     ambient: {
       color: "#dceaff", // Light blue tint to keep midday fill crisp
       groundColor: "#ecf4ff",
-      intensity: 0.5,
+      intensity: 0.45,
     },
     fog: {
       enabled: true,
@@ -49,7 +49,7 @@ export const LOOK_PROFILES = {
   },
   "Golden Hour": {
     renderer: {
-      toneMappingExposure: 0.98, // Kept near neutral; warmth comes from lighting/ambient balance
+      toneMappingExposure: 0.95, // Slight pull-down keeps highlights from clipping
     },
     starsVisible: 0.08,
     moonElevation: 10,
@@ -64,13 +64,13 @@ export const LOOK_PROFILES = {
     ambient: {
       color: "#b47b57",
       groundColor: "#6b3f2e",
-      intensity: 0.6, // Stronger warm fill for softer shadows
+      intensity: 0.55, // Warm fill without flattening contrast
     },
     fog: {
       enabled: true,
       color: "#ffd8b0",
       near: 200,
-      far: 4500,      // Gentle warm haze while keeping silhouettes readable
+      far: 4200,      // Gentle warm haze while keeping silhouettes readable
     },
     skybox: {
       exposureMultiplier: 1.0,
@@ -78,7 +78,7 @@ export const LOOK_PROFILES = {
     },
     grade: {
       contrast: 0.16, // Align contrast with other presets while keeping silhouette definition
-      saturation: 0.08, // Warmth without oversaturating terrain
+      saturation: 0.06, // Warmth without oversaturating terrain
       shadowTint: "#2f241b",
       midTint: "#ffe2c4",
       highlightTint: "#fff3e4",
@@ -94,7 +94,7 @@ export const LOOK_PROFILES = {
   },
   "Blue Hour": {
     renderer: {
-      toneMappingExposure: 1.02, // Slight lift while relying on cooler fill to set mood
+      toneMappingExposure: 1.0, // Neutral exposure; visibility comes from balanced ambient
     },
     starsVisible: 0.55,
     moonElevation: 8,
@@ -109,13 +109,13 @@ export const LOOK_PROFILES = {
     ambient: {
       color: "#465672",
       groundColor: "#283448",
-      intensity: 0.5,
+      intensity: 0.58,
     },
     fog: {
       enabled: true,
       color: "#3f506c",
       near: 250,
-      far: 2600,
+      far: 3000,
     },
     skybox: {
       exposureMultiplier: 0.85,
@@ -123,13 +123,13 @@ export const LOOK_PROFILES = {
     },
     grade: {
       contrast: 0.12, // Closer to other looks for consistent perceived depth
-      saturation: -0.1, // Keep cool palette without dulling materials
+      saturation: -0.08, // Keep cool palette without dulling materials
       shadowTint: "#223344",
       midTint: "#3b5278",
       highlightTint: "#9bb5e1",
     },
     env: {
-      envMapIntensity: 0.65 // Twilight reflections balanced with dim sun
+      envMapIntensity: 0.72 // Twilight reflections balanced with dim sun
     },
     moon: {
       visible: true,
@@ -139,31 +139,31 @@ export const LOOK_PROFILES = {
   },
   "Night": {
     renderer: {
-      toneMappingExposure: 1.05, // Night uses added ambient instead of high exposure to preserve contrast/stars
+      toneMappingExposure: 1.06, // Night uses added ambient instead of high exposure to preserve contrast/stars
     },
     starsVisible: 1.0,
     moonElevation: 25,
-    moonLightIntensity: 0.2,
+    moonLightIntensity: 0.32,
     soundscapeMode: "night",
     sun: {
-      color: "#a8c2ff",
-      intensity: 0.12,
+      color: "#95b7ff",
+      intensity: 0.08,
       azimuth: 135,
       elevation: -45,
     },
     ambient: {
       color: "#0c1a2f",
       groundColor: "#0c1a2f",
-      intensity: 0.25,
+      intensity: 0.32,
     },
     fog: {
       enabled: true,
       color: "#0a162b",
       near: 250,
-      far: 3200,
+      far: 3600,
     },
     skybox: {
-      exposureMultiplier: 0.35,
+      exposureMultiplier: 0.42,
       skyKey: "night_sky"
     },
     grade: {
@@ -174,11 +174,11 @@ export const LOOK_PROFILES = {
       highlightTint: "#c6d7ff",
     },
     env: {
-      envMapIntensity: 0.2
+      envMapIntensity: 0.35
     },
     moon: {
       visible: true,
-      intensity: 0.5,
+      intensity: 0.56,
       elevation: 38,
     }
   }
