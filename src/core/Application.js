@@ -767,7 +767,8 @@ export class Application {
     lights.moonLight = moonLight;
     this.dynamicSky = dynamicSky;
 
-    const hdrPath = joinPath(BASE_URL, "hdr/clear_midday.hdr");
+    const hdrPath =
+      "https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/clear_noon_1k.exr";
     const loadEnvironmentWithFallback = async () => {
       try {
         const envMap = await loadHdriEnvironment({
