@@ -22,7 +22,7 @@ export function createRenderer({ antialias = true } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 1.0; // Look presets assume ACES with ~1.0 as the baseline exposure
   renderer.useLegacyLights = false;
   renderer.localClippingEnabled = true;
   configureRendererShadows(renderer);

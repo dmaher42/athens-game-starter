@@ -134,6 +134,12 @@ const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 
 // Use Look Profiles as the primary presets
 const LIGHTING_PRESETS = LOOK_PROFILES;
+const LIGHTING_PRESET_ORDER = [
+  "Bright Noon",
+  "Golden Hour",
+  "Blue Hour",
+  "Night",
+];
 const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
 const SUN_ELEVATION_STORAGE_KEY = "skybox.sunElevationDeg";
 
@@ -2544,6 +2550,64 @@ export class Application {
       }
     };
 
+    const presetNames = Object.keys(LIGHTING_PRESETS);
+    const isDevBuild =
+      (typeof import.meta !== "undefined" && import.meta.env?.DEV === true) ||
+      (typeof process !== "undefined" && process?.env?.NODE_ENV === "development");
+
+    let presetOverlay = null;
+    let presetOverlayTimer = null;
+
+    const ensurePresetOverlay = () => {
+      if (!isDevBuild || typeof document === "undefined") return null;
+      if (presetOverlay) return presetOverlay;
+      const el = document.createElement("div");
+      el.id = "lighting-preset-overlay";
+      el.style.position = "fixed";
+      el.style.bottom = "16px";
+      el.style.right = "16px";
+      el.style.padding = "8px 12px";
+      el.style.background = "rgba(0,0,0,0.65)";
+      el.style.color = "#f6f8fb";
+      el.style.fontFamily = "sans-serif";
+      el.style.fontSize = "12px";
+      el.style.borderRadius = "6px";
+      el.style.pointerEvents = "none";
+      el.style.boxShadow = "0 2px 10px rgba(0,0,0,0.35)";
+      document.body.appendChild(el);
+      presetOverlay = el;
+      return presetOverlay;
+    };
+
+    const getNextPresetName = (name) => {
+      if (!presetNames.length) return null;
+      const currentIndex = presetNames.indexOf(name);
+      const baseIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = (baseIndex + 1) % presetNames.length;
+      return presetNames[nextIndex];
+    };
+
+    const showPresetOverlay = (activeName, nextName) => {
+      const overlay = ensurePresetOverlay();
+      if (!overlay || !activeName) return;
+      overlay.textContent = nextName
+        ? `Lighting: ${activeName} (next: ${nextName})`
+        : `Lighting: ${activeName}`;
+      overlay.style.opacity = "1";
+      if (presetOverlayTimer) {
+        clearTimeout(presetOverlayTimer);
+        presetOverlayTimer = null;
+      }
+      presetOverlayTimer = setTimeout(() => {
+        if (overlay) overlay.style.opacity = "0.5";
+      }, 1800);
+    };
+
+    const getActivePresetName = () => {
+      const phasePreset = getPresetForPhase(timeOfDayState.timeOfDayPhase ?? 0);
+      return lastAppliedLightingPreset || phasePreset || presetNames[0] || null;
+    };
+
     const getFogState = () => {
       const getFogOptions = scene?.userData?.getFogOptions;
       const fog = typeof getFogOptions === "function" ? getFogOptions() : null;
@@ -2564,6 +2628,14 @@ export class Application {
       }
 
       return { color: new THREE.Color(0xcfe7f7), near: 200, far: 2000 };
+    };
+
+    const clampExposure = (value) => {
+      const base = Number.isFinite(value)
+        ? value
+        : renderer.toneMappingExposure ?? 1.0;
+      // Keep tone mapping stable across presets without drifting into clipped or banded ranges.
+      return THREE.MathUtils.clamp(base, 0.85, 1.15);
     };
 
     const updateFogState = (color, near, far) => {
@@ -2618,7 +2690,9 @@ export class Application {
       // 1. Renderer Updates
       if (profile.renderer) {
         if (Number.isFinite(profile.renderer.toneMappingExposure)) {
-          renderer.toneMappingExposure = profile.renderer.toneMappingExposure;
+          renderer.toneMappingExposure = clampExposure(
+            profile.renderer.toneMappingExposure,
+          );
         }
       }
 
@@ -2720,6 +2794,8 @@ export class Application {
       updateMainHillRoadLighting(roadGroup, lights.nightFactor);
 
       renderFrame();
+
+      showPresetOverlay(profileName, getNextPresetName(profileName));
     };
 
     const applyLookProfile = (profileName, options = {}) => {
@@ -2742,6 +2818,8 @@ export class Application {
       lastAppliedLightingPreset = profileName;
       userPresetActive = source !== "auto";
       devHud?.setActivePreset?.(profileName);
+
+      showPresetOverlay(profileName, getNextPresetName(profileName));
 
       // Apply static elements immediately
       if (profile.skybox?.skyKey && dynamicSky) {
@@ -2788,7 +2866,7 @@ export class Application {
           visible: moonState.visible,
         },
         fog: getFogState(),
-        exposure: renderer.toneMappingExposure,
+        exposure: clampExposure(renderer.toneMappingExposure),
         starsOpacity: getStarsOpacity(),
         moonDirection: getMoonDirection().clone(),
         moonIntensity: moonLight?.intensity ?? 0,
@@ -2821,7 +2899,7 @@ export class Application {
             }
           : null,
         exposure: Number.isFinite(profile.renderer?.toneMappingExposure)
-          ? profile.renderer.toneMappingExposure
+          ? clampExposure(profile.renderer.toneMappingExposure)
           : startState.exposure,
         starsOpacity: targetStarsOpacity,
         moonDirection: targetMoonDir ? targetMoonDir.clone() : getMoonDirection(),
@@ -2829,6 +2907,15 @@ export class Application {
       };
 
       onFogChange(!!profile.fog?.enabled);
+
+      // If the target preset disables fog, clear any existing fog immediately
+      // so the transition doesn't keep the previous profile's haze.
+      if (!targetState.fog) {
+        setFogEnabled(false);
+        if (scene) {
+          scene.fog = null;
+        }
+      }
 
       if (immediate) {
         applyLookProfileImmediate(profileName);
@@ -2839,11 +2926,28 @@ export class Application {
       const startTime = performance.now();
       const transition = { cancelled: false };
       activeLightingTransition = transition;
+      let fogResetPending = !targetState.fog;
 
       const step = (now) => {
         if (transition.cancelled) return;
         const t = Math.min(1, (now - startTime) / durationMs);
         const eased = t * t * (3 - 2 * t);
+
+        if (fogResetPending) {
+          fogResetPending = false;
+          setFogEnabled(false);
+          if (scene) {
+            scene.fog = null;
+            const setFogOptions = scene.userData?.setFogOptions;
+            if (typeof setFogOptions === "function") {
+              setFogOptions({
+                color: startState.fog?.color ?? new THREE.Color(0xffffff),
+                near: 0,
+                far: 1,
+              });
+            }
+          }
+        }
 
         const az = THREE.MathUtils.lerp(
           startState.azimuthDeg,
@@ -2977,11 +3081,12 @@ export class Application {
           haze,
         );
 
-        renderer.toneMappingExposure = THREE.MathUtils.lerp(
+        const blendedExposure = THREE.MathUtils.lerp(
           startState.exposure,
           targetState.exposure,
           eased,
         );
+        renderer.toneMappingExposure = clampExposure(blendedExposure);
 
         updateHarborLighting(harbor, lights.nightFactor);
         updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: 0 });
@@ -3283,8 +3388,10 @@ export class Application {
       getDirection,
       onPin,
       onSetLightingPreset: (name) =>
-        applyLightingPreset(name, { forceReapply: true, source: "user" }),
+        setLightingPreset(name, "user"),
       lightingPresets: LIGHTING_PRESETS,
+      getActivePresetName: () => getActiveLightingPresetName(),
+      setActivePreset: (name) => setLightingPreset(name, "user"),
       getFogEnabled: () => fogEnabled,
       onToggleFog: toggleFog,
       sunAlignment: {
@@ -3293,6 +3400,7 @@ export class Application {
         onChange: setSunAlignment,
       },
     });
+    registerLightingDebugCommands();
     this.devHud = devHud;
     devHud?.setActivePreset?.(lastAppliedLightingPreset);
     mountMiniMap({ getPosition, getDirection });
@@ -3333,6 +3441,8 @@ export class Application {
         interactor.useObject();
       } else if (event.code === "KeyG" && !event.repeat) {
         toggleFog();
+      } else if (isDevBuild && event.code === "KeyT" && !event.repeat) {
+        cycleLightingPreset();
       } else if (event.code === "F8" && !event.repeat) {
         const position = player?.object?.position;
         const x = position?.x;
