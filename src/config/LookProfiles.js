@@ -4,6 +4,10 @@ export const LOOK_PROFILES = {
     renderer: {
       toneMappingExposure: 0.95, // Reduced from 1.05 to prevent washout
     },
+    starsVisible: 0.0,
+    moonElevation: -10,
+    moonLightIntensity: 0.0,
+    soundscapeMode: "day",
     sun: {
       color: "#fff7e0",
       intensity: 3.8,
@@ -42,6 +46,10 @@ export const LOOK_PROFILES = {
     renderer: {
       toneMappingExposure: 0.9,
     },
+    starsVisible: 0.08,
+    moonElevation: 10,
+    moonLightIntensity: 0.15,
+    soundscapeMode: "day",
     sun: {
       color: "#ffb36b",
       intensity: 3.9,
@@ -78,6 +86,10 @@ export const LOOK_PROFILES = {
     renderer: {
       toneMappingExposure: 0.82,
     },
+    starsVisible: 0.55,
+    moonElevation: 8,
+    moonLightIntensity: 0.32,
+    soundscapeMode: "night",
     sun: {
       color: "#8899bb",
       intensity: 0.5,
@@ -114,6 +126,10 @@ export const LOOK_PROFILES = {
     renderer: {
       toneMappingExposure: 0.58,
     },
+    starsVisible: 1.0,
+    moonElevation: 25,
+    moonLightIntensity: 0.7,
+    soundscapeMode: "night",
     sun: {
       color: "#7fa2ff",
       intensity: 0.18,
