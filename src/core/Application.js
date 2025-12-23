@@ -2277,8 +2277,51 @@ export class Application {
 
     // Current Look Profile State
     let currentLookProfile = null;
+    let activeLightingTransition = null;
 
-    const applyLookProfile = (profileName) => {
+    const stopLightingTransition = () => {
+      if (activeLightingTransition) {
+        activeLightingTransition.cancelled = true;
+        activeLightingTransition = null;
+      }
+    };
+
+    const getFogState = () => {
+      const getFogOptions = scene?.userData?.getFogOptions;
+      const fog = typeof getFogOptions === "function" ? getFogOptions() : null;
+      if (fog && fog.color) {
+        const fogColor =
+          fog.color instanceof THREE.Color
+            ? fog.color.clone()
+            : new THREE.Color(fog.color);
+        return { color: fogColor, near: fog.near ?? 0, far: fog.far ?? 0 };
+      }
+
+      if (scene?.fog && scene.fog.isFog) {
+        return {
+          color: scene.fog.color.clone(),
+          near: scene.fog.near,
+          far: scene.fog.far,
+        };
+      }
+
+      return { color: new THREE.Color(0xcfe7f7), near: 200, far: 2000 };
+    };
+
+    const updateFogState = (color, near, far) => {
+      const setFogOptions = scene?.userData?.setFogOptions;
+      if (typeof setFogOptions === "function") {
+        setFogOptions({ color, near, far });
+      } else if (scene?.fog && scene.fog.isFog) {
+        scene.fog.color.copy(color);
+        scene.fog.near = near;
+        scene.fog.far = far;
+      } else if (scene) {
+        scene.fog = new THREE.Fog(color, near, far);
+      }
+    };
+
+    const applyLookProfileImmediate = (profileName) => {
       const profile = LOOK_PROFILES[profileName];
       if (!profile) {
         console.warn(`[LookProfile] Profile '${profileName}' not found`);
@@ -2302,8 +2345,6 @@ export class Application {
         if (Number.isFinite(profile.sun.elevation)) {
           sunAlignmentState.elevationDeg = clampElevation(profile.sun.elevation);
         }
-        // Persist only if intended, but profiles are usually ephemeral/presets.
-        // We'll update state so the sun moves.
         persistSunAlignment();
       }
 
@@ -2315,85 +2356,60 @@ export class Application {
       // 4. Fog (Apply AFTER skybox to enforce profile overrides)
       if (profile.fog) {
         const { enabled, color, near, far } = profile.fog;
-        // Update fog state
         onFogChange(!!enabled);
         if (enabled && color && Number.isFinite(near) && Number.isFinite(far)) {
           const fogColor = new THREE.Color(color);
-          if (typeof setFogOptions === "function") {
-             setFogOptions({ color: fogColor, near, far });
-          } else if (scene.fog && scene.fog.isFog) {
-             scene.fog.color.copy(fogColor);
-             scene.fog.near = near;
-             scene.fog.far = far;
-          } else {
-             // Fallback if scene.fog isn't instantiated yet
-             scene.fog = new THREE.Fog(fogColor, near, far);
-          }
+          updateFogState(fogColor, near, far);
         }
       }
 
       // 5. Grade / Post-process
       if (profile.grade) {
-         applyColorGradeSettings(profile.grade);
+        applyColorGradeSettings(profile.grade);
       }
 
       // 6. Environment
       if (profile.env && Number.isFinite(profile.env.envMapIntensity)) {
-         applyEnvironmentIntensity(profile.env.envMapIntensity);
+        applyEnvironmentIntensity(profile.env.envMapIntensity);
       }
 
-      // Force an immediate update
       const sunDir = getAlignedSunDirection();
-
-      // Update Time of Day Phase immediately to match lighting if Day/Night
-      // This prevents the HUD from showing "01:14" when it's Bright Noon.
-      // Use the elevation from the profile definition if available, otherwise rely on alignment state.
       const el = profile.sun?.elevation ?? sunAlignmentState.elevationDeg;
-      // Default to Noon (0.5) unless explicitly Night (<= 0)
-      if (typeof el === 'number' && el <= 0) {
-          setTimeOfDayPhase(timeOfDayState, 0.0); // Midnight
+      if (typeof el === "number" && el <= 0) {
+        setTimeOfDayPhase(timeOfDayState, 0.0);
       } else {
-          setTimeOfDayPhase(timeOfDayState, 0.5); // Noon
+        setTimeOfDayPhase(timeOfDayState, 0.5);
       }
 
-      // Calculate derived nightFactor or use one from profile?
-      // We can derive nightFactor roughly from elevation or force it.
-      // For now, let's trigger lighting update with overrides.
       const sunColor = profile.sun?.color ? new THREE.Color(profile.sun.color) : null;
       const sunIntensity = profile.sun?.intensity;
-      const ambColor = profile.ambient?.color ? new THREE.Color(profile.ambient.color) : null;
-      const gndColor = profile.ambient?.groundColor ? new THREE.Color(profile.ambient.groundColor) : null;
+      const ambColor =
+        profile.ambient?.color ? new THREE.Color(profile.ambient.color) : null;
+      const gndColor =
+        profile.ambient?.groundColor
+          ? new THREE.Color(profile.ambient.groundColor)
+          : null;
       const ambIntensity = profile.ambient?.intensity;
 
       updateLighting(lights, sunDir, {
         applyPosition: true,
+        sunDistance,
+        sunTarget: sunTargetVector,
         overrideSunColor: sunColor,
         overrideSunIntensity: sunIntensity,
         overrideAmbientColor: ambColor,
         overrideGroundColor: gndColor,
-        overrideAmbientIntensity: ambIntensity
+        overrideAmbientIntensity: ambIntensity,
       });
 
-      // Update ocean to match new look
-      // We need a 'haze' object structure for updateOcean
-      const hazeStruct = profile.fog ? {
-         start: profile.fog.near,
-         end: profile.fog.far,
-         color: profile.fog.color
-      } : null;
+      const hazeStruct = profile.fog
+        ? { start: profile.fog.near, end: profile.fog.far, color: profile.fog.color }
+        : null;
 
       if (dynamicSky) {
+        dynamicSky.setAzimuthOffsetDegrees(sunAlignmentState.azimuthDeg);
         dynamicSky.setSunDirection(sunDir);
       }
-
-      // We need to estimate a 'nightFactor' if not provided.
-      // If elevation < 0, it's night?
-      // For presets, let's assume day unless specified.
-      // Or derive from lighting colors intensity?
-      // updateLighting calculates it, but we overrode it.
-      // Let's rely on lights.nightFactor which updateLighting sets (although we might need to tweak updateLighting to set it correctly even when overriden)
-      // Actually updateLighting sets nightFactor based on sun height.
-      // Since we set sun elevation, nightFactor should be correct.
 
       updateOcean(
         ocean,
@@ -2401,23 +2417,226 @@ export class Application {
         sunDir,
         lights.nightFactor,
         lights.sunLight.color,
-        hazeStruct
+        hazeStruct,
       );
 
-      // Other updates
       updateHarborLighting(harbor, lights.nightFactor);
-      updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: 0 }); // Phase irrelevant if overriding
+      updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: 0 });
       updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: 0 });
       updateMainHillRoadLighting(roadGroup, lights.nightFactor);
 
       renderFrame();
     };
 
+    const applyLookProfile = (profileName, options = {}) => {
+      const { immediate = false } = options;
+      const profile = LOOK_PROFILES[profileName];
+      if (!profile) {
+        console.warn(`[LookProfile] Profile '${profileName}' not found`);
+        return;
+      }
+
+      stopLightingTransition();
+      currentLookProfile = profile;
+
+      // Apply static elements immediately
+      if (profile.skybox?.skyKey && dynamicSky) {
+        dynamicSky.applyPreset(profile.skybox.skyKey);
+      }
+      if (profile.grade) {
+        applyColorGradeSettings(profile.grade);
+      }
+      if (profile.env && Number.isFinite(profile.env.envMapIntensity)) {
+        applyEnvironmentIntensity(profile.env.envMapIntensity);
+      }
+
+      const targetSunAz = Number.isFinite(profile.sun?.azimuth)
+        ? wrapAzimuth(profile.sun.azimuth)
+        : sunAlignmentState.azimuthDeg;
+      const targetSunEl = Number.isFinite(profile.sun?.elevation)
+        ? clampElevation(profile.sun.elevation)
+        : sunAlignmentState.elevationDeg;
+
+      const startState = {
+        azimuthDeg: sunAlignmentState.azimuthDeg,
+        elevationDeg: sunAlignmentState.elevationDeg,
+        sunColor: lights.sunLight.color.clone(),
+        sunIntensity: lights.sunLight.intensity,
+        ambientColor: lights.ambientLight.color.clone(),
+        groundColor: lights.ambientLight.color.clone(),
+        ambientIntensity: lights.ambientLight.intensity,
+        fog: getFogState(),
+        exposure: renderer.toneMappingExposure,
+      };
+
+      const targetState = {
+        azimuthDeg: targetSunAz,
+        elevationDeg: targetSunEl,
+        sunColor: profile.sun?.color
+          ? new THREE.Color(profile.sun.color)
+          : startState.sunColor.clone(),
+        sunIntensity: Number.isFinite(profile.sun?.intensity)
+          ? profile.sun.intensity
+          : startState.sunIntensity,
+        ambientColor: profile.ambient?.color
+          ? new THREE.Color(profile.ambient.color)
+          : startState.ambientColor.clone(),
+        groundColor: profile.ambient?.groundColor
+          ? new THREE.Color(profile.ambient.groundColor)
+          : startState.groundColor.clone(),
+        ambientIntensity: Number.isFinite(profile.ambient?.intensity)
+          ? profile.ambient.intensity
+          : startState.ambientIntensity,
+        fog: profile.fog && profile.fog.enabled
+          ? {
+              color: new THREE.Color(profile.fog.color),
+              near: profile.fog.near,
+              far: profile.fog.far,
+            }
+          : null,
+        exposure: Number.isFinite(profile.renderer?.toneMappingExposure)
+          ? profile.renderer.toneMappingExposure
+          : startState.exposure,
+      };
+
+      onFogChange(!!profile.fog?.enabled);
+
+      if (immediate) {
+        applyLookProfileImmediate(profileName);
+        return;
+      }
+
+      const durationMs = 2600;
+      const startTime = performance.now();
+      const transition = { cancelled: false };
+      activeLightingTransition = transition;
+
+      const step = (now) => {
+        if (transition.cancelled) return;
+        const t = Math.min(1, (now - startTime) / durationMs);
+        const eased = t * t * (3 - 2 * t);
+
+        const az = THREE.MathUtils.lerp(
+          startState.azimuthDeg,
+          targetState.azimuthDeg,
+          eased,
+        );
+        const el = THREE.MathUtils.lerp(
+          startState.elevationDeg,
+          targetState.elevationDeg,
+          eased,
+        );
+        sunAlignmentState.azimuthDeg = wrapAzimuth(az);
+        sunAlignmentState.elevationDeg = clampElevation(el);
+        persistSunAlignment();
+
+        const sunDir = azElToDirection(
+          sunAlignmentState.azimuthDeg,
+          sunAlignmentState.elevationDeg,
+        );
+        if (dynamicSky) {
+          dynamicSky.setSunDirection(sunDir);
+          dynamicSky.setAzimuthOffsetDegrees(sunAlignmentState.azimuthDeg);
+        }
+
+        const sunColor = startState.sunColor
+          .clone()
+          .lerp(targetState.sunColor, eased);
+        const ambientColor = startState.ambientColor
+          .clone()
+          .lerp(targetState.ambientColor, eased);
+        const groundColor = startState.groundColor
+          .clone()
+          .lerp(targetState.groundColor, eased);
+        const sunIntensity = THREE.MathUtils.lerp(
+          startState.sunIntensity,
+          targetState.sunIntensity,
+          eased,
+        );
+        const ambientIntensity = THREE.MathUtils.lerp(
+          startState.ambientIntensity,
+          targetState.ambientIntensity,
+          eased,
+        );
+
+        updateLighting(lights, sunDir, {
+          applyPosition: true,
+          sunDistance,
+          sunTarget: sunTargetVector,
+          overrideSunColor: sunColor,
+          overrideSunIntensity: sunIntensity,
+          overrideAmbientColor: ambientColor,
+          overrideGroundColor: groundColor,
+          overrideAmbientIntensity: ambientIntensity,
+        });
+
+        let haze = null;
+        let fogColor = startState.fog.color;
+        let fogNear = startState.fog.near;
+        let fogFar = startState.fog.far;
+
+        if (targetState.fog) {
+          fogColor = startState.fog.color
+            .clone()
+            .lerp(targetState.fog.color, eased);
+          fogNear = THREE.MathUtils.lerp(
+            startState.fog.near,
+            targetState.fog.near,
+            eased,
+          );
+          fogFar = THREE.MathUtils.lerp(
+            startState.fog.far,
+            targetState.fog.far,
+            eased,
+          );
+          updateFogState(fogColor, fogNear, fogFar);
+          haze = { start: fogNear, end: fogFar, color: fogColor };
+        }
+
+        updateOcean(
+          ocean,
+          0,
+          sunDir,
+          lights.nightFactor,
+          lights.sunLight.color,
+          haze,
+        );
+
+        renderer.toneMappingExposure = THREE.MathUtils.lerp(
+          startState.exposure,
+          targetState.exposure,
+          eased,
+        );
+
+        updateHarborLighting(harbor, lights.nightFactor);
+        updateCityLighting(harborCity, lights.nightFactor, { timeOfDayPhase: 0 });
+        updateCityLighting(hillCity, lights.nightFactor, { timeOfDayPhase: 0 });
+        updateMainHillRoadLighting(roadGroup, lights.nightFactor);
+
+        renderFrame();
+
+        if (t < 1) {
+          requestAnimationFrame(step);
+          return;
+        }
+
+        activeLightingTransition = null;
+        const elTarget = targetState.elevationDeg;
+        if (typeof elTarget === "number" && elTarget <= 0) {
+          setTimeOfDayPhase(timeOfDayState, 0.0);
+        } else {
+          setTimeOfDayPhase(timeOfDayState, 0.5);
+        }
+      };
+
+      requestAnimationFrame(step);
+    };
+
     // Alias for HUD compatibility
     const applyLightingPreset = applyLookProfile;
 
     // Apply default profile on startup to lock the look immediately
-    applyLookProfile("Bright Noon");
+    applyLookProfile("Bright Noon", { immediate: true });
 
     const onFrame = (deltaTime, elapsed) => {
       // Keep track of time for smooth animation and frame-independent movement.
