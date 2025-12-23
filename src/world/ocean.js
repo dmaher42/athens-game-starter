@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { Water } from "three/examples/jsm/objects/Water.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import {
   HARBOR_WATER_CENTER,
@@ -293,6 +292,9 @@ function sampleTerrainCeiling(bounds, sampler) {
 }
 
 export async function createOcean(scene, options = {}) {
+  // Lazy-load Water only when ocean is needed
+  const { Water } = await import("three/examples/jsm/objects/Water.js");
+  
   // Remove prior water meshes
   scene.traverse((o) => {
     if (o && (o.name === "AegeanOcean" || o.userData?.isWater)) {
