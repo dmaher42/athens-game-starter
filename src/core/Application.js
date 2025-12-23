@@ -2495,6 +2495,7 @@ export class Application {
     // Current Look Profile State
     let currentLookProfile = null;
     let lastAppliedLightingPreset = null;
+    let userPresetActive = false;
     let activeLightingTransition = null;
 
     const stopLightingTransition = () => {
@@ -2681,7 +2682,8 @@ export class Application {
     };
 
     const applyLookProfile = (profileName, options = {}) => {
-      const { immediate = false, forceReapply = false } = options;
+      const { immediate = false, forceReapply = false, source = "manual" } =
+        options;
       const profile = LOOK_PROFILES[profileName];
       if (!profile) {
         console.warn(`[LookProfile] Profile '${profileName}' not found`);
@@ -2695,6 +2697,7 @@ export class Application {
       stopLightingTransition();
       currentLookProfile = profile;
       lastAppliedLightingPreset = profileName;
+      userPresetActive = source !== "auto";
 
       // Apply static elements immediately
       if (profile.skybox?.skyKey && dynamicSky) {
@@ -2788,7 +2791,7 @@ export class Application {
         return;
       }
 
-      const durationMs = 2600;
+      const durationMs = 800;
       const startTime = performance.now();
       const transition = { cancelled: false };
       activeLightingTransition = transition;
@@ -2981,7 +2984,11 @@ export class Application {
     // Apply default profile on startup to lock the look immediately
     const initialPreset =
       getPresetForPhase(timeOfDayState.timeOfDayPhase ?? 0) || "Bright Noon";
-    applyLookProfile(initialPreset, { immediate: true, forceReapply: true });
+    applyLookProfile(initialPreset, {
+      immediate: true,
+      forceReapply: true,
+      source: "auto",
+    });
 
     const onFrame = (deltaTime, elapsed) => {
       // Keep track of time for smooth animation and frame-independent movement.
@@ -3001,7 +3008,8 @@ export class Application {
       const activePresetForPhase = getPresetForPhase(phase);
       if (
         activePresetForPhase &&
-        activePresetForPhase !== lastAppliedLightingPreset
+        activePresetForPhase !== lastAppliedLightingPreset &&
+        !userPresetActive
       ) {
         applyLightingPreset(activePresetForPhase, { source: "auto" });
       }
@@ -3213,7 +3221,8 @@ export class Application {
       getPosition,
       getDirection,
       onPin,
-      onSetLightingPreset: applyLightingPreset,
+      onSetLightingPreset: (name) =>
+        applyLightingPreset(name, { forceReapply: true, source: "user" }),
       lightingPresets: LIGHTING_PRESETS,
       getFogEnabled: () => fogEnabled,
       onToggleFog: toggleFog,
