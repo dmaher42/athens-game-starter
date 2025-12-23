@@ -1,7 +1,7 @@
 import type { Vector3 } from "three";
 
 import { createHudPanel, startThrottledLoop, updateTextIfChanged } from "./hudShared.js";
-import { getUISlot } from "./uiRoot.js";
+import { registerPanel } from "./HudManager.js";
 
 type Vector3Like = Pick<Vector3, "x" | "y" | "z">;
 type WindowWithHudFlag = Window & typeof globalThis & { SHOW_HUD?: boolean };
@@ -442,8 +442,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     content.appendChild(section);
   }
 
-  const slot = getUISlot("topRight");
-  slot?.appendChild(wrap);
+  registerPanel("devHud", wrap, 3);
 
   const elPos = readout.querySelector<HTMLSpanElement>("#hud-pos");
   const elBear = readout.querySelector<HTMLSpanElement>("#hud-bear");

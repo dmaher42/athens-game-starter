@@ -5,7 +5,7 @@ import type {
 } from "@app/types";
 
 import { createHudPanel } from "./hudShared.js";
-import { getUISlot } from "./uiRoot.js";
+import { registerPanel } from "./HudManager.js";
 
 const STYLE_ID = "hotkey-overlay-style" as const;
 const ROOT_CLASS = "hotkey-overlay" as const;
@@ -156,11 +156,7 @@ export function mountHotkeyOverlay(
   }
   root.appendChild(panelHandle.root);
 
-  const slot = getUISlot("topRight");
-  if (!slot) {
-    return null;
-  }
-  slot.appendChild(root);
+  registerPanel("hotkeyOverlay", root, 2);
 
   const applyVisibility = (shouldOpen: boolean): void => {
     panelHandle.setCollapsed(!shouldOpen);

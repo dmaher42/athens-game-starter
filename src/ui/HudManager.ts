@@ -1,0 +1,124 @@
+import { ensureUIRoot, getUISlot } from "./uiRoot.js";
+
+type HudQuadrant = "topLeft" | "topRight" | "bottomLeft" | "bottomRight" | "center";
+
+interface HudPanelRegistration {
+  readonly name: string;
+  readonly element: HTMLElement;
+  readonly priority: number;
+  readonly quadrant: HudQuadrant;
+  layoutHidden: boolean;
+  previousDisplay?: string | null;
+}
+
+const DEFAULT_POSITIONS: Record<string, HudQuadrant> = {
+  miniMap: "topLeft",
+  questHud: "topLeft",
+  devHud: "topRight",
+  audioMixer: "topRight",
+  exposureSlider: "topRight",
+  hotkeyOverlay: "topRight",
+  interactionHud: "center",
+};
+
+const SMALL_SCREEN_MAX = 720;
+
+class HudManager {
+  private panels = new Map<string, HudPanelRegistration>();
+
+  constructor() {
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", () => this.updateLayout());
+    }
+  }
+
+  registerPanel(name: string, element: HTMLElement, priority = 0): void {
+    if (!element || typeof document === "undefined") return;
+    ensureUIRoot();
+
+    const quadrant = DEFAULT_POSITIONS[name] ?? "topRight";
+    this.panels.set(name, {
+      name,
+      element,
+      priority,
+      quadrant,
+      layoutHidden: false,
+    });
+
+    element.dataset["hudQuadrant"] = quadrant;
+    this.updateLayout();
+  }
+
+  unregisterPanel(name: string): void {
+    const registration = this.panels.get(name);
+    if (!registration) return;
+    if (registration.layoutHidden) {
+      if (registration.previousDisplay != null) {
+        registration.element.style.display = registration.previousDisplay;
+      } else {
+        registration.element.style.removeProperty("display");
+      }
+    }
+    this.panels.delete(name);
+    this.updateLayout();
+  }
+
+  updateLayout(): void {
+    if (typeof document === "undefined") return;
+    ensureUIRoot();
+
+    const isSmallScreen =
+      typeof window !== "undefined" && window.innerWidth <= SMALL_SCREEN_MAX;
+    const maxPerQuadrant = isSmallScreen ? 1 : Number.POSITIVE_INFINITY;
+
+    const grouped = new Map<HudQuadrant, HudPanelRegistration[]>();
+    this.panels.forEach((panel) => {
+      const list = grouped.get(panel.quadrant) ?? [];
+      list.push(panel);
+      grouped.set(panel.quadrant, list);
+    });
+
+    grouped.forEach((panels, quadrant) => {
+      const slot = getUISlot(quadrant);
+      if (!slot) return;
+
+      const sorted = panels.sort((a, b) => b.priority - a.priority);
+      const visible = sorted.slice(0, maxPerQuadrant);
+      const hidden = sorted.slice(maxPerQuadrant);
+
+      visible.forEach((panel) => {
+        if (panel.layoutHidden) {
+          if (panel.previousDisplay != null) {
+            panel.element.style.display = panel.previousDisplay;
+          } else {
+            panel.element.style.removeProperty("display");
+          }
+          panel.layoutHidden = false;
+          panel.previousDisplay = undefined;
+        }
+        if (panel.element.parentElement !== slot) {
+          slot.appendChild(panel.element);
+        }
+      });
+
+      hidden.forEach((panel) => {
+        panel.previousDisplay = panel.element.style.display;
+        panel.layoutHidden = true;
+        panel.element.style.display = "none";
+      });
+    });
+  }
+}
+
+const manager = new HudManager();
+
+export const registerPanel = (
+  name: string,
+  element: HTMLElement,
+  priority = 0,
+): void => manager.registerPanel(name, element, priority);
+
+export const unregisterPanel = (name: string): void =>
+  manager.unregisterPanel(name);
+
+export const updateLayout = (): void => manager.updateLayout();

@@ -1,6 +1,6 @@
 import type { AudioMixerOptions } from "@app/types";
 
-import { getUISlot } from "./uiRoot.js";
+import { registerPanel, unregisterPanel } from "./HudManager.js";
 
 export interface AudioMixerSoundscape {
   masterGain: { gain: { value: number } };
@@ -28,11 +28,6 @@ export function mountAudioMixer(
   }
 
   const key = typeof opts.key === "string" && opts.key.trim().length > 0 ? opts.key : DEFAULT_HOTKEY;
-
-  const slot = getUISlot("topRight");
-  if (!slot) {
-    return null;
-  }
 
   const wrap = document.createElement("div");
   Object.assign(wrap.style, {
@@ -81,7 +76,7 @@ export function mountAudioMixer(
   wrap.appendChild(createSlider("Voices", soundscape.bus.voices, 0.7));
   wrap.appendChild(createSlider("Effects", soundscape.bus.effects, 0.7));
 
-  slot.appendChild(wrap);
+  registerPanel("audioMixer", wrap, 1);
 
   const handleKeydown = (event: KeyboardEvent): void => {
     if (event.key === key) {
@@ -100,6 +95,7 @@ export function mountAudioMixer(
       if (typeof window !== "undefined") {
         window.removeEventListener("keydown", handleKeydown);
       }
+      unregisterPanel("audioMixer");
       wrap.remove();
     },
   };
