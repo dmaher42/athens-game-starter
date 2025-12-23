@@ -241,7 +241,12 @@ export class DynamicSky {
 
     if (this.stars.material) {
       const fadeIn = MathUtils.smoothstep(0.02, -0.1, this.sunDirection.y);
-      this.stars.material.opacity = fadeIn * 0.85;
+      const overrideOpacity = this.stars.userData?.overrideOpacity;
+      if (overrideOpacity != null) {
+        this.stars.material.opacity = overrideOpacity;
+      } else {
+        this.stars.material.opacity = fadeIn * 0.85;
+      }
     }
 
     const turbidityDay = this.sky.material.uniforms.turbidity.value;

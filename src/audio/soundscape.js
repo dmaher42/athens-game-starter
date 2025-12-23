@@ -191,6 +191,8 @@ export class Soundscape {
       agora: { pos: anchors.agora, radius: 40 },
       acropolis: { pos: anchors.acropolis, radius: 40 }
     };
+
+    this.mode = null;
   }
 
   _safePlay(source) {
@@ -499,7 +501,9 @@ export class Soundscape {
    */
   update(playerPos) {
     if (!this.ready) return;
-    const night = this.lightingRef?.getNightFactor?.() ?? 0;
+    const nightPreference = this.mode === "night" ? 1 : this.mode === "day" ? 0 : null;
+    const night =
+      nightPreference ?? (this.lightingRef?.getNightFactor?.() ?? 0);
     // Day/Night crossfade: more market by day, more wind/lyre by night
     const lerp = (a,b,t)=> a+(b-a)*t;
     this.bus.voices.gain.value = lerp(0.75, 0.35, night);
@@ -507,6 +511,14 @@ export class Soundscape {
     // Master stays ~0.9; optionally lower late night:
     this.masterGain.gain.value = lerp(0.9, 0.8, night);
     this._updateZoneAmbience(playerPos);
+  }
+
+  setMode(mode) {
+    if (mode === "day" || mode === "night") {
+      this.mode = mode;
+    } else {
+      this.mode = null;
+    }
   }
 
   _updateZoneAmbience(playerPos) {
