@@ -1,6 +1,7 @@
 import type { Vector3 } from "three";
 
 import { createHudPanel, startThrottledLoop, updateTextIfChanged } from "./hudShared.js";
+import "./hudTheme.css";
 import { registerPanel } from "./HudManager.js";
 
 type Vector3Like = Pick<Vector3, "x" | "y" | "z">;
@@ -50,81 +51,6 @@ export interface DevHudHandle {
   updateFogState(state?: boolean | null): void;
 }
 
-const STYLE_ID = "dev-hud-style";
-
-function ensureStyles(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    .dev-hud-panel {
-      width: 260px;
-      gap: 12px;
-    }
-    .dev-hud-compass-container {
-      display: flex;
-      justify-content: center;
-      padding-bottom: 8px;
-    }
-    .dev-hud-compass {
-      width: 88px;
-      height: 88px;
-      border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.75);
-      position: relative;
-    }
-    .dev-hud-compass-needle {
-      position: absolute;
-      left: 50%; top: 50%;
-      width: 2px; height: 40px;
-      background: rgba(255,0,0,0.9);
-      transform-origin: 50% 100%;
-      border-radius: 2px;
-      transform: translate(-1px, -40px) rotate(0deg);
-    }
-    .dev-hud-compass-label {
-      position: absolute;
-      left: 50%; top: 50%;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-    .dev-hud-section {
-      margin-top: 8px;
-      padding-top: 6px;
-      border-top: 1px solid rgba(255,255,255,0.15);
-    }
-    .dev-hud-heading {
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      font-size: 11px;
-      opacity: 0.85;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-    .dev-hud-btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .dev-hud-btn {
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid rgba(255,255,255,0.35);
-      background: rgba(0,0,0,0.35);
-      color: inherit;
-      font: inherit;
-      cursor: pointer;
-      transition: background 0.2s ease, border-color 0.2s ease;
-    }
-    .dev-hud-btn:hover {
-      background: rgba(255,255,255,0.18);
-      border-color: rgba(255,255,255,0.55);
-    }
-  `;
-  document.head.appendChild(style);
-}
-
 // Dev HUD: compass + coordinates + pin hotkey (P)
 export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
   const {
@@ -141,8 +67,6 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     typeof window !== "undefined" ? (window as WindowWithHudFlag) : null;
   const allowHud = runtimeWindow?.SHOW_HUD === true;
   if (!allowHud) return null;
-
-  ensureStyles();
 
   // --- DOM Structure ---
   const wrapRef: { current: HudRootElement | null } = { current: null };

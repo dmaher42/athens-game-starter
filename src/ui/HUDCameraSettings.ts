@@ -9,6 +9,7 @@ import type {
   CameraSettings,
   CameraSettingsUpdate,
 } from "../state/settingsStore";
+import "./hudTheme.css";
 
 type RangeKey = Extract<
   keyof CameraSettings,
@@ -78,31 +79,17 @@ function createSlider(
   onInput: (key: RangeKey, value: number) => void,
 ): SliderControl {
   const wrapper = document.createElement("div");
-  Object.assign(wrapper.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  } satisfies Partial<CSSStyleDeclaration>);
+  wrapper.className = "hud-camera-settings__slider";
 
   const labelRow = document.createElement("div");
-  Object.assign(labelRow.style, {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "8px",
-    fontSize: "11px",
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    opacity: "0.85",
-  } satisfies Partial<CSSStyleDeclaration>);
+  labelRow.className = "hud-camera-settings__label-row";
 
   const label = document.createElement("span");
   label.textContent = config.label;
   labelRow.appendChild(label);
 
   const valueEl = document.createElement("span");
-  valueEl.style.fontVariantNumeric = "tabular-nums";
-  valueEl.style.opacity = "0.9";
+  valueEl.className = "hud-camera-settings__value";
   labelRow.appendChild(valueEl);
 
   const slider = document.createElement("input");
@@ -112,9 +99,7 @@ function createSlider(
   slider.step = String(config.step);
   slider.name = key;
   slider.setAttribute("aria-label", config.label);
-  Object.assign(slider.style, {
-    width: "100%",
-  } satisfies Partial<CSSStyleDeclaration>);
+  slider.className = "hud-camera-settings__range";
 
   slider.addEventListener("input", () => {
     const value = Number.parseFloat(slider.value);
@@ -134,14 +119,7 @@ function createCheckbox(
   onChange: (key: keyof CameraSettings, checked: boolean) => void,
 ): CheckboxControl {
   const wrapper = document.createElement("label");
-  Object.assign(wrapper.style, {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    cursor: "pointer",
-    fontSize: "12px",
-    opacity: "0.9",
-  } satisfies Partial<CSSStyleDeclaration>);
+  wrapper.className = "hud-camera-settings__checkbox";
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
@@ -171,30 +149,13 @@ export function mount(rootEl: HTMLElement | null): HUDCameraSettingsHandle {
 
   const section = document.createElement("section");
   section.className = "hud-camera-settings";
-  Object.assign(section.style, {
-    marginTop: "8px",
-    paddingTop: "8px",
-    borderTop: "1px solid rgba(255,255,255,0.15)",
-    pointerEvents: "auto",
-  } satisfies Partial<CSSStyleDeclaration>);
 
   const header = document.createElement("div");
-  Object.assign(header.style, {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "8px",
-  } satisfies Partial<CSSStyleDeclaration>);
+  header.className = "hud-camera-settings__header";
 
   const title = document.createElement("span");
   title.textContent = "Camera";
-  Object.assign(title.style, {
-    fontWeight: "600",
-    letterSpacing: "0.08em",
-    fontSize: "11px",
-    textTransform: "uppercase",
-    opacity: "0.85",
-  } satisfies Partial<CSSStyleDeclaration>);
+  title.className = "hud-camera-settings__title";
 
   const toggleButton = document.createElement("button");
   toggleButton.type = "button";
@@ -202,40 +163,15 @@ export function mount(rootEl: HTMLElement | null): HUDCameraSettingsHandle {
   toggleButton.title = "Camera settings";
   toggleButton.setAttribute("aria-label", "Camera settings");
   toggleButton.textContent = "⚙";
-  Object.assign(toggleButton.style, {
-    width: "22px",
-    height: "22px",
-    borderRadius: "50%",
-    border: "1px solid rgba(255,255,255,0.4)",
-    background: "rgba(0,0,0,0.35)",
-    color: "inherit",
-    fontSize: "12px",
-    lineHeight: "1",
-    display: "grid",
-    placeItems: "center",
-    cursor: "pointer",
-    padding: "0",
-  } satisfies Partial<CSSStyleDeclaration>);
+  toggleButton.className = "hud-camera-settings__toggle";
 
   const panel = document.createElement("div");
-  Object.assign(panel.style, {
-    marginTop: "8px",
-    padding: "8px",
-    borderRadius: "6px",
-    background: "rgba(0,0,0,0.35)",
-    backdropFilter: "blur(4px)",
-    maxHeight: "260px",
-    overflowY: "auto",
-    display: "none",
-  } satisfies Partial<CSSStyleDeclaration>);
+  panel.className = "hud-camera-settings__panel";
+  panel.style.display = "none";
 
   const controls: Partial<Record<RangeKey, SliderControl>> = {};
   const slidersContainer = document.createElement("div");
-  Object.assign(slidersContainer.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  } satisfies Partial<CSSStyleDeclaration>);
+  slidersContainer.className = "hud-camera-settings__slider-group";
 
   const onSliderInput = (key: RangeKey, value: number) => {
     if (state.disposed) return;
@@ -251,12 +187,7 @@ export function mount(rootEl: HTMLElement | null): HUDCameraSettingsHandle {
   }
 
   const toggles = document.createElement("div");
-  Object.assign(toggles.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-    marginBottom: "8px",
-  } satisfies Partial<CSSStyleDeclaration>);
+  toggles.className = "hud-camera-settings__toggles";
 
   const enableCheckbox = createCheckbox(
     "Enable Arrow Orbit",

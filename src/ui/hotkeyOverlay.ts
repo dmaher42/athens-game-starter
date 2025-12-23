@@ -6,8 +6,8 @@ import type {
 
 import { createHudPanel } from "./hudShared.js";
 import { registerPanel } from "./HudManager.js";
+import "./hudTheme.css";
 
-const STYLE_ID = "hotkey-overlay-style" as const;
 const ROOT_CLASS = "hotkey-overlay" as const;
 const HIDDEN_MOD = "hotkey-overlay--hidden" as const;
 const STORAGE_KEY = "hotkeyOverlayOpen" as const;
@@ -56,8 +56,6 @@ export function mountHotkeyOverlay(
   if (document.querySelector(`.${ROOT_CLASS}`)) {
     return null;
   }
-
-  ensureStyles();
 
   const hotkeys: readonly HotkeyDescriptor[] =
     Array.isArray(options.hotkeys) && options.hotkeys.length > 0
@@ -215,129 +213,6 @@ export function mountHotkeyOverlay(
       root.remove();
     },
   };
-}
-
-function ensureStyles(): void {
-  if (typeof document === "undefined") {
-    return;
-  }
-  if (document.getElementById(STYLE_ID)) {
-    return;
-  }
-
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    .${ROOT_CLASS} {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      color: #fff;
-      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    }
-
-    .${ROOT_CLASS}__sr {
-      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
-    }
-
-    .${ROOT_CLASS}__toggle {
-      background: rgba(0,0,0,0.5);
-      border: 1px solid rgba(255,255,255,0.18);
-      border-radius: 999px;
-      color: inherit;
-      width: 28px; height: 28px;
-      display: grid; place-items: center;
-      padding: 0;
-      cursor: pointer;
-      transition: background .2s ease, border-color .2s ease, opacity .2s ease, transform .12s ease;
-      opacity: .85;
-    }
-    .${ROOT_CLASS}__toggle:hover,
-    .${ROOT_CLASS}__toggle:focus-visible {
-      background: rgba(0,0,0,0.72);
-      border-color: rgba(255,255,255,0.36);
-      outline: none;
-      opacity: 1;
-      transform: scale(1.04);
-    }
-
-    .${ROOT_CLASS}__panel {
-      background: rgba(10,12,18,0.9);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 10px;
-      padding: 14px;
-      min-width: 220px;
-      backdrop-filter: blur(6px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-      transition: opacity .18s ease, transform .18s ease;
-    }
-
-    .${ROOT_CLASS}__title {
-      margin: 0 0 12px;
-      font-size: 16px;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .${ROOT_CLASS}__list {
-      display: grid;
-      grid-template-columns: max-content 1fr;
-      gap: 6px 12px;
-      margin: 0;
-      padding: 0;
-    }
-
-    .${ROOT_CLASS}__keys {
-      margin: 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      align-items: center;
-    }
-
-    .${ROOT_CLASS}__kbd {
-      display: inline-block;
-      padding: 3px 6px;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      font-size: 13px;
-      font-weight: 600;
-      line-height: 1;
-      color: #eee;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 5px;
-      box-shadow: 0 2px 0 rgba(0,0,0,0.5);
-      text-shadow: 0 1px 0 rgba(0,0,0,0.5);
-    }
-
-    .${ROOT_CLASS}__description {
-      margin: 0;
-      opacity: 0.85;
-    }
-
-    .${ROOT_CLASS}__hint {
-      margin: 12px 0 0;
-      font-size: 12px;
-      letter-spacing: 0.04em;
-      opacity: 0.65;
-      text-transform: uppercase;
-    }
-
-    .${ROOT_CLASS}.${HIDDEN_MOD} .${ROOT_CLASS}__panel {
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(-6px);
-    }
-
-    /* Hide the icon while the panel is open (less clutter) */
-    .${ROOT_CLASS}:not(.${HIDDEN_MOD}) .${ROOT_CLASS}__toggle {
-      opacity: 0;
-      pointer-events: none;
-    }
-  `;
-
-  document.head.appendChild(style);
 }
 
 function resolveKeyLabel(code: string): string {

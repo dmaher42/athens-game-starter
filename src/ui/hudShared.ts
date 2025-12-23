@@ -1,6 +1,6 @@
-const DEFAULT_FRAME_INTERVAL = 1000 / 15;
+import "./hudTheme.css";
 
-const PANEL_STYLE_ID = "hud-panel-style";
+const DEFAULT_FRAME_INTERVAL = 1000 / 15;
 
 interface HudPanelOptions {
   readonly title: string;
@@ -21,80 +21,7 @@ export interface HudPanelHandle {
   isCollapsed(): boolean;
 }
 
-function ensurePanelStyles(): void {
-  if (typeof document === "undefined") return;
-  if (document.getElementById(PANEL_STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = PANEL_STYLE_ID;
-  style.textContent = `
-    .hud-panel {
-      background: rgba(9, 12, 18, 0.72);
-      border-radius: 12px;
-      padding: 12px;
-      color: #fff;
-      font: 12px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.45);
-      backdrop-filter: blur(6px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      pointer-events: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      transition: width 160ms ease, box-shadow 160ms ease;
-    }
-    .hud-panel__header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .hud-panel__title {
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      font-size: 11px;
-      opacity: 0.85;
-    }
-    .hud-toggle {
-      appearance: none;
-      border: 0;
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-weight: 600;
-      font-size: 11px;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      background: rgba(31, 135, 214, 0.18);
-      color: #a8dfff;
-      cursor: pointer;
-      transition: background 120ms ease, color 120ms ease, opacity 120ms ease;
-    }
-    .hud-toggle:hover,
-    .hud-toggle:focus-visible {
-      background: rgba(31, 135, 214, 0.32);
-      color: #e7f6ff;
-      outline: none;
-    }
-    .hud-panel__content {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      overflow: hidden;
-      opacity: 1;
-      height: auto;
-      transition: height 240ms ease, opacity 240ms ease;
-    }
-    .hud-panel--collapsed .hud-panel__content[data-can-collapse="1"] {
-      opacity: 0;
-      height: 0;
-    }
-  `;
-  document.head.appendChild(style);
-}
-
 export function createHudPanel(options: HudPanelOptions): HudPanelHandle {
-  ensurePanelStyles();
-
   const { className, collapseContent = true } = options;
   const labels = {
     collapsed: options.toggleLabels?.collapsed ?? "Expand",
