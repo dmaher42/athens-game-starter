@@ -16,7 +16,7 @@ export const DEFAULT_LIGHTING_CONFIG = {
   },
   presets: {
     blue_hour: {
-      phase: 0.18,
+      phase: 0.06,
       exposure: 0.82,
       label: "Blue Hour",
       haze: {
@@ -26,7 +26,7 @@ export const DEFAULT_LIGHTING_CONFIG = {
       },
     },
     golden_hour: {
-      phase: 0.62,
+      phase: 0.2,
       exposure: 0.9,
       label: "Golden Hour",
       haze: {
@@ -55,7 +55,7 @@ export const DEFAULT_LIGHTING_CONFIG = {
       },
     },
     night_sky: {
-      phase: 0.92,
+      phase: 0.97,
       exposure: 0.55,
       label: "Deep Night",
       haze: {
