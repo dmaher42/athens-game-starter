@@ -32,13 +32,13 @@ const SKY_PRESETS = {
     fogNear: 275,
     fogFar: 1825,
   },
-  high_noon: {
-    zenith: "#3c7fd1",
-    horizon: "#dfe7f0",
-    sun: "#ffffff",
-    fogNear: 320,
-    fogFar: 2000,
-  },
+ high_noon: {
+  zenith: "#4a9eff",       // More vibrant blue (was #3c7fd1)
+  horizon: "#a8c8e8",      // Lighter blue-gray instead of white (was #dfe7f0)
+  sun: "#fff8e8",          // Warm white instead of pure white (was #ffffff)
+  fogNear: 320,
+  fogFar: 2000,
+},
   night_sky: {
     zenith: "#0b1d51",
     horizon: "#1b2a4f",
@@ -130,9 +130,10 @@ export function createSky(scene) {
         float t = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
         vec3 base = mix(horizonColor, zenithColor, pow(t, 1.2));
 
-        float sunAmount = max(dot(dir, normalize(sunDirection)), 0.0);
-        float sunGlow = pow(sunAmount, 6.0);
-        vec3 finalColor = base + sunColor * sunGlow * 0.35;
+       float sunAmount = max(dot(dir, normalize(sunDirection)), 0.0);
+float sunGlow = pow(sunAmount, 6.0);
+// Change 0.35 to 0.20 to reduce glare
+vec3 finalColor = base + sunColor * sunGlow * 0.20;
 
         gl_FragColor = vec4(finalColor, 1.0);
       }
