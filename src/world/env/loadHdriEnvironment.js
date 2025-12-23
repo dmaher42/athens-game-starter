@@ -11,7 +11,9 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
 
     loader
       .setCrossOrigin('anonymous')
-      .setDataType(THREE.HalfFloatType)
+      // Use full float precision to avoid clamping bright HDR values to half-float range
+      // which triggers THREE.DataUtils.toHalfFloat(): Value out of range warnings.
+      .setDataType(THREE.FloatType)
       .load(
         path,
         (exrTexture) => {
