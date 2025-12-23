@@ -2,44 +2,44 @@
 export const LOOK_PROFILES = {
   "Bright Noon": {
     renderer: {
-      toneMappingExposure: 0.86, // Lower exposure for gentler midday light
+      toneMappingExposure: 1.08, // Brighter exposure to deliver crisp midday contrast
     },
     starsVisible: 0.0,
     moonElevation: -10,
     moonLightIntensity: 0.0,
     soundscapeMode: "day",
     sun: {
-      color: "#dceeff", // Cooler sun tone to push the sky toward blue
-      intensity: 3.4,
+      color: "#fff0d6", // Neutral-warm sun to avoid blue cast
+      intensity: 4.2,
       azimuth: -45,
       elevation: 65,   // Midday height (60-70 deg) to avoid harsh zenith glare
     },
     ambient: {
-      color: "#bcdaf5", // Bluer fill to tint indirect light
-      groundColor: "#d6e9ff",
-      intensity: 0.56,
+      color: "#dfe6ef", // Softer neutral fill to keep surfaces bright
+      groundColor: "#f0f4f8",
+      intensity: 0.48,
     },
     fog: {
       enabled: true,
-      color: "#c4e4ff",
-      near: 2000,      // Increased near/far for clarity
-      far: 8000,       // Slight reduction (10k -> 8k) to help distant houses fade vs landmarks
-      density: 0.00018,
+      color: "#e6eef5",
+      near: 2400,      // Keep distance haze light while retaining distant clarity
+      far: 9000,       // Slightly longer range to reduce midday dullness
+      density: 0.00012,
     },
     skybox: {
-      exposureMultiplier: 1.05,
-      saturationMultiplier: 1.12,
+      exposureMultiplier: 1.12,
+      saturationMultiplier: 1.08,
       skyKey: "high_noon"
     },
     grade: {
-      contrast: 0.1,
-      saturation: 0.08,
-      shadowTint: "#d6e8ff",   // Cooler shadow tint to reinforce blue sky cues
-      midTint: "#e9f4ff",      // Slightly bluer mids to keep surfaces natural
-      highlightTint: "#f2f8ff", // Crisp highlights without harsh glare
+      contrast: 0.12,
+      saturation: 0.1,
+      shadowTint: "#e8edf5",   // Neutral shadow tint to keep depth without blue haze
+      midTint: "#f2f5fb",      // Clean mids that preserve material color
+      highlightTint: "#fff7eb", // Warm highlights for sunlit sparkle
     },
     env: {
-      envMapIntensity: 0.6 // Keep reflections lively without overwhelming brightness
+      envMapIntensity: 0.7 // Keep reflections lively without overwhelming brightness
     },
     moon: {
       visible: false,
