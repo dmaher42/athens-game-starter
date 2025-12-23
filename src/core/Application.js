@@ -2907,7 +2907,11 @@ export class Application {
 
         const startMoonDir = startState.moonDirection?.clone?.() ?? getMoonDirection();
         const targetMoonDir = targetState.moonDirection?.clone?.() ?? startMoonDir;
-        const moonDir = startMoonDir.clone().normalize().slerp(targetMoonDir.normalize(), eased);
+        const moonDir = startMoonDir
+          .clone()
+          .normalize()
+          .lerp(targetMoonDir.clone().normalize(), eased)
+          .normalize();
         const moonLightIntensity = THREE.MathUtils.lerp(
           startState.moonIntensity,
           targetState.moonIntensity,
