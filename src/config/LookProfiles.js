@@ -109,5 +109,41 @@ export const LOOK_PROFILES = {
     env: {
       envMapIntensity: 0.4
     }
+  },
+  "Night": {
+    renderer: {
+      toneMappingExposure: 0.58,
+    },
+    sun: {
+      color: "#7fa2ff",
+      intensity: 0.18,
+      azimuth: 135,
+      elevation: -25,
+    },
+    ambient: {
+      color: "#0b1d38",
+      groundColor: "#0b1d38",
+      intensity: 0.22,
+    },
+    fog: {
+      enabled: true,
+      color: "#0b1d51",
+      near: 200,
+      far: 1500,
+    },
+    skybox: {
+      exposureMultiplier: 0.55,
+      skyKey: "night_sky"
+    },
+    grade: {
+      contrast: 0.08,
+      saturation: -0.12,
+      shadowTint: "#050915",
+      midTint: "#10233d",
+      highlightTint: "#c6d7ff",
+    },
+    env: {
+      envMapIntensity: 0.25
+    }
   }
 };
