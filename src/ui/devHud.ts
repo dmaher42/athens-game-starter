@@ -233,6 +233,16 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       updatePresetButtonState(activeName);
     };
 
+    const selectPreset = (name: string) => {
+      const handledBySetter = typeof setActivePreset === "function";
+      if (handledBySetter) {
+        setActivePreset(name);
+      } else {
+        onSetLightingPreset?.(name);
+      }
+      applyActivePreset(name);
+    };
+
     syncActivePreset = () => {
       if (typeof getActivePresetName !== "function") return;
       const activeName = getActivePresetName() ?? null;
@@ -258,11 +268,9 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
         button.title = `Set ${displayLabel} lighting`;
       }
 
-      button.addEventListener("click", (event) => {
+      button.addEventListener("pointerdown", (event) => {
         event.preventDefault();
-        setActivePreset?.(preset.name);
-        onSetLightingPreset?.(preset.name);
-        applyActivePreset(preset.name);
+        selectPreset(preset.name);
       });
       buttonRow.appendChild(button);
     }
@@ -278,9 +286,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % names.length : 0;
       const nextName = names[nextIndex];
       if (nextName !== undefined) {
-        setActivePreset?.(nextName);
-        onSetLightingPreset?.(nextName);
-        applyActivePreset(nextName);
+        selectPreset(nextName);
       }
     };
 
