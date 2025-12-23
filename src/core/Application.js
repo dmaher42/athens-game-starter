@@ -2894,12 +2894,12 @@ export class Application {
         const startMoonDir = startState.moonDirection?.clone?.() ?? getMoonDirection();
         const targetMoonDir = targetState.moonDirection?.clone?.() ?? startMoonDir;
         const moonDir = startMoonDir.clone().normalize().slerp(targetMoonDir.normalize(), eased);
-        const moonIntensity = THREE.MathUtils.lerp(
+        const moonLightIntensity = THREE.MathUtils.lerp(
           startState.moonIntensity,
           targetState.moonIntensity,
           eased,
         );
-        setMoonLight(moonIntensity, moonDir);
+        setMoonLight(moonLightIntensity, moonDir);
 
         updateOcean(
           ocean,
