@@ -769,11 +769,16 @@ export class Application {
 
     const hdrPath = joinPath(BASE_URL, "hdr/clear_midday.hdr");
     try {
-      await loadHdriEnvironment({
+      const envMap = await loadHdriEnvironment({
         renderer,
         scene,
         path: hdrPath,
       });
+
+      if (!envMap) {
+        console.warn("[HDRI] No environment map returned, using fallback sky");
+        createDefaultSky(scene, dynamicSky);
+      }
     } catch (error) {
       console.warn("[HDRI] Failed, using fallback sky", error);
       createDefaultSky(scene, dynamicSky);
