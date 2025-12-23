@@ -30,23 +30,29 @@ function cloneTexture(texture) {
 }
 
 async function createMarbleMaterial(overrides = {}, materialOptions = {}) {
-  const marbleSet = await makeMarbleMaterialSet(materialOptions);
-  const material = new THREE.MeshPhysicalMaterial({
-    color: 0xffffff,
-    roughness: 0.45,
-    metalness: 0.08,
-    clearcoat: 0.24,
-    clearcoatRoughness: 0.48,
-    envMapIntensity: 0.9,
-    ...overrides,
+  // Phase 4: Defer marble texture loading to requestAnimationFrame (2-3M deferral)
+  return new Promise((resolve) => {
+    requestAnimationFrame(async () => {
+      const marbleSet = await makeMarbleMaterialSet(materialOptions);
+      const material = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        roughness: 0.45,
+        metalness: 0.08,
+        clearcoat: 0.24,
+        clearcoatRoughness: 0.48,
+        envMapIntensity: 0.9,
+        ...overrides,
+      });
+
+      if (!overrides.map) material.map = cloneTexture(marbleSet.map);
+      if (!overrides.normalMap) material.normalMap = cloneTexture(marbleSet.normalMap);
+      if (!overrides.roughnessMap) material.roughnessMap = cloneTexture(marbleSet.roughnessMap);
+      if (!overrides.aoMap) material.aoMap = cloneTexture(marbleSet.aoMap);
+
+      console.info("[temples] Marble material loaded in background");
+      resolve(material);
+    });
   });
-
-  if (!overrides.map) material.map = cloneTexture(marbleSet.map);
-  if (!overrides.normalMap) material.normalMap = cloneTexture(marbleSet.normalMap);
-  if (!overrides.roughnessMap) material.roughnessMap = cloneTexture(marbleSet.roughnessMap);
-  if (!overrides.aoMap) material.aoMap = cloneTexture(marbleSet.aoMap);
-
-  return material;
 }
 
 function setCollisionTag(object, shouldCollide = true) {

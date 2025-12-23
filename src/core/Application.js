@@ -854,12 +854,13 @@ export class Application {
       },
     );
     let audioManifestMissing = false;
-    await soundscape.loadManifest("audio/manifest.json").catch(() => {
+    // Phase 1: Defer audio manifest loading to background - don't block startup (11M deferral)
+    soundscape.loadManifest("audio/manifest.json").catch(() => {
       audioManifestMissing = true;
       console.info("[audio] No audio manifest found; running silently.");
+    }).then(() => soundscape.initFromManifest("audio/manifest.json")).then(() => soundscape.ensureUserGestureResume()).catch((e) => {
+      console.warn("[audio] Background audio load failed:", e);
     });
-    await soundscape.initFromManifest("audio/manifest.json");
-    await soundscape.ensureUserGestureResume();
     updateLoadingStatus("Sculpting the Attic landscape...");
 
     // Volume mixer overlay (F10 toggles visibility)
@@ -1113,7 +1114,7 @@ export class Application {
     }
 
     if (!FORCE_PROC) {
-      // --- Aristotle's Tomb (local GLB) ---------------------------------------
+      // --- Aristotle's Tomb (local GLB) - EAGER load (close-up landmark) ---
       try {
         const aristotleUrl =
           await assetLoader.resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
@@ -1142,35 +1143,40 @@ export class Application {
       } catch (err) {
         console.error("Failed to load Aristotle's Tomb:", err);
       }
-      // ------------------------------------------------------------------------
 
-      // Poseidon Temple (Sounion)
-      try {
-        const url =
-          await assetLoader.resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
-        if (url)
-          await loadLandmark(worldRoot, url, {
-            position: new THREE.Vector3(90, 0, -60),
-            scale: 2.6,
-            materialPreset: "marble",
-          });
-      } catch (e) {
-        console.warn("Poseidon Temple not loaded:", e);
-      }
-
-      // Akropol (Acropolis complex placeholder)
-      try {
-        const url =
-          await assetLoader.resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
-        if (url)
-          await loadLandmark(worldRoot, url, {
-            position: new THREE.Vector3(130, 0, 40),
-            scale: 2.2,
-            materialPreset: "marble",
-          });
-      } catch (e) {
-        console.warn("Akropol not loaded:", e);
-      }
+      // Phase 2: Defer distant landmarks (Poseidon & Acropolis) - 8-10M deferral
+      Promise.all([
+        (async () => {
+          try {
+            const url =
+              await assetLoader.resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
+            if (url)
+              await loadLandmark(worldRoot, url, {
+                position: new THREE.Vector3(90, 0, -60),
+                scale: 2.6,
+                materialPreset: "marble",
+              });
+          } catch (e) {
+            console.warn("Poseidon Temple not loaded:", e);
+          }
+        })(),
+        (async () => {
+          try {
+            const url =
+              await assetLoader.resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
+            if (url)
+              await loadLandmark(worldRoot, url, {
+                position: new THREE.Vector3(130, 0, 40),
+                scale: 2.2,
+                materialPreset: "marble",
+              });
+          } catch (e) {
+            console.warn("Akropol not loaded:", e);
+          }
+        })(),
+      ]).catch((e) => console.warn("[landmarks] Background load failed:", e));
+      // Continue without awaiting - distant landmarks load in background
+      // Estimated 8-10M deferral reduces initial critical path
       // ------------------------------------------------------------------------
     } else {
       console.info("[proc] GLB loading disabled (procedural default)");
@@ -1202,11 +1208,10 @@ export class Application {
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
 
-    try {
-      await applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] });
-    } catch (e) {
-      console.warn("Gravel roads hook skipped:", e);
-    }
+    // Phase 3: Defer gravel texture loading to background (5-8M deferral)
+    applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch((e) => {
+      console.warn("Gravel roads hook failed:", e);
+    });
 
     updateTerrainCoverageMask(terrain, {
       buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
