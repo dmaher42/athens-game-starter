@@ -421,6 +421,63 @@ export class Application {
       return wrapped < 0 ? wrapped + 360 : wrapped;
     };
 
+    const lerpAzimuthDeg = (start, end, t) => {
+      const delta = THREE.MathUtils.euclideanModulo((end - start) + 540, 360) - 180;
+      return wrapAzimuth(start + delta * t);
+    };
+
+    const moonState = {
+      azimuthDeg: wrapAzimuth(skyboxLightingConfig.sunAzimuthDeg + 180),
+      elevationDeg: -10,
+      intensity: 0.0,
+      visible: false,
+    };
+    const updateMoonObjects = (moonMesh, moonLight, updates = {}) => {
+      if (!moonMesh || !moonLight) {
+        console.warn("[Lighting] moonMesh or moonLight missing; skipping update.");
+        return;
+      }
+
+      const { azimuthDeg, elevationDeg, intensity, visible } = updates;
+      const azRad = THREE.MathUtils.degToRad(azimuthDeg ?? 0);
+      const elRad = THREE.MathUtils.degToRad(elevationDeg ?? 0);
+      const radius = 500;
+
+      const x = radius * Math.cos(azRad) * Math.cos(elRad);
+      const y = radius * Math.sin(elRad);
+      const z = radius * Math.sin(azRad) * Math.cos(elRad);
+      moonMesh.position.set(x, y, z);
+      moonLight.position.copy(moonMesh.position);
+      moonLight.target.position.set(0, 0, 0);
+      moonLight.target.updateMatrixWorld();
+
+      if (Number.isFinite(intensity)) {
+        moonLight.intensity = intensity;
+      }
+      if (visible != null) {
+        moonLight.visible = !!visible && moonLight.intensity > 0;
+        moonMesh.visible = !!visible;
+      }
+    };
+
+    const setMoonState = (moonMesh, moonLight, updates = {}) => {
+      moonState.azimuthDeg = wrapAzimuth(
+        updates.azimuthDeg ?? moonState.azimuthDeg,
+      );
+      moonState.elevationDeg = updates.elevationDeg ?? moonState.elevationDeg;
+      moonState.intensity =
+        updates.intensity != null ? updates.intensity : moonState.intensity;
+      moonState.visible =
+        updates.visible != null ? updates.visible : moonState.visible;
+
+      updateMoonObjects(moonMesh, moonLight, {
+        azimuthDeg: moonState.azimuthDeg,
+        elevationDeg: moonState.elevationDeg,
+        intensity: moonState.intensity,
+        visible: moonState.visible,
+      });
+    };
+
     const sunTargetVector = new THREE.Vector3(
       skyboxLightingConfig.sunTarget?.x ?? 0,
       skyboxLightingConfig.sunTarget?.y ?? 0,
@@ -686,13 +743,28 @@ export class Application {
       sunTarget: sunTargetVector,
       azimuthOffsetDeg: sunAlignmentState.azimuthDeg,
     });
-    scene.background = dynamicSky.sky;
-    const lights = createLighting(scene, dynamicSky.sunLight);
-    const moonLight = new THREE.DirectionalLight(0xdde9ff, 0.0);
+    const moonGeometry = new THREE.SphereGeometry(10, 32, 32);
+    const moonMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.4,
+    });
+    const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+    moonMesh.name = "moonMesh";
+    moonMesh.visible = false;
+
+    const moonLight = new THREE.DirectionalLight(0xaadfff, 0.4);
+    moonLight.name = "moonLight";
     moonLight.castShadow = false;
-    moonLight.position.set(0, 120, 0);
+    moonLight.visible = false;
+
+    scene.background = dynamicSky.sky;
+    scene.add(moonMesh);
     scene.add(moonLight);
     scene.add(moonLight.target);
+
+    const lights = createLighting(scene, dynamicSky.sunLight);
+    lights.moonLight = moonLight;
     this.dynamicSky = dynamicSky;
 
     const hdrPath = joinPath(BASE_URL, "hdr/clear_midday.hdr");
@@ -715,6 +787,15 @@ export class Application {
       dynamicSky.setSunDirection(direction);
       return direction;
     };
+
+    const mirroredMoonAzimuth = () => wrapAzimuth(sunAlignmentState.azimuthDeg + 180);
+
+    setMoonState(moonMesh, moonLight, {
+      azimuthDeg: mirroredMoonAzimuth(),
+      elevationDeg: moonState.elevationDeg,
+      intensity: moonLight.intensity,
+      visible: moonState.visible,
+    });
 
     alignSunLight();
     // ---- Living City Soundscape ----
@@ -2390,6 +2471,7 @@ export class Application {
         const cycleDir = dynamicSky.getSunDirection();
         dynamicSky.setSunDirection(getAlignedSunDirection());
         syncSunLighting(cycleDir?.y, cycleDir);
+        setMoonState(moonMesh, moonLight, { azimuthDeg: mirroredMoonAzimuth() });
         renderFrame();
       }
     };
@@ -2441,6 +2523,22 @@ export class Application {
       }
     };
 
+    const resolveMoonSettingsFromProfile = (profile) => {
+      const moonConfig = profile?.moon || {};
+      const azimuthDeg = Number.isFinite(moonConfig.azimuth)
+        ? wrapAzimuth(moonConfig.azimuth)
+        : mirroredMoonAzimuth();
+      const elevationDeg =
+        moonConfig.elevation != null ? moonConfig.elevation : moonState.elevationDeg;
+      const intensity = Number.isFinite(moonConfig.intensity)
+        ? moonConfig.intensity
+        : moonState.intensity;
+      const visible =
+        moonConfig.visible != null ? moonConfig.visible : intensity > 0.05;
+
+      return { azimuthDeg, elevationDeg, intensity, visible };
+    };
+
     const applyLookProfileImmediate = (profileName) => {
       const profile = LOOK_PROFILES[profileName];
       if (!profile) {
@@ -2476,6 +2574,9 @@ export class Application {
         }
         persistSunAlignment();
       }
+
+      const moonSettings = resolveMoonSettingsFromProfile(profile);
+      setMoonState(moonMesh, moonLight, moonSettings);
 
       // 3. Sky
       if (profile.skybox?.skyKey && dynamicSky) {
@@ -2617,6 +2718,12 @@ export class Application {
         ambientColor: lights.ambientLight.color.clone(),
         groundColor: lights.ambientLight.color.clone(),
         ambientIntensity: lights.ambientLight.intensity,
+        moon: {
+          azimuthDeg: moonState.azimuthDeg,
+          elevationDeg: moonState.elevationDeg,
+          intensity: moonState.intensity,
+          visible: moonState.visible,
+        },
         fog: getFogState(),
         exposure: renderer.toneMappingExposure,
         starsOpacity: getStarsOpacity(),
@@ -2642,6 +2749,7 @@ export class Application {
         ambientIntensity: Number.isFinite(profile.ambient?.intensity)
           ? profile.ambient.intensity
           : startState.ambientIntensity,
+        moon: resolveMoonSettingsFromProfile(profile),
         fog: profile.fog && profile.fog.enabled
           ? {
               color: new THREE.Color(profile.fog.color),
@@ -2728,6 +2836,31 @@ export class Application {
           overrideAmbientIntensity: ambientIntensity,
         });
 
+        const moonAz = lerpAzimuthDeg(
+          startState.moon.azimuthDeg,
+          targetState.moon.azimuthDeg,
+          eased,
+        );
+        const moonEl = THREE.MathUtils.lerp(
+          startState.moon.elevationDeg,
+          targetState.moon.elevationDeg,
+          eased,
+        );
+        const moonIntensity = THREE.MathUtils.lerp(
+          startState.moon.intensity,
+          targetState.moon.intensity,
+          eased,
+        );
+        const moonVisible = t < 1
+          ? startState.moon.visible || targetState.moon.visible
+          : targetState.moon.visible;
+        setMoonState(moonMesh, moonLight, {
+          azimuthDeg: moonAz,
+          elevationDeg: moonEl,
+          intensity: moonIntensity,
+          visible: moonVisible,
+        });
+
         let haze = null;
         let fogColor = startState.fog.color;
         let fogNear = startState.fog.near;
@@ -2807,6 +2940,21 @@ export class Application {
       requestAnimationFrame(step);
     };
 
+    const updateMoonForPhase = (phase) => {
+      const normalized = THREE.MathUtils.euclideanModulo(phase - 0.75, 1);
+      const arc = Math.cos(normalized * Math.PI * 2);
+      const visibility = Math.max(0, arc);
+      const elevation = THREE.MathUtils.lerp(-15, 55, visibility);
+      const intensity = THREE.MathUtils.lerp(0.0, 0.6, visibility);
+
+      setMoonState(moonMesh, moonLight, {
+        azimuthDeg: mirroredMoonAzimuth(),
+        elevationDeg: elevation,
+        intensity,
+        visible: visibility > 0.05,
+      });
+    };
+
     // Alias for HUD compatibility
     const applyLightingPreset = applyLookProfile;
 
@@ -2868,8 +3016,9 @@ export class Application {
            dynamicSky.setTimeOfDay(phase * 24);
            alignedSunDir = dynamicSky.getSunDirection();
          }
-         alignedSunDir = alignedSunDir || getAlignedSunDirection();
-         syncSunLighting(alignedSunDir?.y, alignedSunDir);
+        alignedSunDir = alignedSunDir || getAlignedSunDirection();
+        syncSunLighting(alignedSunDir?.y, alignedSunDir);
+        updateMoonForPhase(phase);
       }
 
       if (dynamicSky) {

@@ -40,6 +40,11 @@ export const LOOK_PROFILES = {
     },
     env: {
       envMapIntensity: 0.65
+    },
+    moon: {
+      visible: false,
+      intensity: 0,
+      elevation: -25,
     }
   },
   "Golden Hour": {
@@ -80,6 +85,11 @@ export const LOOK_PROFILES = {
     },
     env: {
       envMapIntensity: 0.9
+    },
+    moon: {
+      visible: false,
+      intensity: 0,
+      elevation: -20,
     }
   },
   "Blue Hour": {
@@ -120,6 +130,11 @@ export const LOOK_PROFILES = {
     },
     env: {
       envMapIntensity: 0.4
+    },
+    moon: {
+      visible: true,
+      intensity: 0.32,
+      elevation: 18,
     }
   },
   "Night": {
@@ -160,6 +175,11 @@ export const LOOK_PROFILES = {
     },
     env: {
       envMapIntensity: 0.25
+    },
+    moon: {
+      visible: true,
+      intensity: 0.6,
+      elevation: 38,
     }
   }
 };
