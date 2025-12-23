@@ -805,8 +805,10 @@ export class Application {
       BASE_URL || DEFAULT_BASE_URL,
       "hdr/clear_midday.exr",
     );
+    console.log("[HDRI] hdrPath:", hdrPath);
     const loadEnvironmentWithFallback = async () => {
       try {
+        console.log("[HDRI] About to load environment from:", hdrPath);
         const envMap = await loadHdriEnvironment({
           renderer,
           scene,
@@ -816,6 +818,7 @@ export class Application {
             applyEnvironmentFallbackForProfile();
           },
         });
+        console.log("[HDRI] loadHdriEnvironment returned envMap:", !!envMap);
 
         if (!envMap) {
           console.warn("[HDRI] No environment map returned, using fallback sky");
@@ -3346,7 +3349,9 @@ export class Application {
     loop.onUpdate(onFrame);
     loop.start();
     updateLoadingStatus("Opening the gates to ancient Athens...");
+    console.log("[App] About to hide loading screen");
     hideLoadingScreen();
+    console.log("[App] hideLoadingScreen returned");
 
     // Utility getters for HUD
     const getPosition = () => {

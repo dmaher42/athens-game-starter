@@ -291,6 +291,7 @@ export function showLoadingError(message) {
 export function hideLoadingScreen() {
   if (!rootEl) return;
 
+  console.log("[LoadingScreen] hideLoadingScreen called, rootEl =", rootEl);
   rootEl.classList.add("is-hidden");
   stopFactRotation();
 

@@ -11,7 +11,7 @@ def run_verification():
 
         try:
             # Increased timeout to 60 seconds and corrected the port
-            page.goto("http://localhost:8001/athens-game-starter/", timeout=60000)
+            page.goto("http://localhost:8000/athens-game-starter/", timeout=60000)
 
             # Wait for the loading screen to disappear
             page.wait_for_selector("#athens-loading-screen", state="hidden", timeout=30000)
