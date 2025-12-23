@@ -13,7 +13,7 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
       .load(
         path,
         (hdrTexture) => {
-          if (!hdrTexture || !hdrTexture.image) {
+          if (!hdrTexture || !hdrTexture.image || !hdrTexture.image.data) {
             pmremGenerator.dispose();
             reject(new Error('Invalid HDR texture'));
             return;
@@ -27,16 +27,18 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
             console.log('[HDRI] Environment map applied');
             resolve(envMap);
           } catch (err) {
-            console.warn('[HDRI] Failed to apply environment:', err);
+            console.warn('[HDRI] Failed to apply environment. Falling back to default lighting.', err);
+            hdrTexture.dispose();
             pmremGenerator.dispose();
-            reject(err);
+            reject(new Error('Failed to generate HDR environment map'));
+            return;
           }
         },
         undefined,
         (error) => {
-          console.warn('[HDRI] Load failed:', error);
+          console.warn('[HDRI] Load failed. Please verify the HDRI path or network connection.', error);
           pmremGenerator.dispose();
-          reject(error);
+          reject(new Error('Failed to load HDRI environment'));
         }
       );
   });
