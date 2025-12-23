@@ -1,5 +1,5 @@
 import { createHudPanel } from "./hudShared.js";
-import { getUISlot } from "./uiRoot.js";
+import { registerPanel } from "./HudManager.js";
 
 // Basic interface for what we expect from QuestManager (avoiding circular imports or complex types for now)
 interface QuestState {
@@ -37,8 +37,7 @@ export class QuestHud {
     this.objectiveEl.className = "quest-hud__objective";
     panel.content.appendChild(this.objectiveEl);
 
-    const slot = getUISlot("topLeft");
-    if (slot) slot.appendChild(this.root);
+    registerPanel("questHud", this.root, 1);
 
     // Subscribe to updates
     if (questManager) {

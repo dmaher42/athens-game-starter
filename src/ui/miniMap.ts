@@ -9,7 +9,7 @@ import {
 } from "../world/locations.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 import { createHudPanel, startThrottledLoop } from "./hudShared.js";
-import { getUISlot } from "./uiRoot.js";
+import { registerPanel, unregisterPanel } from "./HudManager.js";
 
 const STYLE_ID = "mini-map-style";
 
@@ -559,14 +559,14 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
   };
   const stopLoop = startThrottledLoop(loop);
 
-  const slot = getUISlot("topLeft");
-  slot?.appendChild(wrapElement);
+  registerPanel("miniMap", wrapElement, 3);
 
   const handle: MiniMapHandle = {
     rootElement: wrapElement,
     dispose() {
       disposed = true;
       stopLoop();
+      unregisterPanel("miniMap");
       wrapElement.remove();
     },
   };

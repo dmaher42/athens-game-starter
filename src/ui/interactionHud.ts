@@ -1,4 +1,4 @@
-import { getUISlot } from "./uiRoot.js";
+import { registerPanel } from "./HudManager.js";
 
 export class InteractionHud {
   public root: HTMLElement;
@@ -39,12 +39,7 @@ export class InteractionHud {
     this.labelEl = document.createElement("span");
     this.root.appendChild(this.labelEl);
 
-    const slot = getUISlot("center");
-    if (slot) {
-        // Center slot usually centers content.
-        // We want this near the bottom of the screen usually, but center slot is fine.
-        slot.appendChild(this.root);
-    }
+    registerPanel("interactionHud", this.root, 4);
   }
 
   show(text: string) {

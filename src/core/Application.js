@@ -73,6 +73,7 @@ import { mountMiniMap } from "../ui/miniMap.ts";
 import { mount as mountHUDCameraSettings } from "../ui/HUDCameraSettings.ts";
 import { QuestHud } from "../ui/questHud.ts";
 import { InteractionHud } from "../ui/interactionHud.ts";
+import { updateLayout as updateHudLayout } from "../ui/HudManager.ts";
 import {
   showLoadingScreen,
   updateLoadingStatus,
@@ -3225,6 +3226,7 @@ export class Application {
     );
     onFogChange(fogEnabled);
     mountHUDCameraSettings(devHud?.rootElement ?? null);
+    updateHudLayout();
     updateOceanHudStatus();
     if (audioManifestMissing) {
       devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");

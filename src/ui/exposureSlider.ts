@@ -1,6 +1,6 @@
 import type { ExposureSliderOptions } from "@app/types";
 
-import { getUISlot } from "./uiRoot.js";
+import { registerPanel, unregisterPanel } from "./HudManager.js";
 
 export interface ExposureSliderTarget {
   toneMappingExposure: number;
@@ -36,11 +36,6 @@ export function mountExposureSlider(
   const storageKey = typeof opts.storageKey === "string" && opts.storageKey.trim().length > 0
     ? opts.storageKey
     : DEFAULT_STORAGE_KEY;
-
-  const slot = getUISlot("topRight");
-  if (!slot) {
-    return null;
-  }
 
   const wrap = document.createElement("div");
   wrap.id = "tmx-wrap";
@@ -103,7 +98,7 @@ export function mountExposureSlider(
   row.appendChild(value);
   wrap.appendChild(label);
   wrap.appendChild(row);
-  slot.appendChild(wrap);
+  registerPanel("exposureSlider", wrap, 1);
 
   const handleKeydown = (event: KeyboardEvent): void => {
     if (event.key === keyToggle) {
@@ -129,6 +124,7 @@ export function mountExposureSlider(
       if (typeof window !== "undefined") {
         window.removeEventListener("keydown", handleKeydown);
       }
+      unregisterPanel("exposureSlider");
       wrap.remove();
     },
   };
