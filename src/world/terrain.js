@@ -126,7 +126,7 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
 
   const withinWater = x >= west && x <= east && z >= north && z <= south;
   if (withinWater) {
-    return seaLevel - 0.4;
+    return seaLevel + 0.2;
   }
 
   // Slope up to land on the West side of the harbor
