@@ -3086,37 +3086,6 @@ export class Application {
       });
     };
 
-    const cycleLightingPreset = (step = 1) => {
-      if (!presetNames.length) return null;
-      const activeName = getActivePresetName();
-      const baseIndex = activeName ? presetNames.indexOf(activeName) : -1;
-      const currentIndex = baseIndex >= 0 ? baseIndex : 0;
-      const nextIndex = (currentIndex + step + presetNames.length) % presetNames.length;
-      const nextName = presetNames[nextIndex];
-      if (nextName) {
-        applyLookProfile(nextName, { forceReapply: true, source: "hotkey" });
-        showPresetOverlay(nextName, getNextPresetName(nextName));
-      }
-      return nextName || null;
-    };
-
-    const registerPresetDebugHelpers = () => {
-      if (!isDevBuild || typeof window === "undefined") return;
-      const globalWindow = window;
-      globalWindow.setLightingPreset = (name) => {
-        if (typeof name !== "string" || !name.trim()) {
-          console.warn("[LookProfile] Provide a preset name string");
-          return null;
-        }
-        applyLookProfile(name, { forceReapply: true, source: "console" });
-        showPresetOverlay(name, getNextPresetName(name));
-        return name;
-      };
-      globalWindow.cycleLightingPreset = (step = 1) => cycleLightingPreset(step);
-    };
-
-    registerPresetDebugHelpers();
-
     // Alias for HUD compatibility
     const applyLightingPreset = applyLookProfile;
 
