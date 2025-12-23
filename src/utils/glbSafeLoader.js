@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { createKTX2Loader } from "./ktx2.js";
 import { createDracoLoader } from "./draco.js";
@@ -18,7 +17,9 @@ function sanitizeRelativePath(value) {
     .replace(/^\.\//, "");
 }
 
-export function createGLTFLoader(renderer) {
+export async function createGLTFLoader(renderer) {
+  // Lazy-load GLTFLoader only when actually needed
+  const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
   const loader = new GLTFLoader();
 
   if (renderer) {
