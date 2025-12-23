@@ -768,7 +768,10 @@ export class Application {
     lights.moonLight = moonLight;
     this.dynamicSky = dynamicSky;
 
-    const hdrPath = 'hdr/clear_midday_converted.exr';
+    const hdrPath = joinPath(
+      BASE_URL || DEFAULT_BASE_URL,
+      "hdr/clear_midday.exr",
+    );
     const loadEnvironmentWithFallback = async () => {
       try {
         const envMap = await loadHdriEnvironment({
