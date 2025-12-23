@@ -774,6 +774,33 @@ export class Application {
     lights.moonLight = moonLight;
     this.dynamicSky = dynamicSky;
 
+    const applyEnvironmentFallbackForProfile = (profileName = "Bright Noon") => {
+      const profile = LOOK_PROFILES[profileName] || LOOK_PROFILES["Bright Noon"];
+      const skyColor = profile?.ambient?.color || profile?.fog?.color || "#9bb4d4";
+      const groundColor = profile?.ambient?.groundColor || profile?.ambient?.color || "#6c7a8c";
+      const hemiIntensity = Math.max(
+        0.1,
+        profile?.env?.envMapIntensity ?? profile?.ambient?.intensity ?? 0.25,
+      );
+
+      let hemi = scene.userData?.fallbackHemisphere;
+      if (!hemi) {
+        hemi = new THREE.HemisphereLight(skyColor, groundColor, hemiIntensity);
+        hemi.name = "envFallbackLight";
+        scene.userData.fallbackHemisphere = hemi;
+        scene.add(hemi);
+      }
+
+      hemi.color.set(skyColor);
+      hemi.groundColor.set(groundColor);
+      hemi.intensity = hemiIntensity;
+      hemi.visible = !scene.environment;
+
+      if (!scene.background) {
+        scene.background = new THREE.Color(skyColor);
+      }
+    };
+
     const hdrPath = joinPath(
       BASE_URL || DEFAULT_BASE_URL,
       "hdr/clear_midday.exr",
@@ -784,18 +811,27 @@ export class Application {
           renderer,
           scene,
           path: hdrPath,
+          onFallback: () => {
+            scene.environment = null;
+            applyEnvironmentFallbackForProfile();
+          },
         });
 
         if (!envMap) {
           console.warn("[HDRI] No environment map returned, using fallback sky");
           createDefaultSky(scene, dynamicSky);
+          applyEnvironmentFallbackForProfile();
           return null;
         }
 
+        if (scene.userData?.fallbackHemisphere) {
+          scene.userData.fallbackHemisphere.visible = false;
+        }
         return envMap;
       } catch (error) {
         console.warn(`[HDRI] Failed to load ${hdrPath}, using fallback sky`, error);
         createDefaultSky(scene, dynamicSky);
+        applyEnvironmentFallbackForProfile();
         return null;
       }
     };
@@ -2637,9 +2673,11 @@ export class Application {
         console.warn(`[LookProfile] Profile '${profileName}' not found`);
         return;
       }
+      applyEnvironmentFallbackForProfile(profileName);
       currentLookProfile = profile;
       lastAppliedLightingPreset = profileName;
       console.log(`[LookProfile] Applying: ${profileName}`);
+      devHud?.setActivePreset?.(profileName);
 
       const targetStarsOpacity = resolveStarsOpacity(profile.starsVisible);
       const targetMoonDir = Number.isFinite(profile.moonElevation)
@@ -2769,6 +2807,8 @@ export class Application {
         return;
       }
 
+      applyEnvironmentFallbackForProfile(profileName);
+
       if (!forceReapply && lastAppliedLightingPreset === profileName) {
         return;
       }
@@ -2777,6 +2817,7 @@ export class Application {
       currentLookProfile = profile;
       lastAppliedLightingPreset = profileName;
       userPresetActive = source !== "auto";
+      devHud?.setActivePreset?.(profileName);
 
       showPresetOverlay(profileName, getNextPresetName(profileName));
 
@@ -3089,44 +3130,22 @@ export class Application {
     // Alias for HUD compatibility
     const applyLightingPreset = applyLookProfile;
 
-    const presetOrder = LIGHTING_PRESET_ORDER.filter(
-      (name) => LIGHTING_PRESETS[name],
-    );
-    const getActiveLightingPresetName = () => lastAppliedLightingPreset;
-    const setLightingPreset = (name, source = "user") =>
-      applyLightingPreset(name, { forceReapply: true, source });
-    const cycleLightingPreset = (direction = 1) => {
-      if (!presetOrder.length) return null;
-      const activeName = getActiveLightingPresetName();
-      const currentIndex =
-        activeName && presetOrder.includes(activeName)
-          ? presetOrder.indexOf(activeName)
-          : -1;
-      const nextIndex =
-        currentIndex >= 0
-          ? (currentIndex + direction + presetOrder.length) % presetOrder.length
-          : 0;
-      const nextName = presetOrder[nextIndex];
-      if (nextName) {
-        setLightingPreset(nextName, "user");
-      }
-      return nextName;
-    };
-
-    const registerLightingDebugCommands = () => {
-      if (typeof window === "undefined") return;
-      const debugApi = {
-        setLightingPreset: (name) => setLightingPreset(name, "debug"),
-        cycleLightingPreset: (direction = 1) => cycleLightingPreset(direction),
-        listLightingPresets: () => [...presetOrder],
-        getActivePreset: () => getActiveLightingPresetName(),
+    if (typeof window !== "undefined") {
+      const debugWindow = window;
+      debugWindow.setLightingPreset = (name) => {
+        applyLightingPreset(name, { forceReapply: true, source: "debug" });
       };
-      Object.assign(window, debugApi);
-      console.info(
-        "[Lighting] Debug helpers available:",
-        Object.keys(debugApi).join(", "),
-      );
-    };
+      debugWindow.cycleLightingPreset = () => {
+        const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
+          (preset) => !!LOOK_PROFILES[preset],
+        );
+        if (!presets.length) return;
+        const currentIndex = presets.indexOf(lastAppliedLightingPreset ?? "");
+        const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % presets.length : 0;
+        const nextPreset = presets[nextIndex];
+        applyLightingPreset(nextPreset, { forceReapply: true, source: "debug" });
+      };
+    }
 
     // Apply default profile on startup to lock the look immediately
     const initialPreset =
@@ -3383,6 +3402,7 @@ export class Application {
     });
     registerLightingDebugCommands();
     this.devHud = devHud;
+    devHud?.setActivePreset?.(lastAppliedLightingPreset);
     mountMiniMap({ getPosition, getDirection });
     proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
     devHud?.setStatusLine?.(
