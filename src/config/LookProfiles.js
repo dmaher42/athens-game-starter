@@ -9,15 +9,15 @@ export const LOOK_PROFILES = {
     moonLightIntensity: 0.0,
     soundscapeMode: "day",
     sun: {
-      color: "#fff7e0",
+      color: "#f2f7ff", // Neutral-white sun keeps midday light from skewing warm
       intensity: 3.8,
       azimuth: -45,
-      elevation: 75,   // Higher noon (70->75)
+      elevation: 65,   // Midday height (60-70 deg) to avoid harsh zenith glare
     },
     ambient: {
-      color: "#c5b7a3",
-      groundColor: "#e8d8c3",
-      intensity: 0.6,
+      color: "#c9d3df", // Cool-neutral fill to balance sun warmth
+      groundColor: "#dfe6ef",
+      intensity: 0.62,
     },
     fog: {
       enabled: true,
@@ -33,13 +33,13 @@ export const LOOK_PROFILES = {
     },
     grade: {
       contrast: 0.12,
-      saturation: 0.06,
-      shadowTint: "#eef5ff",
-      midTint: "#fff4e6",
-      highlightTint: "#f8fbff",
+      saturation: 0.05,
+      shadowTint: "#e7edf5",   // Cool shadow tint to counteract any remaining warmth
+      midTint: "#f4f7fb",      // Neutral mids keep materials color-accurate
+      highlightTint: "#f9fcff", // Crisp highlights for clear noon sky
     },
     env: {
-      envMapIntensity: 0.65
+      envMapIntensity: 0.68 // Slight boost to keep reflections lively under strong sun
     },
     moon: {
       visible: false,
@@ -77,14 +77,14 @@ export const LOOK_PROFILES = {
       skyKey: "golden_hour"
     },
     grade: {
-      contrast: 0.24,
-      saturation: 0.12,
+      contrast: 0.16, // Align contrast with other presets while keeping silhouette definition
+      saturation: 0.08, // Warmth without oversaturating terrain
       shadowTint: "#2f241b",
       midTint: "#ffe2c4",
       highlightTint: "#fff3e4",
     },
     env: {
-      envMapIntensity: 0.9
+      envMapIntensity: 0.82 // Balanced reflections so metals don't overpower warm light
     },
     moon: {
       visible: false,
@@ -122,14 +122,14 @@ export const LOOK_PROFILES = {
       skyKey: "blue_hour"
     },
     grade: {
-      contrast: 0.1,
-      saturation: -0.2,
+      contrast: 0.12, // Closer to other looks for consistent perceived depth
+      saturation: -0.1, // Keep cool palette without dulling materials
       shadowTint: "#0b1026",
       midTint: "#3b5278",
-      highlightTint: "#8da6d1",
+      highlightTint: "#9bb5e1",
     },
     env: {
-      envMapIntensity: 0.4
+      envMapIntensity: 0.5 // Slightly brighter reflections to offset lower sun
     },
     moon: {
       visible: true,
