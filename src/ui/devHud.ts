@@ -200,6 +200,8 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     return lightingPresets[name] != null;
   });
 
+  let syncActivePreset = () => {};
+
   if (availablePresets.length) {
     const section = document.createElement("div");
     section.className = "dev-hud-section";
@@ -215,6 +217,28 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     const presetHotkeyConfig: Array<{ name: string; codes: string[]; keys: string[]; }> = [];
     const activePresetNames = new Set(availablePresets.map((preset) => preset.name));
     const presetKeyBindings = new Map<string, string>();
+    const presetButtons = new Map<string, HTMLButtonElement>();
+    let lastActivePreset: string | null = null;
+
+    const updatePresetButtonState = (activeName: string | null) => {
+      presetButtons.forEach((button, name) => {
+        const isActive = name === activeName;
+        button.classList.toggle("dev-hud-btn--active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+      });
+    };
+
+    const applyActivePreset = (activeName: string | null) => {
+      lastActivePreset = activeName;
+      updatePresetButtonState(activeName);
+    };
+
+    syncActivePreset = () => {
+      if (typeof getActivePresetName !== "function") return;
+      const activeName = getActivePresetName() ?? null;
+      if (activeName === lastActivePreset) return;
+      applyActivePreset(activeName);
+    };
 
     for (const preset of availablePresets) {
       const presetMeta = lightingPresets?.[preset.name] || {};
@@ -223,6 +247,8 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       button.className = "dev-hud-btn";
       const displayLabel = presetMeta.label || preset.label;
       button.textContent = displayLabel;
+
+      presetButtons.set(preset.name, button);
 
       const hotkeyLabel = presetMeta.hotkey || "";
       if (hotkeyLabel) {
@@ -234,9 +260,9 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
 
       button.addEventListener("click", (event) => {
         event.preventDefault();
-        if (typeof onSetLightingPreset === "function") {
-          onSetLightingPreset(preset.name);
-        }
+        setActivePreset?.(preset.name);
+        onSetLightingPreset?.(preset.name);
+        applyActivePreset(preset.name);
       });
       buttonRow.appendChild(button);
     }
@@ -254,6 +280,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
       if (nextName !== undefined) {
         setActivePreset?.(nextName);
         onSetLightingPreset?.(nextName);
+        applyActivePreset(nextName);
       }
     };
 
@@ -264,6 +291,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     // with data from arguments. Assuming simple binding logic is sufficient or external config drives it.
     // Preserving the property on root for the key listener.
     wrap._presetKeyBindings = presetKeyBindings;
+    applyActivePreset(getActivePresetName?.() ?? null);
   }
 
   // Fog Control
@@ -427,6 +455,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     try {
       updatePositionReadout(getPosition?.());
       updateBearingReadout(getDirection?.());
+      syncActivePreset();
     } catch {}
   }, 100);
 
