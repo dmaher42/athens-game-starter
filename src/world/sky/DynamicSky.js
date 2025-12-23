@@ -257,18 +257,22 @@ export class DynamicSky {
     );
     this.sky.material.uniforms.rayleigh.value = MathUtils.lerp(2.5, 1.1, dayFactor);
 
-    this.sunLight.intensity = MathUtils.lerp(0.08, 4.2, dayFactor);
-    const sunriseColor = new Color("#ffd8a6");
-    const noonColor = new Color("#ffffff");
-    const duskColor = new Color("#ffb07a");
-    const sunColor = sunriseColor.lerp(noonColor, dayFactor).lerp(duskColor, nightFactor * 0.65);
-    this.sunLight.color.copy(sunColor);
+    if (!this.manualSunDirection) {
+      this.sunLight.intensity = MathUtils.lerp(0.08, 4.2, dayFactor);
+      const sunriseColor = new Color("#ffd8a6");
+      const noonColor = new Color("#ffffff");
+      const duskColor = new Color("#ffb07a");
+      const sunColor = sunriseColor
+        .lerp(noonColor, dayFactor)
+        .lerp(duskColor, nightFactor * 0.65);
+      this.sunLight.color.copy(sunColor);
 
-    const moonTint = new Color("#b8c8ff");
-    this.sunLight.visible = true;
-    if (nightFactor > 0.8) {
-      this.sunLight.color.lerp(moonTint, nightFactor * 0.6);
-      this.sunLight.intensity = MathUtils.lerp(0.08, 0.28, nightFactor);
+      const moonTint = new Color("#b8c8ff");
+      this.sunLight.visible = true;
+      if (nightFactor > 0.8) {
+        this.sunLight.color.lerp(moonTint, nightFactor * 0.6);
+        this.sunLight.intensity = MathUtils.lerp(0.08, 0.28, nightFactor);
+      }
     }
   }
 
