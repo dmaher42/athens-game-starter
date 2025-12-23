@@ -2807,11 +2807,28 @@ export class Application {
       const startTime = performance.now();
       const transition = { cancelled: false };
       activeLightingTransition = transition;
+      let fogResetPending = !targetState.fog;
 
       const step = (now) => {
         if (transition.cancelled) return;
         const t = Math.min(1, (now - startTime) / durationMs);
         const eased = t * t * (3 - 2 * t);
+
+        if (fogResetPending) {
+          fogResetPending = false;
+          setFogEnabled(false);
+          if (scene) {
+            scene.fog = null;
+            const setFogOptions = scene.userData?.setFogOptions;
+            if (typeof setFogOptions === "function") {
+              setFogOptions({
+                color: startState.fog?.color ?? new THREE.Color(0xffffff),
+                near: 0,
+                far: 1,
+              });
+            }
+          }
+        }
 
         const az = THREE.MathUtils.lerp(
           startState.azimuthDeg,
