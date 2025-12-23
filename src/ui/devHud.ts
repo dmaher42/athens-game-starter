@@ -459,29 +459,33 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
   let lastPosText = "";
   let lastBearText = "";
   let lastNeedleDeg = 0;
+
+  const updatePositionReadout = (p?: Vector3Like | null) => {
+    if (!p || !elPos) return;
+    const posText = `(${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)})`;
+    if (posText === lastPosText) return;
+    updateTextIfChanged(elPos, posText);
+    lastPosText = posText;
+  };
+
+  const updateBearingReadout = (d?: Vector3Like | null) => {
+    if (!d || !elBear) return;
+    const b = toBearing(d);
+    const bearText = `${b.deg}° ${b.label}`;
+    if (bearText !== lastBearText) {
+      updateTextIfChanged(elBear, bearText);
+      lastBearText = bearText;
+    }
+    if (b.deg !== lastNeedleDeg) {
+      needle.style.transform = `translate(-1px, -40px) rotate(${b.deg}deg)`;
+      lastNeedleDeg = b.deg;
+    }
+  };
+
   const stopLoop = startThrottledLoop(() => {
     try {
-      const p = getPosition?.();
-      if (p && elPos) {
-        const posText = `(${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)})`;
-        if (posText !== lastPosText) {
-          updateTextIfChanged(elPos, posText);
-          lastPosText = posText;
-        }
-      }
-      const d = getDirection?.();
-      if (d && elBear) {
-        const b = toBearing(d);
-        const bearText = `${b.deg}° ${b.label}`;
-        if (bearText !== lastBearText) {
-          updateTextIfChanged(elBear, bearText);
-          lastBearText = bearText;
-        }
-        if (b.deg !== lastNeedleDeg) {
-          needle.style.transform = `translate(-1px, -40px) rotate(${b.deg}deg)`;
-          lastNeedleDeg = b.deg;
-        }
-      }
+      updatePositionReadout(getPosition?.());
+      updateBearingReadout(getDirection?.());
     } catch {}
   }, 100);
 
