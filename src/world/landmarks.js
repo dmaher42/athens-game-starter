@@ -6,7 +6,7 @@ import {
   resolveKTX2TranscoderPath,
   DEFAULT_BASIS_TRANSCODER_PATH,
 } from "../utils/ktx2.js";
-import { loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
+import { loadGLBWithFallbacks, createGLTFLoader } from "../utils/glbSafeLoader.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import {
   makeMarbleMaterial,
@@ -103,7 +103,7 @@ function warnMissingLandmark(key, message) {
 // Shared GLTF loader instance for every landmark. We hook a KTX2Loader into it
 // so GPU-compressed textures decode automatically without changing the rest of
 // our asset pipeline.
-const loader = new GLTFLoader();
+let loader = null;
 let ktx2Loader = null;
 let supportsKTX2 = false;
 let hasWarnedUnsupportedKTX2 = false;
@@ -126,14 +126,20 @@ let hasLoggedCdnFallback = false;
  * whatever JPEG or PNG data is already bundled with the model, so older assets
  * continue to render without any changes.
  */
-export function initializeAssetTranscoders(renderer) {
+export async function initializeAssetTranscoders(renderer) {
   if (!renderer || typeof renderer.getContext !== "function") {
     return;
+  }
+
+  // Lazy-load GLTFLoader if not already created
+  if (!loader) {
+    loader = await createGLTFLoader(renderer);
   }
 
   const transcoderPath = resolveKTX2TranscoderPath();
 
   if (!ktx2Loader) {
+    const { KTX2Loader } = await import("three/examples/jsm/loaders/KTX2Loader.js");
     ktx2Loader = new KTX2Loader();
   }
 
@@ -528,6 +534,16 @@ export async function loadLandmark(scene, url, options = {}) {
     // assets. Check your devtools timeline to see how much faster `.ktx2`
     // textures stream once you've transcoded them.
     console.time(timerLabel);
+  }
+
+  // Ensure loader is initialized
+  if (!loader) {
+    const resolvedRenderer = resolveRenderer(scene, options?.renderer);
+    if (resolvedRenderer) {
+      await initializeAssetTranscoders(resolvedRenderer);
+    } else {
+      loader = await createGLTFLoader(null);
+    }
   }
 
   const placeholderGeometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
