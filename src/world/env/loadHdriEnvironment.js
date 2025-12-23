@@ -13,6 +13,12 @@ export async function loadHdriEnvironment({ renderer, scene, path }) {
       .load(
         path,
         (hdrTexture) => {
+          if (!hdrTexture || !hdrTexture.image) {
+            pmremGenerator.dispose();
+            reject(new Error('Invalid HDR texture'));
+            return;
+          }
+
           try {
             const envMap = pmremGenerator.fromEquirectangular(hdrTexture).texture;
             scene.environment = envMap;
