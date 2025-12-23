@@ -2371,9 +2371,11 @@ export class Application {
 
     const LIGHTING_PHASE_WINDOWS = [
       { name: "Blue Hour", start: 0.0, end: 0.12 },
+      { name: "Golden Hour", start: 0.12, end: 0.25 },
       { name: "Bright Noon", start: 0.25, end: 0.7 },
       { name: "Golden Hour", start: 0.7, end: 0.85 },
-      { name: "Night", start: 0.85, end: 1.0 },
+      { name: "Blue Hour", start: 0.85, end: 0.95 },
+      { name: "Night", start: 0.95, end: 1.0 },
     ];
 
     const persistSunAlignment = () => {
