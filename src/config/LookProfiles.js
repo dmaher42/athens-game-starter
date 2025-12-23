@@ -2,44 +2,44 @@
 export const LOOK_PROFILES = {
   "Bright Noon": {
     renderer: {
-      toneMappingExposure: 0.95, // Reduced from 1.05 to prevent washout
+      toneMappingExposure: 0.86, // Lower exposure for gentler midday light
     },
     starsVisible: 0.0,
     moonElevation: -10,
     moonLightIntensity: 0.0,
     soundscapeMode: "day",
     sun: {
-      color: "#f2f7ff", // Neutral-white sun keeps midday light from skewing warm
-      intensity: 3.8,
+      color: "#dceeff", // Cooler sun tone to push the sky toward blue
+      intensity: 3.4,
       azimuth: -45,
       elevation: 65,   // Midday height (60-70 deg) to avoid harsh zenith glare
     },
     ambient: {
-      color: "#c9d3df", // Cool-neutral fill to balance sun warmth
-      groundColor: "#dfe6ef",
-      intensity: 0.62,
+      color: "#bcdaf5", // Bluer fill to tint indirect light
+      groundColor: "#d6e9ff",
+      intensity: 0.56,
     },
     fog: {
       enabled: true,
-      color: "#cfe7f7",
+      color: "#c4e4ff",
       near: 2000,      // Increased near/far for clarity
       far: 8000,       // Slight reduction (10k -> 8k) to help distant houses fade vs landmarks
       density: 0.00018,
     },
     skybox: {
-      exposureMultiplier: 1.3,
-      saturationMultiplier: 1.05,
+      exposureMultiplier: 1.05,
+      saturationMultiplier: 1.12,
       skyKey: "high_noon"
     },
     grade: {
-      contrast: 0.12,
-      saturation: 0.05,
-      shadowTint: "#e7edf5",   // Cool shadow tint to counteract any remaining warmth
-      midTint: "#f4f7fb",      // Neutral mids keep materials color-accurate
-      highlightTint: "#f9fcff", // Crisp highlights for clear noon sky
+      contrast: 0.1,
+      saturation: 0.08,
+      shadowTint: "#d6e8ff",   // Cooler shadow tint to reinforce blue sky cues
+      midTint: "#e9f4ff",      // Slightly bluer mids to keep surfaces natural
+      highlightTint: "#f2f8ff", // Crisp highlights without harsh glare
     },
     env: {
-      envMapIntensity: 0.68 // Slight boost to keep reflections lively under strong sun
+      envMapIntensity: 0.6 // Keep reflections lively without overwhelming brightness
     },
     moon: {
       visible: false,
