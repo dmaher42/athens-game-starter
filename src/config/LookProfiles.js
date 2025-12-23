@@ -94,7 +94,7 @@ export const LOOK_PROFILES = {
   },
   "Blue Hour": {
     renderer: {
-      toneMappingExposure: 0.82,
+      toneMappingExposure: 0.9,
     },
     starsVisible: 0.55,
     moonElevation: 8,
@@ -102,7 +102,7 @@ export const LOOK_PROFILES = {
     soundscapeMode: "night",
     sun: {
       color: "#8899bb",
-      intensity: 0.5,
+      intensity: 0.65,
       azimuth: 180,
       elevation: -5,
     },
@@ -115,7 +115,7 @@ export const LOOK_PROFILES = {
       enabled: true,
       color: "#3b5278",
       near: 300,
-      far: 2000,
+      far: 3000,
     },
     skybox: {
       exposureMultiplier: 0.7,
@@ -124,22 +124,22 @@ export const LOOK_PROFILES = {
     grade: {
       contrast: 0.12, // Closer to other looks for consistent perceived depth
       saturation: -0.1, // Keep cool palette without dulling materials
-      shadowTint: "#0b1026",
+      shadowTint: "#223344",
       midTint: "#3b5278",
       highlightTint: "#9bb5e1",
     },
     env: {
-      envMapIntensity: 0.5 // Slightly brighter reflections to offset lower sun
+      envMapIntensity: 0.6 // Slightly brighter reflections to offset lower sun
     },
     moon: {
       visible: true,
-      intensity: 0.32,
+      intensity: 0.42,
       elevation: 18,
     }
   },
   "Night": {
     renderer: {
-      toneMappingExposure: 0.58,
+      toneMappingExposure: 0.7,
     },
     starsVisible: 1.0,
     moonElevation: 25,
@@ -147,7 +147,7 @@ export const LOOK_PROFILES = {
     soundscapeMode: "night",
     sun: {
       color: "#7fa2ff",
-      intensity: 0.18,
+      intensity: 0.24,
       azimuth: 135,
       elevation: -25,
     },
@@ -160,7 +160,7 @@ export const LOOK_PROFILES = {
       enabled: true,
       color: "#0b1d51",
       near: 200,
-      far: 1500,
+      far: 2500,
     },
     skybox: {
       exposureMultiplier: 0.55,
@@ -169,16 +169,16 @@ export const LOOK_PROFILES = {
     grade: {
       contrast: 0.08,
       saturation: -0.12,
-      shadowTint: "#050915",
+      shadowTint: "#223344",
       midTint: "#10233d",
       highlightTint: "#c6d7ff",
     },
     env: {
-      envMapIntensity: 0.25
+      envMapIntensity: 0.38
     },
     moon: {
       visible: true,
-      intensity: 0.6,
+      intensity: 0.8,
       elevation: 38,
     }
   }
