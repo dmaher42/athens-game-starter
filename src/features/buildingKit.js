@@ -75,7 +75,7 @@ async function loadTextureCandidate({ baseUrl, candidate, colorSpace }) {
   try {
     const texture = await marbleTextureLoader.loadAsync(url);
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.anisotropy = 4;
+    texture.anisotropy = 8;
     texture.colorSpace = colorSpace;
     texture.needsUpdate = true;
     return texture;

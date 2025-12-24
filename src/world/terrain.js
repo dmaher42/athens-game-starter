@@ -349,11 +349,13 @@ export function createTerrain(scene) {
   sandNormal.wrapS = sandNormal.wrapT = THREE.RepeatWrapping;
   sandNormal.repeat.set(28, 24);
   sandNormal.colorSpace = THREE.NoColorSpace;
+  sandNormal.anisotropy = 8;
 
   const sandARM = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`);
   sandARM.wrapS = sandARM.wrapT = THREE.RepeatWrapping;
   sandARM.repeat.set(28, 24);
   sandARM.colorSpace = THREE.NoColorSpace;
+  sandARM.anisotropy = 8;
 
   let terrainMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,

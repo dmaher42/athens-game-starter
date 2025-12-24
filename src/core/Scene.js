@@ -194,6 +194,34 @@ export function createSceneContext({
   composer.addPass(colorGradePass);
 
   const renderFrame = () => {
+    // DEV: detect textures that are flagged for update but have no image data
+    if (import.meta.env?.DEV) {
+      try {
+        scene.traverse((obj) => {
+          if (!obj || !obj.material) return;
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          for (const m of mats) {
+            if (!m) continue;
+            for (const v of Object.values(m)) {
+              if (v && v.isTexture) {
+                // DataTexture has its own data buffer; skip those
+                const isDataTex = typeof THREE.DataTexture !== 'undefined' && v instanceof THREE.DataTexture;
+                if (v.needsUpdate && !isDataTex && !v.image) {
+                  console.warn('[debug] Texture needsUpdate with no image:', v, { material: m, object: obj });
+                  // Avoid spamming the renderer each frame — clear the flag so the renderer won't repeatedly warn.
+                  v.needsUpdate = false;
+                }
+              }
+            }
+          }
+        });
+      } catch (e) {
+        // swallow any debug-time exceptions
+        // eslint-disable-next-line no-console
+        console.warn('[debug] texture scan failed', e);
+      }
+    }
+
     if (composer) {
       composer.render();
     } else {

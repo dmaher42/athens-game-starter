@@ -166,6 +166,13 @@ function configureTexture(texture, options = {}) {
 
   if (typeof options.anisotropy === "number") {
     texture.anisotropy = options.anisotropy;
+  } else {
+    // Use a higher default anisotropy for crisper ground textures on modern GPUs
+    try {
+      texture.anisotropy = Math.max(texture.anisotropy || 1, 8);
+    } catch (e) {
+      /* ignore */
+    }
   }
 
   texture.needsUpdate = true;
@@ -184,7 +191,6 @@ function loadTexture(url, options, onError) {
         if (onError) onError(event);
       },
     );
-    configureTexture(texture, options);
     return texture;
   } catch (error) {
     console.warn(`Failed to load ground texture: ${url}`, error);

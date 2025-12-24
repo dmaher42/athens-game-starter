@@ -25,7 +25,9 @@ const DEFAULT_ENGINE_CONFIG = ({
   baseUrl = resolveBaseUrl(),
   queryParams = safeUrlSearchParams(),
 } = {}) => {
-  const forceGlb = queryParams.has("glb") && queryParams.get("glb") !== "0";
+  // Default to allowing GLB loading (opt-out via ?glb=0). If callers explicitly set
+  // the `glb` query param to 0, we disable GLB loading and fall back to procedural.
+  const forceGlb = queryParams.has("glb") ? queryParams.get("glb") !== "0" : true;
   const forceProcedural = !forceGlb;
 
   return {
