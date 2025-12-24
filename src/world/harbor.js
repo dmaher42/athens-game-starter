@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { getGravellySandMaterial } from "../materials/gravellySandMaterial.js";
 import {
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_CENTER,
@@ -92,7 +91,33 @@ function createHarborPad(harborGroundY) {
       ),
     );
   }
-  const pad = new THREE.Mesh(geometry, getGravellySandMaterial());
+  
+  // Create material matching terrain texture for seamless appearance underwater
+  const textureLoader = new THREE.TextureLoader();
+  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
+  
+  const sandNormal = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`);
+  sandNormal.wrapS = sandNormal.wrapT = THREE.RepeatWrapping;
+  sandNormal.repeat.set(28, 24); // Match terrain repeat scale
+  sandNormal.colorSpace = THREE.NoColorSpace;
+  
+  const sandARM = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`);
+  sandARM.wrapS = sandARM.wrapT = THREE.RepeatWrapping;
+  sandARM.repeat.set(28, 24); // Match terrain repeat scale
+  sandARM.colorSpace = THREE.NoColorSpace;
+  
+  const padMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.8,
+    metalness: 0.0,
+    normalMap: sandNormal,
+    normalScale: new THREE.Vector2(0.5, 0.5),
+    aoMap: sandARM,
+    roughnessMap: sandARM,
+    aoMapIntensity: 0.6,
+  });
+  
+  const pad = new THREE.Mesh(geometry, padMaterial);
   pad.name = "HarborPad";
   pad.rotation.x = -Math.PI / 2;
   // Position relative to harbor group origin (0,0,0)
