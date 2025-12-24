@@ -14,12 +14,13 @@
 import * as THREE from 'three';
 
 // External refs (to be injected or accessed from globals)
-let scene, renderer, hemisphereLight;
+let scene, renderer, hemisphereLight, dynamicSky;
 
 export function init(envOptions) {
   scene = envOptions.scene;
   renderer = envOptions.renderer;
   hemisphereLight = envOptions.hemisphereLight;
+  dynamicSky = envOptions.dynamicSky || null;
 }
 
 export function applyBasicLightingProfile(profile) {
@@ -34,7 +35,27 @@ export function applyBasicLightingProfile(profile) {
 
 // Copilot: Use this to position the sun in the sky dome. Accepts a THREE.Vector3 direction and rotates the sun mesh or procedural sun accordingly.
 export function setSunPosition(sunDirectionVec3) {
-  // TODO: Update directional light or procedural sky sun position
+  try {
+    if (dynamicSky && typeof dynamicSky.setSunDirection === 'function') {
+      dynamicSky.setSunDirection(sunDirectionVec3);
+      return;
+    }
+    // Fallback: try to find a directional light named sunLight
+    const namedSun = scene?.getObjectByName?.('sunLight') || scene?.getObjectByName?.('SunLight') || null;
+    const sun = scene?.userData?.sunLight || namedSun;
+    if (sun && sun.isDirectionalLight) {
+      const dir = sunDirectionVec3.clone().normalize();
+      const radius = 1000;
+      const pos = dir.multiplyScalar(radius);
+      sun.position.copy(pos);
+      if (sun.target) {
+        sun.target.position.set(0, 0, 0);
+        sun.target.updateMatrixWorld();
+      }
+    }
+  } catch (e) {
+    console.warn('[EnvStubs] setSunPosition failed', e);
+  }
 }
 
 // Copilot: Update moon visibility and rotation using the moonState object. Ensure moon mesh exists and is added to the scene.

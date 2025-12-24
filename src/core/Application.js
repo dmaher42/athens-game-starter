@@ -65,7 +65,7 @@ import { PlayerController } from "../controls/PlayerController.js";
 import { ThirdPersonCamera } from "../controls/ThirdPersonCamera.js";
 import { Character } from "../characters/Character.js";
 import { UIManager } from "./UIManager.js";
-import { init as initEnvStubs, applyBasicLightingProfile, setEnvironmentMapIntensity } from "./EnvironmentManager.stubs.js";
+import { init as initEnvStubs, applyBasicLightingProfile, setEnvironmentMapIntensity, setSunPosition } from "./EnvironmentManager.stubs.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
 import { QuestHud } from "../ui/questHud.ts";
 import { InteractionHud } from "../ui/interactionHud.ts";
@@ -794,6 +794,7 @@ export class Application {
         scene,
         renderer,
         hemisphereLight: scene?.userData?.fallbackHemisphere || null,
+        dynamicSky: dynamicSky || null,
       });
 
       // Apply a basic profile using Bright Noon values (supplemental)
@@ -822,6 +823,8 @@ export class Application {
         sunAlignmentState.elevationDeg,
       );
       dynamicSky.setSunDirection(direction);
+      // Also route through Env stubs for portability
+      try { setSunPosition(direction); } catch {}
       return direction;
     };
 
