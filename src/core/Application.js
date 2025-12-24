@@ -65,6 +65,7 @@ import { PlayerController } from "../controls/PlayerController.js";
 import { ThirdPersonCamera } from "../controls/ThirdPersonCamera.js";
 import { Character } from "../characters/Character.js";
 import { UIManager } from "./UIManager.js";
+import { init as initEnvStubs, applyBasicLightingProfile } from "./EnvironmentManager.stubs.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
 import { QuestHud } from "../ui/questHud.ts";
 import { InteractionHud } from "../ui/interactionHud.ts";
@@ -786,6 +787,29 @@ export class Application {
     };
 
     await loadEnvironmentWithFallback();
+
+    // Initialize EnvironmentManager stubs with current scene context
+    try {
+      initEnvStubs({
+        scene,
+        renderer,
+        hemisphereLight: scene?.userData?.fallbackHemisphere || null,
+      });
+
+      // Apply a basic profile using Bright Noon values (supplemental)
+      const bn = LOOK_PROFILES?.["Bright Noon"] || null;
+      if (bn) {
+        applyBasicLightingProfile({
+          hemisphere: bn?.ambient?.intensity ?? 0.28,
+          exposure: bn?.renderer?.toneMappingExposure ?? 1.0,
+          fogColor: bn?.fog?.color ?? "#e2ecf7",
+          fogNear: bn?.fog?.near ?? 3200,
+          fogFar: bn?.fog?.far ?? 12000,
+        });
+      }
+    } catch (e) {
+      console.warn("[EnvStubs] initialization failed", e);
+    }
 
     const alignSunLight = () => {
       const direction = azElToDirection(
