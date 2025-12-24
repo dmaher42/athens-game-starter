@@ -251,7 +251,7 @@ function scatterDockProps(target, dockSections, seaLevel) {
     const prop = Math.random() > 0.5 ? createCrateCluster() : createBarrelCluster();
     const localX = THREE.MathUtils.randFloatSpread(section.userData.length * 0.6);
     const localZ = THREE.MathUtils.randFloatSpread(section.userData.width * 0.5);
-    prop.position.set(section.position.x + localX, seaLevel + DOCK_THICKNESS * 0.5 + 0.02, section.position.z + localZ);
+    prop.position.set(section.position.x + localX, seaLevel + DOCK_LIFT + DOCK_THICKNESS * 0.5 + 0.15, section.position.z + localZ);
     prop.userData.category = "harbor-prop-dock";
     target.add(prop);
   }
@@ -269,7 +269,7 @@ function scatterShoreProps(target, groundY) {
     const prop = Math.random() > 0.5 ? createCrateCluster() : createBarrelCluster();
     const x = THREE.MathUtils.randFloat(scatterBounds.west, scatterBounds.east);
     const z = THREE.MathUtils.randFloat(scatterBounds.north, scatterBounds.south);
-    prop.position.set(x, groundY, z);
+    prop.position.set(x, groundY + 0.1, z);
     prop.userData.category = "harbor-prop-shore";
     target.add(prop);
   }
