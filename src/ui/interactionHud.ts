@@ -1,4 +1,5 @@
 import { registerPanel } from "./HudManager.js";
+import "./hudTheme.css";
 
 export class InteractionHud {
   public root: HTMLElement;
@@ -8,31 +9,30 @@ export class InteractionHud {
   constructor() {
     this.root = document.createElement("div");
     Object.assign(this.root.style, {
-      background: "rgba(0, 0, 0, 0.7)",
-      color: "#fff",
+      background: "var(--hud-surface-strong)",
+      color: "var(--hud-text)",
       padding: "8px 16px",
       borderRadius: "20px",
-      fontFamily: "ui-sans-serif, system-ui, sans-serif",
-      fontSize: "14px",
-      fontWeight: "500",
+      font: "var(--hud-font)",
+      fontWeight: "600",
       pointerEvents: "none",
       transition: "opacity 0.2s ease",
       opacity: "0",
-      marginTop: "auto", // Push to bottom of center slot if needed
-      marginBottom: "20%" // Lift up a bit
+      marginTop: "auto",
+      marginBottom: "20%"
     });
 
     // Icon/Key prompt
     this.keyEl = document.createElement("span");
     this.keyEl.textContent = "[F]";
     Object.assign(this.keyEl.style, {
-        background: "#fff",
-        color: "#000",
-        borderRadius: "4px",
-        padding: "0 4px",
-        marginRight: "8px",
-        fontWeight: "bold",
-        fontSize: "12px"
+      background: "rgba(255,255,255,0.9)",
+      color: "#000",
+      borderRadius: "4px",
+      padding: "0 4px",
+      marginRight: "8px",
+      fontWeight: "700",
+      fontSize: "12px"
     });
     this.root.appendChild(this.keyEl);
 

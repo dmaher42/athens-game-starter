@@ -1,6 +1,7 @@
 import type { Vector3 } from "three";
 
-import { createHudPanel, startThrottledLoop, updateTextIfChanged } from "./hudShared.js";
+import { createHudPanel, updateTextIfChanged } from "./hudShared.js";
+import { registerUIUpdate } from "./updateLoop.js";
 import "./hudTheme.css";
 import { registerPanel } from "./HudManager.js";
 
@@ -454,13 +455,17 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     }
   };
 
-  const stopLoop = startThrottledLoop(() => {
-    try {
-      updatePositionReadout(getPosition?.());
-      updateBearingReadout(getDirection?.());
-      syncActivePreset();
-    } catch {}
-  }, 100);
+  const disposeUpdate = registerUIUpdate(
+    "devHud",
+    () => {
+      try {
+        updatePositionReadout(getPosition?.());
+        updateBearingReadout(getDirection?.());
+        syncActivePreset();
+      } catch {}
+    },
+    10,
+  );
 
   const getPresetKeyBindings = (): Map<string, string> | null => {
     return wrap?._presetKeyBindings ?? null;
@@ -493,7 +498,7 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
 
   const handle: DevHudHandle = {
     dispose() {
-      stopLoop();
+      disposeUpdate();
       window.removeEventListener("keydown", onKey);
       wrap.remove();
     },

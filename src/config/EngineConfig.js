@@ -44,8 +44,10 @@ const DEFAULT_ENGINE_CONFIG = ({
     },
     debug: {
       overlays: {
-        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: true, devDefault: true },
-        exposureSlider: { devDefault: true },
+        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: true },
+        exposureSlider: { defaultValue: false, devDefault: true },
+        devHud: { defaultValue: false, devDefault: true },
+        cameraSettings: { defaultValue: false, devDefault: true },
       },
       logLevel: queryParams.get("log") || "info",
     },
@@ -61,9 +63,11 @@ const ENVIRONMENT_OVERRIDES = {
   development: ({ queryParams }) => ({
     debug: {
       overlays: {
-        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: true, devDefault: true },
-        exposureSlider: { devDefault: true },
+        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: true },
+        exposureSlider: { defaultValue: false, devDefault: true },
         hotkeyReference: { devDefault: true, windowFlagKey: "SHOW_HOTKEYS" },
+        devHud: { defaultValue: false, devDefault: true },
+        cameraSettings: { defaultValue: false, devDefault: true },
       },
       logLevel: queryParams.get("log") || "debug",
     },

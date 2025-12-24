@@ -3373,13 +3373,10 @@ export class Application {
       if (Number.isFinite(y)) pin.position.y = y;
     };
 
-    // Mount HUD in dev OR if a global flag is set (useful in prod previews)
-    // Force HUD to always show in live builds so camera controls + compass remain visible
-    if (typeof window !== "undefined") {
-      window.SHOW_HUD = true;
-    }
-    console.log("[HUD] mounting…");
-    devHud = mountDevHUD({
+    const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: false, devDefault: true };
+    if (resolveFeatureToggle(devHudToggle)) {
+      console.log("[HUD] mounting…");
+      devHud = mountDevHUD({
       getPosition,
       getDirection,
       onPin,
@@ -3395,7 +3392,8 @@ export class Application {
         getElevationDeg: () => sunAlignmentState.elevationDeg,
         onChange: setSunAlignment,
       },
-    });
+      });
+    }
     // The following line is commented out to prevent a ReferenceError at runtime.
     // The definition for 'registerLightingDebugCommands' could not be found in the codebase.
     // This appears to be a missing file or an unresolved dependency.
@@ -3409,7 +3407,10 @@ export class Application {
       FORCE_PROC ? "Procedural: ON" : "Procedural: OFF",
     );
     onFogChange(fogEnabled);
-    mountHUDCameraSettings(devHud?.rootElement ?? null);
+    const cameraHudToggle = engineConfig.debug?.overlays?.cameraSettings || { defaultValue: false, devDefault: true };
+    if (resolveFeatureToggle(cameraHudToggle)) {
+      mountHUDCameraSettings(devHud?.rootElement ?? null);
+    }
     updateHudLayout();
     updateOceanHudStatus();
     if (audioManifestMissing) {

@@ -8,7 +8,8 @@ import {
   HARBOR_CENTER_3D,
 } from "../world/locations.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
-import { createHudPanel, startThrottledLoop } from "./hudShared.js";
+import { createHudPanel } from "./hudShared.js";
+import { registerUIUpdate } from "./updateLoop.js";
 import { registerPanel, unregisterPanel } from "./HudManager.js";
 import "./hudTheme.css";
 
@@ -486,7 +487,7 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
       console.warn("[MiniMap] update failed", error);
     }
   };
-  const stopLoop = startThrottledLoop(loop);
+  const disposeUpdate = registerUIUpdate("miniMap", () => loop(), 8);
 
   registerPanel("miniMap", wrapElement, 3);
 
@@ -494,7 +495,7 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
     rootElement: wrapElement,
     dispose() {
       disposed = true;
-      stopLoop();
+      disposeUpdate();
       unregisterPanel("miniMap");
       wrapElement.remove();
     },

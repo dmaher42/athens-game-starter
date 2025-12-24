@@ -157,6 +157,19 @@ Draco and KTX2 loaders are supported and configurable
 
 Terrain, lighting, and materials are designed to be tunable and experimental
 
+HUD & Overlays
+
+- Overlays are off by default in production and on in development.
+- Enable via query params or window flags:
+	- Audio Mixer: `?audio=1` or `window.SHOW_AUDIO_MIXER = true`
+	- Hotkey Reference: set `window.SHOW_HOTKEYS = true`
+	- Dev HUD: enable via engine debug overlays or set `engineConfig.debug.overlays.devHud.defaultValue=true` at build time
+	- Camera Settings HUD: same pattern as Dev HUD (`cameraSettings`)
+- Update cadence: HUD components should use the shared UI update loop in `src/ui/updateLoop.ts`:
+	- `registerUIUpdate("devHud", (dt)=>{ /* ... */ }, 10)` to update ~10 times/second
+	- Prefer event-driven updates when possible; only register loops for dynamic readouts
+	- Unregister updates in component `dispose()` to avoid leaks
+
 What This Project Is Not
 
 Not a procedural survival world
