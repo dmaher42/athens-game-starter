@@ -13,6 +13,7 @@ const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
 const HARBOR_GROUND_HEIGHT = 2.5;
+const DOCK_LIFT = 1.2; // Raise docks above water for better visibility
 const waterTextureLoader = new THREE.TextureLoader();
 
 const BOAT_STYLES = [
@@ -111,7 +112,7 @@ function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOC
       metalness: 0.04,
     }),
   );
-  deck.position.y = seaLevel - DOCK_THICKNESS * 0.5;
+  deck.position.y = seaLevel + DOCK_LIFT - DOCK_THICKNESS * 0.5;
   enableShadows(deck);
 
   const postMaterial = new THREE.MeshStandardMaterial({
@@ -122,7 +123,7 @@ function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOC
   const postGeometry = new THREE.CylinderGeometry(0.35, 0.42, DOCK_POST_HEIGHT + 0.6, 10);
 
   const posts = new THREE.Group();
-  const postY = seaLevel - (DOCK_POST_HEIGHT + 0.6) * 0.5;
+  const postY = seaLevel + DOCK_LIFT - (DOCK_POST_HEIGHT + 0.6) * 0.5;
   const offsets = [
     [length * 0.5 - 0.9, width * 0.5 - 0.7],
     [-length * 0.5 + 0.9, width * 0.5 - 0.7],
