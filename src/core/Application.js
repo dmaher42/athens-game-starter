@@ -64,8 +64,6 @@ import { BuildingManager } from "../buildings/BuildingManager.js";
 import { PlayerController } from "../controls/PlayerController.js";
 import { ThirdPersonCamera } from "../controls/ThirdPersonCamera.js";
 import { Character } from "../characters/Character.js";
-import { CameraManager } from "./CameraManager.js";
-import { EnvironmentManager } from "./EnvironmentManager.js";
 import { UIManager } from "./UIManager.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
 import { QuestHud } from "../ui/questHud.ts";
