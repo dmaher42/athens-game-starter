@@ -56,12 +56,13 @@ const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
 
 // Harbor configuration (East Facing)
-// Match city flat height so harbor ground sits level with city plateau
-const HARBOR_GROUND_HEIGHT = 2.5;
+// Match harbor.js constant for consistent ground height
+const HARBOR_GROUND_HEIGHT = 2.0;
 const HARBOUR_RADIUS = 70;
 const HARBOUR_TARGET_DEPTH = 2;
-// Use imported location
-const EAST_HARBOR_CENTER = new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z);
+// Use RELOCATED harbor position (-50, -100) instead of original HARBOR_CENTER_3D (120, 80)
+// This matches the harbor.position.set(-50, harborGroundY, -100) in harbor.js
+const EAST_HARBOR_CENTER = new THREE.Vector2(-50, -100);
 
 // New Mainland/Coastal Constants
 const INLAND_ELEVATION_SCALE = 220.0; // West rise dominates over noise
