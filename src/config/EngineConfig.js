@@ -45,10 +45,10 @@ const DEFAULT_ENGINE_CONFIG = ({
     debug: {
       overlays: {
         audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: true },
-        exposureSlider: { defaultValue: false, devDefault: true },
-        hotkeyReference: { defaultValue: false, devDefault: true, windowFlagKey: "SHOW_HOTKEYS" },
-        devHud: { defaultValue: false, devDefault: true },
-        cameraSettings: { defaultValue: false, devDefault: true },
+        exposureSlider: { queryKey: "exposure", windowFlagKey: "SHOW_EXPOSURE", defaultValue: false, devDefault: true },
+        hotkeyReference: { queryKey: "hotkeys", windowFlagKey: "SHOW_HOTKEYS", defaultValue: false, devDefault: true },
+        devHud: { queryKey: "hud", windowFlagKey: "SHOW_HUD", defaultValue: false, devDefault: true },
+        cameraSettings: { queryKey: "camerahud", windowFlagKey: "SHOW_CAMERA_HUD", defaultValue: false, devDefault: true },
       },
       logLevel: queryParams.get("log") || "info",
     },
