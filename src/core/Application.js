@@ -776,12 +776,9 @@ export class Application {
 
     const applyEnvironmentFallbackForProfile = (profileName = "Bright Noon") => {
       const profile = LOOK_PROFILES[profileName] || LOOK_PROFILES["Bright Noon"];
-      const skyColor = profile?.ambient?.color || profile?.fog?.color || "#9bb4d4";
-      const groundColor = profile?.ambient?.groundColor || profile?.ambient?.color || "#6c7a8c";
-      const hemiIntensity = Math.max(
-        0.1,
-        profile?.env?.envMapIntensity ?? profile?.ambient?.intensity ?? 0.25,
-      );
+      const skyColor = profile?.ambient?.color || "#dbe9ff";
+      const groundColor = profile?.ambient?.groundColor || "#9ba8b5";
+      const hemiIntensity = profile?.ambient?.intensity ?? 0.28;
 
       let hemi = scene.userData?.fallbackHemisphere;
       if (!hemi) {
@@ -794,22 +791,18 @@ export class Application {
       hemi.color.set(skyColor);
       hemi.groundColor.set(groundColor);
       hemi.intensity = hemiIntensity;
-      hemi.visible = !scene.environment;
+      hemi.visible = true;
 
-      if (!scene.background) {
-        scene.background = new THREE.Color(skyColor);
-      }
+      // Set scene background to procedural sky color
+      scene.background = dynamicSky?.sky || new THREE.Color(skyColor);
+      
+      // Clear environment map to ensure hemisphere light contributes
+      scene.environment = null;
     };
 
-    const url = joinPath(
-      BASE_URL || DEFAULT_BASE_URL,
-      "assets/hdr/clear_midday_converted.exr",
-    );
     const loadEnvironmentWithFallback = async () => {
-      // Skip HDRI for now; use procedural sky + hemisphere light.
-      // Ensure any previous environment map is cleared so hemi contributes.
-      scene.environment = null;
-
+      // Procedural sky only - no HDRI loading
+      // This ensures consistent daylight rendering without black screens
       createDefaultSky(scene, dynamicSky);
       applyEnvironmentFallbackForProfile();
       return null;
