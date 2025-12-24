@@ -58,6 +58,8 @@ export const GROUND_TEXTURE_CONFIG = {
     colorSpace: "srgb",
     repeat: [28, 24],
     rotation: 0.03,
+    roughness: 0.8,
+    metalness: 0.0,
   },
 
   /**
