@@ -555,6 +555,8 @@ export async function createOcean(scene, options = {}) {
   water.userData.seaLevel = seaLevel;
   water.userData.oceanRadius = radius;
   water.userData.horizonY = horizonY;
+  // Transparent water renders before opaque terrain via renderOrder
+  water.renderOrder = -1;
 
   // Custom wave scaling keeps detail even on the circular expanse
   if (waterNormals) {

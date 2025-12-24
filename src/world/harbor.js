@@ -69,6 +69,8 @@ function createHarborWaterPlane(seaLevel) {
   water.userData.isWater = true;
   water.userData.seaLevel = seaLevel;
   water.receiveShadow = false;
+  // Transparent harbor water renders before opaque pad via renderOrder
+  water.renderOrder = 0;
   return water;
 }
 

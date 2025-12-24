@@ -127,7 +127,9 @@ function createCoastalBand({ innerRadius, outerRadius, seaLevel }) {
 
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = "ShoreTerminationBand";
-  mesh.position.y = seaLevel + 0.12;
+  // Lower Y position below terrain to avoid occluding sand texture
+  // Silhouette should appear at horizon, not ground level
+  mesh.position.y = seaLevel - 8.0;
   mesh.receiveShadow = false;
   mesh.castShadow = false;
   mesh.userData.nonInteractive = true;

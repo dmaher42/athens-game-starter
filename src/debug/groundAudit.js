@@ -7,8 +7,28 @@ function isGroundy(obj) {
     n.includes("harbor") ||
     n.includes("ocean") ||
     n.includes("shore") ||
-    n.includes("floorcap")
+    n.includes("floorcap") ||
+    n.includes("water") ||
+    n.includes("dock") ||
+    n.includes("pad")
   );
+}
+
+function getMaterialInfo(material) {
+  if (!material) return { type: "null" };
+  if (Array.isArray(material)) {
+    return { type: "array", count: material.length };
+  }
+  return {
+    type: material.type,
+    transparent: material.transparent ?? false,
+    opacity: material.opacity ?? 1,
+    renderOrder: "renderOrder" in material ? material.renderOrder : "N/A",
+    depthWrite: material.depthWrite ?? true,
+    depthTest: material.depthTest ?? true,
+    colorWrite: material.colorWrite ?? true,
+    side: material.side === THREE.DoubleSide ? "DoubleSide" : material.side === THREE.BackSide ? "BackSide" : "FrontSide",
+  };
 }
 
 function addOutline(scene, obj) {
@@ -44,11 +64,56 @@ function enableWireframe(obj) {
   }
 }
 
-function logPositions(scene) {
-  const rows = scene.children
-    .filter(isGroundy)
-    .map((obj) => ({ name: obj.name, y: obj.position?.y ?? 0 }));
+function logDetailedAudit(scene) {
+  console.group("=== GROUND LAYER AUDIT ===");
+  
+  const groundLayers = scene.children.filter(isGroundy);
+  
+  console.log(`\nFound ${groundLayers.length} ground-related meshes:\n`);
+  
+  const rows = groundLayers.map((obj) => {
+    const matInfo = getMaterialInfo(obj.material);
+    return {
+      name: obj.name,
+      y: Number((obj.position?.y ?? 0).toFixed(2)),
+      renderOrder: obj.renderOrder ?? 0,
+      type: obj.type,
+      transparent: matInfo.transparent,
+      opacity: matInfo.opacity,
+      depthWrite: matInfo.depthWrite,
+      side: matInfo.side,
+      visible: obj.visible ?? true,
+    };
+  });
+  
+  // Sort by Y (descending) then by renderOrder (descending) for visibility analysis
+  rows.sort((a, b) => {
+    if (a.y !== b.y) return b.y - a.y;
+    return (b.renderOrder ?? 0) - (a.renderOrder ?? 0);
+  });
+  
   console.table(rows);
+  
+  console.log("\n=== LAYER OVERLAP ANALYSIS ===");
+  for (const row of rows) {
+    const opacity = row.transparent ? row.opacity : 1.0;
+    const occludes = !row.transparent || opacity > 0.95 ? "✓ OPAQUE (occludes below)" : "✗ TRANSPARENT";
+    console.log(`${row.name.padEnd(30)} Y=${row.y.toString().padStart(6)} renderOrder=${String(row.renderOrder).padStart(3)} ${occludes}`);
+  }
+  
+  console.log("\n=== RENDERING STACK (EXPECTED ORDER) ===");
+  console.log("High renderOrder renders LAST (on top)");
+  console.log("Lower Y positions render FIRST (below)");
+  console.log("Suggested stack (bottom to top):");
+  console.log("  1. WorldFloorCap (Y≈-140, renderOrder=-10) - Below everything");
+  console.log("  2. Terrain (Y=0, renderOrder=0) - Main ground with sand texture");
+  console.log("  3. AegeanOcean (Y=0, renderOrder=0, transparent) - Ocean water");
+  console.log("  4. ShoreTermination (Y≈0.06, renderOrder=-1, transparent) - Coastal silhouette");
+  console.log("  5. HarborPad (Y≈2.12, renderOrder=2) - Opaque sand ground raised above water");
+  console.log("  6. HarborLowPolyWater (Y=0, renderOrder=0, transparent) - Harbor water reflection");
+  console.log("  7. Docks (Y≈0.975, renderOrder=0) - Wood docks above harbor water");
+  
+  console.groupEnd();
 }
 
 export function mountGroundAudit(scene) {
@@ -74,7 +139,7 @@ export function mountGroundAudit(scene) {
     }
   }
 
-  logPositions(scene);
+  logDetailedAudit(scene);
 
   // Expose quick toggle
   scene.userData.groundAudit = {
