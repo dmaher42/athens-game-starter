@@ -795,9 +795,9 @@ export class Application {
         hdriEnvMap = env;
         scene.environment = env;
         scene.background = env;
-        // Dim exposure a bit when HDRI is active to reduce whiteout
+        // Dim exposure further when HDRI is active to reduce whiteout
         if (renderer && Number.isFinite(renderer.toneMappingExposure)) {
-          renderer.toneMappingExposure = Math.max(0.35, renderer.toneMappingExposure * 0.75);
+          renderer.toneMappingExposure = Math.max(0.3, renderer.toneMappingExposure * 0.6);
         }
         if (dynamicSky?.sky) dynamicSky.sky.visible = false;
         return env;
