@@ -33,6 +33,11 @@ function textureUrl(file) {
   return `${baseUrl}textures/ground/${file}`;
 }
 
+function sandTextureUrl() {
+  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
+  return `${baseUrl}textures/gravelly_sand/gravelly_sand_diff_1k.jpg`;
+}
+
 /**
  * If your ground loader expects:
  *   - base: a single texture layer
@@ -48,68 +53,19 @@ export const GROUND_TEXTURE_CONFIG = {
    * Base layer (what you see everywhere, then blended with dirt/grass regions)
    */
   base: {
-    // If your loader expects `url` at base, keep it.
-    // If it expects `albedoUrl` or similar, rename accordingly.
-    url: textureUrl("grass-albedo.jpg"),
+    // Swap the entire ground to our gravelly sand atlas.
+    url: sandTextureUrl(),
     colorSpace: "srgb",
-
-    // Higher repeat => Higher density (texture looks correct at walking height)
-    repeat: [64, 64],
-
-    // Small rotation prevents obvious grid tiling.
-    rotation: 0.08,
+    repeat: [28, 24],
+    rotation: 0.03,
   },
 
   /**
    * Blended layers + procedural mask controls
    */
   blend: {
-    grass: {
-      url: textureUrl("grass-albedo.jpg"),
-      colorSpace: "srgb",
-      repeat: [64, 64],
-      rotation: 0.00,
-    },
-
-    dirt: {
-      url: textureUrl("dirt-albedo.jpg"),
-      colorSpace: "srgb",
-      // Dirt should be slightly less tiled so patches feel broad and natural.
-      repeat: [48, 48],
-      rotation: 0.13,
-    },
-
-    // New Stone Layer (reuses dirt texture but will be tinted in shader)
-    stone: {
-      url: textureUrl("dirt-albedo.jpg"),
-      colorSpace: "srgb",
-      repeat: [32, 32],
-      rotation: 0.7,
-      tint: [0.65, 0.65, 0.7], // Rock-like tint
-    },
-
-    /**
-     * Procedural mask controls
-     * - noiseScale: lower => larger regions/blobs
-     * - noiseContrast: lower => softer blend edges
-     *
-     * If your shader uses different names (e.g. `maskScale`, `maskContrast`),
-     * rename these to exactly what the shader/material reads.
-     */
-    noiseScale: 4.0, // Increased slightly for more variation
-    noiseContrast: 0.8,
-
-    // Tri-blend settings
-    slopeThreshold: 0.5, // Slope > 0.5 starts becoming rock
-    slopeBlend: 0.2, // Blend width
-
-    /**
-     * Optional: if your loader supports these, they help break repetition further.
-     * If your loader does NOT read them, they are harmless unless it validates keys strictly.
-     * If it validates strictly, remove these optional keys.
-     */
-    noiseOffset: [0.0, 0.0],
-    noiseRotation: 0.0,
+    // Disable grass/dirt/stone tri-blend so everything stays sand.
+    enabled: false,
   },
 
   /**
@@ -134,17 +90,6 @@ export const GROUND_TEXTURE_CONFIG = {
    * Detail layers (e.g. gravel, rock, variations)
    */
   details: [
-    {
-      // Gravel/Path detail - subtle darkening/coloring in the city/mid-band
-      url: textureUrl("dirt-albedo.jpg"),
-      mode: 'multiply',
-      minHeight: 4.0,
-      maxHeight: 40.0,
-      fade: 5.0,
-      strength: 0.4,
-      tint: [0.7, 0.7, 0.7], // Grayish
-      noiseScale: 15.0, // Finer noise
-      noiseStrength: 0.5,
-    }
+    // No secondary detail layers; keep the ground uniformly sandy.
   ]
 };
