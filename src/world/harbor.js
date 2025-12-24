@@ -64,7 +64,9 @@ function createHarborWaterPlane(seaLevel) {
 
   const water = new THREE.Mesh(geometry, material);
   water.rotation.x = -Math.PI / 2;
-  water.position.set(HARBOR_WATER_CENTER.x, seaLevel, HARBOR_WATER_CENTER.z);
+  // Position relative to harbor group origin (0,0,0) since group is repositioned
+  // Harbor group will be moved to (-50, harborGroundY, -100) in world space
+  water.position.set(0, seaLevel - HARBOR_GROUND_HEIGHT, 0);
   water.name = "HarborLowPolyWater";
   water.userData.isWater = true;
   water.userData.seaLevel = seaLevel;
@@ -94,10 +96,12 @@ function createHarborPad(harborGroundY) {
   const pad = new THREE.Mesh(geometry, getGravellySandMaterial());
   pad.name = "HarborPad";
   pad.rotation.x = -Math.PI / 2;
+  // Position relative to harbor group origin (0,0,0)
+  // Group is repositioned to (-50, harborGroundY, -100) in world space
   pad.position.set(
-    (HARBOR_WATER_BOUNDS.west + HARBOR_WATER_BOUNDS.east) * 0.5,
-    harborGroundY + 0.12, // lift above terrain to avoid burying/z-fighting
-    (HARBOR_WATER_BOUNDS.north + HARBOR_WATER_BOUNDS.south) * 0.5,
+    0,
+    0.12, // lift above water plane for z-fighting prevention
+    0,
   );
   pad.receiveShadow = true;
   pad.renderOrder = 2;
@@ -323,11 +327,13 @@ export function createHarbor(scene) {
   const waterPlane = createHarborWaterPlane(seaLevel);
   harbor.add(waterPlane);
 
-  const pierStartX = HARBOR_WATER_EAST_LIMIT + 1.1;
+  // Pier positions relative to harbor group origin
+  // Original HARBOR_WATER_EAST_LIMIT was 190, relative to center 120, so offset is +70
+  const pierStartX = 70 + 1.1;
   const pierRows = [
-    { z: HARBOR_WATER_CENTER.z - 18, sections: 4 },
-    { z: HARBOR_WATER_CENTER.z - 2, sections: 5 },
-    { z: HARBOR_WATER_CENTER.z + 16, sections: 4 },
+    { z: -18, sections: 4 },  // North pier
+    { z: -2, sections: 5 },   // Center pier
+    { z: 16, sections: 4 },   // South pier
   ];
 
   const piersGroup = new THREE.Group();
@@ -378,7 +384,9 @@ export function createHarbor(scene) {
       accent: style.accent,
     });
     const moorOffset = DOCK_SECTION_WIDTH * 0.5 + 1.2;
-    boat.position.set(pierStartX - DOCK_SECTION_LENGTH * 1.6, seaLevel, row.z + (Math.random() > 0.5 ? moorOffset : -moorOffset));
+    // Boat Y position relative to group origin (group Y = harborGroundY = 2.0)
+    // Water is at seaLevel (0), so relative to group it's at seaLevel - harborGroundY = -2.0
+    boat.position.set(pierStartX - DOCK_SECTION_LENGTH * 1.6, seaLevel - HARBOR_GROUND_HEIGHT, row.z + (Math.random() > 0.5 ? moorOffset : -moorOffset));
     boat.userData.category = "harbor-boat";
     boatsGroup.add(boat);
   }
@@ -391,8 +399,8 @@ export function createHarbor(scene) {
   harbor.add(propsGroup);
 
   const sheds = [
-    createShed(new THREE.Vector3(18, 5.2, 12), harborGroundY, new THREE.Vector3(HARBOR_WATER_EAST_LIMIT + 12, 0, HARBOR_WATER_CENTER.z - 10)),
-    createShed(new THREE.Vector3(22, 6, 14), harborGroundY, new THREE.Vector3(HARBOR_WATER_EAST_LIMIT + 24, 0, HARBOR_WATER_CENTER.z + 8)),
+    createShed(new THREE.Vector3(18, 5.2, 12), harborGroundY, new THREE.Vector3(70 + 12, 0, -10)),
+    createShed(new THREE.Vector3(22, 6, 14), harborGroundY, new THREE.Vector3(70 + 24, 0, 8)),
   ];
   sheds.forEach((shed) => harbor.add(shed));
 
