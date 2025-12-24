@@ -21,6 +21,16 @@ const MIN_X = -10, MAX_X = 10;
 const MIN_Z = -10, MAX_Z = 20;
 const BLOCK_SIZE = 48; // Increased from 40 for better district spacing (~20% increase)
 
+// District Spacing Rules
+export const SPACING_RULES = {
+  LANDMARK_MIN_SPACING: 8 * BLOCK_SIZE, // 8-tile radius between landmarks (384m)
+  CIVIC_CLUSTER_MAX_DISTANCE: 30 * BLOCK_SIZE, // 30 tiles from starting point (1440m)
+  LANDMARK_TYPES: ['parthenon', 'temple', 'monument', 'tholos', 'stoa'],
+};
+
+// Track placed landmarks for spacing validation
+const placedLandmarks = [];
+
 export function inHarborBand(
   pos,
   shorelineCenter = { x: HARBOR_CENTER_3D.x, z: HARBOR_CENTER_3D.z }
@@ -30,6 +40,60 @@ export function inHarborBand(
   // Treat tiles east of the harbor center (minus a small setback) as harbor frontage.
   const harborStartX = shorelineCenter.x - HARBOR_ZONE.bandWidth;
   return pos.x >= harborStartX;
+}
+
+/**
+ * Check if a landmark can be placed at given position
+ * Enforces 8-tile radius spacing between landmarks
+ */
+export function canPlaceLandmark(x, z, type = 'landmark') {
+  const isLandmark = SPACING_RULES.LANDMARK_TYPES.includes(type);
+  
+  if (!isLandmark) {
+    return true; // Not a landmark, no spacing restriction
+  }
+
+  // Check distance to all existing landmarks
+  for (const existing of placedLandmarks) {
+    const distance = Math.sqrt(
+      Math.pow(x - existing.x, 2) + Math.pow(z - existing.z, 2)
+    );
+    
+    if (distance < SPACING_RULES.LANDMARK_MIN_SPACING) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Register a landmark after placement
+ */
+export function registerLandmark(x, z, type) {
+  placedLandmarks.push({ x, z, type });
+}
+
+/**
+ * Check if position is within civic cluster constraints
+ * Civic clusters (Agora, Civic Core) must be within 30 tiles of starting point
+ */
+export function isWithinCivicClusterRange(x, z) {
+  const startX = CITY_CENTER_ORIGIN.x;
+  const startZ = CITY_CENTER_ORIGIN.z;
+  
+  const distance = Math.sqrt(
+    Math.pow(x - startX, 2) + Math.pow(z - startZ, 2)
+  );
+  
+  return distance <= SPACING_RULES.CIVIC_CLUSTER_MAX_DISTANCE;
+}
+
+/**
+ * Clear landmark registry (useful for regeneration)
+ */
+export function clearLandmarkRegistry() {
+  placedLandmarks.length = 0;
 }
 
 function createPavedStrip(width, length, color = 0x888888) {
@@ -77,8 +141,21 @@ function generateCityGrid(terrainSampler) {
         cell.district = 'sacred';
       } else if (distance >= 60 && distance < 140) {
         cell.district = 'commercial';
+        
+        // Commercial areas near Agora should be within civic cluster range
+        if (!isWithinCivicClusterRange(worldX, worldZ)) {
+          cell.district = 'residential'; // Downgrade to residential if too far
+        }
       } else {
         cell.district = 'residential';
+      }
+      
+      // Civic district must be within 30 tiles of starting point and on flat land
+      if (cell.district === 'civic') {
+        if (!isWithinCivicClusterRange(worldX, worldZ)) {
+          cell.buildable = false;
+          console.log(`[CityPlan] Civic building rejected at (${gridX}, ${gridZ}) - outside civic cluster range`);
+        }
       }
 
       // Analyze terrain if sampler available
@@ -124,6 +201,13 @@ function generateCityGrid(terrainSampler) {
           // Parthenon requires very flat land
           if (terrainSampler && cell.slope > SLOPE_THRESHOLDS.FLAT * 0.5) {
             cell.buildable = false;
+          }
+          // Validate landmark spacing
+          if (!canPlaceLandmark(worldX, worldZ, 'parthenon')) {
+            cell.buildable = false;
+            console.log(`[CityPlan] Parthenon rejected at (${gridX}, ${gridZ}) - too close to other landmarks`);
+          } else {
+            registerLandmark(worldX, worldZ, 'parthenon');
           }
         } else {
           cell.type = 'building';

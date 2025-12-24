@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { SPACING_RULES } from "../world/cityPlan.js";
 
 /**
  * Debug utilities for city layout analysis
@@ -135,6 +136,53 @@ export function analyzeTerrainHeights(terrain, samplePoints = 100) {
 }
 
 /**
+ * Analyze landmark spacing violations
+ */
+export function analyzeLandmarkSpacing(scene) {
+  const landmarks = [];
+  const violations = [];
+
+  // Collect all landmarks
+  scene.traverse((obj) => {
+    if (obj.userData && obj.userData.category === 'landmark') {
+      landmarks.push({
+        name: obj.name || 'unnamed',
+        position: obj.position.clone(),
+        type: obj.userData.landmarkType || 'unknown',
+      });
+    }
+  });
+
+  // Check spacing between all landmark pairs
+  for (let i = 0; i < landmarks.length; i++) {
+    for (let j = i + 1; j < landmarks.length; j++) {
+      const lm1 = landmarks[i];
+      const lm2 = landmarks[j];
+      
+      const distance = lm1.position.distanceTo(lm2.position);
+      const minSpacing = SPACING_RULES.LANDMARK_MIN_SPACING;
+
+      if (distance < minSpacing) {
+        violations.push({
+          landmark1: lm1.name,
+          landmark2: lm2.name,
+          distance: distance,
+          minRequired: minSpacing,
+          deficit: minSpacing - distance,
+        });
+      }
+    }
+  }
+
+  return {
+    totalLandmarks: landmarks.length,
+    landmarks: landmarks,
+    violations: violations,
+    spacingRule: SPACING_RULES.LANDMARK_MIN_SPACING,
+  };
+}
+
+/**
  * Check for overlapping buildings
  */
 export function detectBuildingOverlaps(scene, threshold = 2.0) {
@@ -255,6 +303,28 @@ export function printCityDebugReport(scene, terrain, options = {}) {
     console.log("  ✅ No building overlaps detected");
   }
 
+  // Landmark spacing analysis
+  console.log("\n🏛️  LANDMARK SPACING:");
+  const landmarkStats = analyzeLandmarkSpacing(scene);
+  console.log(`  Total Landmarks: ${landmarkStats.totalLandmarks}`);
+  console.log(`  Required Spacing: ${landmarkStats.spacingRule.toFixed(0)}m (8 tiles)`);
+  if (landmarkStats.violations.length > 0) {
+    console.log(`  ⚠️  Found ${landmarkStats.violations.length} spacing violations:`);
+    landmarkStats.violations.forEach((violation) => {
+      console.log(
+        `    ${violation.landmark1} ↔ ${violation.landmark2}: ${violation.distance.toFixed(1)}m (needs ${violation.minRequired.toFixed(0)}m, deficit: ${violation.deficit.toFixed(1)}m)`
+      );
+    });
+  } else {
+    console.log("  ✅ All landmarks properly spaced");
+  }
+  if (landmarkStats.totalLandmarks > 0) {
+    console.log("\n  Landmark Locations:");
+    landmarkStats.landmarks.forEach((lm) => {
+      console.log(`    ${lm.name} (${lm.type}): (${lm.position.x.toFixed(1)}, ${lm.position.y.toFixed(1)}, ${lm.position.z.toFixed(1)})`);
+    });
+  }
+
   // Floating building detection
   const seaLevel = options.seaLevel || 0;
   console.log("\n🌊 WATER LEVEL CHECK:");
@@ -278,6 +348,7 @@ export function printCityDebugReport(scene, terrain, options = {}) {
   return {
     buildings: buildingStats,
     terrain: terrain ? analyzeTerrainHeights(terrain) : null,
+    landmarks: landmarkStats,
     overlaps,
     floating,
   };
@@ -310,6 +381,7 @@ export function initCityDebugMode(scene, terrain) {
         printReport: () => printCityDebugReport(scene, terrain),
         analyzeTerrain: () => analyzeTerrainHeights(terrain),
         analyzeBuildings: () => analyzeBuildingsByDistrict(scene),
+        analyzeLandmarks: () => analyzeLandmarkSpacing(scene),
         detectOverlaps: () => detectBuildingOverlaps(scene),
         detectFloating: () => detectFloatingBuildings(scene),
       };
@@ -317,6 +389,7 @@ export function initCityDebugMode(scene, terrain) {
       console.log("  window.cityDebug.printReport()");
       console.log("  window.cityDebug.analyzeTerrain()");
       console.log("  window.cityDebug.analyzeBuildings()");
+      console.log("  window.cityDebug.analyzeLandmarks()");
       console.log("  window.cityDebug.detectOverlaps()");
       console.log("  window.cityDebug.detectFloating()");
     }

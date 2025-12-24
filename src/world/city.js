@@ -11,6 +11,7 @@ import { makeTiledPBR } from "../materials/pbr-utils.js";
 import { generateStoaGeometry, generateTholosGeometry } from "./monuments.js";
 import { generateTempleGeometry, createParthenon, createTempleOfZeus, createTheater } from "./landmarks.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
+import { canPlaceLandmark, registerLandmark, SPACING_RULES } from "./cityPlan.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
 const ROOF_COLOR_PRESETS = ["#a94a30", "#b55634", "#9f432d"];
@@ -508,28 +509,44 @@ export async function createCity(scene, terrain, options = {}) {
   const tholosHeight = 7;
   const tholosX = origin.x + 6;
   const tholosZ = origin.z;
-  const tholosY = sampleHeight(terrain, tholosX, tholosZ, origin.y);
-  const tholosGeo = generateTholosGeometry(tholosRadius, tholosHeight);
-  tholosGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(tholosX, tholosY, tholosZ));
-  cityGeometries.push(tholosGeo);
-  const tholosRadiusMeters = tholosRadius * 1.2;
-  placedPoints.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters });
-  landmarkBuffers.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters + 6 });
-  buildingPlacements.push({ x: tholosX, z: tholosZ, rotation: 0, width: tholosRadius * 2, depth: tholosRadius * 2 });
+  
+  // Validate landmark spacing for tholos
+  if (!canPlaceLandmark(tholosX, tholosZ, 'tholos')) {
+    console.warn(`[City] Tholos placement rejected at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)}) - violates 8-tile landmark spacing`);
+  } else {
+    const tholosY = sampleHeight(terrain, tholosX, tholosZ, origin.y);
+    const tholosGeo = generateTholosGeometry(tholosRadius, tholosHeight);
+    tholosGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(tholosX, tholosY, tholosZ));
+    cityGeometries.push(tholosGeo);
+    const tholosRadiusMeters = tholosRadius * 1.2;
+    placedPoints.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters });
+    landmarkBuffers.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters + 6 });
+    buildingPlacements.push({ x: tholosX, z: tholosZ, rotation: 0, width: tholosRadius * 2, depth: tholosRadius * 2 });
+    registerLandmark(tholosX, tholosZ, 'tholos');
+    console.log(`[City] Tholos placed at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)})`);
+  }
 
   const stoaLength = 22;
   const stoaWidth = 8;
   const stoaHeight = 6;
   const stoaX = origin.x - 10;
   const stoaZ = origin.z - 6;
-  const stoaY = sampleHeight(terrain, stoaX, stoaZ, origin.y);
-  const stoaGeo = generateStoaGeometry(stoaLength, stoaWidth, stoaHeight);
-  stoaGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(stoaX, stoaY, stoaZ));
-  cityGeometries.push(stoaGeo);
-  const stoaRadius = Math.hypot(stoaLength, stoaWidth) * 0.5;
-  placedPoints.push({ x: stoaX, z: stoaZ, radius: stoaRadius });
-  landmarkBuffers.push({ x: stoaX, z: stoaZ, radius: stoaRadius + 10 });
-  buildingPlacements.push({ x: stoaX, z: stoaZ, rotation: 0, width: stoaLength, depth: stoaWidth });
+  
+  // Validate landmark spacing for stoa
+  if (!canPlaceLandmark(stoaX, stoaZ, 'stoa')) {
+    console.warn(`[City] Stoa placement rejected at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)}) - violates 8-tile landmark spacing`);
+  } else {
+    const stoaY = sampleHeight(terrain, stoaX, stoaZ, origin.y);
+    const stoaGeo = generateStoaGeometry(stoaLength, stoaWidth, stoaHeight);
+    stoaGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(stoaX, stoaY, stoaZ));
+    cityGeometries.push(stoaGeo);
+    const stoaRadius = Math.hypot(stoaLength, stoaWidth) * 0.5;
+    placedPoints.push({ x: stoaX, z: stoaZ, radius: stoaRadius });
+    landmarkBuffers.push({ x: stoaX, z: stoaZ, radius: stoaRadius + 10 });
+    buildingPlacements.push({ x: stoaX, z: stoaZ, rotation: 0, width: stoaLength, depth: stoaWidth });
+    registerLandmark(stoaX, stoaZ, 'stoa');
+    console.log(`[City] Stoa placed at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)})`);
+  }
 
   const zoneACount = 800;
   let zoneAPlaced = 0;
