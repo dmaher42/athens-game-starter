@@ -806,22 +806,10 @@ export class Application {
       "assets/hdr/clear_midday_converted.exr",
     );
     const loadEnvironmentWithFallback = async () => {
-      // TODO: Temporarily disabled HDRI loading - using procedural sky for faster startup
-      // TODO: To restore HDRI support, uncomment the code below:
-      /*
-      const envMap = await loadHdriEnvironment({
-        renderer,
-        scene,
-        path: url,
-        onFallback: () => {
-          createDefaultSky(scene, dynamicSky);
-          applyEnvironmentFallbackForProfile();
-        },
-      });
-      return envMap;
-      */
+      // Skip HDRI for now; use procedural sky + hemisphere light.
+      // Ensure any previous environment map is cleared so hemi contributes.
+      scene.environment = null;
 
-      // Using procedural sky by default (faster startup, no asset loading)
       createDefaultSky(scene, dynamicSky);
       applyEnvironmentFallbackForProfile();
       return null;

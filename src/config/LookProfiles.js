@@ -10,14 +10,14 @@ export const LOOK_PROFILES = {
     soundscapeMode: "day",
     sun: {
       color: "#ffffff", // Neutral white light for clean midday look
-      intensity: 0.8,
+      intensity: 1.2,
       azimuth: 180,
       elevation: 75,   // High sun angle for midday
     },
     ambient: {
       color: "#dbe9ff", // Light blue ambient to match clear sky
       groundColor: "#cfdcec",
-      intensity: 0.5,
+      intensity: 0.7,
     },
     fog: {
       enabled: true,
