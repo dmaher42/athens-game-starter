@@ -4,6 +4,14 @@ import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { Prefabs, spawnBuilding } from './buildingSpawner.js';
 import { buildTemple } from '../features/temples.js';
 import { loadDistrictRules } from './districtRules.js';
+import { 
+  getSlope, 
+  getAverageSlope, 
+  getElevation, 
+  isSlopeValidForBuilding, 
+  analyzeTile,
+  SLOPE_THRESHOLDS 
+} from './terrainUtils.js';
 
 /* PATCH: Harbor zone params */
 export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.25 };
@@ -37,32 +45,33 @@ function createPavedStrip(width, length, color = 0x888888) {
   return mesh;
 }
 
-function generateCityGrid() {
+function generateCityGrid(terrainSampler) {
   const cells = [];
+  
+  console.log('[CityPlan] Generating terrain-aware city grid...');
+  let slopeRejects = 0;
+  let elevationRejects = 0;
+  
   for (let gridX = MIN_X; gridX <= MAX_X; gridX++) {
     for (let gridZ = MIN_Z; gridZ <= MAX_Z; gridZ++) {
+      const worldX = CITY_CENTER_ORIGIN.x + (gridX * BLOCK_SIZE);
+      const worldZ = CITY_CENTER_ORIGIN.z + (gridZ * BLOCK_SIZE);
+      
       const cell = {
         gridX,
         gridZ,
-        // Use CITY_CENTER_ORIGIN as the base, then offset by grid position
-        position: new THREE.Vector3(
-          CITY_CENTER_ORIGIN.x + (gridX * BLOCK_SIZE),
-          getCityGroundY(), // Use dynamic city ground height
-          CITY_CENTER_ORIGIN.z + (gridZ * BLOCK_SIZE)
-        ),
+        position: new THREE.Vector3(worldX, getCityGroundY(), worldZ),
         type: 'building',
-        district: 'residential'
+        district: 'residential',
+        slope: 0,
+        elevation: 0,
+        buildable: true,
       };
 
       const distance = Math.sqrt((gridX * BLOCK_SIZE) ** 2 + (gridZ * BLOCK_SIZE) ** 2);
 
-      // District Logic (Directional + Radial)
-
-      const worldX = cell.position.x;
-
-      // Harbor: East side (High X)
-      const harborThresholdX = HARBOR_CENTER_3D.x - BLOCK_SIZE * 1.5;
-      if (worldX >= harborThresholdX) {
+      // District Logic (Directional + Radial) - BEFORE slope analysis
+      if (worldX >= HARBOR_CENTER_3D.x - BLOCK_SIZE * 1.5) {
         cell.district = 'harbor';
       } else if (distance < 60) {
         cell.district = 'sacred';
@@ -72,34 +81,76 @@ function generateCityGrid() {
         cell.district = 'residential';
       }
 
-      // Main Avenue: Runs East-West (Constant Z, varying X)
-      // "Update the 'main avenue' rule so it runs from harbour (east) toward inland (west)."
-      // Harbor is at +X. Inland is -X.
-      // Avenue runs along the X-axis (Z ~= 0).
-      // Grid normalized: Roads run N/S (varying Z) or E/W (varying X)
+      // Analyze terrain if sampler available
+      if (terrainSampler) {
+        const slope = getAverageSlope(terrainSampler, worldX, worldZ, BLOCK_SIZE / 2, 9);
+        const elevation = getElevation(terrainSampler, worldX, worldZ);
+        
+        cell.slope = slope;
+        cell.elevation = elevation;
+
+        // Determine building type for slope validation
+        let buildingType = 'residential';
+        if (cell.district === 'sacred') buildingType = 'temple';
+        else if (cell.district === 'civic') buildingType = 'civic';
+        else if (cell.district === 'commercial') buildingType = 'shop';
+        else if (cell.district === 'harbor') buildingType = 'warehouse';
+
+        // Validate slope for building type
+        const slopeValid = isSlopeValidForBuilding(slope, buildingType);
+        
+        if (!slopeValid) {
+          cell.buildable = false;
+          slopeRejects++;
+        }
+
+        // Extra strict validation for civic/sacred buildings (need flat land)
+        if ((cell.district === 'sacred' || cell.district === 'civic') && slope > SLOPE_THRESHOLDS.FLAT) {
+          cell.buildable = false;
+          elevationRejects++;
+        }
+      }
+
+      // Road placement (always buildable, regardless of slope)
       if (Math.abs(gridZ) <= 1) {
         cell.type = 'road'; // Main E-W avenue
+        cell.buildable = true;
       } else if (gridX === 0 && cell.district !== 'sacred') {
         cell.type = 'road'; // Central N-S boulevard
+        cell.buildable = true;
       } else if (cell.district === 'sacred') {
-          if (gridX === 0 && gridZ === 0) {
-              cell.type = 'parthenon';
-          } else {
-              cell.type = 'building';
+        if (gridX === 0 && gridZ === 0) {
+          cell.type = 'parthenon';
+          // Parthenon requires very flat land
+          if (terrainSampler && cell.slope > SLOPE_THRESHOLDS.FLAT * 0.5) {
+            cell.buildable = false;
           }
+        } else {
+          cell.type = 'building';
+        }
       } else if (cell.district === 'commercial') {
-          if (gridX % 3 === 0 || gridZ % 3 === 0) {
-             cell.type = 'road';
-          }
+        if (gridX % 3 === 0 || gridZ % 3 === 0) {
+          cell.type = 'road';
+          cell.buildable = true;
+        }
       } else {
-          if (gridX % 3 === 0 || gridZ % 3 === 0) {
-             cell.type = 'road';
-          }
+        if (gridX % 3 === 0 || gridZ % 3 === 0) {
+          cell.type = 'road';
+          cell.buildable = true;
+        }
       }
 
       cells.push(cell);
     }
   }
+  
+  if (terrainSampler) {
+    console.log(`[CityPlan] Terrain analysis: ${slopeRejects} slope rejects, ${elevationRejects} elevation rejects`);
+    const totalCells = cells.length;
+    const buildableCells = cells.filter(c => c.buildable && c.type !== 'road').length;
+    console.log(`[CityPlan] Buildable cells: ${buildableCells}/${totalCells} (${(buildableCells/totalCells*100).toFixed(1)}%)`);
+  }
+  
   return cells;
 }
 
@@ -144,7 +195,8 @@ export async function createCivicDistrict(scene, options = {}) {
     return fallback + surfaceOffset;
   };
 
-  const grid = generateCityGrid();
+  // Generate grid with terrain analysis
+  const grid = generateCityGrid(terrainSampler);
 
   group.userData.plan = {
     grid,
@@ -184,6 +236,11 @@ export async function createCivicDistrict(scene, options = {}) {
   }
 
   for (const cell of grid) {
+    // Skip unbuildable cells (too steep or unsuitable terrain)
+    if (!cell.buildable && cell.type !== 'road') {
+      continue;
+    }
+
     const localX = cell.position.x;
     const localZ = cell.position.z;
     const localY = sampleLocalHeight(localX, localZ, 0);

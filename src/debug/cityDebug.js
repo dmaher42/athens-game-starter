@@ -13,6 +13,7 @@ export function analyzeBuildingsByDistrict(scene) {
     districts: {},
     total: 0,
     byType: {},
+    slopeData: [],
   };
 
   scene.traverse((obj) => {
@@ -26,11 +27,22 @@ export function analyzeBuildingsByDistrict(scene) {
           types: {},
           avgHeight: 0,
           heights: [],
+          slopes: [],
         };
       }
 
       stats.districts[district].count++;
       stats.districts[district].heights.push(obj.position.y);
+
+      // Track slope if available
+      if (obj.userData.slope !== undefined) {
+        stats.districts[district].slopes.push(obj.userData.slope);
+        stats.slopeData.push({
+          district,
+          slope: obj.userData.slope,
+          elevation: obj.position.y,
+        });
+      }
 
       const buildingType = obj.userData.buildingType || "generic";
       stats.districts[district].types[buildingType] =
@@ -40,12 +52,18 @@ export function analyzeBuildingsByDistrict(scene) {
     }
   });
 
-  // Calculate average heights
+  // Calculate average heights and slopes
   Object.keys(stats.districts).forEach((district) => {
     const heights = stats.districts[district].heights;
     if (heights.length > 0) {
       stats.districts[district].avgHeight =
         heights.reduce((a, b) => a + b, 0) / heights.length;
+    }
+
+    const slopes = stats.districts[district].slopes;
+    if (slopes.length > 0) {
+      stats.districts[district].avgSlope =
+        slopes.reduce((a, b) => a + b, 0) / slopes.length;
     }
   });
 
@@ -190,6 +208,9 @@ export function printCityDebugReport(scene, terrain, options = {}) {
       console.log(`    ${district}:`);
       console.log(`      Count: ${data.count}`);
       console.log(`      Avg Height: ${data.avgHeight.toFixed(2)}m`);
+      if (data.avgSlope !== undefined) {
+        console.log(`      Avg Slope: ${data.avgSlope.toFixed(3)}`);
+      }
       console.log(`      Types:`, data.types);
     });
 
