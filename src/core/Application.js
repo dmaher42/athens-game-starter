@@ -728,6 +728,7 @@ export class Application {
       sunTarget: sunTargetVector,
       azimuthOffsetDeg: sunAlignmentState.azimuthDeg,
     });
+    let hdriEnvMap = null;
     const moonGeometry = new THREE.SphereGeometry(10, 32, 32);
     const moonMaterial = new THREE.MeshStandardMaterial({
       color: 0xffffff,
@@ -771,18 +772,34 @@ export class Application {
       hemi.intensity = hemiIntensity;
       hemi.visible = true;
 
-      // Set scene background to procedural sky color
-      scene.background = dynamicSky?.sky || new THREE.Color(skyColor);
-      
-      // Clear environment map to ensure hemisphere light contributes
-      scene.environment = null;
+      if (hdriEnvMap) {
+        scene.background = hdriEnvMap;
+        scene.environment = hdriEnvMap;
+        if (dynamicSky?.sky) dynamicSky.sky.visible = false;
+      } else {
+        scene.background = dynamicSky?.sky || new THREE.Color(skyColor);
+        scene.environment = null;
+      }
     };
 
     const loadEnvironmentWithFallback = async () => {
-      // Procedural sky only - no HDRI loading
-      // This ensures consistent daylight rendering without black screens
-      createDefaultSky(scene, dynamicSky);
-      applyEnvironmentFallbackForProfile();
+      const hdriPath = joinPath(BASE_URL, "hdr/clear_noon_1k.exr");
+      const onFallback = () => {
+        hdriEnvMap = null;
+        createDefaultSky(scene, dynamicSky);
+        applyEnvironmentFallbackForProfile();
+      };
+
+      const env = await loadHdriEnvironment({ renderer, scene, path: hdriPath, onFallback });
+      if (env) {
+        hdriEnvMap = env;
+        scene.environment = env;
+        scene.background = env;
+        if (dynamicSky?.sky) dynamicSky.sky.visible = false;
+        return env;
+      }
+
+      onFallback();
       return null;
     };
 
