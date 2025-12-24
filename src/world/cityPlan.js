@@ -76,8 +76,11 @@ function generateCityGrid() {
       // "Update the 'main avenue' rule so it runs from harbour (east) toward inland (west)."
       // Harbor is at +X. Inland is -X.
       // Avenue runs along the X-axis (Z ~= 0).
+      // Grid normalized: Roads run N/S (varying Z) or E/W (varying X)
       if (Math.abs(gridZ) <= 1) {
-        cell.type = 'road';
+        cell.type = 'road'; // Main E-W avenue
+      } else if (gridX === 0 && cell.district !== 'sacred') {
+        cell.type = 'road'; // Central N-S boulevard
       } else if (cell.district === 'sacred') {
           if (gridX === 0 && gridZ === 0) {
               cell.type = 'parthenon';

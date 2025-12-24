@@ -310,8 +310,15 @@ export function createTerrain(scene) {
 
     color.copy(GRASS_COLOR).lerp(white, beachFactor);
 
+    // Underwater terrain: Apply seabed color for terrain below water level
     if (height < seaLevel) {
-       color.lerp(SHALLOW_WATER_COLOR, 0.5);
+       // Use sand color for shallow underwater terrain (< 0.1m below)
+       if (height > seaLevel - 0.1) {
+         color.lerp(SAND_COLOR, 0.7);
+       } else {
+         // Deeper water gets darker seabed color
+         color.lerp(SHALLOW_WATER_COLOR, 0.6);
+       }
     }
 
     colorAttribute.setXYZ(i, color.r, color.g, color.b);

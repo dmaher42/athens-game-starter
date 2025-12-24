@@ -118,7 +118,10 @@ import {
 import { GameLoop } from "./GameLoop.js";
 import { VillagerSystem } from "../world/traffic.js";
 import { createAtmosphericParticles } from "../world/particles.js";
+import { initPropCulling, updateDistanceCulling } from "../utils/propCulling.js";
+import { initBuildingCulling, updateBuildingCulling, protectLandmarks } from "../utils/buildingCulling.js";
 import { scatterGroundProps } from "../world/groundProps.js";
+import { initCityDebugMode } from "../debug/cityDebug.js";
 import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
 
 console.info("[build]", engineConfig.build || {});
@@ -3348,6 +3351,22 @@ export class Application {
         lastDisplayedTime = formattedTime;
       }
 
+      // Update distance-based prop culling (throttled to every ~10 frames for performance)
+      if (Math.floor(elapsed * 60) % 10 === 0) {
+        updateDistanceCulling(scene, camera, {
+          nearDistance: 100,
+          farDistance: 200
+        });
+      }
+
+      // Update building culling (throttled to every ~20 frames)
+      if (Math.floor(elapsed * 60) % 20 === 0) {
+        updateBuildingCulling(scene, camera, {
+          cullDistance: 400,
+          enableHorizon: true
+        });
+      }
+
       renderFrame();
     };
 
@@ -3355,6 +3374,34 @@ export class Application {
     loop.start();
     updateLoadingStatus("Opening the gates to ancient Athens...");
     hideLoadingScreen();
+
+    // Initialize prop culling system to reduce clutter and improve performance
+    console.log('[PropCulling] Initializing prop culling for cluttered areas...');
+    try {
+      initPropCulling(scene, camera, { dryRun: false });
+    } catch (err) {
+      console.error('[PropCulling] Failed to initialize prop culling:', err);
+    }
+
+    // Initialize building culling system for better performance
+    console.log('[BuildingCulling] Initializing building visibility culling...');
+    try {
+      protectLandmarks(scene);
+      initBuildingCulling(scene, camera, { 
+        cullDistance: 400,
+        enableHorizon: true,
+        enableLOD: false // Can enable for more aggressive optimization
+      });
+    } catch (err) {
+      console.error('[BuildingCulling] Failed to initialize building culling:', err);
+    }
+
+    // Initialize city debug mode (enable with ?citydebug=1)
+    try {
+      initCityDebugMode(scene, terrain);
+    } catch (err) {
+      console.error('[CityDebug] Failed to initialize debug mode:', err);
+    }
 
     // Debug: Audit low objects that might be submerged or overlapping with water
     if (import.meta?.env?.DEV) {
