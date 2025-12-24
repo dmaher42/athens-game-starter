@@ -3364,8 +3364,9 @@ export class Application {
     };
 
     // Initialize UIManager with all HUD overlays (consolidated from scattered mounts)
-    const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: false, devDefault: true };
-    const cameraHudToggle = engineConfig.debug?.overlays?.cameraSettings || { defaultValue: false, devDefault: true };
+    // Ensure lighting preset HUD shows by default (was off in prod)
+    const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: true, devDefault: true };
+    const cameraHudToggle = engineConfig.debug?.overlays?.cameraSettings || { defaultValue: true, devDefault: true };
     
     if (resolveFeatureToggle(devHudToggle) || resolveFeatureToggle(cameraHudToggle)) {
       console.log("[HUD] mounting via UIManager…");
