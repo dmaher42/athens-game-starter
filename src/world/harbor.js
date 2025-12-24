@@ -43,14 +43,13 @@ function createReflectiveWaterMaterial() {
   );
 
   return new THREE.MeshPhysicalMaterial({
-    color: "#406080",
+    color: new THREE.Color(0x3a9bdc),
     transparent: true,
-    opacity: 0.8,
-    metalness: 0.5,
+    opacity: 0.6,
+    metalness: 0.1,
     roughness: 0.3,
+    transmission: 0.9,
     envMapIntensity: 1.0,
-    clearcoat: 0.6,
-    clearcoatRoughness: 0.25,
     normalMap,
     normalScale: new THREE.Vector2(0.45, 0.45),
   });
