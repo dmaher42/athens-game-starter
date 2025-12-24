@@ -8,6 +8,34 @@ const _right = new THREE.Vector3();
 const _up = new THREE.Vector3(0, 1, 0);
 
 const _roadTileKeys = new Set();
+const _textureLoader = new THREE.TextureLoader();
+
+// Cached road textures for performance
+let _roadDiffuse = null;
+let _roadNormal = null;
+let _roadARM = null;
+
+function loadRoadTextures() {
+  if (_roadDiffuse) return; // Already loaded
+  
+  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
+  
+  // Use gravelly sand for packed earth road appearance
+  _roadDiffuse = _textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_diff_1k.jpg`);
+  _roadDiffuse.wrapS = _roadDiffuse.wrapT = THREE.RepeatWrapping;
+  _roadDiffuse.repeat.set(4, 1); // Stretch along road length
+  _roadDiffuse.colorSpace = THREE.SRGBColorSpace;
+  
+  _roadNormal = _textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`);
+  _roadNormal.wrapS = _roadNormal.wrapT = THREE.RepeatWrapping;
+  _roadNormal.repeat.set(4, 1);
+  _roadNormal.colorSpace = THREE.NoColorSpace;
+  
+  _roadARM = _textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`);
+  _roadARM.wrapS = _roadARM.wrapT = THREE.RepeatWrapping;
+  _roadARM.repeat.set(4, 1);
+  _roadARM.colorSpace = THREE.NoColorSpace;
+}
 
 function gridKey(gx, gz) {
   return `${Math.round(gx)}|${Math.round(gz)}`;
@@ -139,13 +167,24 @@ export function createRoad(parent, points, options = {}) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  // Add uv2 for aoMap
+  geometry.setAttribute("uv2", new THREE.BufferAttribute(new Float32Array(uvs), 2));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeVertexNormals();
 
+  // Load road textures
+  loadRoadTextures();
+
   const material = new THREE.MeshStandardMaterial({
-    color: options.color ?? 0xF0AD4E,
-    roughness: 0.95,
-    metalness: 0.05,
+    map: _roadDiffuse,
+    normalMap: _roadNormal,
+    normalScale: new THREE.Vector2(0.4, 0.4),
+    aoMap: _roadARM,
+    roughnessMap: _roadARM,
+    aoMapIntensity: 0.5,
+    color: 0xb8a890, // Slight warm tint for packed earth
+    roughness: 0.9,
+    metalness: 0.0,
     side: THREE.DoubleSide,
   });
   material.polygonOffset = true;
