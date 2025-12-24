@@ -12,7 +12,7 @@ const DOCK_SECTION_WIDTH = 5.8;
 const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
-const HARBOR_GROUND_HEIGHT = 2.5;
+const HARBOR_GROUND_HEIGHT = 2.0;
 const DOCK_LIFT = 1.2; // Raise docks above water for better visibility
 const waterTextureLoader = new THREE.TextureLoader();
 
@@ -398,6 +398,8 @@ export function createHarbor(scene) {
     scene.add(harbor);
   }
 
+  // Reposition harbor toward visible shoreline (southwest offset)
+  harbor.position.set(-50, harborGroundY, -100);
   return harbor;
 }
 
