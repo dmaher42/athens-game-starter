@@ -58,8 +58,9 @@ function createReflectiveWaterMaterial() {
 function createHarborWaterPlane(seaLevel) {
   const padding = 8;
   const width = Math.abs(HARBOR_WATER_BOUNDS.east - HARBOR_WATER_BOUNDS.west) + padding * 2;
-  const depth = Math.abs(HARBOR_WATER_BOUNDS.south - HARBOR_WATER_BOUNDS.north) + padding * 2;
-  const geometry = new THREE.PlaneGeometry(width, depth, 12, 12);
+  // Extended depth to create proper north-south shoreline (was 120, now 400)
+  const depth = 400;
+  const geometry = new THREE.PlaneGeometry(width, depth, 24, 24);
   const material = createReflectiveWaterMaterial();
 
   const water = new THREE.Mesh(geometry, material);
