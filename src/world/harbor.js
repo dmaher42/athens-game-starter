@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { getGravellySandMaterial } from "../materials/gravellySandMaterial.js";
 import {
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_CENTER,
@@ -12,50 +13,6 @@ const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
 const HARBOR_GROUND_HEIGHT = 2.5;
-const GRAVELLY_SAND_BASE_PATH = "textures/gravelly_sand/";
-
-let gravellySandMaterialCache = null;
-
-function loadGravellySandMaterial() {
-  if (gravellySandMaterialCache) return gravellySandMaterialCache;
-
-  const loader = new THREE.TextureLoader();
-  const withRepeat = (tex) => {
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(4, 3);
-    return tex;
-  };
-
-  const diffuse = withRepeat(
-    loader.load(`${GRAVELLY_SAND_BASE_PATH}gravelly_sand_diff_1k.jpg`),
-  );
-  diffuse.colorSpace = THREE.SRGBColorSpace;
-
-  const normal = withRepeat(
-    loader.load(`${GRAVELLY_SAND_BASE_PATH}gravelly_sand_nor_gl_1k.jpg`),
-  );
-  normal.colorSpace = THREE.NoColorSpace;
-
-  const arm = withRepeat(
-    loader.load(`${GRAVELLY_SAND_BASE_PATH}gravelly_sand_arm_1k.jpg`),
-  );
-  arm.colorSpace = THREE.NoColorSpace;
-
-  const material = new THREE.MeshStandardMaterial({
-    name: "gravellySandMaterial",
-    map: diffuse,
-    normalMap: normal,
-    aoMap: arm,
-    roughnessMap: arm,
-    metalnessMap: arm,
-    roughness: 0.86,
-    metalness: 0.05,
-    envMapIntensity: 0.6,
-  });
-
-  gravellySandMaterialCache = material;
-  return material;
-}
 
 const BOAT_STYLES = [
   { hull: 0x2f6e8d, accent: 0xe2a86a },
@@ -111,7 +68,7 @@ function createHarborPad(harborGroundY) {
       ),
     );
   }
-  const pad = new THREE.Mesh(geometry, loadGravellySandMaterial());
+  const pad = new THREE.Mesh(geometry, getGravellySandMaterial());
   pad.name = "HarborPad";
   pad.rotation.x = -Math.PI / 2;
   pad.position.set(
