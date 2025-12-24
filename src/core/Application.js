@@ -953,7 +953,8 @@ export class Application {
           );
         }
       } catch {}
-      return !!(import.meta.env && import.meta.env.DEV);
+      // Default: OFF unless explicitly enabled via query param
+      return false;
     })();
     if (shouldAddOccluder) {
       const P1 = new THREE.Vector2(-0.4, -0.3);

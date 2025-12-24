@@ -3,7 +3,6 @@ import { getSeaLevelY } from "./seaLevelState.js";
 
 const DEFAULT_FLOOR_DEPTH = 140;
 const DEFAULT_WORLD_RADIUS = 2000;
-const FLOOR_COLOR = new THREE.Color(0x05070b);
 
 function ensureArray(value) {
   if (!value) return [];
@@ -20,8 +19,14 @@ export function createWorldFloorCap(scene, options = {}) {
   const radius = Math.max(options.radius ?? DEFAULT_WORLD_RADIUS, 400);
 
   const geometry = new THREE.CircleGeometry(radius, 64);
+  const floorColor = (() => {
+    if (options.color) return options.color instanceof THREE.Color ? options.color : new THREE.Color(options.color);
+    const fogColor = scene?.fog?.color;
+    if (fogColor && fogColor.isColor) return fogColor.clone();
+    return new THREE.Color(0x2a3f5c); // horizon-like fallback
+  })();
   const material = new THREE.MeshBasicMaterial({
-    color: FLOOR_COLOR,
+    color: floorColor,
     side: THREE.DoubleSide,
     depthWrite: true,
     transparent: false,
