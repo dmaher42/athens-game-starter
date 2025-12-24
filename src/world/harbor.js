@@ -65,7 +65,7 @@ function createHarborWaterPlane(seaLevel) {
   const water = new THREE.Mesh(geometry, material);
   water.rotation.x = -Math.PI / 2;
   // Position relative to harbor group origin (0,0,0) since group is repositioned
-  // Harbor group will be moved to (-50, harborGroundY, -100) in world space
+  // Harbor group positioned at HARBOR_CENTER_3D (120, harborGroundY, 80) in world space
   // Shift water eastward (+400 X) so it only appears in front/east, not behind/west
   // Local Y position ensures water sits at seaLevel in world coordinates:
   // World Y = harborGroundY + (seaLevel - HARBOR_GROUND_HEIGHT) = seaLevel
@@ -129,7 +129,7 @@ function createHarborPad(harborGroundY) {
   pad.name = "HarborPad";
   pad.rotation.x = -Math.PI / 2;
   // Position relative to harbor group origin (0,0,0)
-  // Group is repositioned to (-50, harborGroundY, -100) in world space
+  // Group is positioned at HARBOR_CENTER_3D (120, harborGroundY, 80) in world space
   pad.position.set(
     0,
     0.12, // lift above water plane for z-fighting prevention
@@ -292,25 +292,29 @@ function scatterDockProps(target, dockSections, seaLevel) {
     const prop = Math.random() > 0.5 ? createCrateCluster() : createBarrelCluster();
     const localX = THREE.MathUtils.randFloatSpread(section.userData.length * 0.6);
     const localZ = THREE.MathUtils.randFloatSpread(section.userData.width * 0.5);
-    prop.position.set(section.position.x + localX, seaLevel + DOCK_LIFT + DOCK_THICKNESS * 0.5 + 0.15, section.position.z + localZ);
+    // Y is local to harbor group: seaLevel is 0, add lift and thickness
+    const localY = (seaLevel - HARBOR_GROUND_HEIGHT) + DOCK_LIFT + DOCK_THICKNESS * 0.5 + 0.15;
+    prop.position.set(section.position.x + localX, localY, section.position.z + localZ);
     prop.userData.category = "harbor-prop-dock";
     target.add(prop);
   }
 }
 
 function scatterShoreProps(target, groundY) {
+  // Local coordinates relative to harbor group center
+  // HARBOR_WATER_EAST_LIMIT = 190, HARBOR_CENTER = 120, so local = 70
   const scatterBounds = {
-    west: HARBOR_WATER_EAST_LIMIT + 2,
-    east: HARBOR_WATER_EAST_LIMIT + 28,
-    north: HARBOR_WATER_BOUNDS.north - 6,
-    south: HARBOR_WATER_BOUNDS.south + 6,
+    west: 70 + 2,   // Local coordinates
+    east: 70 + 28,
+    north: -60 - 6, // HARBOR_WATER_HALF_DEPTH = 60
+    south: 60 + 6,
   };
 
   for (let i = 0; i < 8; i++) {
     const prop = Math.random() > 0.5 ? createCrateCluster() : createBarrelCluster();
     const x = THREE.MathUtils.randFloat(scatterBounds.west, scatterBounds.east);
     const z = THREE.MathUtils.randFloat(scatterBounds.north, scatterBounds.south);
-    prop.position.set(x, groundY + 0.1, z);
+    prop.position.set(x, 0.1, z);
     prop.userData.category = "harbor-prop-shore";
     target.add(prop);
   }
@@ -407,10 +411,11 @@ export function createHarbor(scene) {
   const shorelineGroup = new THREE.Group();
   shorelineGroup.name = "HarborShorelineDressing";
 
+  // Local coordinates relative to harbor group (positioned at HARBOR_CENTER_3D)
   const dressingZ = [
-    HARBOR_WATER_CENTER.z - 18,
-    HARBOR_WATER_CENTER.z - 2,
-    HARBOR_WATER_CENTER.z + 16,
+    -18,  // North
+    -2,   // Center
+    16,   // South
   ];
 
   for (let i = 0; i < dressingZ.length; i++) {
@@ -418,9 +423,10 @@ export function createHarbor(scene) {
       new THREE.CylinderGeometry(0.25, 0.28, 2.4, 10),
       new THREE.MeshStandardMaterial({ color: 0x7a6248, roughness: 0.78 }),
     );
+    // Local X = HARBOR_WATER_EAST_LIMIT - HARBOR_CENTER_3D.x = 190 - 120 = 70
     post.position.set(
-      HARBOR_WATER_EAST_LIMIT + 4.0,
-      harborGroundY + 1.2,
+      70 + 4.0,
+      1.2,
       dressingZ[i],
     );
     shorelineGroup.add(post);
@@ -456,15 +462,18 @@ export function createHarbor(scene) {
   scatterShoreProps(propsGroup, harborGroundY);
   harbor.add(propsGroup);
 
+  // Sheds positioned in local coordinates
   const sheds = [
-    createShed(new THREE.Vector3(18, 5.2, 12), harborGroundY, new THREE.Vector3(70 + 12, 0, -10)),
-    createShed(new THREE.Vector3(22, 6, 14), harborGroundY, new THREE.Vector3(70 + 24, 0, 8)),
+    createShed(new THREE.Vector3(18, 5.2, 12), 0, new THREE.Vector3(70 + 12, 0, -10)),
+    createShed(new THREE.Vector3(22, 6, 14), 0, new THREE.Vector3(70 + 24, 0, 8)),
   ];
   sheds.forEach((shed) => harbor.add(shed));
 
-  // Position harbor in world space before adding to scene
-  // Positioned at (-50, harborGroundY, -100) for the eastern shoreline
-  harbor.position.set(-50, harborGroundY, -100);
+  // Position harbor group in world space
+  // The harbor center should be at HARBOR_CENTER_3D (120, seaLevel, 80)
+  // But we offset by (-50, 0, -100) to move it west and north
+  // Final position: (120-50=70, harborGroundY, 80-100=-20)
+  harbor.position.set(120, harborGroundY, 80);
 
   if (scene) {
     scene.add(harbor);
