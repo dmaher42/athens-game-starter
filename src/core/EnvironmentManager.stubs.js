@@ -99,7 +99,22 @@ export function setEnvironmentMapIntensity(intensity = 1.0) {
 
 // Copilot: Sync time-of-day value (0.0 to 1.0) to all lighting elements. Move sun/moon, adjust exposure, and sky color.
 export function setTimeOfDay(t) {
-  // TODO: Apply sun/moon positions, adjust ambient factors
+  try {
+    const phase = Math.max(0, Math.min(1, Number(t) || 0));
+    // Subtle exposure modulation to hint day/night without full lighting refactor
+    const base = Number.isFinite(renderer?.toneMappingExposure) ? renderer.toneMappingExposure : 1.0;
+    const variation = 0.08 * Math.cos(phase * Math.PI * 2); // +/-0.08 around base
+    const nextExposure = Math.max(0.2, Math.min(2.0, base + variation));
+    if (renderer) {
+      renderer.toneMappingExposure = nextExposure;
+    }
+    // Optionally, route to dynamicSky if present for future expansion
+    if (dynamicSky && typeof dynamicSky.setTimeOfDayPhase === 'function') {
+      dynamicSky.setTimeOfDayPhase(phase);
+    }
+  } catch (e) {
+    console.warn('[EnvStubs] setTimeOfDay failed', e);
+  }
 }
 
 // Copilot: Show or hide the star dome based on visibility flag. Useful for night transitions.

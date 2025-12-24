@@ -65,7 +65,7 @@ import { PlayerController } from "../controls/PlayerController.js";
 import { ThirdPersonCamera } from "../controls/ThirdPersonCamera.js";
 import { Character } from "../characters/Character.js";
 import { UIManager } from "./UIManager.js";
-import { init as initEnvStubs, applyBasicLightingProfile, setEnvironmentMapIntensity, setSunPosition } from "./EnvironmentManager.stubs.js";
+import { init as initEnvStubs, applyBasicLightingProfile, setEnvironmentMapIntensity, setSunPosition, setTimeOfDay } from "./EnvironmentManager.stubs.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
 import { QuestHud } from "../ui/questHud.ts";
 import { InteractionHud } from "../ui/interactionHud.ts";
@@ -3151,6 +3151,8 @@ export class Application {
       // Actually, we should just let the phase drift but ensure rendering ignores it.
       // Or better, freeze the phase display in HUD if locked.
       const phase = timeOfDayState.timeOfDayPhase ?? 0;
+      // Reflect time-of-day into env stubs for subtle exposure modulation
+      try { setTimeOfDay(phase); } catch {}
       timeOfDayState.elapsedSeconds = elapsed;
 
       const activePresetForPhase = getPresetForPhase(phase);
