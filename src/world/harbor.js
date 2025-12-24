@@ -96,6 +96,11 @@ function createHarborPad(harborGroundY) {
   const textureLoader = new THREE.TextureLoader();
   const baseUrl = import.meta?.env?.BASE_URL ?? "/";
   
+  const sandDiffuse = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_diff_1k.jpg`);
+  sandDiffuse.wrapS = sandDiffuse.wrapT = THREE.RepeatWrapping;
+  sandDiffuse.repeat.set(28, 24); // Match terrain repeat scale
+  sandDiffuse.colorSpace = THREE.SRGBColorSpace;
+  
   const sandNormal = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`);
   sandNormal.wrapS = sandNormal.wrapT = THREE.RepeatWrapping;
   sandNormal.repeat.set(28, 24); // Match terrain repeat scale
@@ -107,6 +112,7 @@ function createHarborPad(harborGroundY) {
   sandARM.colorSpace = THREE.NoColorSpace;
   
   const padMaterial = new THREE.MeshStandardMaterial({
+    map: sandDiffuse,
     color: 0xffffff,
     roughness: 0.8,
     metalness: 0.0,
