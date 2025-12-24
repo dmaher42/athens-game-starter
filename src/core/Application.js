@@ -534,7 +534,7 @@ export class Application {
     initializeAssetTranscoders(renderer);
     attachCrosshair();
     const hotkeyOverlayConfig =
-      engineConfig.debug?.overlays?.hotkeyReference || { defaultValue: true };
+      engineConfig.debug?.overlays?.hotkeyReference || { defaultValue: false, devDefault: true };
     if (resolveFeatureToggle(hotkeyOverlayConfig)) {
       mountHotkeyOverlay({ toggleKey: hotkeyOverlayConfig.toggleKey || "KeyH" });
     }
@@ -870,11 +870,8 @@ export class Application {
     updateLoadingStatus("Sculpting the Attic landscape...");
 
     // Volume mixer overlay (F10 toggles visibility)
-    const SHOW_AUDIO_MIXER = shouldShowOverlay({
-      queryKey: "audio",
-      windowFlagKey: "SHOW_AUDIO_MIXER",
-    });
-    if (SHOW_AUDIO_MIXER) {
+    const audioMixerToggle = engineConfig.debug?.overlays?.audioMixer || { defaultValue: false, devDefault: true, queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER" };
+    if (resolveFeatureToggle(audioMixerToggle)) {
       mountAudioMixer(soundscape);
     }
 

@@ -1,6 +1,7 @@
 import type { ExposureSliderOptions } from "@app/types";
 
 import { registerPanel, unregisterPanel } from "./HudManager.js";
+import "./hudTheme.css";
 
 export interface ExposureSliderTarget {
   toneMappingExposure: number;
@@ -41,17 +42,18 @@ export function mountExposureSlider(
   wrap.id = "tmx-wrap";
   Object.assign(wrap.style, {
     padding: "10px 12px",
-    background: "rgba(0,0,0,0.55)",
-    backdropFilter: "blur(4px)",
-    borderRadius: "10px",
-    font: "12px/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial",
-    color: "#fff",
+    background: "var(--hud-bg)",
+    backdropFilter: "blur(6px)",
+    borderRadius: "var(--hud-radius-md)",
+    font: "var(--hud-font)",
+    color: "var(--hud-text)",
     userSelect: "none",
   } satisfies Partial<CSSStyleDeclaration>);
 
   const label = document.createElement("div");
   label.textContent = "Exposure";
   label.style.marginBottom = "6px";
+  label.style.opacity = "0.9";
 
   const row = document.createElement("div");
   row.style.display = "flex";

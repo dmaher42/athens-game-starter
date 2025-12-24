@@ -46,6 +46,7 @@ const DEFAULT_ENGINE_CONFIG = ({
       overlays: {
         audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: true },
         exposureSlider: { defaultValue: false, devDefault: true },
+        hotkeyReference: { defaultValue: false, devDefault: true, windowFlagKey: "SHOW_HOTKEYS" },
         devHud: { defaultValue: false, devDefault: true },
         cameraSettings: { defaultValue: false, devDefault: true },
       },
