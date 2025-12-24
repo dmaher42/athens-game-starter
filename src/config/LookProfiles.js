@@ -2,7 +2,7 @@
 export const LOOK_PROFILES = {
   "Bright Noon": {
     renderer: {
-      toneMappingExposure: 0.8, // Further reduce to keep sky from washing out
+      toneMappingExposure: 0.7, // Darker to avoid HDRI blowout
     },
     starsVisible: 0.0,
     moonElevation: -10,
@@ -10,14 +10,14 @@ export const LOOK_PROFILES = {
     soundscapeMode: "day",
     sun: {
       color: "#ffffff", // Neutral white light for clean midday look
-      intensity: 2.2,
+      intensity: 1.8,
       azimuth: 180,
       elevation: 75,   // High sun angle for midday
     },
     ambient: {
       color: "#dbe9ff", // Light blue ambient to match clear sky
       groundColor: "#cfdcec",
-      intensity: 0.16,
+      intensity: 0.14,
     },
     fog: {
       enabled: true,
@@ -39,7 +39,7 @@ export const LOOK_PROFILES = {
       highlightTint: "#ffffff",
     },
     env: {
-      envMapIntensity: 0.3 // Softer reflections to avoid washout
+      envMapIntensity: 0.2 // Softer reflections to avoid washout
     },
     moon: {
       visible: false,
