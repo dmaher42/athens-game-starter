@@ -320,17 +320,7 @@ export function createTerrain(scene) {
     geometry.setAttribute("basePos", basePos);
   }
 
-  const skirtGeometry = createSkirtGeometry(geometry, seaLevel);
-  const skirtMaterial = new THREE.MeshStandardMaterial({
-     vertexColors: true,
-     side: THREE.FrontSide,
-     roughness: 1.0,
-     metalness: 0.0
-  });
-  const skirt = new THREE.Mesh(skirtGeometry, skirtMaterial);
-  skirt.name = "TerrainSkirt";
-  skirt.rotation.x = -Math.PI / 2;
-  scene.add(skirt);
+    // Skirt disabled: avoid overlapping secondary ground layer near harbor/ocean.
 
   // Load sand texture maps
   const baseUrl = import.meta?.env?.BASE_URL ?? "/";
