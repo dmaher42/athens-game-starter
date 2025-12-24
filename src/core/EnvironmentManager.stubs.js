@@ -103,7 +103,7 @@ export function setTimeOfDay(t) {
     const phase = Math.max(0, Math.min(1, Number(t) || 0));
     // Subtle exposure modulation to hint day/night without full lighting refactor
     const base = Number.isFinite(renderer?.toneMappingExposure) ? renderer.toneMappingExposure : 1.0;
-    const variation = 0.02 * Math.cos(phase * Math.PI * 2); // tighter swing to avoid bright/black spikes
+    const variation = 0.0; // keep noon exposure fixed to avoid sky whiteout
     const nextExposure = Math.max(0.2, Math.min(2.0, base + variation));
     if (renderer) {
       renderer.toneMappingExposure = nextExposure;
