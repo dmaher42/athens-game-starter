@@ -3,6 +3,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { createColorGradePass } from "../world/colorGradingPass.js";
+import { CameraManager } from "./CameraManager.js";
 
 export const WORLD_ROOT_NAME = "WorldRoot";
 
@@ -171,12 +172,8 @@ export function createSceneContext({
     return root;
   };
 
-  const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    2000,
-  );
+  // Create camera using CameraManager for consistency
+  const camera = CameraManager.createCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 
   const composer = new EffectComposer(renderer);
   const composerPixelRatio =
