@@ -684,6 +684,9 @@ export function createHarbor(scene, options = {}) {
   const piersGroup = new THREE.Group();
   piersGroup.name = "HarborPiers";
   const allSections = [];
+  
+  // Track pier positions for boat placement
+  const pierPositions = [];
 
   if (dockSlots.length >= 3) {
     // Place piers in best grid-aligned slots
@@ -699,6 +702,9 @@ export function createHarbor(scene, options = {}) {
       const { pier, sections: pierSections } = createPierLine(localX, localZ, sections, seaLevel);
       allSections.push(...pierSections);
       piersGroup.add(pier);
+      
+      // Store pier position for boat placement
+      pierPositions.push({ x: localX, z: localZ });
     }
   } else {
     // Fallback to default pier positions
@@ -714,6 +720,9 @@ export function createHarbor(scene, options = {}) {
       const { pier, sections } = createPierLine(pierStartX, row.z, row.sections, seaLevel);
       allSections.push(...sections);
       piersGroup.add(pier);
+      
+      // Store pier position for boat placement
+      pierPositions.push({ x: pierStartX, z: row.z });
     }
   }
   
@@ -748,7 +757,7 @@ export function createHarbor(scene, options = {}) {
   const boatsGroup = new THREE.Group();
   boatsGroup.name = "HarborBoats";
   let boatStyleIndex = 0;
-  for (const row of pierRows) {
+  for (const pierPos of pierPositions) {
     const style = BOAT_STYLES[boatStyleIndex % BOAT_STYLES.length];
     boatStyleIndex++;
     const boat = createFishingBoat({
@@ -761,7 +770,11 @@ export function createHarbor(scene, options = {}) {
     const moorOffset = DOCK_SECTION_WIDTH * 0.5 + 1.2;
     // Boat Y position relative to group origin (group Y = harborGroundY = 2.0)
     // Water is at seaLevel (0), so relative to group it's at seaLevel - harborGroundY = -2.0
-    boat.position.set(pierStartX - DOCK_SECTION_LENGTH * 1.6, seaLevel - HARBOR_GROUND_HEIGHT, row.z + (Math.random() > 0.5 ? moorOffset : -moorOffset));
+    boat.position.set(
+      pierPos.x - DOCK_SECTION_LENGTH * 1.6, 
+      seaLevel - HARBOR_GROUND_HEIGHT, 
+      pierPos.z + (Math.random() > 0.5 ? moorOffset : -moorOffset)
+    );
     boat.userData.category = "harbor-boat";
     boatsGroup.add(boat);
   }
