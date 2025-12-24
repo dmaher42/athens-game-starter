@@ -117,7 +117,8 @@ function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOC
       metalness: 0.04,
     }),
   );
-  deck.position.y = seaLevel + DOCK_LIFT - DOCK_THICKNESS * 0.5;
+  // Local Y relative to harbor group (group Y = harborGroundY)
+  deck.position.y = (seaLevel - HARBOR_GROUND_HEIGHT) + DOCK_LIFT - DOCK_THICKNESS * 0.5;
   enableShadows(deck);
 
   const postMaterial = new THREE.MeshStandardMaterial({
@@ -128,7 +129,7 @@ function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOC
   const postGeometry = new THREE.CylinderGeometry(0.35, 0.42, DOCK_POST_HEIGHT + 0.6, 10);
 
   const posts = new THREE.Group();
-  const postY = seaLevel + DOCK_LIFT - (DOCK_POST_HEIGHT + 0.6) * 0.5;
+  const postY = (seaLevel - HARBOR_GROUND_HEIGHT) + DOCK_LIFT - (DOCK_POST_HEIGHT + 0.6) * 0.5;
   const offsets = [
     [length * 0.5 - 0.9, width * 0.5 - 0.7],
     [-length * 0.5 + 0.9, width * 0.5 - 0.7],
@@ -161,7 +162,8 @@ function createPierLine(startX, z, sectionCount, seaLevel) {
   let cursorX = startX;
   for (let i = 0; i < sectionCount; i++) {
     const section = createDockSection(seaLevel);
-    section.position.set(cursorX, seaLevel, z);
+    // Local Y relative to harbor group origin
+    section.position.set(cursorX, seaLevel - HARBOR_GROUND_HEIGHT, z);
     pier.add(section);
     sections.push(section);
     cursorX -= section.userData.length - DOCK_GAP;
@@ -178,7 +180,8 @@ function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f
     new THREE.BoxGeometry(length, 1.1, width),
     new THREE.MeshStandardMaterial({ color: hull, roughness: 0.42, metalness: 0.15 }),
   );
-  hullMesh.position.y = seaLevel + 0.55;
+  // Local offsets relative to boat origin (will be positioned relative to harbor group)
+  hullMesh.position.y = 0.55;
   enableShadows(hullMesh);
   boat.add(hullMesh);
 
@@ -187,7 +190,7 @@ function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f
     new THREE.MeshStandardMaterial({ color: accent, roughness: 0.46, metalness: 0.12 }),
   );
   bow.rotation.z = Math.PI;
-  bow.position.set(length * 0.5 - 1.0, seaLevel + 1.15, 0);
+  bow.position.set(length * 0.5 - 1.0, 1.15, 0);
   enableShadows(bow);
   boat.add(bow);
 
@@ -195,7 +198,7 @@ function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f
     new THREE.BoxGeometry(length * 0.28, 1.0, width * 0.6),
     new THREE.MeshStandardMaterial({ color: 0xf7f1d0, roughness: 0.35 }),
   );
-  cabin.position.set(-length * 0.18, seaLevel + 1.35, 0);
+  cabin.position.set(-length * 0.18, 1.35, 0);
   enableShadows(cabin);
   boat.add(cabin);
 
@@ -203,7 +206,7 @@ function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f
     new THREE.CylinderGeometry(0.08, 0.08, 3.0, 8),
     new THREE.MeshStandardMaterial({ color: 0xe6dfd7, roughness: 0.4 }),
   );
-  mast.position.set(-length * 0.05, seaLevel + 2.2, 0);
+  mast.position.set(-length * 0.05, 2.2, 0);
   enableShadows(mast);
   boat.add(mast);
 

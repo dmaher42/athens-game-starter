@@ -130,7 +130,9 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
 
   const withinWater = x >= west && x <= east && z >= north && z <= south;
   if (withinWater) {
-    return seaLevel + 0.2;
+    // Ensure terrain sits BELOW the water plane inside the harbor water bounds
+    // Water plane is at seaLevel (0). Drop terrain to avoid occlusion.
+    return seaLevel - 1.4;
   }
 
   // Slope up to land on the West side of the harbor
