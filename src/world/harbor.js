@@ -12,6 +12,50 @@ const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
 const HARBOR_GROUND_HEIGHT = 2.5;
+const GRAVELLY_SAND_BASE_PATH = "textures/gravelly_sand/";
+
+let gravellySandMaterialCache = null;
+
+function loadGravellySandMaterial() {
+  if (gravellySandMaterialCache) return gravellySandMaterialCache;
+
+  const loader = new THREE.TextureLoader();
+  const withRepeat = (tex) => {
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 3);
+    return tex;
+  };
+
+  const diffuse = withRepeat(
+    loader.load(`${GRAVELLY_SAND_BASE_PATH}gravelly_sand_diff_1k.jpg`),
+  );
+  diffuse.colorSpace = THREE.SRGBColorSpace;
+
+  const normal = withRepeat(
+    loader.load(`${GRAVELLY_SAND_BASE_PATH}gravelly_sand_nor_gl_1k.jpg`),
+  );
+  normal.colorSpace = THREE.NoColorSpace;
+
+  const arm = withRepeat(
+    loader.load(`${GRAVELLY_SAND_BASE_PATH}gravelly_sand_arm_1k.jpg`),
+  );
+  arm.colorSpace = THREE.NoColorSpace;
+
+  const material = new THREE.MeshStandardMaterial({
+    name: "gravellySandMaterial",
+    map: diffuse,
+    normalMap: normal,
+    aoMap: arm,
+    roughnessMap: arm,
+    metalnessMap: arm,
+    roughness: 0.86,
+    metalness: 0.05,
+    envMapIntensity: 0.6,
+  });
+
+  gravellySandMaterialCache = material;
+  return material;
+}
 
 const BOAT_STYLES = [
   { hull: 0x2f6e8d, accent: 0xe2a86a },
@@ -48,6 +92,35 @@ function createHarborWaterPlane(seaLevel) {
   water.userData.seaLevel = seaLevel;
   water.receiveShadow = false;
   return water;
+}
+
+function createHarborPad(harborGroundY) {
+  const paddingX = 25;
+  const paddingZ = 22;
+  const width =
+    HARBOR_WATER_BOUNDS.east - HARBOR_WATER_BOUNDS.west + paddingX * 2;
+  const depth =
+    HARBOR_WATER_BOUNDS.south - HARBOR_WATER_BOUNDS.north + paddingZ * 2;
+  const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
+  if (geometry.attributes.uv && !geometry.attributes.uv2) {
+    geometry.setAttribute(
+      "uv2",
+      new THREE.BufferAttribute(
+        new Float32Array(geometry.attributes.uv.array),
+        2,
+      ),
+    );
+  }
+  const pad = new THREE.Mesh(geometry, loadGravellySandMaterial());
+  pad.name = "HarborPad";
+  pad.rotation.x = -Math.PI / 2;
+  pad.position.set(
+    (HARBOR_WATER_BOUNDS.west + HARBOR_WATER_BOUNDS.east) * 0.5,
+    harborGroundY + 0.02,
+    (HARBOR_WATER_BOUNDS.north + HARBOR_WATER_BOUNDS.south) * 0.5,
+  );
+  pad.receiveShadow = true;
+  return pad;
 }
 
 function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOCK_SECTION_WIDTH } = {}) {
@@ -263,6 +336,9 @@ export function createHarbor(scene) {
   const seaLevel = getSeaLevelY();
   const harborGroundY = seaLevel + HARBOR_GROUND_HEIGHT;
 
+  const harborPad = createHarborPad(harborGroundY);
+  harbor.add(harborPad);
+
   const waterPlane = createHarborWaterPlane(seaLevel);
   harbor.add(waterPlane);
 
@@ -297,7 +373,11 @@ export function createHarbor(scene) {
       new THREE.CylinderGeometry(0.25, 0.28, 2.4, 10),
       new THREE.MeshStandardMaterial({ color: 0x7a6248, roughness: 0.78 }),
     );
-    post.position.set(HARBOR_WATER_EAST_LIMIT + 4.0, seaLevel + 1.2, dressingZ[i]);
+    post.position.set(
+      HARBOR_WATER_EAST_LIMIT + 4.0,
+      harborGroundY + 1.2,
+      dressingZ[i],
+    );
     shorelineGroup.add(post);
   }
 
