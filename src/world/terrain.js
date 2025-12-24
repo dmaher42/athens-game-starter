@@ -57,8 +57,7 @@ const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
 
 // Harbor configuration (East Facing)
-// Match harbor.js constant for consistent ground height
-const HARBOR_GROUND_HEIGHT = 2.0;
+// HARBOR_GROUND_HEIGHT imported from locations.js at line 6
 const HARBOUR_RADIUS = 70;
 const HARBOUR_TARGET_DEPTH = 2;
 // Use RELOCATED harbor position (-50, -100) instead of original HARBOR_CENTER_3D (120, 80)
