@@ -73,10 +73,11 @@ function createHarborPad(harborGroundY) {
   pad.rotation.x = -Math.PI / 2;
   pad.position.set(
     (HARBOR_WATER_BOUNDS.west + HARBOR_WATER_BOUNDS.east) * 0.5,
-    harborGroundY + 0.02,
+    harborGroundY + 0.12, // lift above terrain to avoid burying/z-fighting
     (HARBOR_WATER_BOUNDS.north + HARBOR_WATER_BOUNDS.south) * 0.5,
   );
   pad.receiveShadow = true;
+  pad.renderOrder = 2;
   return pad;
 }
 
