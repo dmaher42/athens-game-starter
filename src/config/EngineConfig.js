@@ -44,11 +44,11 @@ const DEFAULT_ENGINE_CONFIG = ({
     },
     debug: {
       overlays: {
-        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: true },
-        exposureSlider: { queryKey: "exposure", windowFlagKey: "SHOW_EXPOSURE", defaultValue: false, devDefault: true },
-        hotkeyReference: { queryKey: "hotkeys", windowFlagKey: "SHOW_HOTKEYS", defaultValue: false, devDefault: true },
-        devHud: { queryKey: "hud", windowFlagKey: "SHOW_HUD", defaultValue: false, devDefault: true },
-        cameraSettings: { queryKey: "camerahud", windowFlagKey: "SHOW_CAMERA_HUD", defaultValue: false, devDefault: true },
+        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: true, devDefault: true },
+        exposureSlider: { queryKey: "exposure", windowFlagKey: "SHOW_EXPOSURE", defaultValue: true, devDefault: true },
+        hotkeyReference: { queryKey: "hotkeys", windowFlagKey: "SHOW_HOTKEYS", defaultValue: true, devDefault: true },
+        devHud: { queryKey: "hud", windowFlagKey: "SHOW_HUD", defaultValue: true, devDefault: true },
+        cameraSettings: { queryKey: "camerahud", windowFlagKey: "SHOW_CAMERA_HUD", defaultValue: true, devDefault: true },
       },
       logLevel: queryParams.get("log") || "info",
     },
