@@ -5,6 +5,7 @@ import {
   HARBOR_WATER_EAST_LIMIT,
   getSeaLevelY,
   HARBOR_GROUND_HEIGHT,
+  getCityGroundY,
 } from "./locations.js";
 
 const DOCK_SECTION_LENGTH = 9.5;
@@ -354,6 +355,119 @@ function createShed(size, groundY, position) {
 }
 
 /**
+ * Create a boardwalk/ramp connector from city level to harbor level
+ * Bridges the elevation gap from getCityGroundY() to harborGroundY
+ * @param {number} cityGroundY - The city ground elevation
+ * @param {number} harborGroundY - The harbor ground elevation
+ * @returns {THREE.Group} Connector structure
+ */
+function createCityHarborConnector(cityGroundY, harborGroundY) {
+  const connector = new THREE.Group();
+  connector.name = "CityHarborConnector";
+
+  // Calculate elevation difference
+  const elevationDiff = cityGroundY - harborGroundY;
+  
+  // Boardwalk extends from city edge (around X=60) toward harbor
+  // In local harbor coordinates: cityX - harborX = 0 - 120 = -120
+  const boardwalkLength = 70; // Length toward city (west)
+  const boardwalkWidth = 8;   // Width for comfortable walkway
+  const boardwalkThickness = 0.35;
+  
+  // Wood planks material
+  const woodMaterial = new THREE.MeshStandardMaterial({
+    color: 0xa89075,
+    roughness: 0.75,
+    metalness: 0.02,
+  });
+
+  // Main boardwalk deck segments with gradual slope
+  const segmentCount = 7;
+  const segmentLength = boardwalkLength / segmentCount;
+  
+  for (let i = 0; i < segmentCount; i++) {
+    const t = i / (segmentCount - 1); // 0 to 1 from harbor to city
+    const segmentElevation = THREE.MathUtils.lerp(0, elevationDiff, t);
+    const nextT = (i + 1) / (segmentCount - 1);
+    const nextElevation = THREE.MathUtils.lerp(0, elevationDiff, nextT);
+    const avgElevation = (segmentElevation + nextElevation) / 2;
+    
+    // Calculate tilt angle for this segment
+    const tiltAngle = Math.atan2(nextElevation - segmentElevation, segmentLength);
+    
+    const segment = new THREE.Mesh(
+      new THREE.BoxGeometry(segmentLength, boardwalkThickness, boardwalkWidth),
+      woodMaterial
+    );
+    
+    // Position each segment
+    const xPos = -70 + (i * segmentLength) + (segmentLength / 2);
+    segment.position.set(xPos, avgElevation, 0);
+    segment.rotation.z = tiltAngle;
+    segment.receiveShadow = true;
+    segment.castShadow = true;
+    
+    connector.add(segment);
+  }
+
+  // Support posts under the boardwalk
+  const postCount = 8;
+  const postRadius = 0.22;
+  const postMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6b5845,
+    roughness: 0.82,
+    metalness: 0.0,
+  });
+
+  for (let i = 0; i < postCount; i++) {
+    const t = i / (postCount - 1);
+    const xPos = -70 + (t * boardwalkLength);
+    const topElevation = THREE.MathUtils.lerp(0, elevationDiff, t);
+    const postHeight = topElevation + 2.5; // Extend down below surface
+    
+    // Create two posts on each side of the boardwalk
+    [-boardwalkWidth / 3, boardwalkWidth / 3].forEach(zOffset => {
+      const post = new THREE.Mesh(
+        new THREE.CylinderGeometry(postRadius, postRadius * 1.1, postHeight, 8),
+        postMaterial
+      );
+      post.position.set(xPos, topElevation - postHeight / 2, zOffset);
+      post.receiveShadow = true;
+      post.castShadow = true;
+      connector.add(post);
+    });
+  }
+
+  // Railings on both sides
+  const railingHeight = 1.0;
+  const railingRadius = 0.12;
+  const railingMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b7355,
+    roughness: 0.68,
+    metalness: 0.0,
+  });
+
+  [-boardwalkWidth / 2, boardwalkWidth / 2].forEach(side => {
+    const railingPoints = [];
+    for (let i = 0; i <= 16; i++) {
+      const t = i / 16;
+      const xPos = -70 + (t * boardwalkLength);
+      const yPos = THREE.MathUtils.lerp(0, elevationDiff, t) + railingHeight;
+      railingPoints.push(new THREE.Vector3(xPos, yPos, side));
+    }
+    
+    const railingCurve = new THREE.CatmullRomCurve3(railingPoints);
+    const railingGeometry = new THREE.TubeGeometry(railingCurve, 32, railingRadius, 8, false);
+    const railing = new THREE.Mesh(railingGeometry, railingMaterial);
+    railing.receiveShadow = true;
+    railing.castShadow = true;
+    connector.add(railing);
+  });
+
+  return connector;
+}
+
+/**
  * Creates a complete harbor with all features and props.
  * 
  * Harbor Features Created:
@@ -369,12 +483,14 @@ function createShed(size, groundY, position) {
  * 6. Dock Props - Crates and barrels scattered on dock sections
  * 7. Shore Props - Crates and barrels on the shoreline
  * 8. Sheds/Warehouses - Two storage buildings with terracotta roofs
+ * 9. City Connector - Wooden boardwalk ramp from city level to harbor level
  * 
  * All elements are positioned relative to harborGroundY (seaLevel + HARBOR_GROUND_HEIGHT)
  * to ensure they sit above water level.
  * 
  * The harbor is positioned at HARBOR_CENTER_3D (120, harborGroundY, 80).
  * Terrain is flattened behind the harbor to create a smooth connection to the city.
+ * The boardwalk connector provides a walkable route from city core (Y=2.5) to docks (Y=2).
  * 
  * @param {THREE.Scene} scene - The scene to add the harbor to
  * @returns {THREE.Group} The complete harbor group
@@ -471,6 +587,11 @@ export function createHarbor(scene) {
     createShed(new THREE.Vector3(22, 6, 14), 0, new THREE.Vector3(70 + 24, 0, 8)),
   ];
   sheds.forEach((shed) => harbor.add(shed));
+
+  // Add city-harbor connector boardwalk
+  const cityGroundY = getCityGroundY();
+  const connector = createCityHarborConnector(cityGroundY, harborGroundY);
+  harbor.add(connector);
 
   // Position harbor group in world space
   // The harbor center should be at HARBOR_CENTER_3D (120, seaLevel, 80)
