@@ -28,6 +28,18 @@ export const SPACING_RULES = {
   LANDMARK_TYPES: ['parthenon', 'temple', 'monument', 'tholos', 'stoa'],
 };
 
+// Walkability Grid Constants
+export const WALKABILITY_CONFIG = {
+  PATH_SPACING: 4, // Tiles between paths
+  MAX_PATH_SLOPE: SLOPE_THRESHOLDS.MODERATE, // 0.75 max slope for paths
+  MAX_REACHABILITY_DISTANCE: 60, // Max tiles to key buildings
+  KEY_LOCATIONS: {
+    ACROPOLIS: { x: 0, z: -5 }, // Grid coords
+    AGORA: { x: 0, z: 0 },
+    HARBOR: { x: 10, z: 0 },
+  },
+};
+
 // Track placed landmarks for spacing validation
 const placedLandmarks = [];
 
@@ -94,6 +106,219 @@ export function isWithinCivicClusterRange(x, z) {
  */
 export function clearLandmarkRegistry() {
   placedLandmarks.length = 0;
+}
+
+/**
+ * A* pathfinding algorithm to find shortest path between two grid cells
+ * Avoids steep slopes and connects districts
+ */
+function findPath(grid, startX, startZ, endX, endZ, maxSlope = WALKABILITY_CONFIG.MAX_PATH_SLOPE) {
+  const getCell = (x, z) => grid.find(c => c.gridX === x && c.gridZ === z);
+  
+  const start = getCell(startX, startZ);
+  const end = getCell(endX, endZ);
+  
+  if (!start || !end) return null;
+
+  const openSet = [start];
+  const closedSet = new Set();
+  const cameFrom = new Map();
+  const gScore = new Map();
+  const fScore = new Map();
+
+  gScore.set(start, 0);
+  fScore.set(start, heuristic(start, end));
+
+  function heuristic(a, b) {
+    return Math.abs(a.gridX - b.gridX) + Math.abs(a.gridZ - b.gridZ);
+  }
+
+  function getNeighbors(cell) {
+    const neighbors = [];
+    const dirs = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+    
+    for (const [dx, dz] of dirs) {
+      const neighbor = getCell(cell.gridX + dx, cell.gridZ + dz);
+      if (neighbor && neighbor.slope <= maxSlope) {
+        neighbors.push(neighbor);
+      }
+    }
+    return neighbors;
+  }
+
+  while (openSet.length > 0) {
+    // Find cell with lowest fScore
+    openSet.sort((a, b) => (fScore.get(a) || Infinity) - (fScore.get(b) || Infinity));
+    const current = openSet.shift();
+
+    if (current === end) {
+      // Reconstruct path
+      const path = [current];
+      let temp = current;
+      while (cameFrom.has(temp)) {
+        temp = cameFrom.get(temp);
+        path.unshift(temp);
+      }
+      return path;
+    }
+
+    closedSet.add(current);
+
+    for (const neighbor of getNeighbors(current)) {
+      if (closedSet.has(neighbor)) continue;
+
+      const tentativeGScore = (gScore.get(current) || Infinity) + 1;
+
+      if (!openSet.includes(neighbor)) {
+        openSet.push(neighbor);
+      } else if (tentativeGScore >= (gScore.get(neighbor) || Infinity)) {
+        continue;
+      }
+
+      cameFrom.set(neighbor, current);
+      gScore.set(neighbor, tentativeGScore);
+      fScore.set(neighbor, tentativeGScore + heuristic(neighbor, end));
+    }
+  }
+
+  return null; // No path found
+}
+
+/**
+ * Generate pedestrian paths connecting all districts
+ * Returns path tiles with 4-tile spacing, avoiding steep slopes
+ */
+export function generatePaths(grid, options = {}) {
+  const {
+    spacing = WALKABILITY_CONFIG.PATH_SPACING,
+    avoidSteepSlopes = true,
+    connectAllDistricts = true,
+  } = options;
+
+  const pathTiles = [];
+  const maxSlope = avoidSteepSlopes ? WALKABILITY_CONFIG.MAX_PATH_SLOPE : Infinity;
+
+  console.log('[CityPlan] Generating pedestrian walkability grid...');
+
+  // Mark existing roads as paths
+  for (const cell of grid) {
+    if (cell.type === 'road') {
+      pathTiles.push({
+        gridX: cell.gridX,
+        gridZ: cell.gridZ,
+        position: cell.position.clone(),
+        type: 'road',
+        isPath: true,
+      });
+    }
+  }
+
+  // Generate additional paths with spacing
+  for (let x = MIN_X; x <= MAX_X; x += spacing) {
+    for (let z = MIN_Z; z <= MAX_Z; z += spacing) {
+      const cell = grid.find(c => c.gridX === x && c.gridZ === z);
+      if (cell && cell.type !== 'road' && cell.slope <= maxSlope) {
+        pathTiles.push({
+          gridX: cell.gridX,
+          gridZ: cell.gridZ,
+          position: cell.position.clone(),
+          type: 'footpath',
+          slope: cell.slope,
+          isPath: true,
+        });
+      }
+    }
+  }
+
+  // Ensure connectivity to key locations
+  if (connectAllDistricts) {
+    const keyLocations = [
+      { name: 'Acropolis', ...WALKABILITY_CONFIG.KEY_LOCATIONS.ACROPOLIS },
+      { name: 'Agora', ...WALKABILITY_CONFIG.KEY_LOCATIONS.AGORA },
+      { name: 'Harbor', ...WALKABILITY_CONFIG.KEY_LOCATIONS.HARBOR },
+    ];
+
+    const centerX = 0, centerZ = 0; // Starting point
+
+    for (const location of keyLocations) {
+      const path = findPath(grid, centerX, centerZ, location.x, location.z, maxSlope);
+      
+      if (path) {
+        console.log(`[CityPlan] Path to ${location.name}: ${path.length} tiles`);
+        
+        // Add path tiles
+        for (const cell of path) {
+          if (!pathTiles.some(p => p.gridX === cell.gridX && p.gridZ === cell.gridZ)) {
+            pathTiles.push({
+              gridX: cell.gridX,
+              gridZ: cell.gridZ,
+              position: cell.position.clone(),
+              type: 'connector',
+              slope: cell.slope,
+              isPath: true,
+            });
+          }
+        }
+      } else {
+        console.warn(`[CityPlan] No path found to ${location.name} - terrain too steep or disconnected`);
+      }
+    }
+  }
+
+  console.log(`[CityPlan] Generated ${pathTiles.length} path tiles`);
+  return pathTiles;
+}
+
+/**
+ * Verify reachability of key buildings within max distance
+ */
+export function verifyReachability(grid, pathTiles, options = {}) {
+  const maxDistance = options.maxDistance || WALKABILITY_CONFIG.MAX_REACHABILITY_DISTANCE;
+  const results = {
+    reachable: [],
+    unreachable: [],
+    distances: {},
+  };
+
+  const keyLocations = [
+    { name: 'Acropolis', ...WALKABILITY_CONFIG.KEY_LOCATIONS.ACROPOLIS },
+    { name: 'Agora', ...WALKABILITY_CONFIG.KEY_LOCATIONS.AGORA },
+    { name: 'Harbor', ...WALKABILITY_CONFIG.KEY_LOCATIONS.HARBOR },
+  ];
+
+  const centerX = 0, centerZ = 0;
+
+  console.log('[CityPlan] Verifying reachability to key buildings...');
+
+  for (const location of keyLocations) {
+    const path = findPath(grid, centerX, centerZ, location.x, location.z);
+    
+    if (path) {
+      const distance = path.length;
+      results.distances[location.name] = distance;
+
+      if (distance <= maxDistance) {
+        results.reachable.push(location.name);
+        console.log(`[CityPlan] ✅ ${location.name}: reachable in ${distance} tiles`);
+      } else {
+        results.unreachable.push(location.name);
+        console.warn(`[CityPlan] ⚠️  ${location.name}: ${distance} tiles (exceeds max ${maxDistance})`);
+      }
+    } else {
+      results.unreachable.push(location.name);
+      results.distances[location.name] = Infinity;
+      console.error(`[CityPlan] ❌ ${location.name}: unreachable`);
+    }
+  }
+
+  const allReachable = results.unreachable.length === 0;
+  console.log(`[CityPlan] Reachability: ${results.reachable.length}/${keyLocations.length} locations within ${maxDistance} tiles`);
+
+  return {
+    ...results,
+    allReachable,
+    totalLocations: keyLocations.length,
+  };
 }
 
 function createPavedStrip(width, length, color = 0x888888) {
@@ -282,8 +507,22 @@ export async function createCivicDistrict(scene, options = {}) {
   // Generate grid with terrain analysis
   const grid = generateCityGrid(terrainSampler);
 
+  // Generate pedestrian paths
+  const pathTiles = generatePaths(grid, {
+    spacing: 4,
+    avoidSteepSlopes: true,
+    connectAllDistricts: true,
+  });
+
+  // Verify reachability to key buildings
+  const reachability = verifyReachability(grid, pathTiles, {
+    maxDistance: 60, // Max 60 tiles to key buildings
+  });
+
   group.userData.plan = {
     grid,
+    pathTiles,
+    reachability,
     minX: MIN_X,
     maxX: MAX_X,
     minZ: MIN_Z,
@@ -385,6 +624,35 @@ export async function createCivicDistrict(scene, options = {}) {
            buildingGroup.rotation.y = rot;
            group.add(buildingGroup);
        }
+    }
+  }
+
+  // Render footpaths (non-road paths for pedestrian connectivity)
+  console.log(`[CityPlan] Rendering ${pathTiles.length} path tiles...`);
+  for (const pathTile of pathTiles) {
+    if (pathTile.type === 'footpath' || pathTile.type === 'connector') {
+      const localX = pathTile.position.x;
+      const localZ = pathTile.position.z;
+      const localY = sampleLocalHeight(localX, localZ, 0);
+
+      // Check harbor exclusion
+      const worldX = center.x + localX;
+      const worldZ = center.z + localZ;
+      const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
+        return (
+          worldX >= r.west && worldX <= r.east &&
+          worldZ >= r.north && worldZ <= r.south
+        );
+      });
+      if (isInSetback) continue;
+
+      // Create narrow footpath (lighter color than roads)
+      const pathWidth = pathTile.type === 'connector' ? 8 : 6;
+      const pathColor = pathTile.type === 'connector' ? 0x998877 : 0xaa9988;
+      const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
+      pathMesh.position.set(localX, localY + 0.01, localZ); // Slight offset above ground
+      pathMesh.userData.isFootpath = true;
+      group.add(pathMesh);
     }
   }
 

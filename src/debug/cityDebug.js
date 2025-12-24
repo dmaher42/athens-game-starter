@@ -1,10 +1,47 @@
 import * as THREE from "three";
-import { SPACING_RULES } from "../world/cityPlan.js";
+import { SPACING_RULES, WALKABILITY_CONFIG } from "../world/cityPlan.js";
 
 /**
  * Debug utilities for city layout analysis
  * Reports building counts per district and terrain height variance
  */
+
+/**
+ * Analyze walkability grid and path connectivity
+ */
+export function analyzeWalkability(scene) {
+  const civicDistrict = scene.getObjectByName('CivicDistrict');
+  
+  if (!civicDistrict || !civicDistrict.userData.plan) {
+    console.warn('[Debug] CivicDistrict or plan not found');
+    return null;
+  }
+
+  const { grid, pathTiles, reachability } = civicDistrict.userData.plan;
+
+  const stats = {
+    totalGridCells: grid?.length || 0,
+    totalPathTiles: pathTiles?.length || 0,
+    pathTypes: {},
+    reachability: reachability || {},
+    footpathCount: 0,
+    connectorCount: 0,
+    roadCount: 0,
+  };
+
+  // Count path types
+  if (pathTiles) {
+    for (const path of pathTiles) {
+      stats.pathTypes[path.type] = (stats.pathTypes[path.type] || 0) + 1;
+      
+      if (path.type === 'footpath') stats.footpathCount++;
+      else if (path.type === 'connector') stats.connectorCount++;
+      else if (path.type === 'road') stats.roadCount++;
+    }
+  }
+
+  return stats;
+}
 
 /**
  * Analyze buildings by district
@@ -286,6 +323,37 @@ export function printCityDebugReport(scene, terrain, options = {}) {
     }
   }
 
+  // Walkability analysis
+  console.log("\n🚶 WALKABILITY ANALYSIS:");
+  const walkStats = analyzeWalkability(scene);
+  if (walkStats) {
+    console.log(`  Total Grid Cells: ${walkStats.totalGridCells}`);
+    console.log(`  Total Path Tiles: ${walkStats.totalPathTiles}`);
+    console.log(`  Path Coverage: ${((walkStats.totalPathTiles / walkStats.totalGridCells) * 100).toFixed(1)}%`);
+    console.log("\n  Path Types:");
+    console.log(`    Roads: ${walkStats.roadCount}`);
+    console.log(`    Footpaths: ${walkStats.footpathCount} (${WALKABILITY_CONFIG.PATH_SPACING}-tile spacing)`);
+    console.log(`    Connectors: ${walkStats.connectorCount} (to key buildings)`);
+    
+    if (walkStats.reachability) {
+      console.log("\n  Reachability (max ${WALKABILITY_CONFIG.MAX_REACHABILITY_DISTANCE} tiles):");
+      if (walkStats.reachability.allReachable) {
+        console.log(`    ✅ All ${walkStats.reachability.totalLocations} key locations reachable`);
+      } else {
+        console.log(`    ⚠️  ${walkStats.reachability.unreachable.length} locations unreachable`);
+      }
+      
+      console.log("\n  Distances to Key Buildings:");
+      Object.entries(walkStats.reachability.distances).forEach(([name, dist]) => {
+        const status = dist === Infinity ? '❌' : dist <= WALKABILITY_CONFIG.MAX_REACHABILITY_DISTANCE ? '✅' : '⚠️';
+        const distStr = dist === Infinity ? 'unreachable' : `${dist} tiles`;
+        console.log(`    ${status} ${name}: ${distStr}`);
+      });
+    }
+  } else {
+    console.log("  ⚠️  Walkability data not available");
+  }
+
   // Overlap detection
   console.log("\n⚠️  COLLISION DETECTION:");
   const overlaps = detectBuildingOverlaps(scene, options.overlapThreshold || 2.0);
@@ -348,6 +416,7 @@ export function printCityDebugReport(scene, terrain, options = {}) {
   return {
     buildings: buildingStats,
     terrain: terrain ? analyzeTerrainHeights(terrain) : null,
+    walkability: walkStats,
     landmarks: landmarkStats,
     overlaps,
     floating,
@@ -381,6 +450,7 @@ export function initCityDebugMode(scene, terrain) {
         printReport: () => printCityDebugReport(scene, terrain),
         analyzeTerrain: () => analyzeTerrainHeights(terrain),
         analyzeBuildings: () => analyzeBuildingsByDistrict(scene),
+        analyzeWalkability: () => analyzeWalkability(scene),
         analyzeLandmarks: () => analyzeLandmarkSpacing(scene),
         detectOverlaps: () => detectBuildingOverlaps(scene),
         detectFloating: () => detectFloatingBuildings(scene),
@@ -389,6 +459,7 @@ export function initCityDebugMode(scene, terrain) {
       console.log("  window.cityDebug.printReport()");
       console.log("  window.cityDebug.analyzeTerrain()");
       console.log("  window.cityDebug.analyzeBuildings()");
+      console.log("  window.cityDebug.analyzeWalkability()");
       console.log("  window.cityDebug.analyzeLandmarks()");
       console.log("  window.cityDebug.detectOverlaps()");
       console.log("  window.cityDebug.detectFloating()");
