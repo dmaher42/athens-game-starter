@@ -24,7 +24,7 @@ export const LOOK_PROFILES = {
       color: "#96b9d8", // darker blue fog to fight white sky
       near: 2000,
       far: 7200,
-      density: 0.00005,
+      density: 0.000033,
     },
     skybox: {
       exposureMultiplier: 0.45,
