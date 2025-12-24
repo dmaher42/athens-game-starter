@@ -26,6 +26,8 @@ export const UIManager = {
       renderer,
       soundscape,
       questManager,
+      questHud: externalQuestHud,
+      interactionHud: externalInteractionHud,
       getPosition,
       getDirection,
       lightingCallbacks,
@@ -33,13 +35,9 @@ export const UIManager = {
       sunAlignment,
     } = options;
 
-    // Initialize interaction HUD (always visible for gameplay)
-    interactionHud = new InteractionHud();
-
-    // Initialize quest HUD if quest manager provided
-    if (questManager) {
-      questHud = new QuestHud(questManager);
-    }
+    // Use externally-created instances if provided (for InteractionSystem integration)
+    interactionHud = externalInteractionHud || new InteractionHud();
+    questHud = externalQuestHud || (questManager ? new QuestHud(questManager) : null);
 
     // Initialize dev HUD if callbacks provided
     if (getPosition && getDirection && lightingCallbacks) {

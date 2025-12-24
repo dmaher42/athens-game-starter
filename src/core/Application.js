@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { Soundscape } from "../audio/soundscape.js";
-import { mountAudioMixer } from "../ui/audioMixer.ts";
 import { setTimeOfDayPhase } from "../world/sky.js";
 import { DynamicSky } from "../world/sky/DynamicSky.js";
 import { createLighting, updateLighting } from "../world/lighting.js";
@@ -65,12 +64,10 @@ import { BuildingManager } from "../buildings/BuildingManager.js";
 import { PlayerController } from "../controls/PlayerController.js";
 import { ThirdPersonCamera } from "../controls/ThirdPersonCamera.js";
 import { Character } from "../characters/Character.js";
+import { CameraManager } from "./CameraManager.js";
+import { EnvironmentManager } from "./EnvironmentManager.js";
+import { UIManager } from "./UIManager.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
-import { mountExposureSlider } from "../ui/exposureSlider.ts";
-import { mountHotkeyOverlay } from "../ui/hotkeyOverlay.ts";
-import { mountDevHUD } from "../ui/devHud.ts";
-import { mountMiniMap } from "../ui/miniMap.ts";
-import { mount as mountHUDCameraSettings } from "../ui/HUDCameraSettings.ts";
 import { QuestHud } from "../ui/questHud.ts";
 import { InteractionHud } from "../ui/interactionHud.ts";
 import { updateLayout as updateHudLayout } from "../ui/HudManager.ts";
@@ -515,29 +512,11 @@ export class Application {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    const exposureOverlayConfig =
-      engineConfig.debug?.overlays?.exposureSlider || {};
-    const shouldMountExposureSlider = resolveFeatureToggle(
-      exposureOverlayConfig,
-    );
-
-    if (shouldMountExposureSlider) {
-      const exposureSettings = lightingConfig.exposure || {};
-      // Mount the exposure control (F9 toggles visibility)
-      mountExposureSlider(renderer, {
-        min: Number.isFinite(exposureSettings.min) ? exposureSettings.min : 0.2,
-        max: Number.isFinite(exposureSettings.max) ? exposureSettings.max : 2.0,
-        step: Number.isFinite(exposureSettings.step) ? exposureSettings.step : 0.01,
-        key: exposureOverlayConfig.hotkey || "F9",
-      });
-    }
+    
+    // Exposure slider and hotkey overlay will be mounted by UIManager later with all other HUD overlays
+    
     initializeAssetTranscoders(renderer);
     attachCrosshair();
-    const hotkeyOverlayConfig =
-      engineConfig.debug?.overlays?.hotkeyReference || { defaultValue: false, devDefault: true };
-    if (resolveFeatureToggle(hotkeyOverlayConfig)) {
-      mountHotkeyOverlay({ toggleKey: hotkeyOverlayConfig.toggleKey || "KeyH" });
-    }
     updateLoadingStatus("Listening for the bustle of ancient Athens...");
 
     let devHud = (this.devHud = null);
@@ -850,11 +829,7 @@ export class Application {
     });
     updateLoadingStatus("Sculpting the Attic landscape...");
 
-    // Volume mixer overlay (F10 toggles visibility)
-    const audioMixerToggle = engineConfig.debug?.overlays?.audioMixer || { defaultValue: false, devDefault: true, queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER" };
-    if (resolveFeatureToggle(audioMixerToggle)) {
-      mountAudioMixer(soundscape);
-    }
+    // Audio mixer will be mounted by UIManager later with all other HUD overlays
 
     // Generate a dynamic terrain mesh so the world has rolling hills instead of
     // a perfectly flat plane. We'll pass the mesh to the character so it can
@@ -3351,45 +3326,49 @@ export class Application {
       if (Number.isFinite(y)) pin.position.y = y;
     };
 
+    // Initialize UIManager with all HUD overlays (consolidated from scattered mounts)
     const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: false, devDefault: true };
-    if (resolveFeatureToggle(devHudToggle)) {
-      console.log("[HUD] mounting…");
-      devHud = mountDevHUD({
-      getPosition,
-      getDirection,
-      onPin,
-      onSetLightingPreset: (name) =>
-        setLightingPreset(name, "user"),
-      lightingPresets: LIGHTING_PRESETS,
-      getActivePresetName: () => getActiveLightingPresetName(),
-      setActivePreset: (name) => setLightingPreset(name, "user"),
-      getFogEnabled: () => fogEnabled,
-      onToggleFog: toggleFog,
-      sunAlignment: {
-        getAzimuthDeg: () => sunAlignmentState.azimuthDeg,
-        getElevationDeg: () => sunAlignmentState.elevationDeg,
-        onChange: setSunAlignment,
-      },
-      });
-    }
-    // The following line is commented out to prevent a ReferenceError at runtime.
-    // The definition for 'registerLightingDebugCommands' could not be found in the codebase.
-    // This appears to be a missing file or an unresolved dependency.
-    // registerLightingDebugCommands();
-    this.devHud = devHud;
-    devHud?.setActivePreset?.(lastAppliedLightingPreset);
-    mountMiniMap({ getPosition, getDirection });
-    proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
-    devHud?.setStatusLine?.(
-      "proc",
-      FORCE_PROC ? "Procedural: ON" : "Procedural: OFF",
-    );
-    onFogChange(fogEnabled);
     const cameraHudToggle = engineConfig.debug?.overlays?.cameraSettings || { defaultValue: false, devDefault: true };
-    if (resolveFeatureToggle(cameraHudToggle)) {
-      mountHUDCameraSettings(devHud?.rootElement ?? null);
+    
+    if (resolveFeatureToggle(devHudToggle) || resolveFeatureToggle(cameraHudToggle)) {
+      console.log("[HUD] mounting via UIManager…");
+      UIManager.init({
+        renderer,
+        soundscape,
+        questManager,
+        questHud,
+        interactionHud,
+        getPosition,
+        getDirection,
+        lightingCallbacks: {
+          onSetLightingPreset: (name) => setLightingPreset(name, "user"),
+          lightingPresets: LIGHTING_PRESETS,
+          getActivePresetName: () => getActiveLightingPresetName(),
+          setActivePreset: (name) => setLightingPreset(name, "user"),
+        },
+        fogCallbacks: {
+          getFogEnabled: () => fogEnabled,
+          onToggleFog: toggleFog,
+        },
+        sunAlignment: {
+          getAzimuthDeg: () => sunAlignmentState.azimuthDeg,
+          getElevationDeg: () => sunAlignmentState.elevationDeg,
+          onChange: setSunAlignment,
+        },
+        onPin,
+      });
+      
+      devHud = UIManager.getDevHud();
+      this.devHud = devHud;
+      devHud?.setActivePreset?.(lastAppliedLightingPreset);
+      
+      proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
+      devHud?.setStatusLine?.(
+        "proc",
+        FORCE_PROC ? "Procedural: ON" : "Procedural: OFF",
+      );
+      onFogChange(fogEnabled);
     }
-    updateHudLayout();
     updateOceanHudStatus();
     if (audioManifestMissing) {
       devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
