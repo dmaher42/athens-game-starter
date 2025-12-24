@@ -13,6 +13,7 @@ const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
 const HARBOR_GROUND_HEIGHT = 2.5;
+const waterTextureLoader = new THREE.TextureLoader();
 
 const BOAT_STYLES = [
   { hull: 0x2f6e8d, accent: 0xe2a86a },
@@ -27,19 +28,39 @@ function enableShadows(mesh) {
   mesh.receiveShadow = true;
 }
 
+function createReflectiveWaterMaterial() {
+  // Use a physical material to pick up scene reflections and soft wave normals.
+  const normalMap = waterTextureLoader.load(
+    "textures/ground/water_normals.png",
+    (tex) => {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(6, 6);
+      if ("colorSpace" in tex && THREE.LinearSRGBColorSpace !== undefined) {
+        tex.colorSpace = THREE.LinearSRGBColorSpace;
+      }
+    },
+  );
+
+  return new THREE.MeshPhysicalMaterial({
+    color: "#406080",
+    transparent: true,
+    opacity: 0.8,
+    metalness: 0.5,
+    roughness: 0.3,
+    envMapIntensity: 1.0,
+    clearcoat: 0.6,
+    clearcoatRoughness: 0.25,
+    normalMap,
+    normalScale: new THREE.Vector2(0.45, 0.45),
+  });
+}
+
 function createHarborWaterPlane(seaLevel) {
   const padding = 8;
   const width = Math.abs(HARBOR_WATER_BOUNDS.east - HARBOR_WATER_BOUNDS.west) + padding * 2;
   const depth = Math.abs(HARBOR_WATER_BOUNDS.south - HARBOR_WATER_BOUNDS.north) + padding * 2;
   const geometry = new THREE.PlaneGeometry(width, depth, 12, 12);
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x3a8a97,
-    metalness: 0.42,
-    roughness: 0.24,
-    envMapIntensity: 1.15,
-    transparent: true,
-    opacity: 0.96,
-  });
+  const material = createReflectiveWaterMaterial();
 
   const water = new THREE.Mesh(geometry, material);
   water.rotation.x = -Math.PI / 2;
