@@ -21,14 +21,29 @@ export function init(envOptions) {
   renderer = envOptions.renderer;
   hemisphereLight = envOptions.hemisphereLight;
   dynamicSky = envOptions.dynamicSky || null;
+
+  // Ensure a hemisphere light exists so downstream setters never hit null.
+  if (!hemisphereLight && scene) {
+    hemisphereLight = new THREE.HemisphereLight('#dbe9ff', '#9ba8b5', 0.2);
+    hemisphereLight.name = 'envFallbackLight';
+    scene.add(hemisphereLight);
+    scene.userData = scene.userData || {};
+    scene.userData.fallbackHemisphere = hemisphereLight;
+  }
 }
 
 export function applyBasicLightingProfile(profile) {
   if (!profile) return;
   // ✅ Implemented: hemisphere + fog + exposure
-  hemisphereLight.intensity = profile.hemisphere || 0.25;
-  renderer.toneMappingExposure = profile.exposure || 1.0;
-  scene.fog = new THREE.Fog(profile.fogColor || '#a0a0a0', profile.fogNear || 10, profile.fogFar || 100);
+  if (hemisphereLight) {
+    hemisphereLight.intensity = profile.hemisphere || 0.25;
+  }
+  if (renderer) {
+    renderer.toneMappingExposure = profile.exposure || 1.0;
+  }
+  if (scene) {
+    scene.fog = new THREE.Fog(profile.fogColor || '#a0a0a0', profile.fogNear || 10, profile.fogFar || 100);
+  }
 }
 
 // 🔜 STUBS TO BE IMPLEMENTED IN PHASES
