@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { AGORA_CENTER_3D, HARBOR_CENTER_3D } from './locations.js';
+import { AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { Prefabs, spawnBuilding } from './buildingSpawner.js';
 import { buildTemple } from '../features/temples.js';
@@ -179,6 +179,19 @@ export async function createCivicDistrict(scene, options = {}) {
     const localX = cell.position.x;
     const localZ = cell.position.z;
     const localY = sampleLocalHeight(localX, localZ, 0);
+
+    // Compute world-space position to respect harbor exclusions
+    const worldX = center.x + localX;
+    const worldZ = center.z + localZ;
+    const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
+      return (
+        worldX >= r.west && worldX <= r.east &&
+        worldZ >= r.north && worldZ <= r.south
+      );
+    });
+    if (isInSetback) {
+      continue; // Skip placing any city element inside harbor/walkway setbacks
+    }
 
     if (cell.type === 'road') {
       // Avenue is now East-West (gridZ approx 0)

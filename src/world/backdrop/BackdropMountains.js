@@ -19,7 +19,8 @@ export class BackdropMountains {
   create() {
     // Disable procedural peak mesh generation; rely on HDRI/skybox for distant mountains.
     // this.createMountains();
-    this.createMainlandExtension();
+    // Also disable mainland extension ring to avoid overlapping brown ground near harbor.
+    // this.createMainlandExtension();
   }
 
   createMountains() {

@@ -935,8 +935,10 @@ export class Application {
         horizonColor,
       });
     }
-    if (!this.coastalSkirt && Number.isFinite(terrainSize)) {
-      this.coastalSkirt = createCoastalSkirt(this.scene, terrainSize, seaLevel);
+    // Disable coastal skirt to avoid overlapping ground layers near harbor
+    if (this.coastalSkirt) {
+      this.scene.remove(this.coastalSkirt);
+      this.coastalSkirt = null;
     }
     if (!this.worldFloorCap) {
       this.worldFloorCap = createWorldFloorCap(this.scene, {
