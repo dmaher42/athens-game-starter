@@ -78,6 +78,7 @@ import {
 } from "../ui/loadingScreen.js";
 import { createPin } from "../world/pins.js";
 import { attachHeightSampler, probeAt } from "../world/terrainHeight.js";
+import { mountGroundAudit } from "../debug/groundAudit.js";
 import { addDepthOccluderRibbon } from "../world/occluders.js";
 import { snapAboveGround } from "../world/ground.js";
 import { findSafePlayerSpawn } from "../world/spawn.js";
@@ -1067,6 +1068,11 @@ export class Application {
           Math.abs(getSeaLevelY() - sampledSeaLevel) < 1e-6,
           "[seaLevel] mismatch after harbor sampling",
         );
+
+    // DEV: visualize ground layers to audit overlaps
+    if (import.meta?.env?.DEV) {
+      try { mountGroundAudit(scene); } catch (e) { console.warn("[groundAudit] mount failed", e); }
+    }
       }
     } else if (import.meta.env?.DEV && harborSampleCount < 3) {
       console.info(
