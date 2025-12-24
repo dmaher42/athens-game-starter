@@ -10,6 +10,7 @@ const LOD_DISTANCE_NEAR = 150; // Full detail
 const LOD_DISTANCE_MID = 250;  // Reduced detail
 const LOD_DISTANCE_FAR = 350;  // Minimal detail
 const HORIZON_CHECK_ENABLED = true;
+const FADE_DISTANCE = 150; // distance at which buildings fade/hide
 
 /**
  * Enable frustum culling on all building meshes
@@ -89,6 +90,13 @@ export function updateBuildingCulling(scene, camera, options = {}) {
       
       const worldPos = obj.getWorldPosition(new THREE.Vector3());
       const distance = worldPos.distanceTo(cameraPos);
+      // Quick fade/hide for near-far balance: hide building meshes beyond FADE_DISTANCE
+      // Apply only to regular building objects (marked via userData.isBuilding)
+      if (obj.userData?.isBuilding && distance > FADE_DISTANCE) {
+        obj.visible = false;
+        culledCount++;
+        return;
+      }
       
       // Distance culling
       if (distance > cullDistance) {

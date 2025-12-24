@@ -567,6 +567,15 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   buildingsGroup.name = "Buildings";
   worldRoot.add(buildingsGroup);
 
+  // Density limits per district
+  const MAX_BUILDINGS_PER_ZONE = Number.isFinite(options.maxBuildings) ? options.maxBuildings : 15;
+  const MIN_SPACING_TILES = Number.isFinite(options.minSpacingTiles) ? options.minSpacingTiles : 2;
+  const TILE_SIZE = Number.isFinite(options.tileSize) ? options.tileSize : 48; // meters per tile
+  const MIN_SPACING_METERS = MIN_SPACING_TILES * TILE_SIZE;
+
+  const districtCounts = Object.create(null);
+  const districtPlacedPositions = Object.create(null);
+
   const windowGlowRegistry = {
     candidates: [],
     ratio: THREE.MathUtils.clamp(0.1 + glowRng() * 0.1, 0.1, 0.2),
@@ -588,6 +597,30 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
       continue;
     }
     const districtId = pad.userData?.district || "default";
+
+    // Initialize counters for district
+    districtCounts[districtId] = districtCounts[districtId] || 0;
+    districtPlacedPositions[districtId] = districtPlacedPositions[districtId] || [];
+
+    // Enforce max buildings per district zone
+    if (districtCounts[districtId] >= MAX_BUILDINGS_PER_ZONE) {
+      // Skip this pad - district density cap reached
+      continue;
+    }
+
+    // Enforce minimum spacing within district (in world meters)
+    const padX = pad.position?.x ?? 0;
+    const padZ = pad.position?.z ?? 0;
+    let tooClose = false;
+    for (const pos of districtPlacedPositions[districtId]) {
+      const dx = padX - pos.x;
+      const dz = padZ - pos.z;
+      if (Math.hypot(dx, dz) < MIN_SPACING_METERS) {
+        tooClose = true;
+        break;
+      }
+    }
+    if (tooClose) continue;
 
     // Find matching rule
     const rule = districtRules.districts.find(d => d.id === districtId) ||
@@ -685,8 +718,14 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     const jitter = rotationJitter > 0 ? THREE.MathUtils.lerp(-rotationJitter, rotationJitter, padRng()) : 0;
     built.rotation.y = baseRotation + jitter;
     built.userData = { ...built.userData, district: districtId, type: typeKey };
+    // Mark as building for culling/debug systems
+    built.userData.isBuilding = true;
     buildingsGroup.add(built);
     count += 1;
+
+    // Register placement for district density/spacing enforcement
+    districtCounts[districtId]++;
+    districtPlacedPositions[districtId].push({ x: built.position.x, z: built.position.z });
 
     const candidatePanes = [];
     built.traverse((child) => {
