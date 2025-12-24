@@ -2614,6 +2614,9 @@ export class Application {
       return { azimuthDeg, elevationDeg, intensity, visible };
     };
 
+    // Apply lighting profiles to scene, sky, fog, and all lighting systems
+    // NOTE: EnvironmentManager.js exists but is too simple to replace this ~113-line function
+    // Future: Expand EnvironmentManager to handle sun/moon, dynamic sky, ocean, harbor, grass, etc.
     const applyLookProfileImmediate = (profileName) => {
       const profile = LOOK_PROFILES[profileName];
       if (!profile) {

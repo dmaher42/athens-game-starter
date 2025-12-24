@@ -1,5 +1,23 @@
 // src/core/EnvironmentManager.js
 // Handles sky, lighting, fog, and day/night profiles
+//
+// STATUS: Basic implementation - NOT YET INTEGRATED into Application.js
+//
+// TO FULLY REPLACE applyLookProfileImmediate(), this manager needs to handle:
+// - ✅ Hemisphere lighting (sky + ground colors)
+// - ✅ Renderer tone mapping exposure
+// - ✅ Scene fog (color, near, far)
+// - ❌ Sun/moon positioning (azimuth, elevation)
+// - ❌ Dynamic sky system integration
+// - ❌ Ocean lighting updates
+// - ❌ Harbor lighting updates
+// - ❌ Grass night factor
+// - ❌ Color grading / post-processing
+// - ❌ Stars visibility
+// - ❌ Environment map intensity
+//
+// CURRENT USE: Can be used for simple lighting changes, but Application.js
+// still handles the full lighting system via applyLookProfileImmediate()
 
 import * as THREE from 'three';
 import { LOOK_PROFILES } from '../config/LookProfiles.js';
