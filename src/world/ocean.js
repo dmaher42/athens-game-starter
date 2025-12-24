@@ -110,7 +110,7 @@ function createProceduralWaterNormals(size = 256) {
   return texture;
 }
 
-const _dayWaterColor = new THREE.Color(0x0a5566);
+const _dayWaterColor = new THREE.Color(0x1E90FF); // Brighter Mediterranean blue
 const _nightWaterColor = new THREE.Color(0x001a21);
 const _moodWaterColor = new THREE.Color();
 
@@ -328,8 +328,8 @@ export async function createOcean(scene, options = {}) {
     waterNormals: waterNormals,
     sunDirection: new THREE.Vector3(),
     sunColor: 0xffffff,
-    waterColor: options.waterColor ?? 0x006b7c,
-    distortionScale: 1.5,
+    waterColor: options.waterColor ?? 0x40E0D0, // Mediterranean turquoise
+    distortionScale: 1.2, // Subtler distortion
     fog: !!scene.fog,
   });
 

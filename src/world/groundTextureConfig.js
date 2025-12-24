@@ -64,10 +64,51 @@ export const GROUND_TEXTURE_CONFIG = {
 
   /**
    * Blended layers + procedural mask controls
+   * Enable blend to use beach configuration for sand near shoreline
+   * Use sand as dirt texture so beach areas show pure sand
    */
   blend: {
-    // Disable grass/dirt/stone tri-blend so everything stays sand.
-    enabled: false,
+    enabled: true,
+    
+    // Use procedural grass for inland areas
+    grass: {
+      procedural: "fresh-grass-lowlands",
+      size: 512,
+      seed: 1243,
+      baseColor: [95, 115, 82],
+      shadowColor: [62, 78, 52],
+      highlightColor: [128, 145, 108],
+      bladeFrequency: 0.72,
+      bladeTaper: 0.68,
+      highlightStrength: 0.28,
+      shadowStrength: 0.35,
+      noiseScale: 0.42,
+      patchiness: 0.38,
+      saturation: 0.68,
+      contrast: 1.08,
+      repeat: [28, 24],
+    },
+
+    // Use sand as "dirt" texture so beach effect shows sand
+    dirt: {
+      url: sandTextureUrl(),
+      colorSpace: "srgb",
+      repeat: [28, 24],
+    },
+
+    // Noise controls for grass/dirt blend (disable for clean beach effect)
+    noiseScale: 0.1,      // Very low for minimal procedural variation
+    noiseContrast: 0.01,  // Near zero to rely on beach height
+    maskStrength: 0.0,    // No mask, rely on beach height
+
+    // Stone for steep slopes (optional, can disable if not needed)
+    stone: {
+      url: sandTextureUrl(),  // Use sand for now to keep everything sandy
+      tint: [0.85, 0.82, 0.75],
+      repeat: [28, 24],
+    },
+    slopeThreshold: 0.9,  // Very steep before showing stone
+    slopeBlend: 0.15,
   },
 
   /**
@@ -82,10 +123,12 @@ export const GROUND_TEXTURE_CONFIG = {
   /**
    * Beach configuration
    * Applied by shader to force dirt/sand texture at low altitudes
+   * height: Distance above sea level where beach effect starts to fade out
+   * fade: Transition range for smooth blending from sand to grass
    */
   beach: {
-    height: 2.5,
-    fade: 2.0,
+    height: 4.0,  // Sand visible from sea level (0) to ~4 units (covers harbor at Y=2)
+    fade: 3.0,     // Gradual 3-unit transition to inland grass
   },
 
   /**

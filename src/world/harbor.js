@@ -42,15 +42,15 @@ function createReflectiveWaterMaterial() {
   );
 
   return new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(0x3a9bdc),
+    color: new THREE.Color(0x00CED1), // Mediterranean turquoise
     transparent: true,
-    opacity: 0.6,
-    metalness: 0.1,
-    roughness: 0.3,
-    transmission: 0.9,
-    envMapIntensity: 1.0,
+    opacity: 0.5,
+    metalness: 0.05,
+    roughness: 0.25,
+    transmission: 0.95,
+    envMapIntensity: 1.2,
     normalMap,
-    normalScale: new THREE.Vector2(0.45, 0.45),
+    normalScale: new THREE.Vector2(0.3, 0.3), // Subtler waves
   });
 }
 
