@@ -300,7 +300,8 @@ export function generateGreekHouseGeometry(
   // Foundation
   const foundationGeo = new THREE.BoxGeometry(width + 0.4, foundationHeight, depth + 0.4);
   foundationGeo.translate(0, foundationHeight * 0.5, 0);
-  geometries.push(applyVertexColor(foundationGeo, 0x999999));
+  // Use darker stone color for foundation base
+  geometries.push(applyVertexColor(foundationGeo, 0x7a7a7a));
 
   if (courtyard) {
     // U-shaped layout with open courtyard
@@ -325,6 +326,7 @@ export function generateGreekHouseGeometry(
     const courtyardFloor = new THREE.PlaneGeometry(width - 1.0, Math.max(1.0, depth * 0.7));
     courtyardFloor.rotateX(-Math.PI / 2);
     courtyardFloor.translate(0, foundationHeight + 0.02, -porchInset * 0.35);
+    // Keep courtyard as vertex color for performance (many buildings)
     geometries.push(applyVertexColor(courtyardFloor, 0xd9c8a0));
   } else {
     // Walls with front inset to leave a porch
