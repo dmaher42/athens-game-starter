@@ -131,7 +131,7 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   }
 
   // Slope up to land on the West side of the harbor
-  const slopeWidth = 20;
+  const slopeWidth = 40; // Wider ramp so 2.5m harbor pad blends smoothly to sea level
   const landStart = west - slopeWidth;
 
   if (x >= landStart && x < west && z >= north - 10 && z <= south + 10) {
