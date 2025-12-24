@@ -9,6 +9,7 @@ import {
   createGroundTextureState,
   injectGroundTextureShader,
 } from "./groundTextures.js";
+import { getDistanceToCoast, isInHarborZone } from './coastalZones.js';
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
 import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
 
@@ -434,12 +435,91 @@ export function createTerrain(scene) {
     return h0 + (h1 - h0) * sz;
   };
 
+  // After sampler is available, expose groundTextureState to other systems
   terrain.userData.groundTextureState = groundTextureState;
 
   return terrain;
 }
 
 export function updateTerrain() {}
+
+/**
+ * Lower terrain slightly where shallow water should be exposed and optionally blend shoreline sand color.
+ * Criteria: where the vertex height >= seaLevel and the location is effectively water (distanceToCoast === 0)
+ * @param {THREE.Mesh} terrain
+ * @param {object} options { lowerBy: number, blendShore: boolean }
+ */
+export function adjustShallowWater(terrain, options = {}) {
+  if (!terrain || !terrain.geometry) return;
+  const { lowerBy = 0.5, blendShore = true } = options;
+  const geometry = terrain.geometry;
+  const posAttr = geometry.attributes.position;
+  const colorAttr = geometry.attributes.color;
+  const baseHeights = geometry.userData.baseHeights;
+  const seaLevel = getSeaLevelY();
+
+  // Require sampler to compute coast distance
+  const sampler = terrain.userData?.getHeightAt;
+  const canSample = typeof sampler === 'function';
+
+  const tmp = new THREE.Vector3();
+  for (let i = 0; i < posAttr.count; i++) {
+    const x = posAttr.getX(i);
+    const z = posAttr.getY(i);
+    const h = posAttr.getZ(i);
+
+    // Only consider vertices at or above sea level
+    if (h >= seaLevel) {
+      let isWaterNearby = false;
+
+      if (canSample) {
+        try {
+          const dist = getDistanceToCoast(sampler, x, z, 8);
+          if (dist === 0) isWaterNearby = true;
+        } catch (err) {
+          // fallback to harbor check
+          try {
+            if (isInHarborZone(sampler, x, z)) isWaterNearby = true;
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+
+      if (isWaterNearby) {
+        // Lower vertex to expose water
+        const newH = h - lowerBy;
+        posAttr.setZ(i, newH);
+
+        // Keep the baseHeights sampler consistent with the visual mesh
+        if (baseHeights && baseHeights.length > i) {
+          baseHeights[i] = newH;
+        }
+
+        // Also update basePos attribute (if present) so other systems reading base positions stay in sync
+        const basePos = geometry.getAttribute("basePos");
+        if (basePos) {
+          // basePos stores triples; setZ works with the vertex index
+          try { basePos.setZ(i, newH); } catch (e) { /* ignore if not supported */ }
+        }
+
+        // Blend color toward sand for shoreline effect
+        if (blendShore && colorAttr) {
+          const r = colorAttr.getX(i);
+          const g = colorAttr.getY(i);
+          const b = colorAttr.getZ(i);
+          const cur = new THREE.Color(r, g, b);
+          cur.lerp(SAND_COLOR, 0.65);
+          colorAttr.setXYZ(i, cur.r, cur.g, cur.b);
+        }
+      }
+    }
+  }
+
+  posAttr.needsUpdate = true;
+  if (colorAttr) colorAttr.needsUpdate = true;
+  geometry.computeVertexNormals();
+}
 
 export function updateTerrainCoverageMask(terrain, options = {}) {
   const state = terrain?.userData?.groundTextureState?.baseBlend;
