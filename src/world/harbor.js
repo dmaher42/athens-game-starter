@@ -67,6 +67,8 @@ function createHarborWaterPlane(seaLevel) {
   // Position relative to harbor group origin (0,0,0) since group is repositioned
   // Harbor group will be moved to (-50, harborGroundY, -100) in world space
   // Shift water eastward (+400 X) so it only appears in front/east, not behind/west
+  // Local Y position ensures water sits at seaLevel in world coordinates:
+  // World Y = harborGroundY + (seaLevel - HARBOR_GROUND_HEIGHT) = seaLevel
   water.position.set(400, seaLevel - HARBOR_GROUND_HEIGHT, 0);
   water.name = "HarborLowPolyWater";
   water.userData.isWater = true;

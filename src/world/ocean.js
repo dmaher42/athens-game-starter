@@ -544,6 +544,7 @@ export async function createOcean(scene, options = {}) {
 
   // 4. POSITIONING
   water.rotation.x = -Math.PI / 2;
+  // Ensure water is positioned at SEA_LEVEL_Y (horizonOffset defaults to 0)
   const horizonOffset = Number.isFinite(options.horizonOffset)
     ? options.horizonOffset
     : 0;
