@@ -118,12 +118,13 @@ function applyHarbourCarve(x, z, seaLevel, height) {
 
 function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   // Define a bounding box for the East Harbor water area
-  const halfWidth = 70;
+  // Extend massively eastward to cover everything forward
+  const halfWidth = 400;
   // Extended north-south depth to match water plane (200 half-depth = 400 total)
   const halfDepth = 200;
 
   const west = EAST_HARBOR_CENTER.x - halfWidth;
-  const east = EAST_HARBOR_CENTER.x + halfWidth + 400; // Extend indefinitely east
+  const east = EAST_HARBOR_CENTER.x + halfWidth + 600; // Massive eastward extension
   const north = EAST_HARBOR_CENTER.y - halfDepth;
   const south = EAST_HARBOR_CENTER.y + halfDepth;
 

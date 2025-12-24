@@ -56,11 +56,11 @@ function createReflectiveWaterMaterial() {
 }
 
 function createHarborWaterPlane(seaLevel) {
-  const padding = 8;
-  const width = Math.abs(HARBOR_WATER_BOUNDS.east - HARBOR_WATER_BOUNDS.west) + padding * 2;
+  // Massive water expanse extending eastward
+  const width = 800;
   // Extended depth to create proper north-south shoreline (was 120, now 400)
   const depth = 400;
-  const geometry = new THREE.PlaneGeometry(width, depth, 24, 24);
+  const geometry = new THREE.PlaneGeometry(width, depth, 32, 32);
   const material = createReflectiveWaterMaterial();
 
   const water = new THREE.Mesh(geometry, material);
@@ -78,12 +78,9 @@ function createHarborWaterPlane(seaLevel) {
 }
 
 function createHarborPad(harborGroundY) {
-  const paddingX = 25;
-  const paddingZ = 22;
-  const width =
-    HARBOR_WATER_BOUNDS.east - HARBOR_WATER_BOUNDS.west + paddingX * 2;
-  const depth =
-    HARBOR_WATER_BOUNDS.south - HARBOR_WATER_BOUNDS.north + paddingZ * 2;
+  // Small harbor island pad - 60x60 brown square
+  const width = 60;
+  const depth = 60;
   const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
   if (geometry.attributes.uv && !geometry.attributes.uv2) {
     geometry.setAttribute(
