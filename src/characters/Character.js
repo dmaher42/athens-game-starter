@@ -19,7 +19,7 @@ export class Character extends THREE.Object3D {
    */
   async load(url, renderer, { targetHeight = 1.8 } = {}) {
     const urls = Array.isArray(url) ? url : [url];
-    const loader = createGLTFLoader(renderer);
+    const loader = await createGLTFLoader(renderer);
     const loaded = await loadGLBWithFallbacks(loader, urls, {
       renderer,
       targetHeight,

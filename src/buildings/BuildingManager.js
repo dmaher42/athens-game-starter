@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createGLTFLoader } from '../utils/glbSafeLoader.js';
 
 const BUILDINGS_ROOT_NAME = 'BuildingsRoot';
 
@@ -62,7 +63,7 @@ export class BuildingManager {
    */
   constructor(envCollider) {
     this.envCollider = envCollider;
-    this.loader = new GLTFLoader();
+    this.loader = null;
     this.rootGroup = null;
   }
 
@@ -80,6 +81,10 @@ export class BuildingManager {
    * }} [options]
    */
   async loadBuilding(url, options) {
+    // Lazily initialize the GLTF loader on first use
+    if (!this.loader) {
+      this.loader = await createGLTFLoader(null);
+    }
     // Check if the file exists before attempting to load it
     // This prevents trying to parse HTML 404 pages as GLB files
     const headResult = await headOk(url);

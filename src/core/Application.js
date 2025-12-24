@@ -1878,7 +1878,7 @@ export class Application {
     );
 
     try {
-      const heroLoader = createGLTFLoader(renderer);
+      const heroLoader = await createGLTFLoader(renderer);
       const loadedHero = await loadGLBWithFallbacks(
         heroLoader,
         heroCandidates,
