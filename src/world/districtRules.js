@@ -90,12 +90,12 @@ export async function loadDistrictRules(baseUrlStr = "") {
         id: "default",
         heightRange: [-999, 999],
         buildingDensity: "medium",
-        minSeparation: 16,
+        minSeparation: 20,
         allowedTypes: ["house", "shop"],
         road: { width: 3.2, color: 0x333333 },
       },
     ],
-    densitySpacingMeters: { high: 11, medium: 16, low: 22 },
+    densitySpacingMeters: { high: 14, medium: 20, low: 28 },
     maxSlopeDeltaPerLot: 2.0,
     roadSetbackMeters: 4,
   });
@@ -103,7 +103,7 @@ export async function loadDistrictRules(baseUrlStr = "") {
 
 function normalizeRules(cfg) {
   const toColor = (v) => (typeof v === "number" ? v : 0x333333);
-  const defaultSpacing = { high: 11, medium: 16, low: 22 };
+  const defaultSpacing = { high: 14, medium: 20, low: 28 };
   for (const d of cfg.districts || []) {
     d.heightRange = Array.isArray(d.heightRange) ? d.heightRange : [-999, 999];
     d.allowedTypes = Array.isArray(d.allowedTypes) ? d.allowedTypes : ["house"];
