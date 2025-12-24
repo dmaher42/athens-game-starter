@@ -1000,15 +1000,8 @@ export class Application {
     let harborSampleCount = 0;
     let harbor = null;
 
+    // Create harbor with all features: docks, boats, sheds, props
     harbor = createHarbor(scene);
-
-    // Relocate harbor to East for Mainland Coast logic (Rotate 180 and move)
-    if (harbor) {
-        harbor.rotation.y = Math.PI;
-        // Rotated 180 around (0,0). Original (-120, 80) becomes (120, -80).
-        // We want (120, 80). So offset Z by +160.
-        harbor.position.set(0, 0, 160);
-    }
 
     if (typeof harborSampler === "function") {
       const { west, east, north, south } = HARBOR_WATER_BOUNDS;

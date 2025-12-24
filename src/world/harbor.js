@@ -349,6 +349,29 @@ function createShed(size, groundY, position) {
   return shed;
 }
 
+/**
+ * Creates a complete harbor with all features and props.
+ * 
+ * Harbor Features Created:
+ * 1. Harbor Pad - Ground plane with sand texture
+ * 2. Water Plane - Reflective water surface extending eastward
+ * 3. Piers - Three rows of wooden docks (North, Center, South)
+ *    - Each pier has multiple dock sections
+ *    - Wooden posts for structural support
+ * 4. Boats - Fishing boats moored at each pier
+ *    - Hull, bow, cabin, and mast
+ *    - Variety of colors from BOAT_STYLES
+ * 5. Shoreline Dressing - Mooring posts along the waterfront
+ * 6. Dock Props - Crates and barrels scattered on dock sections
+ * 7. Shore Props - Crates and barrels on the shoreline
+ * 8. Sheds/Warehouses - Two storage buildings with terracotta roofs
+ * 
+ * All elements are positioned relative to harborGroundY (seaLevel + HARBOR_GROUND_HEIGHT)
+ * to ensure they sit above water level.
+ * 
+ * @param {THREE.Scene} scene - The scene to add the harbor to
+ * @returns {THREE.Group} The complete harbor group
+ */
 export function createHarbor(scene) {
   const harbor = new THREE.Group();
   harbor.name = "Harbor";
@@ -439,12 +462,14 @@ export function createHarbor(scene) {
   ];
   sheds.forEach((shed) => harbor.add(shed));
 
+  // Position harbor in world space before adding to scene
+  // Positioned at (-50, harborGroundY, -100) for the eastern shoreline
+  harbor.position.set(-50, harborGroundY, -100);
+
   if (scene) {
     scene.add(harbor);
   }
 
-  // Reposition harbor toward visible shoreline (southwest offset)
-  harbor.position.set(-50, harborGroundY, -100);
   return harbor;
 }
 
