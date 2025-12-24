@@ -49,7 +49,31 @@ export function updateSkyGradient(skyParams) {
 
 // Copilot: Set the intensity of environment map lighting. Affects reflections on GLTF models using .envMapIntensity.
 export function setEnvironmentMapIntensity(intensity = 1.0) {
-  // TODO: Update material.envMapIntensity globally
+  const target = Number.isFinite(intensity) ? Math.max(0, intensity) : 1.0;
+
+  const applyToMaterial = (material) => {
+    if (!material || typeof material !== 'object') return;
+    if (Array.isArray(material)) {
+      material.forEach(applyToMaterial);
+      return;
+    }
+    if ('envMapIntensity' in material) {
+      material.envMapIntensity = target;
+      material.needsUpdate = true;
+    }
+  };
+
+  try {
+    scene?.traverse((child) => {
+      if (!child?.isMesh) return;
+      applyToMaterial(child.material);
+    });
+    if (scene && scene.userData) {
+      scene.userData.environmentIntensity = target;
+    }
+  } catch (e) {
+    console.warn('[EnvStubs] setEnvironmentMapIntensity failed', e);
+  }
 }
 
 // Copilot: Sync time-of-day value (0.0 to 1.0) to all lighting elements. Move sun/moon, adjust exposure, and sky color.

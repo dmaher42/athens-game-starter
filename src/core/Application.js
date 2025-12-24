@@ -65,7 +65,7 @@ import { PlayerController } from "../controls/PlayerController.js";
 import { ThirdPersonCamera } from "../controls/ThirdPersonCamera.js";
 import { Character } from "../characters/Character.js";
 import { UIManager } from "./UIManager.js";
-import { init as initEnvStubs, applyBasicLightingProfile } from "./EnvironmentManager.stubs.js";
+import { init as initEnvStubs, applyBasicLightingProfile, setEnvironmentMapIntensity } from "./EnvironmentManager.stubs.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
 import { QuestHud } from "../ui/questHud.ts";
 import { InteractionHud } from "../ui/interactionHud.ts";
@@ -806,6 +806,11 @@ export class Application {
           fogNear: bn?.fog?.near ?? 3200,
           fogFar: bn?.fog?.far ?? 12000,
         });
+
+        // Also apply environment map intensity to GLTF materials
+        if (Number.isFinite(bn?.env?.envMapIntensity)) {
+          setEnvironmentMapIntensity(bn.env.envMapIntensity);
+        }
       }
     } catch (e) {
       console.warn("[EnvStubs] initialization failed", e);
