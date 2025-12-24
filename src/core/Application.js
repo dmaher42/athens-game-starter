@@ -873,8 +873,8 @@ export class Application {
       Number.isFinite(terrainSize) ? terrainSize * 2.2 : 0,
       2600,
     );
-    // Light horizon to avoid harsh black voids when looking down
-    const horizonColor = 0xdce4f2;
+    // Light but not blown-out horizon to avoid both black voids and whiteout
+    const horizonColor = 0xb7c7d6;
     const shorelineInnerRadius = Math.max(
       Number.isFinite(terrainSize) ? terrainSize * 0.5 + 4 : 0,
       215,
