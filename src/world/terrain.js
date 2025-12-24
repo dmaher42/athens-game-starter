@@ -54,7 +54,8 @@ const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
 
 // Harbor configuration (East Facing)
-const HARBOR_GROUND_HEIGHT = 1;
+// Match city flat height so harbor ground sits level with city plateau
+const HARBOR_GROUND_HEIGHT = 2.5;
 const HARBOUR_RADIUS = 70;
 const HARBOUR_TARGET_DEPTH = 2;
 // Use imported location
