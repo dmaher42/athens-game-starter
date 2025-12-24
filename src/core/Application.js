@@ -3097,8 +3097,8 @@ export class Application {
     }
 
     // Apply default profile on startup to lock the look immediately
-    const initialPreset =
-      getPresetForPhase(timeOfDayState.timeOfDayPhase ?? 0) || "Bright Noon";
+    // Force "Bright Noon" as the default lighting preset
+    const initialPreset = "Bright Noon";
     applyLookProfile(initialPreset, {
       immediate: true,
       forceReapply: true,
