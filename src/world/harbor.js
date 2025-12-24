@@ -6,7 +6,17 @@ import {
   getSeaLevelY,
   HARBOR_GROUND_HEIGHT,
   getCityGroundY,
+  HARBOR_CENTER_3D,
 } from "./locations.js";
+import {
+  findDockSlots,
+  findRaisedPlatformSlots,
+  snapToGridSlot,
+  isInHarborZone,
+  isRaisedPlatformZone,
+  analyzeHarborZone,
+  HARBOR_ZONE_CONFIG,
+} from "./coastalZones.js";
 
 const DOCK_SECTION_LENGTH = 9.5;
 const DOCK_SECTION_WIDTH = 5.8;
@@ -468,6 +478,139 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
 }
 
 /**
+ * Creates a lighthouse on a raised platform.
+ * Includes cylindrical stone tower with light chamber at top.
+ */
+function createLighthouse() {
+  const lighthouse = new THREE.Group();
+
+  // Base platform
+  const baseGeometry = new THREE.CylinderGeometry(2.0, 2.2, 0.5, 8);
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6b6b5a,
+    roughness: 0.9,
+    metalness: 0.0,
+  });
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.y = 0.25;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  lighthouse.add(base);
+
+  // Tower (tapered cylinder)
+  const towerGeometry = new THREE.CylinderGeometry(0.9, 1.2, 4.0, 12);
+  const towerMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8a8a7a,
+    roughness: 0.85,
+    metalness: 0.0,
+  });
+  const tower = new THREE.Mesh(towerGeometry, towerMaterial);
+  tower.position.y = 2.5;
+  tower.castShadow = true;
+  tower.receiveShadow = true;
+  lighthouse.add(tower);
+
+  // Light chamber (glass dome)
+  const chamberGeometry = new THREE.CylinderGeometry(1.0, 1.0, 0.8, 12);
+  const chamberMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffcc,
+    roughness: 0.1,
+    metalness: 0.3,
+    emissive: 0xffff88,
+    emissiveIntensity: 0.4,
+  });
+  const chamber = new THREE.Mesh(chamberGeometry, chamberMaterial);
+  chamber.position.y = 5.0;
+  chamber.castShadow = true;
+  lighthouse.add(chamber);
+
+  // Roof (cone)
+  const roofGeometry = new THREE.ConeGeometry(1.1, 0.8, 12);
+  const roofMaterial = new THREE.MeshStandardMaterial({
+    color: 0xaa2222,
+    roughness: 0.7,
+    metalness: 0.2,
+  });
+  const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+  roof.position.y = 5.8;
+  roof.castShadow = true;
+  lighthouse.add(roof);
+
+  return lighthouse;
+}
+
+/**
+ * Creates a clocktower on a raised platform.
+ * Includes square tower with clock faces and peaked roof.
+ */
+function createClocktower() {
+  const clocktower = new THREE.Group();
+
+  // Base platform
+  const baseGeometry = new THREE.BoxGeometry(2.5, 0.5, 2.5);
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: 0x6b6b5a,
+    roughness: 0.9,
+    metalness: 0.0,
+  });
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.y = 0.25;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  clocktower.add(base);
+
+  // Tower (square)
+  const towerGeometry = new THREE.BoxGeometry(1.8, 4.0, 1.8);
+  const towerMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8a8a7a,
+    roughness: 0.85,
+    metalness: 0.0,
+  });
+  const tower = new THREE.Mesh(towerGeometry, towerMaterial);
+  tower.position.y = 2.5;
+  tower.castShadow = true;
+  tower.receiveShadow = true;
+  clocktower.add(tower);
+
+  // Clock faces (four sides)
+  const clockFaceGeometry = new THREE.CircleGeometry(0.5, 16);
+  const clockFaceMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.3,
+    metalness: 0.1,
+  });
+  
+  const clockPositions = [
+    { x: 0, z: 0.91, rotY: 0 },      // Front
+    { x: 0.91, z: 0, rotY: Math.PI/2 }, // Right
+    { x: 0, z: -0.91, rotY: Math.PI },  // Back
+    { x: -0.91, z: 0, rotY: -Math.PI/2 } // Left
+  ];
+
+  clockPositions.forEach(pos => {
+    const face = new THREE.Mesh(clockFaceGeometry, clockFaceMaterial);
+    face.position.set(pos.x, 3.8, pos.z);
+    face.rotation.y = pos.rotY;
+    clocktower.add(face);
+  });
+
+  // Roof (pyramid)
+  const roofGeometry = new THREE.ConeGeometry(1.4, 1.2, 4);
+  const roofMaterial = new THREE.MeshStandardMaterial({
+    color: 0xaa4422,
+    roughness: 0.7,
+    metalness: 0.2,
+  });
+  const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+  roof.position.y = 5.1;
+  roof.rotation.y = Math.PI / 4;
+  roof.castShadow = true;
+  clocktower.add(roof);
+
+  return clocktower;
+}
+
+/**
  * Creates a complete harbor with all features and props.
  * 
  * Harbor Features Created:
@@ -484,6 +627,8 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
  * 7. Shore Props - Crates and barrels on the shoreline
  * 8. Sheds/Warehouses - Two storage buildings with terracotta roofs
  * 9. City Connector - Wooden boardwalk ramp from city level to harbor level
+ * 10. Lighthouse - Tall stone tower on raised platform (if available)
+ * 11. Clocktower - Square tower with clock faces on raised platform (if available)
  * 
  * All elements are positioned relative to harborGroundY (seaLevel + HARBOR_GROUND_HEIGHT)
  * to ensure they sit above water level.
@@ -495,12 +640,39 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
  * @param {THREE.Scene} scene - The scene to add the harbor to
  * @returns {THREE.Group} The complete harbor group
  */
-export function createHarbor(scene) {
+export function createHarbor(scene, options = {}) {
   const harbor = new THREE.Group();
   harbor.name = "Harbor";
 
   const seaLevel = getSeaLevelY();
   const harborGroundY = seaLevel + HARBOR_GROUND_HEIGHT;
+  
+  // Get terrain sampler if available
+  const terrainSampler = options.terrain?.userData?.getHeightAt || 
+                        options.terrainSampler ||
+                        scene?.userData?.getHeightAt;
+
+  console.log('[Harbor] Creating coastal harbor with grid-aligned placement...');
+
+  // Analyze harbor zone if terrain sampler available
+  let dockSlots = [];
+  let raisedSlots = [];
+  
+  if (terrainSampler) {
+    const searchArea = {
+      centerX: HARBOR_CENTER_3D.x,
+      centerZ: HARBOR_CENTER_3D.z,
+      width: 100,
+      depth: 80,
+    };
+
+    const analysis = analyzeHarborZone(terrainSampler, searchArea);
+    console.log(`[Harbor] Zone analysis: ${analysis.dockSlots} dock slots, ${analysis.raisedSlots} raised platforms`);
+    console.log(`[Harbor] Coverage: ${analysis.dockCoverage.toFixed(1)}% dock, ${analysis.raisedCoverage.toFixed(1)}% raised`);
+    
+    dockSlots = analysis.bestDockPositions || [];
+    raisedSlots = analysis.bestRaisedPositions || [];
+  }
 
   const harborPad = createHarborPad(harborGroundY);
   harbor.add(harborPad);
@@ -508,23 +680,43 @@ export function createHarbor(scene) {
   const waterPlane = createHarborWaterPlane(seaLevel);
   harbor.add(waterPlane);
 
-  // Pier positions relative to harbor group origin
-  // Original HARBOR_WATER_EAST_LIMIT was 190, relative to center 120, so offset is +70
-  const pierStartX = 70 + 1.1;
-  const pierRows = [
-    { z: -18, sections: 4 },  // North pier
-    { z: -2, sections: 5 },   // Center pier
-    { z: 16, sections: 4 },   // South pier
-  ];
-
+  // Use grid-aligned dock slots if available, otherwise fallback to default positions
   const piersGroup = new THREE.Group();
   piersGroup.name = "HarborPiers";
   const allSections = [];
-  for (const row of pierRows) {
-    const { pier, sections } = createPierLine(pierStartX, row.z, row.sections, seaLevel);
-    allSections.push(...sections);
-    piersGroup.add(pier);
+
+  if (dockSlots.length >= 3) {
+    // Place piers in best grid-aligned slots
+    console.log(`[Harbor] Placing piers in ${Math.min(3, dockSlots.length)} grid-aligned slots`);
+    
+    for (let i = 0; i < Math.min(3, dockSlots.length); i++) {
+      const slot = dockSlots[i];
+      // Convert world coordinates to local harbor coordinates
+      const localX = slot.x - HARBOR_CENTER_3D.x;
+      const localZ = slot.z - HARBOR_CENTER_3D.z;
+      
+      const sections = 4 + Math.floor(Math.random() * 2);
+      const { pier, sections: pierSections } = createPierLine(localX, localZ, sections, seaLevel);
+      allSections.push(...pierSections);
+      piersGroup.add(pier);
+    }
+  } else {
+    // Fallback to default pier positions
+    console.log('[Harbor] Using default pier positions (no terrain sampler)');
+    const pierStartX = 70 + 1.1;
+    const pierRows = [
+      { z: -18, sections: 4 },
+      { z: -2, sections: 5 },
+      { z: 16, sections: 4 },
+    ];
+
+    for (const row of pierRows) {
+      const { pier, sections } = createPierLine(pierStartX, row.z, row.sections, seaLevel);
+      allSections.push(...sections);
+      piersGroup.add(pier);
+    }
   }
+  
   harbor.add(piersGroup);
 
   const shorelineGroup = new THREE.Group();
@@ -587,6 +779,35 @@ export function createHarbor(scene) {
     createShed(new THREE.Vector3(22, 6, 14), 0, new THREE.Vector3(70 + 24, 0, 8)),
   ];
   sheds.forEach((shed) => harbor.add(shed));
+
+  // Place lighthouse and clocktower on raised platforms if available
+  if (raisedSlots.length >= 1) {
+    // Sort raised slots by elevation (highest first)
+    const sortedRaised = [...raisedSlots].sort((a, b) => b.elevation - a.elevation);
+    
+    // Place lighthouse on highest raised platform
+    const lighthouseSlot = sortedRaised[0];
+    const lighthouse = createLighthouse();
+    // Convert world coords to local coords relative to harbor center
+    const lighthouseLocalX = lighthouseSlot.x - HARBOR_CENTER_3D.x;
+    const lighthouseLocalZ = lighthouseSlot.z - HARBOR_CENTER_3D.z;
+    lighthouse.position.set(lighthouseLocalX, lighthouseSlot.elevation - harborGroundY, lighthouseLocalZ);
+    lighthouse.userData.category = "harbor-lighthouse";
+    harbor.add(lighthouse);
+    console.log(`[Harbor] Lighthouse placed at (${lighthouseLocalX.toFixed(1)}, ${lighthouseSlot.elevation.toFixed(2)}, ${lighthouseLocalZ.toFixed(1)})`);
+
+    // Place clocktower on second highest raised platform if available
+    if (sortedRaised.length >= 2) {
+      const clocktowerSlot = sortedRaised[1];
+      const clocktower = createClocktower();
+      const clocktowerLocalX = clocktowerSlot.x - HARBOR_CENTER_3D.x;
+      const clocktowerLocalZ = clocktowerSlot.z - HARBOR_CENTER_3D.z;
+      clocktower.position.set(clocktowerLocalX, clocktowerSlot.elevation - harborGroundY, clocktowerLocalZ);
+      clocktower.userData.category = "harbor-clocktower";
+      harbor.add(clocktower);
+      console.log(`[Harbor] Clocktower placed at (${clocktowerLocalX.toFixed(1)}, ${clocktowerSlot.elevation.toFixed(2)}, ${clocktowerLocalZ.toFixed(1)})`);
+    }
+  }
 
   // Add city-harbor connector boardwalk
   const cityGroundY = getCityGroundY();
