@@ -13,17 +13,17 @@ export function getGravellySandMaterial() {
   const loader = new THREE.TextureLoader();
 
   const diffuse = withRepeat(
-    loader.load("/textures/gravelly_sand/gravelly_sand_diff_1k.jpg"),
+    loader.load("textures/gravelly_sand/gravelly_sand_diff_1k.jpg"),
   );
   diffuse.colorSpace = THREE.SRGBColorSpace;
 
   const normal = withRepeat(
-    loader.load("/textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
+    loader.load("textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
   );
   normal.colorSpace = THREE.NoColorSpace;
 
   const arm = withRepeat(
-    loader.load("/textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
+    loader.load("textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
   );
   arm.colorSpace = THREE.NoColorSpace;
 
