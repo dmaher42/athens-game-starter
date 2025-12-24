@@ -44,7 +44,7 @@ function generateCityGrid() {
       const cell = {
         gridX,
         gridZ,
-        position: new THREE.Vector3(gridX * BLOCK_SIZE, 0, gridZ * BLOCK_SIZE),
+        position: new THREE.Vector3(gridX * BLOCK_SIZE, 2.5, gridZ * BLOCK_SIZE), // Base elevation above sea level
         type: 'building',
         district: 'residential'
       };
