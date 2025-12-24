@@ -3363,6 +3363,19 @@ export class Application {
     updateLoadingStatus("Opening the gates to ancient Athens...");
     hideLoadingScreen();
 
+    // Debug: Audit low objects that might be submerged or overlapping with water
+    if (import.meta?.env?.DEV) {
+      console.log('[GROUND AUDIT] Checking for low-positioned objects...');
+      let lowObjectCount = 0;
+      scene.traverse(obj => {
+        if (obj.isMesh && obj.position.y < 1) {
+          console.log('[LOW OBJECT]', obj.name || 'unnamed', 'Y:', obj.position.y.toFixed(3));
+          lowObjectCount++;
+        }
+      });
+      console.log(`[GROUND AUDIT] Found ${lowObjectCount} objects below Y=1`);
+    }
+
     // Utility getters for HUD
     const getPosition = () => {
       try {
