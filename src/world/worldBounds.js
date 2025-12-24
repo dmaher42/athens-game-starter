@@ -23,7 +23,7 @@ export function createWorldFloorCap(scene, options = {}) {
     if (options.color) return options.color instanceof THREE.Color ? options.color : new THREE.Color(options.color);
     const fogColor = scene?.fog?.color;
     if (fogColor && fogColor.isColor) return fogColor.clone();
-    return new THREE.Color(0x2a3f5c); // horizon-like fallback
+    return new THREE.Color(0xdce4f2); // bright horizon-like fallback
   })();
   const material = new THREE.MeshBasicMaterial({
     color: floorColor,
