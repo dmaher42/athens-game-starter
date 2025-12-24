@@ -3,6 +3,7 @@ import {
   getSeaLevelY,
   AGORA_CENTER_3D,
   HARBOR_CENTER_3D,
+  HARBOR_GROUND_HEIGHT,
 } from "./locations.js";
 import {
   createGroundTextureState,
@@ -135,13 +136,23 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
     return seaLevel - 1.4;
   }
 
-  // Slope up to land on the West side of the harbor
-  const slopeWidth = 25; // Longer than original 20 to reduce cliffs without overextending
-  const landStart = west - slopeWidth;
+  // Create a flat shelf BEHIND the harbor (west of water) for city connection
+  const shelfWidth = 60; // Width of flat area for harbor buildings and props
+  const shelfStart = west - shelfWidth;
+  const shelfDepth = 80; // Extend shelf north-south
+  
+  if (x >= shelfStart && x < west && z >= north - shelfDepth && z <= south + shelfDepth) {
+    // Flat shelf at harborGroundY for harbor props and city connection
+    return harborGroundY;
+  }
 
-  if (x >= landStart && x < west && z >= north - 10 && z <= south + 10) {
+  // Slope up to land on the West side of the harbor shelf
+  const slopeWidth = 25; // Transition from shelf to city terrain
+  const landStart = shelfStart - slopeWidth;
+
+  if (x >= landStart && x < shelfStart && z >= north - shelfDepth - 10 && z <= south + shelfDepth + 10) {
       const t = (x - landStart) / slopeWidth;
-      return THREE.MathUtils.lerp(harborGroundY, seaLevel, t);
+      return THREE.MathUtils.lerp(baseHeight, harborGroundY, t);
   }
 
   return baseHeight;

@@ -4,6 +4,7 @@ import {
   HARBOR_WATER_CENTER,
   HARBOR_WATER_EAST_LIMIT,
   getSeaLevelY,
+  HARBOR_GROUND_HEIGHT,
 } from "./locations.js";
 
 const DOCK_SECTION_LENGTH = 9.5;
@@ -11,7 +12,6 @@ const DOCK_SECTION_WIDTH = 5.8;
 const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
-const HARBOR_GROUND_HEIGHT = 2;
 const DOCK_LIFT = 1.2; // Raise docks above water for better visibility
 const waterTextureLoader = new THREE.TextureLoader();
 
@@ -372,6 +372,9 @@ function createShed(size, groundY, position) {
  * 
  * All elements are positioned relative to harborGroundY (seaLevel + HARBOR_GROUND_HEIGHT)
  * to ensure they sit above water level.
+ * 
+ * The harbor is positioned at HARBOR_CENTER_3D (120, harborGroundY, 80).
+ * Terrain is flattened behind the harbor to create a smooth connection to the city.
  * 
  * @param {THREE.Scene} scene - The scene to add the harbor to
  * @returns {THREE.Group} The complete harbor group

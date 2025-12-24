@@ -3367,6 +3367,20 @@ export class Application {
         }
       });
       console.log(`[GROUND AUDIT] Found ${lowObjectCount} objects below Y=1`);
+      
+      // Optional: Enable wireframe for low objects with ?wireframe=1
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('wireframe') === '1') {
+        console.log('[DEBUG] Enabling wireframe for low objects');
+        scene.traverse(obj => {
+          if (obj.isMesh && obj.position.y < 1) {
+            const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+            materials.forEach(mat => {
+              if (mat) mat.wireframe = true;
+            });
+          }
+        });
+      }
     }
 
     // Utility getters for HUD

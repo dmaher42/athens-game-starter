@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS } from './locations.js';
+import { AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, CITY_CENTER_ORIGIN, getCityGroundY } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { Prefabs, spawnBuilding } from './buildingSpawner.js';
 import { buildTemple } from '../features/temples.js';
@@ -44,7 +44,12 @@ function generateCityGrid() {
       const cell = {
         gridX,
         gridZ,
-        position: new THREE.Vector3(gridX * BLOCK_SIZE, 2.5, gridZ * BLOCK_SIZE), // Base elevation above sea level
+        // Use CITY_CENTER_ORIGIN as the base, then offset by grid position
+        position: new THREE.Vector3(
+          CITY_CENTER_ORIGIN.x + (gridX * BLOCK_SIZE),
+          getCityGroundY(), // Use dynamic city ground height
+          CITY_CENTER_ORIGIN.z + (gridZ * BLOCK_SIZE)
+        ),
         type: 'building',
         district: 'residential'
       };

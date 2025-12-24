@@ -14,12 +14,19 @@ const resolveSeaLevelY = () => getSeaLevelY();
 // Define a single consistent ground elevation for the entire city.
 // 2.5m is a safe height above water (Dry but close to sea level).
 const getCityGroundY = () => resolveSeaLevelY() + 2.5;
+export { getCityGroundY }; // Export for use across city systems
 // --------------------------
+
+// Shared city origin for all layout systems
+export const CITY_CENTER_ORIGIN = new THREE.Vector3(0, getCityGroundY(), 0);
+
+// Harbor ground height above sea level
+export const HARBOR_GROUND_HEIGHT = 2;
 
 // Harbor relocated to East (+X)
 export const HARBOR_CENTER_3D = new THREE.Vector3(
   120,
-  resolveSeaLevelY(),
+  resolveSeaLevelY() + HARBOR_GROUND_HEIGHT,
   80,
 );
 
