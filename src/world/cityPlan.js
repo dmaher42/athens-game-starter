@@ -11,7 +11,7 @@ export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.2
 // Grid Constants
 const MIN_X = -10, MAX_X = 10;
 const MIN_Z = -10, MAX_Z = 20;
-const BLOCK_SIZE = 40;
+const BLOCK_SIZE = 48; // Increased from 40 for better district spacing (~20% increase)
 
 export function inHarborBand(
   pos,
