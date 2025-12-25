@@ -13,6 +13,7 @@ const HTML_CONTENT_TYPE = /text\/html/i;
 
 const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;
 const GLB_EXTENSION = /\.glb(?:$|[?#])/i;
+const GLB_MODELS_PATH = /models\/(?:landmarks|buildings)\/.+\.glb(?:$|[?#])/i;
 
 export let ARISTOTLE_CANDIDATES = getAssetCandidates("aristotle");
 export let POSEIDON_CANDIDATES = getAssetCandidates("poseidon");
@@ -38,10 +39,12 @@ export class AssetLoader {
     baseUrl = resolveBaseUrl(),
     forceProcedural = false,
     districtRuleCandidates = [],
+    enableGlbMode = true,
   } = {}) {
     this.baseUrl = baseUrl;
     this.forceProcedural = Boolean(forceProcedural);
     this.districtRuleCandidates = districtRuleCandidates;
+    this.enableGlbMode = Boolean(enableGlbMode);
   }
 
   async probeInitialAssets({
@@ -49,6 +52,9 @@ export class AssetLoader {
     glbCandidates = [],
     includeGlbCandidates = !this.forceProcedural,
   } = {}) {
+    const ENABLE_GLB_MODE = this.enableGlbMode;
+    if (!ENABLE_GLB_MODE) return;
+
     const base = this.baseUrl ?? resolveBaseUrl();
     if (IS_DEV) console.log("[base:resolved]", base);
 
@@ -85,8 +91,13 @@ export class AssetLoader {
     const isJsonProbe = TRUE_JSON_PROBE.test(target);
     const isGlbProbe = GLB_EXTENSION.test(target);
     const fallbackStatuses = new Set([403, 405, 501]);
+    const ENABLE_GLB_MODE = this.enableGlbMode;
 
     if (this.forceProcedural && isGlbProbe) {
+      return false;
+    }
+
+    if (!ENABLE_GLB_MODE && isGlbProbe) {
       return false;
     }
 
@@ -120,6 +131,7 @@ export class AssetLoader {
   }
 
   async resolveFirstAvailableAsset(candidates = []) {
+    const ENABLE_GLB_MODE = this.enableGlbMode;
     if (this.forceProcedural) {
       return null;
     }
@@ -129,6 +141,9 @@ export class AssetLoader {
       if (typeof url !== "string") continue;
       const trimmed = url.trim();
       if (!trimmed) continue;
+      if (!ENABLE_GLB_MODE && GLB_MODELS_PATH.test(trimmed)) {
+        return null;
+      }
 
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
         if (!seen.has(trimmed) && (await this.headOk(trimmed))) {
@@ -227,6 +242,11 @@ export class AssetLoader {
       let usedPath = uniqueTargets[0];
       for (const candidate of uniqueTargets) {
         usedPath = candidate;
+        const enableGlbMode = this.enableGlbMode;
+        if (!enableGlbMode && GLB_MODELS_PATH.test(candidate)) {
+          status = "skipped";
+          break;
+        }
         if (this.forceProcedural && GLB_EXTENSION.test(candidate)) {
           status = "skipped";
           break;
