@@ -112,8 +112,7 @@ Quick Start (Local)
 npm install
 npm start
 
-Simplified Mode
-To run the game, open Codespaces and run `npm start`. There is no dev/production split; the engine runs in a consistent simplified mode for development.
+Simplified Mode: To run the game, open Codespaces and run `npm start`. There is no dev/production split; the engine runs in a consistent simplified mode for development.
 
 Preview-First Workflow (Recommended)
 
