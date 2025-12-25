@@ -112,6 +112,11 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
         }
         seen.add(url);
 
+        if (url.endsWith(".glb")) {
+          console.warn(`[GLB Disabled] Skipping model load: ${url}`);
+          continue;
+        }
+
         if (!(await headOk(url))) {
           tried.push([url, 404]);
           continue;
