@@ -108,11 +108,33 @@ F – Interact
 G – Toggle fly mode (dev/debug only)
 
 Development & Deployment
-Quick Start (Local)
+
+### ✅ Getting Started (Chromebook Friendly)
+
+1. **Open in GitHub Codespaces**
+   - Click the green "Code" button → **Open with Codespaces**
+   - Wait for it to initialize
+
+2. **Run the Game**
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+3. **Open the Preview**
+   - Click the "Open in Browser" notification, or
+   - Go to the **Ports** tab and click the URL next to port 8000
+
+### Quick Start (Local Development)
+
+```bash
 npm install
 npm run dev
+```
 
-Preview-First Workflow (Recommended)
+Then open http://localhost:8000/athens-game-starter/ in your browser.
+
+### Preview-First Workflow (Recommended)
 
 Edit files directly in GitHub → create a PR
 
