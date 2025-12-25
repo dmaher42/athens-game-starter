@@ -27,6 +27,8 @@ let statusEl = null;
 let factEl = null;
 /** @type {HTMLElement | null} */
 let factLabelEl = null;
+/** @type {HTMLElement | null} */
+let progressEl = null;
 /** @type {number | null} */
 let factTimer = null;
 /** @type {string[]} */
@@ -94,6 +96,13 @@ function ensureStyles() {
       line-height: 1.5;
       color: rgba(240, 244, 255, 0.92);
     }
+    #${ROOT_ID} .athens-loading__progress {
+      margin: 0;
+      font-size: clamp(13px, 3vw, 14px);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(240, 244, 255, 0.65);
+    }
     #${ROOT_ID}.is-error .athens-loading__status {
       color: #ffd9d0;
     }
@@ -136,6 +145,7 @@ function createRoot() {
       <div class="athens-loading__spinner" aria-hidden="true"></div>
       <h1 class="athens-loading__title">Exploring Ancient Athens</h1>
       <p class="athens-loading__status">Preparing the experience...</p>
+      <p class="athens-loading__progress" hidden></p>
       <div class="athens-loading__fact-label">Did you know?</div>
       <p class="athens-loading__fact"></p>
     </div>
@@ -151,6 +161,9 @@ function createRoot() {
   );
   factLabelEl = /** @type {HTMLElement | null} */ (
     root.querySelector(".athens-loading__fact-label")
+  );
+  progressEl = /** @type {HTMLElement | null} */ (
+    root.querySelector(".athens-loading__progress")
   );
 
   return root;
@@ -243,6 +256,7 @@ export function showLoadingScreen({ facts: customFacts, initialStatus } = {}) {
   } else {
     updateLoadingStatus("Preparing the experience...");
   }
+  updateLoadingProgress();
 
   if (rootEl) {
     rootEl.classList.remove("is-hidden", "is-error");
@@ -258,6 +272,27 @@ export function updateLoadingStatus(message) {
   if (typeof message === "string" && message.trim().length) {
     statusEl.textContent = message;
   }
+}
+
+export function updateLoadingProgress(current, total) {
+  if (!rootEl || !progressEl) return;
+
+  const currentValue = Number(current);
+  const totalValue = Number(total);
+  const isValid =
+    Number.isFinite(currentValue) && Number.isFinite(totalValue) && totalValue > 0;
+
+  if (!isValid) {
+    progressEl.textContent = "";
+    progressEl.hidden = true;
+    return;
+  }
+
+  const clampedCurrent = Math.min(Math.max(currentValue, 0), totalValue);
+  progressEl.textContent = `Step ${Math.round(clampedCurrent)} of ${Math.round(
+    totalValue,
+  )}`;
+  progressEl.hidden = false;
 }
 
 export function showLoadingError(message) {
@@ -299,6 +334,7 @@ export function hideLoadingScreen() {
   statusEl = null;
   factEl = null;
   factLabelEl = null;
+  progressEl = null;
 
   if (typeof window !== "undefined") {
     window.setTimeout(() => {

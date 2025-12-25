@@ -72,6 +72,7 @@ import { updateLayout as updateHudLayout } from "../ui/HudManager.ts";
 import {
   showLoadingScreen,
   updateLoadingStatus,
+  updateLoadingProgress,
   showLoadingError,
   hideLoadingScreen,
 } from "../ui/loadingScreen.js";
@@ -370,6 +371,15 @@ export class Application {
     showLoadingScreen({
       initialStatus: "Preparing the experience...",
     });
+    const totalLoadingStages = 4;
+    let loadingStage = 0;
+    const advanceLoadingStage = (message) => {
+      loadingStage = Math.min(loadingStage + 1, totalLoadingStages);
+      updateLoadingStatus(message);
+      updateLoadingProgress(loadingStage, totalLoadingStages);
+    };
+
+    updateLoadingProgress(0, totalLoadingStages);
     updateLoadingStatus("Preparing renderer and interface...");
     assetLoader.runAssetQuickChecks().catch(() => {});
     assetLoader
@@ -503,7 +513,7 @@ export class Application {
     
     initializeAssetTranscoders(renderer);
     attachCrosshair();
-    updateLoadingStatus("Listening for the bustle of ancient Athens...");
+    advanceLoadingStage("Listening for the bustle of ancient Athens...");
 
     let devHud = (this.devHud = null);
     let ocean = (this.ocean = null);
@@ -955,6 +965,7 @@ export class Application {
     if (typeof terrain?.userData?.getHeightAt === "function") {
       scene.userData.terrainHeightSampler = terrain.userData.getHeightAt;
     }
+    advanceLoadingStage("Terrain ready. Mapping the hills...");
     // Dev/test-only occluder ribbon (enable with ?occluder=1 or in DEV)
     const shouldAddOccluder = (() => {
       try {
@@ -1067,6 +1078,7 @@ export class Application {
     };
     this.pendingOceanStatus = pendingOceanStatus;
     updateOceanHudStatus();
+    advanceLoadingStage("Ocean ready. Setting the harbor tides...");
     const envCollider = new EnvironmentCollider();
     scene.add(envCollider.mesh);
 
@@ -1096,34 +1108,35 @@ export class Application {
       }
     }
 
+    let landmarkLoadPromise = Promise.resolve();
     if (!FORCE_PROC) {
-      // --- Aristotle's Tomb (local GLB) - EAGER load (close-up landmark) ---
-      try {
-        const aristotleUrl =
-          await assetLoader.resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
-        if (aristotleUrl) {
-          const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
-            position: ACROPOLIS_PEAK_3D,
-            scale: 3.0,
-            materialPreset: "marble",
-          });
+      // --- Landmarks ---
+      const landmarkTasks = [
+        (async () => {
           try {
-            await attachAristotleMarblePBR({
-              obj: aristotle ?? null,
-              scene,
-              renderer,
-              BASE_URL,
-            });
+            const aristotleUrl =
+              await assetLoader.resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
+            if (aristotleUrl) {
+              const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
+                position: ACROPOLIS_PEAK_3D,
+                scale: 3.0,
+                materialPreset: "marble",
+              });
+              try {
+                await attachAristotleMarblePBR({
+                  obj: aristotle ?? null,
+                  scene,
+                  renderer,
+                  BASE_URL,
+                });
+              } catch {
+                // Ignore optional PBR hook failures.
+              }
+            }
           } catch {
-            // Ignore optional PBR hook failures.
+            // Ignore missing Aristotle asset.
           }
-        }
-      } catch {
-        // Ignore missing Aristotle asset.
-      }
-
-      // Phase 2: Defer distant landmarks (Poseidon & Acropolis) - 8-10M deferral
-      Promise.all([
+        })(),
         (async () => {
           try {
             const url =
@@ -1152,10 +1165,9 @@ export class Application {
             // Ignore missing Akropol landmark.
           }
         })(),
-      ]).catch(() => {});
-      // Continue without awaiting - distant landmarks load in background
-      // Estimated 8-10M deferral reduces initial critical path
-      // ------------------------------------------------------------------------
+      ];
+
+      landmarkLoadPromise = Promise.all(landmarkTasks).catch(() => {});
     }
 
     const { city: harborCity, roadCurves } = await createCity(
@@ -3237,7 +3249,8 @@ export class Application {
 
     loop.onUpdate(onFrame);
     loop.start();
-    updateLoadingStatus("Opening the gates to ancient Athens...");
+    await landmarkLoadPromise;
+    advanceLoadingStage("Opening the gates to ancient Athens...");
     hideLoadingScreen();
 
     // Initialize prop culling system to reduce clutter and improve performance
