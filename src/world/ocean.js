@@ -15,6 +15,7 @@ import {
   ISLAND_RADIUS,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
+import { RENDER_LAYERS } from "./renderLayers.js";
 
 function generateNormalComponent(x, y, octave) {
   const frequency = Math.pow(2, octave);
@@ -558,7 +559,7 @@ export async function createOcean(scene, options = {}) {
   water.userData.oceanRadius = radius;
   water.userData.horizonY = horizonY;
   // Transparent water renders before opaque terrain via renderOrder
-  water.renderOrder = -1;
+  water.renderOrder = RENDER_LAYERS.WATER;
 
   // Custom wave scaling keeps detail even on the circular expanse
   if (waterNormals) {

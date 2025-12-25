@@ -17,6 +17,7 @@ import {
   analyzeHarborZone,
   HARBOR_ZONE_CONFIG,
 } from "./coastalZones.js";
+import { RENDER_LAYERS } from "./renderLayers.js";
 
 const DOCK_SECTION_LENGTH = 9.5;
 const DOCK_SECTION_WIDTH = 5.8;
@@ -86,7 +87,7 @@ function createHarborWaterPlane(seaLevel) {
   water.userData.seaLevel = seaLevel;
   water.receiveShadow = false;
   // Transparent harbor water renders before opaque pad via renderOrder
-  water.renderOrder = 0;
+  water.renderOrder = RENDER_LAYERS.WATER;
   return water;
 }
 
@@ -147,7 +148,7 @@ function createHarborPad(harborGroundY) {
     0,
   );
   pad.receiveShadow = true;
-  pad.renderOrder = 2;
+  pad.renderOrder = RENDER_LAYERS.DETAIL;
   return pad;
 }
 
