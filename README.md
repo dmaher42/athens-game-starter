@@ -129,10 +129,9 @@ Development & Deployment
 
 ```bash
 npm install
-npm run dev
-```
+npm start
 
-Then open http://localhost:8000/athens-game-starter/ in your browser.
+Simplified Mode: To run the game, open Codespaces and run `npm start`. There is no dev/production split; the engine runs in a consistent simplified mode for development.
 
 ### Preview-First Workflow (Recommended)
 
@@ -181,7 +180,7 @@ Terrain, lighting, and materials are designed to be tunable and experimental
 
 HUD & Overlays
 
-- Overlays are off by default in production and on in development.
+- Overlays use a unified default mode (no dev/production split).
 - Enable via query params or window flags:
 	- Audio Mixer: `?audio=1` or `window.SHOW_AUDIO_MIXER = true`
 	- Hotkey Reference: set `window.SHOW_HOTKEYS = true`

@@ -28,8 +28,8 @@ export async function createGLTFLoader(renderer) {
       if (ktx2) {
         loader.setKTX2Loader(ktx2);
       }
-    } catch (error) {
-      console.warn("[GLB Loader] Unable to configure KTX2 loader", error);
+    } catch {
+      // Silent fallback: KTX2 loader remains unset.
     }
   }
 
@@ -38,8 +38,8 @@ export async function createGLTFLoader(renderer) {
     if (draco) {
       loader.setDRACOLoader(draco);
     }
-  } catch (error) {
-    console.warn("[GLB Loader] Unable to configure DRACO loader", error);
+  } catch {
+    // Silent fallback: DRACO loader remains unset.
   }
 
   loader.setMeshoptDecoder(MeshoptDecoder);
@@ -60,10 +60,10 @@ async function headOk(url) {
 
 export async function loadGLBWithFallbacks(loader, urls, options = {}) {
   if (!loader || typeof loader.loadAsync !== "function") {
-    throw new Error("loadGLBWithFallbacks requires a GLTFLoader instance");
+    return null;
   }
   if (!Array.isArray(urls) || urls.length === 0) {
-    throw new Error("loadGLBWithFallbacks requires at least one URL");
+    return null;
   }
 
   const {
@@ -80,8 +80,6 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
   const baseUrl = resolveBaseUrl();
   const seen = new Set();
 
-  let lastErr = null;
-  const tried = [];
   for (const candidate of urls) {
     const raw = typeof candidate === "string" ? candidate.trim() : "";
     if (!raw) {
@@ -118,7 +116,6 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
         }
 
         if (!(await headOk(url))) {
-          tried.push([url, 404]);
           continue;
         }
         try {
@@ -145,28 +142,16 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
           if (typeof onLoaded === "function") {
             try {
               onLoaded({ url, gltf, root });
-            } catch (hookError) {
-              console.warn("[GLB Fallback] onLoaded hook failed", hookError);
+            } catch {
+              // Silent fallback: ignore onLoaded hook errors.
             }
           }
 
           return { url, gltf, root };
-        } catch (err) {
-          lastErr = err instanceof Error ? err : new Error(String(err));
-          tried.push([url, "load-fail"]);
+        } catch {
         }
       }
     }
-
-  if (tried.length) {
-    const attemptedUrls = tried.map(([url]) => url);
-    const suffix = lastErr ? ` (${lastErr.message || lastErr})` : "";
-    if (suffix.trim()) {
-      console.warn("[GLB] No reachable candidate:", attemptedUrls, suffix);
-    } else {
-      console.warn("[GLB] No reachable candidate:", attemptedUrls);
-    }
-  }
 
   return null;
 }
