@@ -7,7 +7,6 @@ export async function loadHdriEnvironment({ renderer, scene, path, onFallback })
 
   return new Promise((resolve) => {
     const loader = new EXRLoader();
-    const fallbackWarning = '[HDRI] HDRI file missing or unsupported: falling back to procedural sky';
 
     loader
       .setCrossOrigin('anonymous')
@@ -18,7 +17,6 @@ export async function loadHdriEnvironment({ renderer, scene, path, onFallback })
         path,
         (exrTexture) => {
           if (!exrTexture || !exrTexture.image) {
-            console.warn(fallbackWarning);
             pmremGenerator.dispose();
             onFallback?.();
             resolve(null);
@@ -26,7 +24,6 @@ export async function loadHdriEnvironment({ renderer, scene, path, onFallback })
           }
 
           if (!exrTexture.image.data) {
-            console.warn(fallbackWarning);
             pmremGenerator.dispose();
             exrTexture.dispose();
             onFallback?.();
@@ -35,7 +32,6 @@ export async function loadHdriEnvironment({ renderer, scene, path, onFallback })
           }
 
           if (exrTexture.type !== THREE.HalfFloatType && exrTexture.type !== THREE.FloatType) {
-            console.warn(fallbackWarning);
             pmremGenerator.dispose();
             exrTexture.dispose();
             onFallback?.();
@@ -48,10 +44,8 @@ export async function loadHdriEnvironment({ renderer, scene, path, onFallback })
             scene.environment = envMap;
             exrTexture.dispose();
             pmremGenerator.dispose();
-            console.log('[HDRI] Environment map applied');
             resolve(envMap);
           } catch (err) {
-            console.warn('[HDRI] Failed to apply environment. Falling back to default lighting.', err);
             exrTexture.dispose();
             pmremGenerator.dispose();
             onFallback?.();
@@ -63,16 +57,12 @@ export async function loadHdriEnvironment({ renderer, scene, path, onFallback })
         (error) => {
           const message = error?.message || '';
           if (message.toLowerCase().includes('unsupported type')) {
-            console.warn(fallbackWarning);
-            console.warn('[HDRI] Unsupported EXR type:', message);
             pmremGenerator.dispose();
             onFallback?.();
             resolve(null);
             return;
           }
 
-          console.warn(fallbackWarning);
-          console.warn('[HDRI] Load failed:', error);
           pmremGenerator.dispose();
           onFallback?.();
           resolve(null);

@@ -4,9 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "start": "vite",
     "build": "vite build && node scripts/ensure-three-bundled.mjs && node scripts/build-bundleless-sources.mjs && node scripts/copy-bundleless-sources.mjs && node scripts/sanitize-bare-import-text.mjs",
-    "preview": "vite preview --strictPort",
     "typecheck": "tsc -p tsconfig.json",
     "generate:favicon": "node scripts/generate-favicon.mjs",
     "download:aristotle": "node scripts/download-aristotle-tomb.mjs",

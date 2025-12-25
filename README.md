@@ -108,11 +108,32 @@ F – Interact
 G – Toggle fly mode (dev/debug only)
 
 Development & Deployment
-Quick Start (Local)
-npm install
-npm run dev
 
-Preview-First Workflow (Recommended)
+### ✅ Getting Started (Chromebook Friendly)
+
+1. **Open in GitHub Codespaces**
+   - Click the green "Code" button → **Open with Codespaces**
+   - Wait for it to initialize
+
+2. **Run the Game**
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+3. **Open the Preview**
+   - Click the "Open in Browser" notification, or
+   - Go to the **Ports** tab and click the URL next to port 8000
+
+### Quick Start (Local Development)
+
+```bash
+npm install
+npm start
+
+Simplified Mode: To run the game, open Codespaces and run `npm start`. There is no dev/production split; the engine runs in a consistent simplified mode for development.
+
+### Preview-First Workflow (Recommended)
 
 Edit files directly in GitHub → create a PR
 
@@ -159,7 +180,7 @@ Terrain, lighting, and materials are designed to be tunable and experimental
 
 HUD & Overlays
 
-- Overlays are off by default in production and on in development.
+- Overlays use a unified default mode (no dev/production split).
 - Enable via query params or window flags:
 	- Audio Mixer: `?audio=1` or `window.SHOW_AUDIO_MIXER = true`
 	- Hotkey Reference: set `window.SHOW_HOTKEYS = true`

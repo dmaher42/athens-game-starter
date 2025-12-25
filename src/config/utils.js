@@ -4,13 +4,7 @@ export const TRUE_VALUES = new Set(["", "1", "true", "on", "yes", "y"]);
 export const FALSE_VALUES = new Set(["0", "false", "off", "no", "n"]);
 
 export function getRuntimeEnvironment() {
-  if (typeof import.meta !== "undefined" && import.meta?.env?.MODE) {
-    return import.meta.env.MODE;
-  }
-  if (typeof process !== "undefined" && process?.env?.NODE_ENV) {
-    return process.env.NODE_ENV;
-  }
-  return "production";
+  return "unified";
 }
 
 export function isPlainObject(value) {

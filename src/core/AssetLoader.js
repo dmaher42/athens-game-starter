@@ -83,6 +83,7 @@ export class AssetLoader {
     const target = typeof url === "string" ? url : String(url ?? "");
     const isJsonProbe = TRUE_JSON_PROBE.test(target);
     const isGlbProbe = GLB_EXTENSION.test(target);
+    const fallbackStatuses = new Set([403, 405, 501]);
 
     if (this.forceProcedural && isGlbProbe) {
       return false;
@@ -94,6 +95,23 @@ export class AssetLoader {
 
     try {
       const res = await fetch(url, options);
+      if (!isJsonProbe && !res.ok && fallbackStatuses.has(res.status)) {
+        console.warn(
+          "[asset-check:head-denied]",
+          res.status,
+          "retrying GET",
+          url,
+        );
+        const getRes = await fetch(url, { method: "GET", cache: "no-cache" });
+        const ok = getRes.ok && !isHtmlResponse(getRes);
+        console.log(
+          "[asset-check:get-fallback]",
+          getRes.status,
+          ok,
+          url,
+        );
+        return ok;
+      }
       return res.ok && !isHtmlResponse(res);
     } catch (error) {
       return false;
