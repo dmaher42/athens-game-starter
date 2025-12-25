@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { getSeaLevelY } from "./seaLevelState.js";
 import { HARBOR_CENTER_3D } from "./locations.js";
+import { RENDER_LAYERS } from "./renderLayers.js";
 
 const DEFAULT_COASTAL_INNER_RADIUS = 215;
 const DEFAULT_COASTAL_WIDTH = 35;
@@ -284,7 +285,7 @@ function createWaterFadeRing({
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = "WaterHorizonFade";
   mesh.position.y = seaLevel + 0.06;
-  mesh.renderOrder = -1;
+  mesh.renderOrder = RENDER_LAYERS.WATER;
   mesh.userData.nonInteractive = true;
   return mesh;
 }

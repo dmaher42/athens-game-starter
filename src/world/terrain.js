@@ -12,6 +12,7 @@ import {
 import { getDistanceToCoast, isInHarborZone } from './coastalZones.js';
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
 import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
+import { RENDER_LAYERS } from "./renderLayers.js";
 
 const textureLoader = new THREE.TextureLoader();
 
@@ -393,7 +394,7 @@ export function createTerrain(scene) {
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
   // Ensure terrain renders on top of transparent water layers via explicit renderOrder
-  terrain.renderOrder = 1;
+  terrain.renderOrder = RENDER_LAYERS.TERRAIN;
   scene.add(terrain);
 
   const stride = segments + 1;

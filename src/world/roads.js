@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RENDER_LAYERS } from "./renderLayers.js";
 
 const _point = new THREE.Vector3();
 const _tangent = new THREE.Vector3();
@@ -197,7 +198,7 @@ export function createRoad(parent, points, options = {}) {
   mesh.castShadow = false;
   mesh.userData.noCollision = options.noCollision ?? true;
   mesh.position.y += 0.015;
-  mesh.renderOrder = 2;
+  mesh.renderOrder = RENDER_LAYERS.DETAIL;
 
   if (parent) {
     parent.add(mesh);
