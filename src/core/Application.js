@@ -385,9 +385,30 @@ export class Application {
       initialStatus: "Preparing the experience...",
     });
     updateLoadingStatus("Preparing renderer and interface...");
-    assetLoader.runAssetQuickChecks().catch((err) => {
+    const quickCheckResult = await assetLoader.runAssetQuickChecks().catch((err) => {
       console.warn("Asset QuickChecks failed", err);
+      return null;
     });
+    if (quickCheckResult?.hasMissingCritical || quickCheckResult?.hasRepeatedFailures) {
+      const missingCriticalLabels = quickCheckResult.missingCriticalChecks.map(
+        (entry) => entry.label,
+      );
+      const uniqueMissing = Array.from(new Set(missingCriticalLabels));
+      const criticalSummary =
+        uniqueMissing.length > 0
+          ? `Missing critical asset${uniqueMissing.length > 1 ? "s" : ""}: ${uniqueMissing.join(", ")}.`
+          : "Multiple critical assets failed to load.";
+      const repeatedSummary =
+        quickCheckResult.hasRepeatedFailures && !quickCheckResult.hasMissingCritical
+          ? "Multiple asset checks failed to load."
+          : "";
+      showLoadingError(
+        [criticalSummary, repeatedSummary, "Please verify the asset bundle and refresh."]
+          .filter(Boolean)
+          .join(" "),
+      );
+      return;
+    }
     assetLoader
       .probeInitialAssets({
         glbCandidates: [

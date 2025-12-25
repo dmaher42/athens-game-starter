@@ -161,9 +161,17 @@ export class AssetLoader {
     const quickChecks = getQuickChecks();
 
     const results = [];
+    const missingChecks = [];
+    const missingCriticalChecks = [];
+    const isCriticalCheck = (entry) => {
+      const label = entry?.label?.toLowerCase?.() ?? "";
+      const path = entry?.path?.toLowerCase?.() ?? "";
+      return label.includes("district") || path.includes("config/districts.json");
+    };
     for (const entry of quickChecks) {
       const label = entry.label || "Unnamed Check";
       const targets = [];
+      const critical = isCriticalCheck(entry);
 
       if (typeof entry.path === "string" && entry.path.trim()) {
         const pathValue = entry.path.trim();
@@ -189,6 +197,10 @@ export class AssetLoader {
       const uniqueTargets = Array.from(new Set(targets.filter(Boolean)));
       if (uniqueTargets.length === 0) {
         results.push({ label, path: "", status: "missing" });
+        missingChecks.push({ label, path: "", status: "missing", critical });
+        if (critical) {
+          missingCriticalChecks.push({ label, path: "", status: "missing" });
+        }
         continue;
       }
 
@@ -208,6 +220,12 @@ export class AssetLoader {
       }
 
       results.push({ label, path: usedPath, status });
+      if (status === "missing") {
+        missingChecks.push({ label, path: usedPath, status, critical });
+        if (critical) {
+          missingCriticalChecks.push({ label, path: usedPath, status });
+        }
+      }
     }
 
     if (typeof console?.table === "function") {
@@ -215,6 +233,15 @@ export class AssetLoader {
     } else {
       console.log("Asset QuickChecks", results);
     }
+
+    return {
+      results,
+      missingChecks,
+      missingCriticalChecks,
+      missingCount: missingChecks.length,
+      hasMissingCritical: missingCriticalChecks.length > 0,
+      hasRepeatedFailures: missingChecks.length >= 2,
+    };
   }
 }
 

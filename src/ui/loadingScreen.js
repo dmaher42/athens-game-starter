@@ -274,6 +274,8 @@ export function showLoadingError(message) {
   stopFactRotation();
 
   rootEl.classList.add("is-error");
+  rootEl.classList.remove("is-hidden");
+  rootEl.style.opacity = "1";
   updateLoadingStatus(
     message || "We couldn't finish loading Athens. Please refresh to try again.",
   );
