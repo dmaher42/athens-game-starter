@@ -53,7 +53,12 @@ function deriveGithubRawCandidates(relativePath) {
   if (!segments.length) return [];
 
   const repo = segments[0];
-  const sanitizedRelative = String(relativePath || "").replace(/^\/+/, "");
+  let sanitizedRelative = String(relativePath || "").replace(/^\/+/, "");
+  // Strip repo segment to avoid double-prefixing (e.g., athens-game-starter/athens-game-starter/...)
+  const repoPrefix = `${repo}/`;
+  if (sanitizedRelative.toLowerCase().startsWith(repoPrefix.toLowerCase())) {
+    sanitizedRelative = sanitizedRelative.slice(repoPrefix.length);
+  }
   if (!sanitizedRelative) return [];
 
   const pathCandidates = new Set([sanitizedRelative]);

@@ -63,6 +63,14 @@ export function resolveBaseUrl() {
   return normalizeBase(base);
 }
 
+export function stripRepoSegment(path) {
+  if (!path || typeof path !== "string") return path;
+  // Remove leading repo segment(s) to avoid double-prefixing
+  return path
+    .replace(new RegExp(`^/?${REPO_SEGMENT}/`, "i"), "")
+    .replace(/^\/+/, "");
+}
+
 export function joinPath(base, rel) {
   if (!base) base = "/";
   if (!rel) return base;
