@@ -604,6 +604,16 @@ export async function loadLandmark(scene, url, options = {}) {
       throw new Error("loadLandmark requires a non-empty URL");
     }
 
+    if (sanitizedUrl.endsWith(".glb")) {
+      console.warn(`[GLB Disabled] Skipping model load: ${sanitizedUrl}`);
+      const fallbackObject = await tryProceduralFallback("glb-disabled");
+      if (fallbackObject) {
+        return fallbackObject;
+      }
+      cleanupEntry();
+      return null;
+    }
+
     const skipGlb = options.forceProcedural === true;
     if (skipGlb) {
       const fallbackObject = await tryProceduralFallback("force-procedural");
