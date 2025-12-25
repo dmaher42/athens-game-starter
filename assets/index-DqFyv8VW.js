@@ -48363,6 +48363,7 @@ if (void 0) {
 const HTML_CONTENT_TYPE = /text\/html/i;
 const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;
 const GLB_EXTENSION = /\.glb(?:$|[?#])/i;
+const GLB_MODELS_PATH = /models\/(?:landmarks|buildings)\/.+\.glb(?:$|[?#])/i;
 let ARISTOTLE_CANDIDATES = getAssetCandidates("aristotle");
 let POSEIDON_CANDIDATES = getAssetCandidates("poseidon");
 let AKROPOL_CANDIDATES = getAssetCandidates("akropol");
@@ -48377,17 +48378,21 @@ class AssetLoader {
   constructor({
     baseUrl: baseUrl2 = resolveBaseUrl$2(),
     forceProcedural = false,
-    districtRuleCandidates = []
+    districtRuleCandidates = [],
+    enableGlbMode = true
   } = {}) {
     this.baseUrl = baseUrl2;
     this.forceProcedural = Boolean(forceProcedural);
     this.districtRuleCandidates = districtRuleCandidates;
+    this.enableGlbMode = Boolean(enableGlbMode);
   }
   async probeInitialAssets({
     additionalProbes = [],
     glbCandidates = [],
     includeGlbCandidates = !this.forceProcedural
   } = {}) {
+    const ENABLE_GLB_MODE2 = this.enableGlbMode;
+    if (!ENABLE_GLB_MODE2) return;
     const base = this.baseUrl ?? resolveBaseUrl$2();
     if (IS_DEV) console.log("[base:resolved]", base);
     const manifestProbes = getManifestProbes();
@@ -48417,7 +48422,11 @@ class AssetLoader {
     const isJsonProbe = TRUE_JSON_PROBE.test(target);
     const isGlbProbe = GLB_EXTENSION.test(target);
     const fallbackStatuses = /* @__PURE__ */ new Set([403, 405, 501]);
+    const ENABLE_GLB_MODE2 = this.enableGlbMode;
     if (this.forceProcedural && isGlbProbe) {
+      return false;
+    }
+    if (!ENABLE_GLB_MODE2 && isGlbProbe) {
       return false;
     }
     const options = isJsonProbe ? { method: "GET", cache: "no-cache" } : { method: "HEAD" };
@@ -48446,6 +48455,7 @@ class AssetLoader {
     }
   }
   async resolveFirstAvailableAsset(candidates = []) {
+    const ENABLE_GLB_MODE2 = this.enableGlbMode;
     if (this.forceProcedural) {
       return null;
     }
@@ -48454,6 +48464,9 @@ class AssetLoader {
       if (typeof url !== "string") continue;
       const trimmed = url.trim();
       if (!trimmed) continue;
+      if (!ENABLE_GLB_MODE2 && GLB_MODELS_PATH.test(trimmed)) {
+        return null;
+      }
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
         if (!seen2.has(trimmed) && await this.headOk(trimmed)) {
           return trimmed;
@@ -48538,6 +48551,11 @@ class AssetLoader {
       let usedPath = uniqueTargets[0];
       for (const candidate of uniqueTargets) {
         usedPath = candidate;
+        const enableGlbMode = this.enableGlbMode;
+        if (!enableGlbMode && GLB_MODELS_PATH.test(candidate)) {
+          status = "skipped";
+          break;
+        }
         if (this.forceProcedural && GLB_EXTENSION.test(candidate)) {
           status = "skipped";
           break;
@@ -50927,7 +50945,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CoFJoD5T.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DKLCmK7S.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51437,7 +51455,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-WSH1Hrny.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D7JKyuGJ.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52211,7 +52229,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CoFJoD5T.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DKLCmK7S.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -66846,8 +66864,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-25T23:32:47.574Z" : "",
-      sha: true ? "a9e08ce7ce6b8cf1a2f1f98b7f47cf588fab2f1a" : ""
+      time: true ? "2025-12-25T23:57:29.377Z" : "",
+      sha: true ? "a68d8693686a793430433fba43572be54ca0ce74" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -73866,6 +73884,7 @@ function disposeSkybox(scene2) {
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$2();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES = engineConfig.districtRuleCandidates || [];
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
+const ENABLE_GLB_MODE = false;
 const LIGHTING_PRESETS = LOOK_PROFILES;
 const LIGHTING_PRESET_ORDER = [
   "Bright Noon",
@@ -73875,8 +73894,8 @@ const LIGHTING_PRESET_ORDER = [
 ];
 const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
 const SUN_ELEVATION_STORAGE_KEY = "skybox.sunElevationDeg";
-const DEFAULT_FORCE_GLB = typeof engineConfig.featureFlags?.forceGlb === "boolean" ? engineConfig.featureFlags.forceGlb : false;
-const DEFAULT_FORCE_PROC = typeof engineConfig.featureFlags?.forceProcedural === "boolean" ? engineConfig.featureFlags.forceProcedural : !DEFAULT_FORCE_GLB;
+const DEFAULT_FORCE_GLB = ENABLE_GLB_MODE && typeof engineConfig.featureFlags?.forceGlb === "boolean" ? engineConfig.featureFlags.forceGlb : false;
+const DEFAULT_FORCE_PROC = typeof engineConfig.featureFlags?.forceProcedural === "boolean" ? engineConfig.featureFlags.forceProcedural : !DEFAULT_FORCE_GLB || !ENABLE_GLB_MODE;
 const USE_THIRD_PERSON = engineConfig.featureFlags?.useThirdPersonCamera !== false;
 const HARBOUR_CENTER = new Vector3(-120, 0, 80);
 const HARBOUR_RADIUS = 60;
@@ -74028,12 +74047,14 @@ class Application {
     this.baseUrl = baseUrl2 ?? DEFAULT_BASE_URL;
     this.districtRuleCandidates = districtRuleCandidates ?? DEFAULT_DISTRICT_RULE_URL_CANDIDATES;
     this.queryParams = queryParams ?? engineConfig.queryParams;
-    this.forceGlb = typeof forceGlb === "boolean" ? forceGlb : DEFAULT_FORCE_GLB;
-    this.forceProc = typeof forceProc === "boolean" ? forceProc : !this.forceGlb;
+    const resolvedForceGlb = typeof forceGlb === "boolean" ? forceGlb : DEFAULT_FORCE_GLB;
+    this.forceGlb = ENABLE_GLB_MODE && resolvedForceGlb;
+    this.forceProc = ENABLE_GLB_MODE ? typeof forceProc === "boolean" ? forceProc : !this.forceGlb : true;
     this.assetLoader = new AssetLoader({
       baseUrl: this.baseUrl,
       forceProcedural: this.forceProc,
-      districtRuleCandidates: this.districtRuleCandidates
+      districtRuleCandidates: this.districtRuleCandidates,
+      enableGlbMode: ENABLE_GLB_MODE
     });
     this.gameLoop = new GameLoop();
     this.sceneContext = null;
@@ -76788,4 +76809,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-C3SuY6_v.js.map
+//# sourceMappingURL=index-DqFyv8VW.js.map
