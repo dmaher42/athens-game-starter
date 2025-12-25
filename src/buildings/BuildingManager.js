@@ -81,6 +81,10 @@ export class BuildingManager {
    * }} [options]
    */
   async loadBuilding(url, options) {
+    if (typeof url === 'string' && url.endsWith('.glb')) {
+      console.warn(`[GLB Disabled] Skipping model load: ${url}`);
+      return null;
+    }
     // Lazily initialize the GLTF loader on first use
     if (!this.loader) {
       this.loader = await createGLTFLoader(null);
