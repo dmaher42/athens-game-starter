@@ -339,10 +339,22 @@ export function hideLoadingScreen() {
   progressEl = null;
 
   if (typeof window !== "undefined") {
-    window.setTimeout(() => {
+    const removeIfPresent = () => {
+      if (!elementToRemove.isConnected) return;
       elementToRemove.remove();
-    }, 400);
+    };
+    const scheduleRemoval = () => {
+      window.setTimeout(removeIfPresent, 420);
+    };
+
+    if (typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(scheduleRemoval);
+    } else {
+      scheduleRemoval();
+    }
   } else {
-    elementToRemove.remove();
+    if (elementToRemove.isConnected) {
+      elementToRemove.remove();
+    }
   }
 }
