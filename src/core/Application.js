@@ -219,7 +219,12 @@ function createDefaultSky(scene, skyInstance = null) {
     fallbackSky.sunLight.position.copy(defaultDirection).multiplyScalar(320);
   }
 
-  scene.background = fallbackSky.sky ?? fallbackSky;
+  // Safeguard: Always ensure scene has a background (prevent black frames)
+  if (!scene.background || scene.background === null) {
+    scene.background = fallbackSky.sky ?? new THREE.Color(0xbfd5ff);
+  } else {
+    scene.background = fallbackSky.sky ?? fallbackSky;
+  }
 
   let sunLight = fallbackSky.sunLight;
   if (!sunLight) {
@@ -791,12 +796,17 @@ export class Application {
       hemi.intensity = hemiIntensity;
       hemi.visible = true;
 
+      // Safeguard: Preserve existing background during transition to prevent black frames
+      const currentBackground = scene.background;
+      
       if (hdriEnvMap) {
         scene.background = hdriEnvMap;
         scene.environment = hdriEnvMap;
         if (dynamicSky?.sky) dynamicSky.sky.visible = false;
       } else {
-        scene.background = dynamicSky?.sky || new THREE.Color(skyColor);
+        // Use current background as fallback if available, otherwise create new one
+        const fallbackBackground = dynamicSky?.sky || new THREE.Color(skyColor);
+        scene.background = currentBackground || fallbackBackground;
         scene.environment = null;
       }
     };
@@ -2585,7 +2595,15 @@ export class Application {
       if (!profile) {
         return;
       }
+      
+      // Safeguard: Apply environment fallback first to ensure background is set
       applyEnvironmentFallbackForProfile(resolvedProfileName);
+      
+      // Ensure scene has a valid background before proceeding
+      if (!scene.background || scene.background === null) {
+        scene.background = dynamicSky?.sky || new THREE.Color(profile.ambient?.color || "#dbe9ff");
+      }
+      
       currentLookProfile = profile;
       lastAppliedLightingPreset = resolvedProfileName;
       devHud?.setActivePreset?.(resolvedProfileName);
@@ -2718,7 +2736,13 @@ export class Application {
         return;
       }
 
+      // Safeguard: Apply environment fallback BEFORE any transitions to prevent black frames
       applyEnvironmentFallbackForProfile(resolvedProfileName);
+      
+      // Ensure scene has a valid background before proceeding
+      if (!scene.background || scene.background === null) {
+        scene.background = dynamicSky?.sky || new THREE.Color(profile.ambient?.color || "#dbe9ff");
+      }
 
       if (!forceReapply && lastAppliedLightingPreset === resolvedProfileName) {
         return;
@@ -3066,6 +3090,12 @@ export class Application {
     });
 
     const onFrame = (deltaTime, elapsed) => {
+      // Safeguard: Ensure scene always has a background before rendering
+      if (!scene.background || scene.background === null) {
+        const fallbackColor = currentLookProfile?.ambient?.color || "#dbe9ff";
+        scene.background = dynamicSky?.sky || new THREE.Color(fallbackColor);
+      }
+      
       // Keep track of time for smooth animation and frame-independent movement.
       if (dayCycle.secondsPerDay > 0) {
         const deltaPhase = deltaTime / dayCycle.secondsPerDay;
