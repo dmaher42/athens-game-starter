@@ -43,11 +43,6 @@ export function resolveBaseUrl() {
   let base = normalizeBase(globalBase || envBase || "/");
 
   if (hasDoubleRepo(base)) {
-    if (import.meta.env?.DEV) {
-      console.error(
-        `[baseUrl] Detected double repo segment in base (${base}); normalizing to ${REPO_BASE}`,
-      );
-    }
     base = REPO_BASE;
   }
 

@@ -26,7 +26,6 @@ import {
   createMainHillRoad,
   updateMainHillRoadLighting,
 } from "../world/roads_hillcity.js";
-import { mountHillCityDebug } from "../world/debug_hillcity.js";
 import { createPlazas } from "../world/plazas.js";
 import {
   updateCityLighting,
@@ -78,7 +77,6 @@ import {
 } from "../ui/loadingScreen.js";
 import { createPin } from "../world/pins.js";
 import { attachHeightSampler, probeAt } from "../world/terrainHeight.js";
-import { mountGroundAudit } from "../debug/groundAudit.js";
 import { addDepthOccluderRibbon } from "../world/occluders.js";
 import { snapAboveGround } from "../world/ground.js";
 import { findSafePlayerSpawn } from "../world/spawn.js";
@@ -124,8 +122,6 @@ import { scatterGroundProps } from "../world/groundProps.js";
 import { initCityDebugMode } from "../debug/cityDebug.js";
 import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
 
-console.info("[build]", engineConfig.build || {});
-
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
   engineConfig.districtRuleCandidates || [];
@@ -158,9 +154,6 @@ const HARBOUR_CENTER = new THREE.Vector3(-120, 0, 80);
 const HARBOUR_RADIUS = 60;
 const SEA_LEVEL = 0.0;
 
-window.addEventListener("unhandledrejection", (ev) => {
-  console.error("Unhandled promise rejection:", ev.reason);
-});
 
 function shouldShowOverlay(options = {}) {
   return resolveFeatureToggle(options);
@@ -374,20 +367,11 @@ export class Application {
     const POSEIDON_CANDIDATES = getAssetCandidates("poseidon");
     const AKROPOL_CANDIDATES = getAssetCandidates("akropol");
 
-    console.log("🔧 Athens mainApp start");
-    console.info(
-      FORCE_PROC
-        ? "[proc] GLB loading disabled (procedural default)"
-        : "[glb] GLB mode enabled",
-    );
-
     showLoadingScreen({
       initialStatus: "Preparing the experience...",
     });
     updateLoadingStatus("Preparing renderer and interface...");
-    assetLoader.runAssetQuickChecks().catch((err) => {
-      console.warn("Asset QuickChecks failed", err);
-    });
+    assetLoader.runAssetQuickChecks().catch(() => {});
     assetLoader
       .probeInitialAssets({
         glbCandidates: [
@@ -397,7 +381,7 @@ export class Application {
         ],
         includeGlbCandidates: !FORCE_PROC,
       })
-      .catch((err) => console.warn("[probe] initial asset scan failed", err));
+      .catch(() => {});
 
     const readStoredNumber = (key, fallback) => {
       try {
@@ -405,8 +389,8 @@ export class Application {
           const value = Number(window.localStorage.getItem(key));
           if (Number.isFinite(value)) return value;
         }
-      } catch (error) {
-        console.warn(`[storage] Unable to read ${key}`, error);
+      } catch {
+        // Ignore storage read errors.
       }
       return fallback;
     };
@@ -416,8 +400,8 @@ export class Application {
         if (typeof window !== "undefined" && window.localStorage) {
           window.localStorage.setItem(key, String(value));
         }
-      } catch (error) {
-        console.warn(`[storage] Unable to persist ${key}`, error);
+      } catch {
+        // Ignore storage write errors.
       }
     };
 
@@ -441,7 +425,6 @@ export class Application {
     };
     const updateMoonObjects = (moonMesh, moonLight, updates = {}) => {
       if (!moonMesh || !moonLight) {
-        console.warn("[Lighting] moonMesh or moonLight missing; skipping update.");
         return;
       }
 
@@ -838,8 +821,8 @@ export class Application {
           setEnvironmentMapIntensity(bn.env.envMapIntensity);
         }
       }
-    } catch (e) {
-      console.warn("[EnvStubs] initialization failed", e);
+    } catch {
+      // Ignore initialization failures for optional environment stubs.
     }
 
     const alignSunLight = () => {
@@ -876,12 +859,14 @@ export class Application {
     );
     let audioManifestMissing = false;
     // Phase 1: Defer audio manifest loading to background - don't block startup (11M deferral)
-    soundscape.loadManifest("audio/manifest.json").catch(() => {
-      audioManifestMissing = true;
-      console.info("[audio] No audio manifest found; running silently.");
-    }).then(() => soundscape.initFromManifest("audio/manifest.json")).then(() => soundscape.ensureUserGestureResume()).catch((e) => {
-      console.warn("[audio] Background audio load failed:", e);
-    });
+    soundscape
+      .loadManifest("audio/manifest.json")
+      .catch(() => {
+        audioManifestMissing = true;
+      })
+      .then(() => soundscape.initFromManifest("audio/manifest.json"))
+      .then(() => soundscape.ensureUserGestureResume())
+      .catch(() => {});
     updateLoadingStatus("Sculpting the Attic landscape...");
 
     // Audio mixer will be mounted by UIManager later with all other HUD overlays
@@ -1055,25 +1040,10 @@ export class Application {
       Number.isFinite(sampledSeaLevel) &&
       Math.abs(sampledSeaLevel - currentSeaLevel) > 1e-3
     ) {
-      const changed = setSeaLevelY(sampledSeaLevel, {
+      setSeaLevelY(sampledSeaLevel, {
         reason: "harbor-sampling",
         samples: harborSampleCount,
       });
-      if (changed && import.meta.env?.DEV) {
-        console.assert(
-          Math.abs(getSeaLevelY() - sampledSeaLevel) < 1e-6,
-          "[seaLevel] mismatch after harbor sampling",
-        );
-
-    // DEV: visualize ground layers to audit overlaps
-    if (import.meta?.env?.DEV) {
-      try { mountGroundAudit(scene); } catch (e) { console.warn("[groundAudit] mount failed", e); }
-    }
-      }
-    } else if (import.meta.env?.DEV && harborSampleCount < 3) {
-      console.info(
-        `[seaLevel] Harbor sampling unavailable (samples=${harborSampleCount}); using fallback ${currentSeaLevel.toFixed(3)}`,
-      );
     }
 
     const resolvedSeaLevel = getSeaLevelY();
@@ -1118,9 +1088,6 @@ export class Application {
     if (roadGroup) {
       roadGroup.visible = roadsVisible;
     }
-    if (import.meta.env?.DEV) {
-      mountHillCityDebug(scene, mainRoad);
-    }
 
     if (grassEnabled) {
       grassRoot = mountGrass(scene);
@@ -1147,17 +1114,12 @@ export class Application {
               renderer,
               BASE_URL,
             });
-          } catch (e) {
-            console.warn("Aristotle PBR hook skipped:", e);
+          } catch {
+            // Ignore optional PBR hook failures.
           }
-        } else {
-          console.warn(
-            "Aristotle's Tomb not found. Expected at:",
-            ARISTOTLE_CANDIDATES,
-          );
         }
-      } catch (err) {
-        console.error("Failed to load Aristotle's Tomb:", err);
+      } catch {
+        // Ignore missing Aristotle asset.
       }
 
       // Phase 2: Defer distant landmarks (Poseidon & Acropolis) - 8-10M deferral
@@ -1172,8 +1134,8 @@ export class Application {
                 scale: 2.6,
                 materialPreset: "marble",
               });
-          } catch (e) {
-            console.warn("Poseidon Temple not loaded:", e);
+          } catch {
+            // Ignore missing Poseidon landmark.
           }
         })(),
         (async () => {
@@ -1186,16 +1148,14 @@ export class Application {
                 scale: 2.2,
                 materialPreset: "marble",
               });
-          } catch (e) {
-            console.warn("Akropol not loaded:", e);
+          } catch {
+            // Ignore missing Akropol landmark.
           }
         })(),
-      ]).catch((e) => console.warn("[landmarks] Background load failed:", e));
+      ]).catch(() => {});
       // Continue without awaiting - distant landmarks load in background
       // Estimated 8-10M deferral reduces initial critical path
       // ------------------------------------------------------------------------
-    } else {
-      console.info("[proc] GLB loading disabled (procedural default)");
     }
 
     const { city: harborCity, roadCurves } = await createCity(
@@ -1225,9 +1185,7 @@ export class Application {
     updateLoadingStatus("Raising temples, homes, and harbors...");
 
     // Phase 3: Defer gravel texture loading to background (5-8M deferral)
-    applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch((e) => {
-      console.warn("Gravel roads hook failed:", e);
-    });
+    applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch(() => {});
 
     updateTerrainCoverageMask(terrain, {
       buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
@@ -1909,27 +1867,7 @@ export class Application {
       player.attachCharacter(character);
 
       const resolvedHeroRootPath = joinPath(BASE_URL, heroRootPath);
-      if (url !== resolvedHeroRootPath && url !== heroRootPath) {
-        console.info(
-          `Hero GLB not found at ${resolvedHeroRootPath}; using bundled astronaut sample from ${url}.`,
-        );
-      }
-      console.log("[Hero] Loaded:", url);
-      console.log(
-        "[Hero] Expected primary path:",
-        joinPath(BASE_URL, "models/character/hero.glb"),
-      );
     } catch (error) {
-      console.error(
-        `[Hero] All candidates failed, using fallback avatar:`,
-        error?.message || error,
-      );
-      console.info(
-        `Add your own hero model at ${joinPath(
-          BASE_URL,
-          "models/character/hero.glb",
-        )}; the bundled astronaut sample will load otherwise.`,
-      );
       attachFallbackAvatar();
     }
     updateLoadingStatus("Welcoming Athenians to the city...");
@@ -1972,9 +1910,7 @@ export class Application {
           npcUpdaters.push(...glbNpcs.updaters);
         }
       })
-      .catch((error) => {
-        console.warn("[NPC Loader] Failed to spawn GLB NPCs", error);
-      });
+      .catch(() => {});
     // Limit the number of placeholder light shadow maps so we stay under the
     // WebGL texture unit cap when many placeholders are visible at once.
     const PLACEHOLDER_LIGHT_SHADOW_BUDGET = 12;
@@ -2304,18 +2240,8 @@ export class Application {
         ),
       );
 
-      sampleBuildingResults.forEach((result, index) => {
-        if (result.status === "rejected") {
-          console.error(
-            `Sample building failed to load: ${sampleBuildingSpecs[index].url}`,
-            result.reason,
-          );
-        }
-      });
+      sampleBuildingResults.forEach(() => {});
     } else {
-      console.info(
-        "[proc] Skipping GLB sample buildings; using procedural city fill.",
-      );
     }
 
     const landmarkManager = new LandmarkManager({
@@ -2337,7 +2263,6 @@ export class Application {
 
     let configToLoad = athensLayoutConfig;
     if (FORCE_PROCEDURAL_LANDMARKS) {
-      console.log("[proc] Forcing procedural landmarks.");
       configToLoad = {
         metadata: { description: "Procedural development layout" },
         groups: [
@@ -2391,19 +2316,13 @@ export class Application {
     let landmarkResults = [];
     try {
       landmarkResults = await landmarkManager.loadConfig(configToLoad);
-    } catch (error) {
-      console.error("[LandmarkManager] Failed to load Athens layout", error);
+    } catch {
+      // Ignore missing landmark config assets.
     }
 
     proceduralLandmarkCount = landmarkResults.filter(
       (entry) => entry?.object?.userData?.proceduralType,
     ).length;
-
-    if (FORCE_PROCEDURAL_LANDMARKS) {
-      console.log(
-        `[proc] Placed ${proceduralLandmarkCount} procedural landmarks.`,
-      );
-    }
 
     interactor = createInteractor(renderer, camera, scene);
 
@@ -2557,57 +2476,6 @@ export class Application {
     };
 
     const presetNames = Object.keys(LIGHTING_PRESETS);
-    const isDevBuild =
-      (typeof import.meta !== "undefined" && import.meta.env?.DEV === true) ||
-      (typeof process !== "undefined" && process?.env?.NODE_ENV === "development");
-
-    let presetOverlay = null;
-    let presetOverlayTimer = null;
-
-    const ensurePresetOverlay = () => {
-      if (!isDevBuild || typeof document === "undefined") return null;
-      if (presetOverlay) return presetOverlay;
-      const el = document.createElement("div");
-      el.id = "lighting-preset-overlay";
-      el.style.position = "fixed";
-      el.style.bottom = "16px";
-      el.style.right = "16px";
-      el.style.padding = "8px 12px";
-      el.style.background = "rgba(0,0,0,0.65)";
-      el.style.color = "#f6f8fb";
-      el.style.fontFamily = "sans-serif";
-      el.style.fontSize = "12px";
-      el.style.borderRadius = "6px";
-      el.style.pointerEvents = "none";
-      el.style.boxShadow = "0 2px 10px rgba(0,0,0,0.35)";
-      document.body.appendChild(el);
-      presetOverlay = el;
-      return presetOverlay;
-    };
-
-    const getNextPresetName = (name) => {
-      if (!presetNames.length) return null;
-      const currentIndex = presetNames.indexOf(name);
-      const baseIndex = currentIndex >= 0 ? currentIndex : 0;
-      const nextIndex = (baseIndex + 1) % presetNames.length;
-      return presetNames[nextIndex];
-    };
-
-    const showPresetOverlay = (activeName, nextName) => {
-      const overlay = ensurePresetOverlay();
-      if (!overlay || !activeName) return;
-      overlay.textContent = nextName
-        ? `Lighting: ${activeName} (next: ${nextName})`
-        : `Lighting: ${activeName}`;
-      overlay.style.opacity = "1";
-      if (presetOverlayTimer) {
-        clearTimeout(presetOverlayTimer);
-        presetOverlayTimer = null;
-      }
-      presetOverlayTimer = setTimeout(() => {
-        if (overlay) overlay.style.opacity = "0.5";
-      }, 1800);
-    };
 
     const getActivePresetName = () => {
       const phasePreset = getPresetForPhase(timeOfDayState.timeOfDayPhase ?? 0);
@@ -2677,16 +2545,16 @@ export class Application {
     // Still uses applyLookProfileImmediate() because of 17+ connected systems
     // Future goal: incrementally port logic into EnvironmentManager
     const applyLookProfileImmediate = (profileName) => {
-      const profile = LOOK_PROFILES[profileName];
+      const resolvedProfileName = profileName || "Bright Noon";
+      const profile =
+        LOOK_PROFILES[resolvedProfileName] || LOOK_PROFILES["Bright Noon"];
       if (!profile) {
-        console.warn(`[LookProfile] Profile '${profileName}' not found`);
         return;
       }
-      applyEnvironmentFallbackForProfile(profileName);
+      applyEnvironmentFallbackForProfile(resolvedProfileName);
       currentLookProfile = profile;
-      lastAppliedLightingPreset = profileName;
-      console.log(`[LookProfile] Applying: ${profileName}`);
-      devHud?.setActivePreset?.(profileName);
+      lastAppliedLightingPreset = resolvedProfileName;
+      devHud?.setActivePreset?.(resolvedProfileName);
 
       const targetStarsOpacity = resolveStarsOpacity(profile.starsVisible);
       const targetMoonDir = Number.isFinite(profile.moonElevation)
@@ -2804,31 +2672,29 @@ export class Application {
 
       renderFrame();
 
-      showPresetOverlay(profileName, getNextPresetName(profileName));
     };
 
     const applyLookProfile = (profileName, options = {}) => {
       const { immediate = false, forceReapply = false, source = "manual" } =
         options;
-      const profile = LOOK_PROFILES[profileName];
+      const resolvedProfileName = profileName || "Bright Noon";
+      const profile =
+        LOOK_PROFILES[resolvedProfileName] || LOOK_PROFILES["Bright Noon"];
       if (!profile) {
-        console.warn(`[LookProfile] Profile '${profileName}' not found`);
         return;
       }
 
-      applyEnvironmentFallbackForProfile(profileName);
+      applyEnvironmentFallbackForProfile(resolvedProfileName);
 
-      if (!forceReapply && lastAppliedLightingPreset === profileName) {
+      if (!forceReapply && lastAppliedLightingPreset === resolvedProfileName) {
         return;
       }
 
       stopLightingTransition();
       currentLookProfile = profile;
-      lastAppliedLightingPreset = profileName;
+      lastAppliedLightingPreset = resolvedProfileName;
       userPresetActive = source !== "auto";
-      devHud?.setActivePreset?.(profileName);
-
-      showPresetOverlay(profileName, getNextPresetName(profileName));
+      devHud?.setActivePreset?.(resolvedProfileName);
 
       // Apply static elements immediately
       if (profile.skybox?.skyKey && dynamicSky) {
@@ -2927,7 +2793,7 @@ export class Application {
       }
 
       if (immediate) {
-        applyLookProfileImmediate(profileName);
+        applyLookProfileImmediate(resolvedProfileName);
         return;
       }
 
@@ -3291,7 +3157,6 @@ export class Application {
         player.velocity.set(0, 0, 0);
         playerRoot.position.copy(respawnPos);
         player.syncCapsuleToObject();
-        console.warn("[Player] Fell into void; respawned at Agora.");
       }
 
       const terrainSize = terrain?.geometry?.userData?.size;
@@ -3376,15 +3241,13 @@ export class Application {
     hideLoadingScreen();
 
     // Initialize prop culling system to reduce clutter and improve performance
-    console.log('[PropCulling] Initializing prop culling for cluttered areas...');
     try {
       initPropCulling(scene, camera, { dryRun: false });
-    } catch (err) {
-      console.error('[PropCulling] Failed to initialize prop culling:', err);
+    } catch {
+      // Ignore optional prop culling failures.
     }
 
     // Initialize building culling system for better performance
-    console.log('[BuildingCulling] Initializing building visibility culling...');
     try {
       protectLandmarks(scene);
       initBuildingCulling(scene, camera, { 
@@ -3392,42 +3255,15 @@ export class Application {
         enableHorizon: true,
         enableLOD: false // Can enable for more aggressive optimization
       });
-    } catch (err) {
-      console.error('[BuildingCulling] Failed to initialize building culling:', err);
+    } catch {
+      // Ignore optional building culling failures.
     }
 
     // Initialize city debug mode (enable with ?citydebug=1)
     try {
       initCityDebugMode(scene, terrain);
-    } catch (err) {
-      console.error('[CityDebug] Failed to initialize debug mode:', err);
-    }
-
-    // Debug: Audit low objects that might be submerged or overlapping with water
-    if (import.meta?.env?.DEV) {
-      console.log('[GROUND AUDIT] Checking for low-positioned objects...');
-      let lowObjectCount = 0;
-      scene.traverse(obj => {
-        if (obj.isMesh && obj.position.y < 1) {
-          console.log('[LOW OBJECT]', obj.name || 'unnamed', 'Y:', obj.position.y.toFixed(3));
-          lowObjectCount++;
-        }
-      });
-      console.log(`[GROUND AUDIT] Found ${lowObjectCount} objects below Y=1`);
-      
-      // Optional: Enable wireframe for low objects with ?wireframe=1
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('wireframe') === '1') {
-        console.log('[DEBUG] Enabling wireframe for low objects');
-        scene.traverse(obj => {
-          if (obj.isMesh && obj.position.y < 1) {
-            const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-            materials.forEach(mat => {
-              if (mat) mat.wireframe = true;
-            });
-          }
-        });
-      }
+    } catch {
+      // Ignore debug mode init failures.
     }
 
     // Utility getters for HUD
@@ -3465,7 +3301,6 @@ export class Application {
     const cameraHudToggle = engineConfig.debug?.overlays?.cameraSettings || { defaultValue: true, devDefault: true };
     
     if (resolveFeatureToggle(devHudToggle) || resolveFeatureToggle(cameraHudToggle)) {
-      console.log("[HUD] mounting via UIManager…");
       UIManager.init({
         renderer,
         soundscape,
@@ -3539,10 +3374,7 @@ export class Application {
         const x = position?.x;
         const z = position?.z;
         if (Number.isFinite(x) && Number.isFinite(z)) {
-          const result = probeAt(x, z);
-          console.table({ x, z, ...result });
-        } else {
-          console.warn("[probe] Player position unavailable", position);
+          probeAt(x, z);
         }
       }
     });

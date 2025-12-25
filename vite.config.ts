@@ -20,7 +20,9 @@ export default defineConfig({
     outDir: "docs",
     emptyOutDir: true,
     sourcemap: true,
+    minify: false,
     rollupOptions: {
+      treeshake: false,
       // Ensure no externals that would leave bare imports at runtime
       external: [], // keep empty unless you have a good reason
       plugins: [
