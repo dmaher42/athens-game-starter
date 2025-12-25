@@ -16,6 +16,63 @@ import { RENDER_LAYERS } from "./renderLayers.js";
 
 const textureLoader = new THREE.TextureLoader();
 
+function configureMapTexture(texture, options = {}) {
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  if (options.repeat) {
+    texture.repeat.set(options.repeat[0], options.repeat[1]);
+  }
+  if (options.colorSpace) {
+    texture.colorSpace = options.colorSpace;
+  }
+  if (typeof options.anisotropy === "number") {
+    texture.anisotropy = options.anisotropy;
+  }
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearMipMapLinearFilter;
+  texture.needsUpdate = true;
+}
+
+function createFallbackDataTexture(color, options) {
+  const data = new Uint8Array(color);
+  const texture = new THREE.DataTexture(
+    data,
+    1,
+    1,
+    THREE.RGBFormat,
+    THREE.UnsignedByteType,
+  );
+  configureMapTexture(texture, options);
+  return texture;
+}
+
+function loadTextureWithFallback(url, options, fallbackFactory) {
+  const fallbackTexture = fallbackFactory();
+  configureMapTexture(fallbackTexture, options);
+
+  try {
+    textureLoader.load(
+      url,
+      (loadedTexture) => {
+        if (!loadedTexture) return;
+        configureMapTexture(loadedTexture, options);
+        fallbackTexture.image = loadedTexture.image;
+        fallbackTexture.format = loadedTexture.format;
+        fallbackTexture.type = loadedTexture.type;
+        fallbackTexture.colorSpace = loadedTexture.colorSpace;
+        fallbackTexture.needsUpdate = true;
+      },
+      undefined,
+      (event) => {
+        console.warn(`Failed to load ground texture: ${url}`, event);
+      },
+    );
+  } catch (error) {
+    console.warn(`Failed to load ground texture: ${url}`, error);
+  }
+
+  return fallbackTexture;
+}
+
 // Lightweight gradient noise to break up perfectly flat surfaces.
 function gradientNoise(x, z) {
   const x0 = Math.floor(x);
@@ -346,17 +403,23 @@ export function createTerrain(scene) {
 
   // Load sand texture maps
   const baseUrl = import.meta?.env?.BASE_URL ?? "/";
-  const sandNormal = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`);
-  sandNormal.wrapS = sandNormal.wrapT = THREE.RepeatWrapping;
-  sandNormal.repeat.set(28, 24);
-  sandNormal.colorSpace = THREE.NoColorSpace;
-  sandNormal.anisotropy = 8;
+  const textureOptions = {
+    repeat: [28, 24],
+    colorSpace: THREE.NoColorSpace,
+    anisotropy: 8,
+  };
 
-  const sandARM = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`);
-  sandARM.wrapS = sandARM.wrapT = THREE.RepeatWrapping;
-  sandARM.repeat.set(28, 24);
-  sandARM.colorSpace = THREE.NoColorSpace;
-  sandARM.anisotropy = 8;
+  const sandNormal = loadTextureWithFallback(
+    `${baseUrl}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`,
+    textureOptions,
+    () => createFallbackDataTexture([128, 128, 255], textureOptions),
+  );
+
+  const sandARM = loadTextureWithFallback(
+    `${baseUrl}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`,
+    textureOptions,
+    () => createFallbackDataTexture([255, 255, 0], textureOptions),
+  );
 
   let terrainMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
