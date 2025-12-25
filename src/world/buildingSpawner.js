@@ -568,7 +568,7 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
   worldRoot.add(buildingsGroup);
 
   // Density limits per district
-  const MAX_BUILDINGS_PER_ZONE = Number.isFinite(options.maxBuildings) ? options.maxBuildings : 15;
+  const MAX_BUILDINGS_PER_ZONE = Number.isFinite(options.maxBuildings) ? options.maxBuildings : 10;
   const MIN_SPACING_TILES = Number.isFinite(options.minSpacingTiles) ? options.minSpacingTiles : 2;
   const TILE_SIZE = Number.isFinite(options.tileSize) ? options.tileSize : 48; // meters per tile
   const MIN_SPACING_METERS = MIN_SPACING_TILES * TILE_SIZE;

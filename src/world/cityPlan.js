@@ -23,7 +23,7 @@ const BLOCK_SIZE = 48; // Increased from 40 for better district spacing (~20% in
 
 // District Spacing Rules
 export const SPACING_RULES = {
-  LANDMARK_MIN_SPACING: 8 * BLOCK_SIZE, // 8-tile radius between landmarks (384m)
+  LANDMARK_MIN_SPACING: 12 * BLOCK_SIZE, // 12-tile radius between landmarks (576m)
   CIVIC_CLUSTER_MAX_DISTANCE: 30 * BLOCK_SIZE, // 30 tiles from starting point (1440m)
   LANDMARK_TYPES: ['parthenon', 'temple', 'monument', 'tholos', 'stoa'],
 };

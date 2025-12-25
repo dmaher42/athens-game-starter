@@ -6,11 +6,11 @@ import * as THREE from "three";
  */
 
 const CULL_DISTANCE = 400; // meters
-const LOD_DISTANCE_NEAR = 150; // Full detail
-const LOD_DISTANCE_MID = 250;  // Reduced detail
-const LOD_DISTANCE_FAR = 350;  // Minimal detail
+const LOD_DISTANCE_NEAR = 120; // Full detail
+const LOD_DISTANCE_MID = 220;  // Reduced detail
+const LOD_DISTANCE_FAR = 320;  // Minimal detail
 const HORIZON_CHECK_ENABLED = true;
-const FADE_DISTANCE = 150; // distance at which buildings fade/hide
+const FADE_DISTANCE = 120; // distance at which buildings fade/hide
 
 /**
  * Enable frustum culling on all building meshes
