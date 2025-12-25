@@ -10,12 +10,6 @@ export default defineConfig({
     },
     extensions: [".ts", ".tsx", ".js", ".jsx"],
   },
-  server: {
-    port: 8000,
-    fs: {
-      strict: false,
-    },
-  },
   build: {
     outDir: "docs",
     emptyOutDir: true,
@@ -35,9 +29,6 @@ export default defineConfig({
         }),
       ],
     },
-  },
-  optimizeDeps: {
-    include: ["three", "three-mesh-bvh"],
   },
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),

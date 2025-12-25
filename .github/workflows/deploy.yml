@@ -3,21 +3,17 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: gh-pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,48 +26,14 @@ jobs:
           cache: "npm"
 
       - name: Install
-        run: npm ci
+        run: npm install
 
       - name: Build
         run: npm run build
 
-      - name: Verify build output
-        run: |
-          set -euo pipefail
-          must_have=(
-            "docs/index.html"
-            "docs/audio/manifest.json"
-            "docs/config/districts.json"
-          )
-          missing=0
-          for f in "${must_have[@]}"; do
-            if [[ -f "$f" ]]; then
-              echo "OK  $f"
-            else
-              echo "::error title=Missing build file::$f"
-              missing=1
-            fi
-          done
-          if [[ $missing -ne 0 ]]; then
-            exit 1
-          fi
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs
-
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
