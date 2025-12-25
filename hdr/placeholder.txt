@@ -1,0 +1,10 @@
+Environment maps are loaded at runtime; the default points to the Poly Haven
+`clear_noon_1k.exr` file to avoid bundling large binaries. To override it with a
+local capture, drop a half-float equirectangular EXR in this folder and update
+`hdrPath` in `src/core/Application.js`.
+
+Convert a Radiance .hdr capture to the expected format with ImageMagick:
+
+convert clear_midday.hdr -compress zip -define exr:pixelType=half clear_midday.exr
+
+Ensure the output keeps a 2:1 aspect ratio for correct sky projection.
