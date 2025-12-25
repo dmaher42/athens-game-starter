@@ -129,6 +129,8 @@ const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
 
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 
+const ENABLE_GLB_MODE = false;
+
 // Use Look Profiles as the primary presets
 const LIGHTING_PRESETS = LOOK_PROFILES;
 const LIGHTING_PRESET_ORDER = [
@@ -141,13 +143,13 @@ const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
 const SUN_ELEVATION_STORAGE_KEY = "skybox.sunElevationDeg";
 
 const DEFAULT_FORCE_GLB =
-  typeof engineConfig.featureFlags?.forceGlb === "boolean"
+  ENABLE_GLB_MODE && typeof engineConfig.featureFlags?.forceGlb === "boolean"
     ? engineConfig.featureFlags.forceGlb
     : false;
 const DEFAULT_FORCE_PROC =
   typeof engineConfig.featureFlags?.forceProcedural === "boolean"
     ? engineConfig.featureFlags.forceProcedural
-    : !DEFAULT_FORCE_GLB;
+    : !DEFAULT_FORCE_GLB || !ENABLE_GLB_MODE;
 const USE_THIRD_PERSON =
   engineConfig.featureFlags?.useThirdPersonCamera !== false;
 
@@ -342,14 +344,19 @@ export class Application {
     this.districtRuleCandidates =
       districtRuleCandidates ?? DEFAULT_DISTRICT_RULE_URL_CANDIDATES;
     this.queryParams = queryParams ?? engineConfig.queryParams;
-    this.forceGlb =
+    const resolvedForceGlb =
       typeof forceGlb === "boolean" ? forceGlb : DEFAULT_FORCE_GLB;
-    this.forceProc =
-      typeof forceProc === "boolean" ? forceProc : !this.forceGlb;
+    this.forceGlb = ENABLE_GLB_MODE && resolvedForceGlb;
+    this.forceProc = ENABLE_GLB_MODE
+      ? typeof forceProc === "boolean"
+        ? forceProc
+        : !this.forceGlb
+      : true;
     this.assetLoader = new AssetLoader({
       baseUrl: this.baseUrl,
       forceProcedural: this.forceProc,
       districtRuleCandidates: this.districtRuleCandidates,
+      enableGlbMode: ENABLE_GLB_MODE,
     });
     this.gameLoop = new GameLoop();
     this.sceneContext = null;
