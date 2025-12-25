@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, CITY_CENTER_ORIGIN, getCityGroundY } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
+import { IS_DEV } from '../utils/env.js';
 import { Prefabs, spawnBuilding } from './buildingSpawner.js';
 import { buildTemple } from '../features/temples.js';
 import { loadDistrictRules } from './districtRules.js';
@@ -198,7 +199,7 @@ export function generatePaths(grid, options = {}) {
   const pathTiles = [];
   const maxSlope = avoidSteepSlopes ? WALKABILITY_CONFIG.MAX_PATH_SLOPE : Infinity;
 
-  console.log('[CityPlan] Generating pedestrian walkability grid...');
+  if (IS_DEV) console.log('[CityPlan] Generating pedestrian walkability grid...');
 
   // Mark existing roads as paths
   for (const cell of grid) {
@@ -244,7 +245,7 @@ export function generatePaths(grid, options = {}) {
       const path = findPath(grid, centerX, centerZ, location.x, location.z, maxSlope);
       
       if (path) {
-        console.log(`[CityPlan] Path to ${location.name}: ${path.length} tiles`);
+        if (IS_DEV) console.log(`[CityPlan] Path to ${location.name}: ${path.length} tiles`);
         
         // Add path tiles
         for (const cell of path) {
@@ -260,12 +261,12 @@ export function generatePaths(grid, options = {}) {
           }
         }
       } else {
-        console.warn(`[CityPlan] No path found to ${location.name} - terrain too steep or disconnected`);
+        if (IS_DEV) console.warn(`[CityPlan] No path found to ${location.name} - terrain too steep or disconnected`);
       }
     }
   }
 
-  console.log(`[CityPlan] Generated ${pathTiles.length} path tiles`);
+  if (IS_DEV) console.log(`[CityPlan] Generated ${pathTiles.length} path tiles`);
   return pathTiles;
 }
 
@@ -288,7 +289,7 @@ export function verifyReachability(grid, pathTiles, options = {}) {
 
   const centerX = 0, centerZ = 0;
 
-  console.log('[CityPlan] Verifying reachability to key buildings...');
+  if (IS_DEV) console.log('[CityPlan] Verifying reachability to key buildings...');
 
   for (const location of keyLocations) {
     const path = findPath(grid, centerX, centerZ, location.x, location.z);
@@ -299,20 +300,20 @@ export function verifyReachability(grid, pathTiles, options = {}) {
 
       if (distance <= maxDistance) {
         results.reachable.push(location.name);
-        console.log(`[CityPlan] ✅ ${location.name}: reachable in ${distance} tiles`);
+        if (IS_DEV) console.log(`[CityPlan] ✅ ${location.name}: reachable in ${distance} tiles`);
       } else {
         results.unreachable.push(location.name);
-        console.warn(`[CityPlan] ⚠️  ${location.name}: ${distance} tiles (exceeds max ${maxDistance})`);
+        if (IS_DEV) console.warn(`[CityPlan] ⚠️  ${location.name}: ${distance} tiles (exceeds max ${maxDistance})`);
       }
     } else {
       results.unreachable.push(location.name);
       results.distances[location.name] = Infinity;
-      console.error(`[CityPlan] ❌ ${location.name}: unreachable`);
+      if (IS_DEV) console.error(`[CityPlan] ❌ ${location.name}: unreachable`);
     }
   }
 
   const allReachable = results.unreachable.length === 0;
-  console.log(`[CityPlan] Reachability: ${results.reachable.length}/${keyLocations.length} locations within ${maxDistance} tiles`);
+  if (IS_DEV) console.log(`[CityPlan] Reachability: ${results.reachable.length}/${keyLocations.length} locations within ${maxDistance} tiles`);
 
   return {
     ...results,
@@ -337,7 +338,7 @@ function createPavedStrip(width, length, color = 0x888888) {
 function generateCityGrid(terrainSampler) {
   const cells = [];
   
-  console.log('[CityPlan] Generating terrain-aware city grid...');
+  if (IS_DEV) console.log('[CityPlan] Generating terrain-aware city grid...');
   let slopeRejects = 0;
   let elevationRejects = 0;
   
@@ -628,7 +629,7 @@ export async function createCivicDistrict(scene, options = {}) {
   }
 
   // Render footpaths (non-road paths for pedestrian connectivity)
-  console.log(`[CityPlan] Rendering ${pathTiles.length} path tiles...`);
+  if (IS_DEV) console.log(`[CityPlan] Rendering ${pathTiles.length} path tiles...`);
   for (const pathTile of pathTiles) {
     if (pathTile.type === 'footpath' || pathTile.type === 'connector') {
       const localX = pathTile.position.x;

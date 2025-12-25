@@ -332,7 +332,7 @@ export function createInteractor(renderer, camera, scene) {
     }
 
     if (!currentHover) {
-      console.log("Nothing to interact with.");
+      // console.log("Nothing to interact with.");
       return;
     }
 

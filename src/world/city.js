@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { IS_DEV } from "../utils/env.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   CITY_CHUNK_CENTER,
@@ -512,7 +513,7 @@ export async function createCity(scene, terrain, options = {}) {
   
   // Validate landmark spacing for tholos
   if (!canPlaceLandmark(tholosX, tholosZ, 'tholos')) {
-    console.warn(`[City] Tholos placement rejected at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)}) - violates 8-tile landmark spacing`);
+    if (IS_DEV) console.warn(`[City] Tholos placement rejected at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)}) - violates 8-tile landmark spacing`);
   } else {
     const tholosY = sampleHeight(terrain, tholosX, tholosZ, origin.y);
     const tholosGeo = generateTholosGeometry(tholosRadius, tholosHeight);
@@ -523,7 +524,7 @@ export async function createCity(scene, terrain, options = {}) {
     landmarkBuffers.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters + 6 });
     buildingPlacements.push({ x: tholosX, z: tholosZ, rotation: 0, width: tholosRadius * 2, depth: tholosRadius * 2 });
     registerLandmark(tholosX, tholosZ, 'tholos');
-    console.log(`[City] Tholos placed at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)})`);
+    if (IS_DEV) console.log(`[City] Tholos placed at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)})`);
   }
 
   const stoaLength = 22;
@@ -534,7 +535,7 @@ export async function createCity(scene, terrain, options = {}) {
   
   // Validate landmark spacing for stoa
   if (!canPlaceLandmark(stoaX, stoaZ, 'stoa')) {
-    console.warn(`[City] Stoa placement rejected at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)}) - violates 8-tile landmark spacing`);
+    if (IS_DEV) console.warn(`[City] Stoa placement rejected at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)}) - violates 8-tile landmark spacing`);
   } else {
     const stoaY = sampleHeight(terrain, stoaX, stoaZ, origin.y);
     const stoaGeo = generateStoaGeometry(stoaLength, stoaWidth, stoaHeight);
@@ -545,7 +546,7 @@ export async function createCity(scene, terrain, options = {}) {
     landmarkBuffers.push({ x: stoaX, z: stoaZ, radius: stoaRadius + 10 });
     buildingPlacements.push({ x: stoaX, z: stoaZ, rotation: 0, width: stoaLength, depth: stoaWidth });
     registerLandmark(stoaX, stoaZ, 'stoa');
-    console.log(`[City] Stoa placed at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)})`);
+    if (IS_DEV) console.log(`[City] Stoa placed at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)})`);
   }
 
   const zoneACount = 800;

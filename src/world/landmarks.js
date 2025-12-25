@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { LOD } from "three";
+import { IS_DEV } from "../utils/env.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
@@ -100,7 +101,7 @@ function warnMissingLandmark(key, message) {
     return;
   }
   missingLandmarkWarnings.add(key);
-  console.warn(message);
+  if (IS_DEV) console.warn(message);
 }
 
 // Reuse a single loader instance so we don't repeatedly allocate it whenever we
@@ -157,7 +158,7 @@ export async function initializeAssetTranscoders(renderer) {
       !hasLoggedCdnFallback &&
       transcoderPath === DEFAULT_BASIS_TRANSCODER_PATH
     ) {
-      console.info(
+      if (IS_DEV) console.info(
         "KTX2 transcoder path not configured; falling back to the three.js CDN. Add public/basis/ or set VITE_BASIS_TRANSCODER_PATH to avoid extra requests."
       );
       hasLoggedCdnFallback = true;
@@ -171,7 +172,7 @@ export async function initializeAssetTranscoders(renderer) {
 
     if (!supportsKTX2) {
       if (!hasWarnedUnsupportedKTX2) {
-        console.warn(
+        if (IS_DEV) console.warn(
           "KTX2 is not supported on this GPU/driver combo. Falling back to standard textures."
         );
         hasWarnedUnsupportedKTX2 = true;

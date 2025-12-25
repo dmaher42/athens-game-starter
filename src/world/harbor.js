@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { IS_DEV } from "../utils/env.js";
 import {
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_CENTER,
@@ -653,7 +654,7 @@ export function createHarbor(scene, options = {}) {
                         options.terrainSampler ||
                         scene?.userData?.getHeightAt;
 
-  console.log('[Harbor] Creating coastal harbor with grid-aligned placement...');
+  if (IS_DEV) console.log('[Harbor] Creating coastal harbor with grid-aligned placement...');
 
   // Analyze harbor zone if terrain sampler available
   let dockSlots = [];
@@ -668,8 +669,8 @@ export function createHarbor(scene, options = {}) {
     };
 
     const analysis = analyzeHarborZone(terrainSampler, searchArea);
-    console.log(`[Harbor] Zone analysis: ${analysis.dockSlots} dock slots, ${analysis.raisedSlots} raised platforms`);
-    console.log(`[Harbor] Coverage: ${analysis.dockCoverage.toFixed(1)}% dock, ${analysis.raisedCoverage.toFixed(1)}% raised`);
+    if (IS_DEV) console.log(`[Harbor] Zone analysis: ${analysis.dockSlots} dock slots, ${analysis.raisedSlots} raised platforms`);
+    if (IS_DEV) console.log(`[Harbor] Coverage: ${analysis.dockCoverage.toFixed(1)}% dock, ${analysis.raisedCoverage.toFixed(1)}% raised`);
     
     dockSlots = analysis.bestDockPositions || [];
     raisedSlots = analysis.bestRaisedPositions || [];
@@ -691,7 +692,7 @@ export function createHarbor(scene, options = {}) {
 
   if (dockSlots.length >= 3) {
     // Place piers in best grid-aligned slots
-    console.log(`[Harbor] Placing piers in ${Math.min(3, dockSlots.length)} grid-aligned slots`);
+    if (IS_DEV) console.log(`[Harbor] Placing piers in ${Math.min(3, dockSlots.length)} grid-aligned slots`);
     
     for (let i = 0; i < Math.min(3, dockSlots.length); i++) {
       const slot = dockSlots[i];
@@ -709,7 +710,7 @@ export function createHarbor(scene, options = {}) {
     }
   } else {
     // Fallback to default pier positions
-    console.log('[Harbor] Using default pier positions (no terrain sampler)');
+    if (IS_DEV) console.log('[Harbor] Using default pier positions (no terrain sampler)');
     const pierStartX = 70 + 1.1;
     const pierRows = [
       { z: -18, sections: 4 },
@@ -808,7 +809,7 @@ export function createHarbor(scene, options = {}) {
     lighthouse.position.set(lighthouseLocalX, lighthouseSlot.elevation - harborGroundY, lighthouseLocalZ);
     lighthouse.userData.category = "harbor-lighthouse";
     harbor.add(lighthouse);
-    console.log(`[Harbor] Lighthouse placed at (${lighthouseLocalX.toFixed(1)}, ${lighthouseSlot.elevation.toFixed(2)}, ${lighthouseLocalZ.toFixed(1)})`);
+    if (IS_DEV) console.log(`[Harbor] Lighthouse placed at (${lighthouseLocalX.toFixed(1)}, ${lighthouseSlot.elevation.toFixed(2)}, ${lighthouseLocalZ.toFixed(1)})`);
 
     // Place clocktower on second highest raised platform if available
     if (sortedRaised.length >= 2) {

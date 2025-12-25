@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
+import { IS_DEV } from "../utils/env.js";
 import {
   getManifestProbes,
   getGlbProbeCandidates,
@@ -49,7 +50,7 @@ export class AssetLoader {
     includeGlbCandidates = !this.forceProcedural,
   } = {}) {
     const base = this.baseUrl ?? resolveBaseUrl();
-    console.log("[base:resolved]", base);
+    if (IS_DEV) console.log("[base:resolved]", base);
 
     const manifestProbes = getManifestProbes();
     const probes = [
@@ -70,13 +71,13 @@ export class AssetLoader {
       try {
         const method = relativePath.endsWith(".json") ? "GET" : "HEAD";
         const response = await fetch(url, { method, cache: "no-cache" });
-        console.log("[probe]", relativePath, response.status, response.ok, url);
+        if (IS_DEV) console.log("[probe]", relativePath, response.status, response.ok, url);
       } catch (error) {
-        console.warn("[probe-failed]", relativePath, url, error);
+        if (IS_DEV) console.warn("[probe-failed]", relativePath, url, error);
       }
     }
 
-    console.log("[base]", base);
+    if (IS_DEV) console.log("[base]", base);
   }
 
   async headOk(url) {
@@ -96,7 +97,7 @@ export class AssetLoader {
     try {
       const res = await fetch(url, options);
       if (!isJsonProbe && !res.ok && fallbackStatuses.has(res.status)) {
-        console.warn(
+        if (IS_DEV) console.warn(
           "[asset-check:head-denied]",
           res.status,
           "retrying GET",
@@ -104,7 +105,7 @@ export class AssetLoader {
         );
         const getRes = await fetch(url, { method: "GET", cache: "no-cache" });
         const ok = getRes.ok && !isHtmlResponse(getRes);
-        console.log(
+        if (IS_DEV) console.log(
           "[asset-check:get-fallback]",
           getRes.status,
           ok,
@@ -246,10 +247,12 @@ export class AssetLoader {
       }
     }
 
-    if (typeof console?.table === "function") {
-      console.table(results, ["label", "path", "status"]);
-    } else {
-      console.log("Asset QuickChecks", results);
+    if (IS_DEV) {
+      if (typeof console?.table === "function") {
+        console.table(results, ["label", "path", "status"]);
+      } else {
+        console.log("Asset QuickChecks", results);
+      }
     }
 
     return {

@@ -109,7 +109,7 @@ function logHarborLandmark(name, obj) {
   const label = typeof name === "string" ? name : "";
   if (!label.toLowerCase().includes("harbor")) return;
   if (!obj) return;
-  console.log("[LANDMARK]", name, "at", obj.position);
+  // console.log("[LANDMARK]", name, "at", obj.position);
 }
 
 export class LandmarkManager {
