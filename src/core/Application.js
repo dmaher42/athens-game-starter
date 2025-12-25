@@ -410,7 +410,6 @@ export class Application {
         glbCandidates: [
           "models/landmarks/poseidon_temple.glb",
           "models/landmarks/akropol.glb",
-          "models/landmarks/aristotle_tomb.glb",
         ],
         includeGlbCandidates: !FORCE_PROC,
       })

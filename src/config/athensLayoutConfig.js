@@ -146,19 +146,13 @@ const baseAthensLayoutConfig = {
   },
   landmarks: {
     poseidon: [
-      "models/buildings/poseidon_temple_at_sounion_greece.glb",
       "models/landmarks/poseidon_temple.glb",
-      "models/landmarks/poseidon_temple_at_sounion_greece.glb",
     ],
     akropol: [
-      "models/buildings/Akropol.glb",
       "models/landmarks/akropol.glb",
-      "models/landmarks/Akropol.glb",
     ],
     aristotle: [
       "models/buildings/aristotle_tomb_in_macedonia_greece.glb",
-      "models/landmarks/aristotle_tomb.glb",
-      "models/landmarks/aristotle_tomb_in_macedonia_greece.glb",
     ],
   },
   // Set `enabled: false` on any group or landmark to temporarily skip it without

@@ -12,7 +12,6 @@ const DEFAULT_ASSET_CONFIG = {
   probeGlbCandidates: [
     "models/landmarks/poseidon_temple.glb",
     "models/landmarks/akropol.glb",
-    "models/landmarks/aristotle_tomb.glb",
   ],
   quickChecks: [
     { label: "Audio Manifest", path: "audio/manifest.json" },
@@ -22,25 +21,13 @@ const DEFAULT_ASSET_CONFIG = {
   ],
   candidates: {
     aristotle: [
-      "models/buildings/aristotle_tomb.glb",
       "models/buildings/aristotle_tomb_in_macedonia_greece.glb",
-      "models/landmarks/aristotle_tomb.glb",
-      "models/landmarks/aristotle_tomb_in_macedonia_greece.glb",
-      "aristotle_tomb_in_macedonia_greece.glb",
     ],
     poseidon: [
-      "models/buildings/poseidon_temple.glb",
-      "models/buildings/poseidon_temple_at_sounion_greece.glb",
       "models/landmarks/poseidon_temple.glb",
-      "models/landmarks/poseidon_temple_at_sounion_greece.glb",
-      "poseidon_temple_at_sounion_greece.glb",
     ],
     akropol: [
-      "models/buildings/akropol.glb",
-      "models/buildings/Akropol.glb",
       "models/landmarks/akropol.glb",
-      "models/landmarks/Akropol.glb",
-      "Akropol.glb",
     ],
   },
 };
