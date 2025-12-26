@@ -14,6 +14,14 @@ import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
 import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
+import {
+  SEA_SIDE,
+  COAST_WIDTH,
+  INLAND_RISE,
+  RIDGE_START,
+  RIDGE_HEIGHT,
+  CITY_SLOPE_MAX,
+} from "../config/terrainShape";
 
 const textureLoader = new THREE.TextureLoader();
 
@@ -125,40 +133,29 @@ const HARBOUR_TARGET_DEPTH = 2;
 const EAST_HARBOR_CENTER = new THREE.Vector2(-50, -100);
 
 // New Mainland/Coastal Constants
-const INLAND_ELEVATION_SCALE = 220.0; // West rise dominates over noise
 const TERRAIN_SIZE = 2400; // Large terrain for mainland
 const HALF_TERRAIN_SIZE = TERRAIN_SIZE * 0.5;
-const COAST_X_START = 80; // Fade to ocean starts here (East)
-const INLAND_X_START = -50; // Rise to hills starts here (West)
 
-function computeCoastData(x, z) {
-  // Mainland Logic:
-  // East (+X) -> Sea
-  // West (-X) -> Inland (Land)
-  // No North/South fade (Mainland extends indefinitely N/S visually, or covered by horizon)
-
-  // 1. East Fade
-  let coastFactor = 0.0;
-
-  if (x > COAST_X_START) {
-    const dist = x - COAST_X_START;
-    const fade = dist / 120.0; // Gentle slope to sea
-    coastFactor = Math.max(coastFactor, fade);
+function getDistanceToSeaNormalized(x, z) {
+  switch (SEA_SIDE) {
+    case "west":
+      return THREE.MathUtils.clamp((x + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1);
+    case "north":
+      return THREE.MathUtils.clamp((z + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1);
+    case "south":
+      return THREE.MathUtils.clamp((HALF_TERRAIN_SIZE - z) / TERRAIN_SIZE, 0, 1);
+    case "east":
+    default:
+      return THREE.MathUtils.clamp((HALF_TERRAIN_SIZE - x) / TERRAIN_SIZE, 0, 1);
   }
-
-  // Clamp
-  const t = THREE.MathUtils.clamp(coastFactor, 0, 1);
-  const fade = THREE.MathUtils.smoothstep(0, 1, t);
-
-  return { t, fade };
 }
 
-function computeWestBias(x) {
-  // Normalized X in [-1, 1]; east is +1, west is -1
-  const normalizedX = THREE.MathUtils.clamp(x / HALF_TERRAIN_SIZE, -1, 1);
-  const westBias = THREE.MathUtils.clamp(-normalizedX, 0, 1);
-  // Ease-in curve so the inland rise feels gradual near the city and stronger far west
-  return Math.pow(westBias, 1.55);
+function computeCoastData(x, z) {
+  const dSea = getDistanceToSeaNormalized(x, z);
+  const coastBand = THREE.MathUtils.clamp(COAST_WIDTH / TERRAIN_SIZE, 0, 1);
+  const coastMask = THREE.MathUtils.smoothstep(0, coastBand, dSea);
+
+  return { dSea, coastMask };
 }
 
 function applyHarbourCarve(x, z, seaLevel, height) {
@@ -221,21 +218,45 @@ function getElevation(x, z, seaLevel, coastData = null) {
   // Base Height calculation
   let h = seaLevel + CITY_HEIGHT;
 
-  // Directional inland elevation that gently increases toward the west (-X)
-  const westBias = computeWestBias(x);
-  h += westBias * INLAND_ELEVATION_SCALE;
+  const coast = coastData ?? computeCoastData(x, z);
+  const dSea = coast.dSea;
+
+  // Macro-shape note: noise + lack of non-sea border min elevation can dip edges below sea level, causing island silhouettes.
+
+  // Directional inland elevation that gently increases away from the sea edge
+  h += INLAND_RISE * (dSea + dSea * dSea);
+
+  const ridgeNoise =
+    gradientNoise(x * NOISE_SCALE * 0.2, z * NOISE_SCALE * 0.2) * 0.5 + 0.5;
+  const ridgeMask = THREE.MathUtils.smoothstep(RIDGE_START, 1.0, dSea);
+  h += ridgeMask * ridgeNoise * RIDGE_HEIGHT;
 
   // Apply Noise
   const rawNoise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE);
   // Keep noise below the inland bias so geography reads clearly and stay calmer to the east
-  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + westBias * 0.65);
+  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + dSea * 0.65);
 
-  // Attenuate noise near coast (East)
-  const coast = coastData ?? computeCoastData(x, z);
-  const coastalNoiseAttenuation = 1 - THREE.MathUtils.smoothstep(0.2, 0.8, coast.t);
+  // Attenuate noise near coast
+  const coastalNoiseAttenuation = 1 - coast.coastMask;
   const shapedNoise = noise * (0.4 + coastalNoiseAttenuation * 0.6);
 
   h += shapedNoise;
+
+  const borderBand = THREE.MathUtils.clamp(COAST_WIDTH / TERRAIN_SIZE, 0, 1);
+  const borderDistances = {
+    east: THREE.MathUtils.clamp((HALF_TERRAIN_SIZE - x) / TERRAIN_SIZE, 0, 1),
+    west: THREE.MathUtils.clamp((x + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1),
+    north: THREE.MathUtils.clamp((z + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1),
+    south: THREE.MathUtils.clamp((HALF_TERRAIN_SIZE - z) / TERRAIN_SIZE, 0, 1),
+  };
+  const nonSeaBorders = Object.entries(borderDistances)
+    .filter(([side]) => side !== SEA_SIDE)
+    .map(([, distance]) => 1 - THREE.MathUtils.smoothstep(0, borderBand, distance));
+  const nonSeaBorderMask =
+    nonSeaBorders.length > 0 ? Math.max(...nonSeaBorders) : 0;
+  if (nonSeaBorderMask > 0) {
+    h = Math.max(h, seaLevel + CITY_SLOPE_MAX * nonSeaBorderMask);
+  }
 
   // Carves
   h = applyHarbourCarve(x, z, seaLevel, h);
@@ -248,10 +269,9 @@ function getElevation(x, z, seaLevel, coastData = null) {
       h = h * 0.7 + (seaLevel + CITY_HEIGHT) * 0.3;
   }
 
-  // Coast Fade (East only)
-  if (coast.t > 0) {
-      const deepOcean = seaLevel + OCEAN_DEPTH;
-      h = THREE.MathUtils.lerp(h, deepOcean, coast.fade);
+  // Coast Fade
+  if (coast.coastMask < 1) {
+    h = THREE.MathUtils.lerp(seaLevel, h, coast.coastMask);
   }
 
   return h;
