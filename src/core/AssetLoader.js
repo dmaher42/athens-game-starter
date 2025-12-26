@@ -10,6 +10,7 @@ import {
 } from "../config/AssetConfig.js";
 
 const HTML_CONTENT_TYPE = /text\/html/i;
+const REPO_SEGMENT = "athens-game-starter";
 
 const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;
 const GLB_EXTENSION = /\.glb(?:$|[?#])/i;
@@ -32,6 +33,21 @@ function sanitizeRelativePath(value) {
     .replace(/^docs\//i, "")
     .replace(/^athens-game-starter\//i, "")
     .replace(/^\.\//, "");
+}
+
+function normalizeAbsoluteRepoUrl(value) {
+  if (typeof value !== "string") return value;
+  if (!/^(?:[a-z]+:)?\/\//i.test(value)) return value;
+  try {
+    const parsed = new URL(value);
+    parsed.pathname = parsed.pathname.replace(
+      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+      `/${REPO_SEGMENT}`,
+    );
+    return parsed.toString();
+  } catch {
+    return value;
+  }
 }
 
 export class AssetLoader {
@@ -184,7 +200,7 @@ export class AssetLoader {
       const trimmed = candidate.trim();
       if (!trimmed) continue;
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-        districtCandidates.push(trimmed);
+        districtCandidates.push(normalizeAbsoluteRepoUrl(trimmed));
         continue;
       }
       const normalized = stripRepoSegment(trimmed);
@@ -222,7 +238,7 @@ export class AssetLoader {
           }
           targets.push(...districtCandidates);
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
-          targets.push(pathValue);
+          targets.push(normalizeAbsoluteRepoUrl(pathValue));
         } else {
           targets.push(joinPath(baseUrl, pathValue));
         }
