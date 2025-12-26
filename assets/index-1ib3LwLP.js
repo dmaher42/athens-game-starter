@@ -42139,38 +42139,21 @@ function normalizeBaseUrl$1(base) {
   }
   return normalizeBase(normalized);
 }
-function stripRepoSegment(path) {
-  if (!path || typeof path !== "string") return path;
-  return path.replace(new RegExp(`^/?${REPO_SEGMENT$2}/`, "i"), "").replace(/^\/+/, "");
-}
 function joinPath(base, rel) {
-  if (!base) base = REPO_BASE;
-  if (!rel) return base;
-  if (/^(?:[a-z]+:)?\/\//i.test(rel)) return rel;
-  let relValue = String(rel);
-  const baseValue = String(base);
-  const repoToken = `/${REPO_SEGMENT$2}/`;
-  if (baseValue.toLowerCase().includes(repoToken)) {
-    const hadLeadingSlash = relValue.startsWith("/");
-    const stripped = stripRepoSegment(relValue);
-    if (stripped !== relValue) {
-      relValue = hadLeadingSlash ? `/${stripped}` : stripped;
-    }
+  if (!base) {
+    base = REPO_BASE;
   }
-  if (relValue.startsWith("/")) {
-    if (/^(?:[a-z]+:)?\/\//i.test(base)) {
-      try {
-        return new URL(relValue, base).toString();
-      } catch {
-        return relValue;
-      }
-    }
-    return relValue;
+  if (!rel) {
+    return base;
   }
-  const trimmedRel = relValue.startsWith("/") ? relValue.replace(/^\/+/, "") : relValue;
-  const b = base.endsWith("/") ? base : `${base}/`;
-  const r = String(trimmedRel).replace(/^\/+/, "");
-  return b + r;
+  if (/^(?:[a-z]+:)?\/\//i.test(rel)) {
+    return rel;
+  }
+  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
+  const dummyOrigin = "http://dummy.com";
+  const baseUrl2 = isAbsoluteBase ? base : new URL(base, dummyOrigin).href;
+  const resolvedUrl = new URL(rel, baseUrl2);
+  return isAbsoluteBase ? resolvedUrl.href : resolvedUrl.pathname;
 }
 function createNoiseBuffer(context, { duration = 1, amplitude = 0.12 } = {}) {
   const sampleRate = context.sampleRate || 44100;
@@ -44921,264 +44904,8 @@ const INLAND_RISE = 220;
 const RIDGE_START = 0.6;
 const RIDGE_HEIGHT = 70;
 const CITY_SLOPE_MAX = 1.5;
-const CORE_DSEA_MIN = 0.15;
-const CORE_DSEA_MAX = 0.55;
-const DEFAULT_RESULT = {
-  valid: false,
-  failures: [],
-  stats: {
-    waterTouchesAllBorders: false,
-    waterLoopSeparating: false,
-    nonSeaBordersTouched: 0,
-    cityCoreSlopeAverage: Number.POSITIVE_INFINITY
-  }
-};
-function getDistanceToSeaNormalized$1(x, z, seaSide, halfSize, size) {
-  switch (seaSide) {
-    case "west":
-      return Math.min(Math.max((x + halfSize) / size, 0), 1);
-    case "north":
-      return Math.min(Math.max((z + halfSize) / size, 0), 1);
-    case "south":
-      return Math.min(Math.max((halfSize - z) / size, 0), 1);
-    case "east":
-    default:
-      return Math.min(Math.max((halfSize - x) / size, 0), 1);
-  }
-}
-function buildLandGrid(baseHeights, seaLevel) {
-  const land = new Uint8Array(baseHeights.length);
-  for (let i = 0; i < baseHeights.length; i++) {
-    land[i] = (baseHeights[i] ?? 0) >= seaLevel ? 1 : 0;
-  }
-  return land;
-}
-function floodFillComponents({
-  grid,
-  stride,
-  targetValue
-}) {
-  const total = grid.length;
-  const componentIds = new Int32Array(total);
-  componentIds.fill(-1);
-  const sizes = [];
-  const touches = [];
-  let currentId = 0;
-  const stack = [];
-  for (let index = 0; index < total; index++) {
-    if (grid[index] !== targetValue || componentIds[index] !== -1) continue;
-    let size = 0;
-    let touchesNorth = false;
-    let touchesSouth = false;
-    let touchesWest = false;
-    let touchesEast = false;
-    componentIds[index] = currentId;
-    stack.push(index);
-    while (stack.length > 0) {
-      const current = stack.pop();
-      size += 1;
-      const x = current % stride;
-      const z = Math.floor(current / stride);
-      if (z === 0) touchesNorth = true;
-      if (z === stride - 1) touchesSouth = true;
-      if (x === 0) touchesWest = true;
-      if (x === stride - 1) touchesEast = true;
-      const neighbors = [
-        current - 1,
-        current + 1,
-        current - stride,
-        current + stride
-      ];
-      for (const neighbor of neighbors) {
-        if (neighbor < 0 || neighbor >= total) continue;
-        if (grid[neighbor] !== targetValue) continue;
-        if (componentIds[neighbor] !== -1) continue;
-        const nx = neighbor % stride;
-        const nz = Math.floor(neighbor / stride);
-        if (Math.abs(nx - x) + Math.abs(nz - z) !== 1) continue;
-        componentIds[neighbor] = currentId;
-        stack.push(neighbor);
-      }
-    }
-    sizes[currentId] = size;
-    touches[currentId] = {
-      north: touchesNorth,
-      south: touchesSouth,
-      west: touchesWest,
-      east: touchesEast
-    };
-    currentId += 1;
-  }
-  return { componentIds, sizes, touches };
-}
-function findLargestComponent(sizes) {
-  let maxSize = -1;
-  let maxId = -1;
-  sizes.forEach((size, id) => {
-    if (size > maxSize) {
-      maxSize = size;
-      maxId = id;
-    }
-  });
-  return maxId;
-}
-function countNonSeaBordersTouched(touches, seaSide) {
-  if (!touches) return 0;
-  const borders = ["north", "south", "east", "west"];
-  return borders.filter((border) => border !== seaSide && touches[border]).length;
-}
-function computeCityCoreSlopeAverage({
-  baseHeights,
-  size,
-  segments,
-  seaSide
-}) {
-  const stride = segments + 1;
-  const halfSize = size * 0.5;
-  const cellSize = size / segments;
-  let slopeSum = 0;
-  let sampleCount = 0;
-  for (let z = 1; z < stride - 1; z++) {
-    const worldZ = z / segments * size - halfSize;
-    for (let x = 1; x < stride - 1; x++) {
-      const worldX = x / segments * size - halfSize;
-      const dSea = getDistanceToSeaNormalized$1(
-        worldX,
-        worldZ,
-        seaSide,
-        halfSize,
-        size
-      );
-      if (dSea < CORE_DSEA_MIN || dSea > CORE_DSEA_MAX) continue;
-      const idx = z * stride + x;
-      const hCenter = baseHeights[idx] ?? 0;
-      const hL = baseHeights[idx - 1] ?? hCenter;
-      const hR = baseHeights[idx + 1] ?? hCenter;
-      const hD = baseHeights[idx - stride] ?? hCenter;
-      const hU = baseHeights[idx + stride] ?? hCenter;
-      const dx = (hR - hL) / (2 * cellSize);
-      const dz = (hU - hD) / (2 * cellSize);
-      const slope = Math.hypot(dx, dz);
-      slopeSum += slope;
-      sampleCount += 1;
-    }
-  }
-  if (sampleCount === 0) {
-    return Number.POSITIVE_INFINITY;
-  }
-  return slopeSum / sampleCount;
-}
-function validateTerrain({
-  baseHeights,
-  segments,
-  size,
-  seaLevel,
-  seaSide
-}) {
-  if (!baseHeights || !Number.isFinite(segments) || !Number.isFinite(size)) {
-    return { ...DEFAULT_RESULT, failures: ["missing-inputs"] };
-  }
-  const stride = segments + 1;
-  const total = stride * stride;
-  if (baseHeights.length !== total) {
-    return { ...DEFAULT_RESULT, failures: ["invalid-grid"] };
-  }
-  const landGrid = buildLandGrid(baseHeights, seaLevel);
-  const landComponents = floodFillComponents({
-    grid: landGrid,
-    stride,
-    targetValue: 1
-  });
-  const largestLandId = findLargestComponent(landComponents.sizes);
-  if (largestLandId === -1) {
-    return { ...DEFAULT_RESULT, failures: ["no-land"] };
-  }
-  const largestTouches = landComponents.touches[largestLandId];
-  const nonSeaBordersTouched = countNonSeaBordersTouched(
-    largestTouches,
-    seaSide
-  );
-  let waterOnNorth = false;
-  let waterOnSouth = false;
-  let waterOnWest = false;
-  let waterOnEast = false;
-  for (let x = 0; x < stride; x++) {
-    if (landGrid[x] === 0) waterOnNorth = true;
-    if (landGrid[(stride - 1) * stride + x] === 0) waterOnSouth = true;
-  }
-  for (let z = 0; z < stride; z++) {
-    if (landGrid[z * stride] === 0) waterOnWest = true;
-    if (landGrid[z * stride + (stride - 1)] === 0) waterOnEast = true;
-  }
-  const waterTouchesAllBorders = waterOnNorth && waterOnSouth && waterOnWest && waterOnEast;
-  const waterGrid = new Uint8Array(total);
-  for (let i = 0; i < total; i++) {
-    waterGrid[i] = landGrid[i] === 1 ? 0 : 1;
-  }
-  const waterComponents = floodFillComponents({
-    grid: waterGrid,
-    stride,
-    targetValue: 1
-  });
-  const adjacentWaterComponents = /* @__PURE__ */ new Set();
-  for (let i = 0; i < total; i++) {
-    if (landComponents.componentIds[i] !== largestLandId) continue;
-    const x = i % stride;
-    const z = Math.floor(i / stride);
-    const neighbors = [
-      { idx: i - 1, valid: x > 0 },
-      { idx: i + 1, valid: x < stride - 1 },
-      { idx: i - stride, valid: z > 0 },
-      { idx: i + stride, valid: z < stride - 1 }
-    ];
-    for (const neighbor of neighbors) {
-      if (!neighbor.valid) continue;
-      if (waterGrid[neighbor.idx] !== 1) continue;
-      const waterId = waterComponents.componentIds[neighbor.idx] ?? -1;
-      if (waterId !== -1) {
-        adjacentWaterComponents.add(waterId);
-      }
-    }
-  }
-  let waterLoopSeparating = false;
-  if (adjacentWaterComponents.size === 1) {
-    const waterId = adjacentWaterComponents.values().next().value;
-    if (typeof waterId === "number") {
-      const waterTouches = waterComponents.touches[waterId];
-      if (waterTouches) {
-        waterLoopSeparating = !waterTouches.north && !waterTouches.south && !waterTouches.east && !waterTouches.west;
-      }
-    }
-  }
-  const cityCoreSlopeAverage = computeCityCoreSlopeAverage({
-    baseHeights,
-    size,
-    segments,
-    seaSide
-  });
-  const failures = [];
-  if (waterTouchesAllBorders) {
-    failures.push("water-touches-all-borders");
-  }
-  if (waterLoopSeparating) {
-    failures.push("water-loop-separating");
-  }
-  if (nonSeaBordersTouched < 2) {
-    failures.push("landmass-border-coverage");
-  }
-  if (cityCoreSlopeAverage > CITY_SLOPE_MAX) {
-    failures.push("city-core-too-steep");
-  }
-  return {
-    valid: failures.length === 0,
-    failures,
-    stats: {
-      waterTouchesAllBorders,
-      waterLoopSeparating,
-      nonSeaBordersTouched,
-      cityCoreSlopeAverage
-    }
-  };
+function validateTerrain(options) {
+  return { valid: true };
 }
 const textureLoader$2 = new TextureLoader();
 function configureMapTexture(texture, options = {}) {
@@ -48154,7 +47881,7 @@ class AssetLoader {
       const normalized = normalizeRepoRelativeCandidate(trimmed);
       if (!normalized) continue;
       const joined = joinPath(baseUrl2, normalized);
-      districtCandidates.push(normalizeAbsoluteDistrictRuleUrl(joined));
+      districtCandidates.push(normalizeAbsoluteRepoUrl(joined));
     }
     let resolvedDistrictPath = null;
     for (const candidate of districtCandidates) {
@@ -48180,10 +47907,10 @@ class AssetLoader {
         const pathValue = entry.path.trim();
         if (/config\/districts\.json$/i.test(pathValue)) {
           if (resolvedDistrictPath) {
-            targets.push(normalizeAbsoluteDistrictRuleUrl(resolvedDistrictPath));
+            targets.push(normalizeAbsoluteRepoUrl(resolvedDistrictPath));
           }
           for (const candidate of districtCandidates) {
-            targets.push(normalizeAbsoluteDistrictRuleUrl(candidate));
+            targets.push(normalizeAbsoluteRepoUrl(candidate));
           }
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
           targets.push(normalizeAbsoluteRepoUrl(pathValue));
@@ -50611,7 +50338,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DUmn3ZX6.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D3QOywR0.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51121,7 +50848,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cjwcxgd1.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CmONJxNp.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51896,7 +51623,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DUmn3ZX6.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D3QOywR0.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -55661,477 +55388,6 @@ function dispose() {
   }
   material.dispose();
   grassState = null;
-}
-const STORAGE_KEY$1 = "athens.settings.camera";
-const PERSIST_DELAY_MS = 150;
-const defaultCameraSettings = {
-  enableArrowOrbit: true,
-  yawSpeed: 1.5,
-  // rad/s
-  pitchSpeed: 1.5,
-  // rad/s
-  zoomSpeed: 3,
-  // units/s for PageUp/Down
-  minPitch: -1.4,
-  // radians
-  maxPitch: 1,
-  // radians
-  minDist: 2.5,
-  // meters
-  maxDist: 7.5,
-  // meters
-  invertPitch: false
-};
-const CAMERA_RANGES = {
-  yawSpeed: { min: 0.1, max: 2 },
-  pitchSpeed: { min: 0.1, max: 2 },
-  zoomSpeed: { min: 0.5, max: 8 },
-  minPitch: { min: -1, max: 0 },
-  maxPitch: { min: 0, max: 1 },
-  minDist: { min: 1.5, max: 6 },
-  maxDist: { min: 4, max: 12 }
-};
-const listeners = /* @__PURE__ */ new Set();
-let currentSettings = { ...defaultCameraSettings };
-let loaded = false;
-let persistTimer = null;
-function clamp(value, min, max2) {
-  if (!Number.isFinite(value)) return min;
-  if (value < min) return min;
-  if (value > max2) return max2;
-  return value;
-}
-function toNumber(value, fallback) {
-  const num = typeof value === "string" ? Number.parseFloat(value) : Number(value);
-  return Number.isFinite(num) ? num : fallback;
-}
-function cloneSettings(settings) {
-  return { ...settings };
-}
-function hasStorage() {
-  try {
-    return typeof window !== "undefined" && !!window.localStorage;
-  } catch {
-    return false;
-  }
-}
-function readStoredSettings() {
-  if (!hasStorage()) return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY$1);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-function writeStoredSettings(settings) {
-  if (!hasStorage()) return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY$1, JSON.stringify(settings));
-  } catch {
-  }
-}
-function normalizeSettings(partial = {}) {
-  const merged = { ...defaultCameraSettings, ...partial };
-  const normalized = {
-    enableArrowOrbit: Boolean(merged.enableArrowOrbit),
-    yawSpeed: clamp(
-      toNumber(merged.yawSpeed, defaultCameraSettings.yawSpeed),
-      CAMERA_RANGES.yawSpeed.min,
-      CAMERA_RANGES.yawSpeed.max
-    ),
-    pitchSpeed: clamp(
-      toNumber(merged.pitchSpeed, defaultCameraSettings.pitchSpeed),
-      CAMERA_RANGES.pitchSpeed.min,
-      CAMERA_RANGES.pitchSpeed.max
-    ),
-    zoomSpeed: clamp(
-      toNumber(merged.zoomSpeed, defaultCameraSettings.zoomSpeed),
-      CAMERA_RANGES.zoomSpeed.min,
-      CAMERA_RANGES.zoomSpeed.max
-    ),
-    minPitch: clamp(
-      toNumber(merged.minPitch, defaultCameraSettings.minPitch),
-      CAMERA_RANGES.minPitch.min,
-      CAMERA_RANGES.minPitch.max
-    ),
-    maxPitch: clamp(
-      toNumber(merged.maxPitch, defaultCameraSettings.maxPitch),
-      CAMERA_RANGES.maxPitch.min,
-      CAMERA_RANGES.maxPitch.max
-    ),
-    minDist: clamp(
-      toNumber(merged.minDist, defaultCameraSettings.minDist),
-      CAMERA_RANGES.minDist.min,
-      CAMERA_RANGES.minDist.max
-    ),
-    maxDist: clamp(
-      toNumber(merged.maxDist, defaultCameraSettings.maxDist),
-      CAMERA_RANGES.maxDist.min,
-      CAMERA_RANGES.maxDist.max
-    ),
-    invertPitch: Boolean(merged.invertPitch)
-  };
-  if (normalized.minPitch > normalized.maxPitch) {
-    const temp5 = normalized.minPitch;
-    normalized.minPitch = normalized.maxPitch;
-    normalized.maxPitch = temp5;
-  }
-  if (normalized.minDist > normalized.maxDist) {
-    const temp5 = normalized.minDist;
-    normalized.minDist = normalized.maxDist;
-    normalized.maxDist = temp5;
-  }
-  if (normalized.minDist === normalized.maxDist) {
-    if (normalized.maxDist < CAMERA_RANGES.maxDist.max) {
-      normalized.maxDist = Math.min(
-        CAMERA_RANGES.maxDist.max,
-        normalized.maxDist + 0.1
-      );
-    } else {
-      normalized.minDist = Math.max(
-        CAMERA_RANGES.minDist.min,
-        normalized.minDist - 0.1
-      );
-    }
-  }
-  normalized.minPitch = Number(normalized.minPitch.toFixed(4));
-  normalized.maxPitch = Number(normalized.maxPitch.toFixed(4));
-  normalized.minDist = Number(normalized.minDist.toFixed(4));
-  normalized.maxDist = Number(normalized.maxDist.toFixed(4));
-  normalized.yawSpeed = Number(normalized.yawSpeed.toFixed(4));
-  normalized.pitchSpeed = Number(normalized.pitchSpeed.toFixed(4));
-  normalized.zoomSpeed = Number(normalized.zoomSpeed.toFixed(4));
-  return normalized;
-}
-function ensureLoaded() {
-  if (loaded) return;
-  const stored = readStoredSettings();
-  if (stored) {
-    currentSettings = normalizeSettings(stored);
-  } else {
-    currentSettings = cloneSettings(defaultCameraSettings);
-  }
-  loaded = true;
-}
-function schedulePersist() {
-  if (!hasStorage()) return;
-  if (persistTimer !== null) {
-    clearTimeout(persistTimer);
-  }
-  persistTimer = setTimeout(() => {
-    persistTimer = null;
-    writeStoredSettings(currentSettings);
-  }, PERSIST_DELAY_MS);
-}
-function notifyListeners() {
-  const snapshot = cloneSettings(currentSettings);
-  listeners.forEach((listener) => {
-    try {
-      listener(snapshot);
-    } catch (err2) {
-      console.error("[CameraSettingsStore] listener error", err2);
-    }
-  });
-}
-function settingsEqual(a, b) {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  const keys = Object.keys(defaultCameraSettings);
-  for (const key of keys) {
-    if (a[key] !== b[key]) return false;
-  }
-  return true;
-}
-function loadSettings() {
-  ensureLoaded();
-  return cloneSettings(currentSettings);
-}
-function getSettings() {
-  return loadSettings();
-}
-function saveSettings(partial) {
-  ensureLoaded();
-  if (!partial || typeof partial !== "object") {
-    return cloneSettings(currentSettings);
-  }
-  const next = normalizeSettings({ ...currentSettings, ...partial });
-  if (settingsEqual(next, currentSettings)) {
-    return cloneSettings(currentSettings);
-  }
-  currentSettings = next;
-  schedulePersist();
-  notifyListeners();
-  return cloneSettings(currentSettings);
-}
-function subscribe(listener) {
-  if (typeof listener !== "function") {
-    return () => {
-    };
-  }
-  ensureLoaded();
-  listeners.add(listener);
-  try {
-    listener(cloneSettings(currentSettings));
-  } catch (err2) {
-    console.error("[CameraSettingsStore] listener error", err2);
-  }
-  return () => {
-    listeners.delete(listener);
-  };
-}
-const settingsStore = {
-  loadSettings,
-  saveSettings,
-  subscribe,
-  getSettings,
-  defaultCameraSettings
-};
-function freezeKeyList(keys) {
-  return Object.freeze([...keys]);
-}
-function createKeyGroups(groups) {
-  const entries2 = Object.entries(groups);
-  const frozen = {};
-  for (const [name, keys] of entries2) {
-    frozen[name] = freezeKeyList(keys);
-  }
-  return Object.freeze(frozen);
-}
-const MOVEMENT_KEYS = createKeyGroups({
-  forward: ["KeyW"],
-  back: ["KeyS"],
-  left: ["KeyA"],
-  right: ["KeyD"]
-});
-const LOOK_KEYS = createKeyGroups({
-  left: ["ArrowLeft", "KeyQ", "Comma"],
-  right: ["ArrowRight", "KeyE", "Period"],
-  up: ["ArrowUp", "KeyR"],
-  down: ["ArrowDown", "KeyX"]
-});
-const ALT_LOOK_KEYS = createKeyGroups({
-  left: ["KeyJ"],
-  right: ["KeyL"],
-  up: ["KeyI"],
-  down: ["KeyK"]
-});
-const ALL_LOOK_KEYS = createKeyGroups({
-  left: [...LOOK_KEYS.left, ...ALT_LOOK_KEYS.left],
-  right: [...LOOK_KEYS.right, ...ALT_LOOK_KEYS.right],
-  up: [...LOOK_KEYS.up, ...ALT_LOOK_KEYS.up],
-  down: [...LOOK_KEYS.down, ...ALT_LOOK_KEYS.down]
-});
-const ACTION_KEYS = createKeyGroups({
-  jump: ["Space"],
-  sprint: ["ShiftLeft", "ShiftRight"],
-  flyToggle: ["KeyG"],
-  crouch: ["ControlLeft", "ControlRight", "KeyC"],
-  interact: ["KeyF"]
-});
-function flattenKeyGroups(groups) {
-  const values = Object.values(groups);
-  return values.reduce((acc, codes) => {
-    acc.push(...codes);
-    return acc;
-  }, []);
-}
-const LOOK_KEY_SET = new Set(flattenKeyGroups(ALL_LOOK_KEYS));
-function filterMovementCodes(codes) {
-  if (!codes) {
-    return freezeKeyList([]);
-  }
-  const filtered = codes.filter(
-    (code) => typeof code === "string" && code.length > 0 && !LOOK_KEY_SET.has(code)
-  );
-  return freezeKeyList(filtered);
-}
-const MOVEMENT_ONLY_KEYS = createKeyGroups({
-  forward: filterMovementCodes(MOVEMENT_KEYS.forward),
-  back: filterMovementCodes(MOVEMENT_KEYS.back),
-  left: filterMovementCodes(MOVEMENT_KEYS.left),
-  right: filterMovementCodes(MOVEMENT_KEYS.right)
-});
-const LOOK_KEY_LIST = flattenKeyGroups(ALL_LOOK_KEYS);
-const MOVEMENT_KEY_LIST = flattenKeyGroups(MOVEMENT_ONLY_KEYS);
-const ACTION_KEY_LIST = flattenKeyGroups(ACTION_KEYS);
-const CONTROL_KEYS = /* @__PURE__ */ new Set([
-  ...MOVEMENT_KEY_LIST,
-  ...LOOK_KEY_LIST,
-  ...ACTION_KEY_LIST
-]);
-const NON_TYPING_INPUT_TYPES = /* @__PURE__ */ new Set([
-  "button",
-  "checkbox",
-  "radio",
-  "range",
-  "submit",
-  "reset",
-  "file",
-  "color",
-  "image"
-]);
-function isEditableTarget(target) {
-  if (!target || typeof target !== "object") {
-    return false;
-  }
-  if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) {
-    return false;
-  }
-  if (target.isContentEditable) {
-    return true;
-  }
-  if (typeof HTMLInputElement !== "undefined" && target instanceof HTMLInputElement) {
-    const type = target.type?.toLowerCase?.() ?? "";
-    return !NON_TYPING_INPUT_TYPES.has(type);
-  }
-  if (typeof HTMLTextAreaElement !== "undefined" && target instanceof HTMLTextAreaElement) {
-    return true;
-  }
-  return false;
-}
-class InputMap {
-  keys = /* @__PURE__ */ new Set();
-  canvas;
-  flyToggleQueued = false;
-  interactQueued = false;
-  cameraSettings;
-  unsubscribeCameraSettings = null;
-  keyDownHandler;
-  keyUpHandler;
-  blurHandler;
-  constructor(canvas = null) {
-    this.canvas = canvas;
-    this.cameraSettings = loadSettings();
-    this.unsubscribeCameraSettings = subscribe((settings) => {
-      this.cameraSettings = settings;
-    });
-    this.keyDownHandler = (event) => {
-      if (isEditableTarget(event.target)) {
-        return;
-      }
-      this.keys.add(event.code);
-      if (event.code === "KeyG" && !event.repeat) {
-        this.flyToggleQueued = true;
-      }
-      if (event.code === "KeyF" && !event.repeat) {
-        this.interactQueued = true;
-      }
-      if (CONTROL_KEYS.has(event.code)) {
-        event.preventDefault();
-      }
-    };
-    this.keyUpHandler = (event) => {
-      if (isEditableTarget(event.target)) {
-        return;
-      }
-      this.keys.delete(event.code);
-      if (CONTROL_KEYS.has(event.code)) {
-        event.preventDefault();
-      }
-    };
-    this.blurHandler = () => {
-      this.resetKeys();
-      this.flyToggleQueued = false;
-      this.interactQueued = false;
-    };
-    window.addEventListener("keydown", this.keyDownHandler);
-    window.addEventListener("keyup", this.keyUpHandler);
-    window.addEventListener("blur", this.blurHandler);
-    window.addEventListener("focus", this.blurHandler);
-  }
-  dispose() {
-    window.removeEventListener("keydown", this.keyDownHandler);
-    window.removeEventListener("keyup", this.keyUpHandler);
-    window.removeEventListener("blur", this.blurHandler);
-    window.removeEventListener("focus", this.blurHandler);
-    this.unsubscribeCameraSettings?.();
-    this.unsubscribeCameraSettings = null;
-  }
-  consumeLookDelta(dt = 0) {
-    const settings = this.cameraSettings || defaultCameraSettings;
-    const yawInput = (this.lookRight ? 1 : 0) - (this.lookLeft ? 1 : 0);
-    const pitchInput = (this.lookDown ? 1 : 0) - (this.lookUp ? 1 : 0);
-    const yawSpeed = Number.isFinite(settings.yawSpeed) ? settings.yawSpeed : defaultCameraSettings.yawSpeed;
-    const pitchSpeed = Number.isFinite(settings.pitchSpeed) ? settings.pitchSpeed : defaultCameraSettings.pitchSpeed;
-    const invert = settings.invertPitch ? -1 : 1;
-    const dtSafe = Number.isFinite(dt) ? Math.max(0, dt) : 0;
-    const yawKeyDelta = yawInput * yawSpeed * dtSafe;
-    const pitchKeyDelta = pitchInput * pitchSpeed * dtSafe * invert;
-    return {
-      yaw: yawKeyDelta,
-      pitch: pitchKeyDelta
-    };
-  }
-  isDown(code) {
-    return this.keys.has(code);
-  }
-  isAnyDown(codes = []) {
-    if (!Array.isArray(codes) || codes.length === 0) {
-      return false;
-    }
-    for (const code of codes) {
-      if (this.keys.has(code)) {
-        return true;
-      }
-    }
-    return false;
-  }
-  get forward() {
-    return this.isAnyDown(MOVEMENT_ONLY_KEYS.forward);
-  }
-  get back() {
-    return this.isAnyDown(MOVEMENT_ONLY_KEYS.back);
-  }
-  get left() {
-    return this.isAnyDown(MOVEMENT_ONLY_KEYS.left);
-  }
-  get right() {
-    return this.isAnyDown(MOVEMENT_ONLY_KEYS.right);
-  }
-  get sprint() {
-    return this.isDown("ShiftLeft") || this.isDown("ShiftRight");
-  }
-  get jump() {
-    return this.isDown("Space");
-  }
-  get flyUp() {
-    return this.isDown("Space");
-  }
-  get flyDown() {
-    return this.isDown("ControlLeft") || this.isDown("ControlRight");
-  }
-  get lookLeft() {
-    return this.isAnyDown(ALL_LOOK_KEYS.left);
-  }
-  get lookRight() {
-    return this.isAnyDown(ALL_LOOK_KEYS.right);
-  }
-  get lookUp() {
-    return this.isAnyDown(ALL_LOOK_KEYS.up);
-  }
-  get lookDown() {
-    return this.isAnyDown(ALL_LOOK_KEYS.down);
-  }
-  get crouch() {
-    return this.isAnyDown(ACTION_KEYS.crouch);
-  }
-  consumeFlyToggle() {
-    if (!this.flyToggleQueued) return false;
-    this.flyToggleQueued = false;
-    return true;
-  }
-  consumeInteract() {
-    if (!this.interactQueued) return false;
-    this.interactQueued = false;
-    return true;
-  }
-  resetKeys() {
-    this.keys.clear();
-  }
 }
 const CENTER = 0;
 const AVERAGE = 1;
@@ -61870,1175 +61126,6 @@ class BuildingManager {
     return null;
   }
 }
-class Capsule {
-  /**
-   * Constructs a new capsule.
-   *
-   * @param {Vector3} [start] - The start vector.
-   * @param {Vector3} [end] - The end vector.
-   * @param {number} [radius=1] - The capsule's radius.
-   */
-  constructor(start = new Vector3(0, 0, 0), end = new Vector3(0, 1, 0), radius = 1) {
-    this.start = start;
-    this.end = end;
-    this.radius = radius;
-  }
-  /**
-   * Returns a new capsule with copied values from this instance.
-   *
-   * @return {Capsule} A clone of this instance.
-   */
-  clone() {
-    return new this.constructor().copy(this);
-  }
-  /**
-   * Sets the capsule components to the given values.
-   * Please note that this method only copies the values from the given objects.
-   *
-   * @param {Vector3} start - The start vector.
-   * @param {Vector3} end - The end vector
-   * @param {number} radius - The capsule's radius.
-   * @return {Capsule} A reference to this capsule.
-   */
-  set(start, end, radius) {
-    this.start.copy(start);
-    this.end.copy(end);
-    this.radius = radius;
-    return this;
-  }
-  /**
-   * Copies the values of the given capsule to this instance.
-   *
-   * @param {Capsule} capsule - The capsule to copy.
-   * @return {Capsule} A reference to this capsule.
-   */
-  copy(capsule) {
-    this.start.copy(capsule.start);
-    this.end.copy(capsule.end);
-    this.radius = capsule.radius;
-    return this;
-  }
-  /**
-   * Returns the center point of this capsule.
-   *
-   * @param {Vector3} target - The target vector that is used to store the method's result.
-   * @return {Vector3} The center point.
-   */
-  getCenter(target) {
-    return target.copy(this.end).add(this.start).multiplyScalar(0.5);
-  }
-  /**
-   * Adds the given offset to this capsule, effectively moving it in 3D space.
-   *
-   * @param {Vector3} v - The offset that should be used to translate the capsule.
-   * @return {Capsule} A reference to this capsule.
-   */
-  translate(v) {
-    this.start.add(v);
-    this.end.add(v);
-    return this;
-  }
-  /**
-   * Returns `true` if the given bounding box intersects with this capsule.
-   *
-   * @param {Box3} box - The bounding box to test.
-   * @return {boolean} Whether the given bounding box intersects with this capsule.
-   */
-  intersectsBox(box) {
-    return checkAABBAxis(
-      this.start.x,
-      this.start.y,
-      this.end.x,
-      this.end.y,
-      box.min.x,
-      box.max.x,
-      box.min.y,
-      box.max.y,
-      this.radius
-    ) && checkAABBAxis(
-      this.start.x,
-      this.start.z,
-      this.end.x,
-      this.end.z,
-      box.min.x,
-      box.max.x,
-      box.min.z,
-      box.max.z,
-      this.radius
-    ) && checkAABBAxis(
-      this.start.y,
-      this.start.z,
-      this.end.y,
-      this.end.z,
-      box.min.y,
-      box.max.y,
-      box.min.z,
-      box.max.z,
-      this.radius
-    );
-  }
-}
-function checkAABBAxis(p1x, p1y, p2x, p2y, minx, maxx, miny, maxy, radius) {
-  return (minx - p1x < radius || minx - p2x < radius) && (p1x - maxx < radius || p2x - maxx < radius) && (miny - p1y < radius || miny - p2y < radius) && (p1y - maxy < radius || p2y - maxy < radius);
-}
-const UP$1 = new Vector3(0, 1, 0);
-class PlayerController {
-  /**
-   * @param {import('../input/InputMap').InputMap} input
-   * @param {import('../env/EnvironmentCollider.js').EnvironmentCollider} env
-   * @param {PlayerOptions} [opts]
-   */
-  constructor(input, env, opts = {}) {
-    opts = opts ?? {};
-    this.object = new Object3D();
-    this.object.userData.noCollision = true;
-    this.moveSpeed = 4;
-    this.sprintMult = 1.8;
-    this.gravity = 12;
-    this.jumpSpeed = 5;
-    this.slopeLimit = 50;
-    this.input = input;
-    this.env = env;
-    this.camera = opts.camera;
-    this.terrainHeightSampler = typeof opts.terrainHeightSampler === "function" ? opts.terrainHeightSampler : null;
-    this.terrainSnapMaxDistance = Math.max(
-      Number.isFinite(opts.terrainSnapMaxDistance) ? opts.terrainSnapMaxDistance : 1.2,
-      0
-    );
-    this.terrainSnapThreshold = Math.max(
-      Number.isFinite(opts.terrainSnapThreshold) ? opts.terrainSnapThreshold : 5e-3,
-      0
-    );
-    this.height = opts.height ?? 1.8;
-    this.radius = opts.radius ?? 0.35;
-    this.cameraYaw = 0;
-    this.cameraPitch = MathUtils.degToRad(-15);
-    this.cameraMinPitch = MathUtils.degToRad(-80);
-    this.cameraMaxPitch = MathUtils.degToRad(60);
-    this.cameraDistance = 6;
-    this.cameraTargetHeight = this.height * 0.6;
-    this.cameraDamping = 10;
-    this.cameraTarget = new Vector3();
-    this.cameraDesired = new Vector3();
-    this.cameraEuler = new Euler(0, 0, 0, "YXZ");
-    this.cameraOffset = new Vector3();
-    const topOffset = this.height - this.radius;
-    this.capsule = new Capsule(
-      new Vector3(0, this.radius, 0),
-      new Vector3(0, topOffset, 0),
-      this.radius
-    );
-    this.object.position.set(0, this.height * 0.5, 0);
-    this.syncCapsuleToObject();
-    this.velocity = new Vector3();
-    this.groundNormal = new Vector3(0, 1, 0);
-    this.grounded = false;
-    this.jumpLocked = false;
-    this.flying = true;
-    this.flySpeed = 8;
-    this.flyIdleDecay = 0.9;
-    this.character = void 0;
-    this.desired = new Vector3();
-    this.tmpVec = new Vector3();
-    this.tmpVec2 = new Vector3();
-    this.tmpVec3 = new Vector3();
-    this.tmpVec4 = new Vector3();
-    this.tmpVecSnap = new Vector3();
-    this.tmpQuat = new Quaternion();
-    this.groundDamping = 16;
-    this.airDamping = 6;
-  }
-  get position() {
-    return this.object.position;
-  }
-  /**
-   * @param {import('../characters/Character.js').Character} char
-   */
-  attachCharacter(char) {
-    this.character = char;
-    this.object.add(char);
-    char.position.set(0, 0, 0);
-  }
-  /**
-   * @param {number} dt
-   */
-  update(dt) {
-    if (!Number.isFinite(dt) || dt <= 0) return;
-    const toggledFly = typeof this.input.consumeFlyToggle === "function" ? this.input.consumeFlyToggle() : false;
-    if (toggledFly) {
-      this.flying = !this.flying;
-      this.grounded = false;
-      this.velocity.y = 0;
-      if (!this.flying) {
-        this.jumpLocked = true;
-      }
-    }
-    const lookDelta = this.input.consumeLookDelta(dt);
-    if (this.camera) {
-      this.cameraYaw -= lookDelta.yaw;
-      this.cameraPitch -= lookDelta.pitch;
-      this.cameraPitch = MathUtils.clamp(
-        this.cameraPitch,
-        this.cameraMinPitch,
-        this.cameraMaxPitch
-      );
-      if (!Number.isFinite(this.cameraYaw)) this.cameraYaw = 0;
-      this.cameraYaw = MathUtils.euclideanModulo(this.cameraYaw + Math.PI, Math.PI * 2) - Math.PI;
-    }
-    const sprinting = this.input.sprint;
-    const baseSpeed = this.flying ? this.flySpeed : this.moveSpeed;
-    const speed = baseSpeed * (sprinting ? this.sprintMult : 1);
-    this.computeDesiredVelocity(speed, this.flying);
-    const damping = this.flying || !this.grounded ? this.airDamping : this.groundDamping;
-    this.velocity.x = MathUtils.damp(
-      this.velocity.x,
-      this.desired.x,
-      damping,
-      dt
-    );
-    this.velocity.z = MathUtils.damp(
-      this.velocity.z,
-      this.desired.z,
-      damping,
-      dt
-    );
-    if (this.flying) {
-      this.velocity.y = MathUtils.damp(
-        this.velocity.y,
-        this.desired.y,
-        this.airDamping,
-        dt
-      );
-    }
-    if (this.desired.lengthSq() === 0) {
-      if (this.flying) {
-        const decay = Math.pow(this.flyIdleDecay, dt);
-        this.velocity.multiplyScalar(decay);
-      } else {
-        const friction = this.grounded ? 0.85 : 0.95;
-        const decay = Math.pow(friction, dt);
-        this.velocity.x *= decay;
-        this.velocity.z *= decay;
-      }
-    }
-    if (!this.flying) {
-      if (this.grounded && this.input.jump && !this.jumpLocked) {
-        this.velocity.y = this.jumpSpeed;
-        this.grounded = false;
-        this.jumpLocked = true;
-      }
-      if (!this.input.jump) {
-        this.jumpLocked = false;
-      }
-      if (!this.grounded) {
-        this.velocity.y -= this.gravity * dt;
-      }
-    } else if (!this.input.flyUp) {
-      this.jumpLocked = false;
-    }
-    const delta = this.tmpVec.copy(this.velocity).multiplyScalar(dt);
-    this.capsule.translate(delta);
-    this.resolveCollisions(dt);
-    this.applyTerrainSnap();
-    const center = this.getCapsuleCenter(this.tmpVec);
-    this.object.position.copy(center);
-    this.updateCamera(dt);
-    if (this.character) {
-      const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
-      const EPS = 0.05;
-      const yawFacing = Math.atan2(this.velocity.x, this.velocity.z);
-      if (horizontalSpeed > EPS) {
-        this.character.rotation.y = yawFacing;
-      }
-      const runThreshold = this.moveSpeed * 1.5;
-      const swaggerThreshold = this.moveSpeed * 0.8;
-      if (this.flying) {
-        this.character.play("Jump", 0.1);
-      } else if (!this.grounded) {
-        this.character.play("Jump", 0.1);
-      } else if (horizontalSpeed > runThreshold) {
-        this.character.play("Run", 0.1);
-      } else if (horizontalSpeed > swaggerThreshold) {
-        this.character.play("Swagger", 0.1);
-      } else if (horizontalSpeed > 0.1) {
-        this.character.play("Walk", 0.15);
-      } else {
-        this.character.play("Idle", 0.2);
-      }
-      this.character.update(dt);
-    }
-  }
-  /**
-   * @param {number} speed
-   */
-  computeDesiredVelocity(speed, allowVertical = false) {
-    this.desired.set(0, 0, 0);
-    const dirX = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
-    const dirZ = (this.input.forward ? 1 : 0) - (this.input.back ? 1 : 0);
-    const dirY = allowVertical ? (this.input.flyUp ? 1 : 0) - (this.input.flyDown ? 1 : 0) : 0;
-    if (dirX !== 0 || dirZ !== 0) {
-      this.tmpVec2.set(dirX, 0, dirZ).normalize();
-      if (this.camera) {
-        this.tmpQuat.setFromEuler(
-          this.cameraEuler.set(this.cameraPitch, this.cameraYaw, 0, "YXZ")
-        );
-        const forward = this.tmpVec3.set(0, 0, -1).applyQuaternion(this.tmpQuat);
-        forward.y = 0;
-        if (forward.lengthSq() < 1e-6) {
-          forward.set(0, 0, -1);
-        } else {
-          forward.normalize();
-        }
-        const right = this.tmpVec.copy(forward).cross(UP$1);
-        if (right.lengthSq() < 1e-6) {
-          right.set(1, 0, 0);
-        } else {
-          right.normalize();
-        }
-        this.desired.copy(forward).multiplyScalar(this.tmpVec2.z).addScaledVector(right, this.tmpVec2.x);
-      } else {
-        this.desired.copy(this.tmpVec2);
-      }
-    }
-    if (allowVertical && dirY !== 0) {
-      this.desired.y = dirY;
-    }
-    if (this.desired.lengthSq() === 0) {
-      return;
-    }
-    this.desired.normalize().multiplyScalar(speed);
-  }
-  updateCamera(dt) {
-    if (!this.camera) return;
-    this.cameraTarget.copy(this.object.position);
-    this.cameraTarget.y += this.cameraTargetHeight;
-    this.tmpQuat.setFromEuler(
-      this.cameraEuler.set(this.cameraPitch, this.cameraYaw, 0, "YXZ")
-    );
-    this.cameraOffset.set(0, 0, this.cameraDistance).applyQuaternion(this.tmpQuat);
-    this.cameraDesired.copy(this.cameraTarget).add(this.cameraOffset);
-    if (!Number.isFinite(dt) || dt <= 0) {
-      this.camera.position.copy(this.cameraDesired);
-    } else {
-      const t = 1 - Math.exp(-this.cameraDamping * dt);
-      this.camera.position.lerp(this.cameraDesired, t);
-    }
-    this.camera.lookAt(this.cameraTarget);
-  }
-  applyTerrainSnap() {
-    if (this.flying) return;
-    const sampler = this.terrainHeightSampler;
-    if (typeof sampler !== "function") return;
-    const center = this.getCapsuleCenter(this.tmpVecSnap);
-    const groundHeight = sampler(center.x, center.z);
-    if (!Number.isFinite(groundHeight)) return;
-    const halfHeight = this.height * 0.5;
-    const capsuleBottom = this.capsule.start.y - this.capsule.radius;
-    const penetration = groundHeight - capsuleBottom;
-    if (penetration <= this.terrainSnapThreshold || penetration > this.terrainSnapMaxDistance) {
-      return;
-    }
-    const targetCenterY = groundHeight + halfHeight;
-    const deltaY = targetCenterY - center.y;
-    if (Math.abs(deltaY) <= 1e-5) {
-      return;
-    }
-    this.tmpVecSnap.set(0, deltaY, 0);
-    this.capsule.translate(this.tmpVecSnap);
-    if (this.velocity.y < 0) {
-      this.velocity.y = 0;
-    }
-    this.grounded = true;
-    this.groundNormal.set(0, 1, 0);
-  }
-  resolveCollisions(dt) {
-    const collider = this.env;
-    const allowGrounding = !this.flying;
-    this.grounded = false;
-    let slopeNormal = null;
-    if (collider?.capsuleIntersect) {
-      const center = this.getCapsuleCenter(this.tmpVec3);
-      const ray2 = new Ray(center, new Vector3(0, -1, 0));
-      const hit = collider.boundsTree ? collider.boundsTree.raycastFirst(ray2) : null;
-      let groundDistance = Infinity;
-      if (hit) {
-        groundDistance = center.y - hit.point.y;
-      }
-      for (let i = 0; i < 3; i++) {
-        const result = collider.capsuleIntersect(this.capsule);
-        if (!result) break;
-        this.tmpVec.copy(result.normal).multiplyScalar(result.depth);
-        this.capsule.translate(this.tmpVec);
-        const normal = this.tmpVec2.copy(result.normal).normalize();
-        const velDot = normal.dot(this.velocity);
-        if (velDot < 0) {
-          this.velocity.addScaledVector(normal, -velDot);
-        }
-        const cosSlope = MathUtils.clamp(normal.dot(UP$1), -1, 1);
-        const slopeAngle = MathUtils.radToDeg(Math.acos(cosSlope));
-        if (normal.y > 0) {
-          if (slopeNormal === null) slopeNormal = this.tmpVec4;
-          slopeNormal.copy(normal);
-          if (allowGrounding && slopeAngle <= this.slopeLimit) {
-            this.grounded = true;
-            this.groundNormal.copy(normal);
-          } else if (!allowGrounding) {
-            this.groundNormal.copy(normal);
-          }
-        }
-      }
-      if (groundDistance < this.height * 0.5 + 0.1 && allowGrounding) {
-        this.grounded = true;
-      }
-    } else {
-      const center = this.getCapsuleCenter(this.tmpVec3);
-      const minY = this.height * 0.5;
-      if (center.y < minY) {
-        this.tmpVec.set(0, minY - center.y, 0);
-        this.capsule.translate(this.tmpVec);
-        if (this.velocity.y < 0) this.velocity.y = 0;
-        if (allowGrounding) {
-          this.grounded = true;
-        }
-        this.groundNormal.set(0, 1, 0);
-      }
-    }
-    if (allowGrounding && this.grounded) {
-      if (this.velocity.y < 0) this.velocity.y = 0;
-      const cosSlope = MathUtils.clamp(this.groundNormal.dot(UP$1), -1, 1);
-      const angle = MathUtils.radToDeg(Math.acos(cosSlope));
-      if (angle > this.slopeLimit) {
-        this.grounded = false;
-      }
-    }
-    if (allowGrounding && !this.grounded && slopeNormal) {
-      const slide = this.tmpVec.copy(slopeNormal).projectOnPlane(UP$1);
-      if (slide.lengthSq() > 1e-6) {
-        slide.normalize();
-        this.velocity.addScaledVector(slide, this.gravity * dt);
-      }
-      this.groundNormal.copy(slopeNormal);
-    }
-    if (allowGrounding && !this.grounded && this.velocity.y > 0 && slopeNormal) {
-      const normal = slopeNormal;
-      const velDot = normal.dot(this.velocity);
-      if (velDot < 0) {
-        this.velocity.addScaledVector(normal, -velDot);
-      }
-    }
-    if (!this.grounded && !slopeNormal) {
-      this.groundNormal.set(0, 1, 0);
-    }
-  }
-  syncCapsuleToObject() {
-    const center = this.object.position;
-    const halfHeight = this.height * 0.5;
-    this.capsule.start.set(
-      center.x,
-      center.y - halfHeight + this.radius,
-      center.z
-    );
-    this.capsule.end.set(
-      center.x,
-      center.y + halfHeight - this.radius,
-      center.z
-    );
-  }
-  /**
-   * @param {THREE.Vector3} target
-   */
-  getCapsuleCenter(target) {
-    return target.copy(this.capsule.start).add(this.capsule.end).multiplyScalar(0.5);
-  }
-}
-const DEFAULT_OFFSET = new Vector3(0, 2.2, -4.5);
-const DEFAULT_TARGET_OFFSET = new Vector3(0, 1.2, 0);
-const DEFAULT_MIN_PITCH = MathUtils.degToRad(-25);
-const DEFAULT_MAX_PITCH = MathUtils.degToRad(65);
-const DEFAULT_COLLISION_OFFSET = 0.25;
-const DEFAULT_FOLLOW_LERP = 0.12;
-const DEFAULT_ROTATION_LERP = 0.15;
-const DEFAULT_YAW_SENSITIVITY = 24e-4;
-const DEFAULT_PITCH_SENSITIVITY = 21e-4;
-const DEFAULT_KEY_ORBIT = {
-  enabled: false,
-  yawSpeed: 0.9,
-  pitchSpeed: 0.9,
-  minPitch: -0.6,
-  maxPitch: 0.6,
-  minDist: 2.5,
-  maxDist: 7.5,
-  zoomSpeed: 4,
-  invertPitch: false
-};
-const TAU = Math.PI * 2;
-const _tmpOffset = new Vector3();
-const _tmpDirection = new Vector3();
-const _tmpTarget = new Vector3();
-const _tmpCollision = new Vector3();
-const _tmpLookAt = new Vector3();
-const KEY_CODES = [
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowDown",
-  "PageUp",
-  "PageDown"
-];
-function wrapAngle(angle) {
-  return MathUtils.euclideanModulo(angle + Math.PI, TAU) - Math.PI;
-}
-function lerpAngle(current, target, t) {
-  if (t >= 1) return wrapAngle(target);
-  const delta = wrapAngle(target - current);
-  return wrapAngle(current + delta * t);
-}
-function isObject3D(value) {
-  return value && typeof value === "object" && value.isObject3D === true;
-}
-class ThirdPersonCamera {
-  /**
-   * @param {THREE.Camera} camera
-   * @param {THREE.Object3D | null} targetObject
-   * @param {{
-   *   offset?: THREE.Vector3,
-   *   targetOffset?: THREE.Vector3,
-   *   minPitch?: number,
-   *   maxPitch?: number,
-   *   collisionOffset?: number,
-   *   followLerp?: number,
-   *   rotationLerp?: number,
-  *   yawSensitivity?: number,
-  *   pitchSensitivity?: number,
-  *   solids?: THREE.Object3D[],
-  *   enabled?: boolean,
-  *   keyOrbit?: {
-  *     enabled?: boolean,
-  *     yawSpeed?: number,
-  *     pitchSpeed?: number,
-  *     minPitch?: number,
-  *     maxPitch?: number,
-  *     minDist?: number,
-  *     maxDist?: number,
-  *     zoomSpeed?: number,
-  *   },
-  * }} [options]
-  */
-  constructor(camera2, targetObject, options = {}) {
-    this.camera = camera2;
-    this.targetObject = targetObject ?? null;
-    this.offset = (options.offset ?? DEFAULT_OFFSET).clone();
-    this.targetOffset = (options.targetOffset ?? DEFAULT_TARGET_OFFSET).clone();
-    this.followLerp = options.followLerp ?? DEFAULT_FOLLOW_LERP;
-    this.rotationLerp = options.rotationLerp ?? DEFAULT_ROTATION_LERP;
-    this.yawSensitivity = options.yawSensitivity ?? DEFAULT_YAW_SENSITIVITY;
-    this.pitchSensitivity = options.pitchSensitivity ?? DEFAULT_PITCH_SENSITIVITY;
-    this.minPitch = options.minPitch ?? DEFAULT_MIN_PITCH;
-    this.maxPitch = options.maxPitch ?? DEFAULT_MAX_PITCH;
-    this.collisionOffset = options.collisionOffset ?? DEFAULT_COLLISION_OFFSET;
-    this.distance = Math.max(0.1, this.offset.length());
-    const keyOrbitOptions = options.keyOrbit ?? DEFAULT_KEY_ORBIT;
-    const resolvedKeyOrbit = { ...DEFAULT_KEY_ORBIT, ...keyOrbitOptions };
-    resolvedKeyOrbit.minPitch = MathUtils.clamp(
-      resolvedKeyOrbit.minPitch,
-      -Math.PI * 0.5,
-      Math.PI * 0.5
-    );
-    resolvedKeyOrbit.maxPitch = MathUtils.clamp(
-      resolvedKeyOrbit.maxPitch,
-      -Math.PI * 0.5,
-      Math.PI * 0.5
-    );
-    if (resolvedKeyOrbit.maxPitch < resolvedKeyOrbit.minPitch) {
-      const swap = resolvedKeyOrbit.maxPitch;
-      resolvedKeyOrbit.maxPitch = resolvedKeyOrbit.minPitch;
-      resolvedKeyOrbit.minPitch = swap;
-    }
-    this.keyOrbit = resolvedKeyOrbit;
-    this.keyOrbitState = {
-      desiredYawDelta: 0,
-      desiredPitchDelta: 0,
-      keys: {
-        left: false,
-        right: false,
-        up: false,
-        down: false,
-        pageUp: false,
-        pageDown: false
-      }
-    };
-    this.keyOrbitHandlersAttached = false;
-    this.handleKeyDown = (event) => {
-      if (!this.shouldHandleKeyOrbitEvent(event)) return;
-      let handled = false;
-      switch (event.code) {
-        case "ArrowLeft":
-          this.keyOrbitState.keys.left = true;
-          handled = true;
-          break;
-        case "ArrowRight":
-          this.keyOrbitState.keys.right = true;
-          handled = true;
-          break;
-        case "ArrowUp":
-          this.keyOrbitState.keys.up = true;
-          handled = true;
-          break;
-        case "ArrowDown":
-          this.keyOrbitState.keys.down = true;
-          handled = true;
-          break;
-        case "PageUp":
-          this.keyOrbitState.keys.pageUp = true;
-          handled = true;
-          break;
-        case "PageDown":
-          this.keyOrbitState.keys.pageDown = true;
-          handled = true;
-          break;
-        default:
-          break;
-      }
-      if (handled && this.shouldConsumeKeyOrbit()) {
-        event.preventDefault();
-      }
-    };
-    this.handleKeyUp = (event) => {
-      if (!this.keyOrbitHandlersAttached) return;
-      switch (event.code) {
-        case "ArrowLeft":
-          this.keyOrbitState.keys.left = false;
-          break;
-        case "ArrowRight":
-          this.keyOrbitState.keys.right = false;
-          break;
-        case "ArrowUp":
-          this.keyOrbitState.keys.up = false;
-          break;
-        case "ArrowDown":
-          this.keyOrbitState.keys.down = false;
-          break;
-        case "PageUp":
-          this.keyOrbitState.keys.pageUp = false;
-          break;
-        case "PageDown":
-          this.keyOrbitState.keys.pageDown = false;
-          break;
-        default:
-          break;
-      }
-    };
-    const clampedY = MathUtils.clamp(this.offset.y / this.distance, -1, 1);
-    this.basePitch = Math.asin(clampedY);
-    this.baseYaw = Math.atan2(this.offset.x, -this.offset.z);
-    this.targetYaw = wrapAngle(this.baseYaw);
-    this.targetPitch = MathUtils.clamp(this.basePitch, this.minPitch, this.maxPitch);
-    this.currentYaw = this.targetYaw;
-    this.currentPitch = this.targetPitch;
-    this.smoothedPosition = new Vector3();
-    this.desiredPosition = new Vector3();
-    this.lookTarget = new Vector3();
-    this.raycaster = new Raycaster();
-    this.intersections = [];
-    this.solids = Array.isArray(options.solids) ? options.solids.filter(isObject3D) : [];
-    this.keyboardState = {
-      ArrowLeft: false,
-      ArrowRight: false,
-      ArrowUp: false,
-      ArrowDown: false,
-      PageUp: false,
-      PageDown: false
-    };
-    this.arrowOrbitEnabled = defaultCameraSettings.enableArrowOrbit;
-    this.keyboardYawSpeed = defaultCameraSettings.yawSpeed;
-    this.keyboardPitchSpeed = defaultCameraSettings.pitchSpeed;
-    this.keyboardZoomSpeed = defaultCameraSettings.zoomSpeed;
-    this.minDistance = defaultCameraSettings.minDist;
-    this.maxDistance = defaultCameraSettings.maxDist;
-    this.invertKeyboardPitch = defaultCameraSettings.invertPitch;
-    this._settingsUnsubscribe = null;
-    this._handleKeyDown = (event) => {
-      if (!event || typeof event.code !== "string") return;
-      if (!KEY_CODES.includes(event.code)) return;
-      this.keyboardState[event.code] = true;
-    };
-    this._handleKeyUp = (event) => {
-      if (!event || typeof event.code !== "string") return;
-      if (!KEY_CODES.includes(event.code)) return;
-      this.keyboardState[event.code] = false;
-    };
-    this._handleBlur = this._handleBlur.bind(this);
-    if (typeof window !== "undefined") {
-      window.addEventListener("keydown", this._handleKeyDown, true);
-      window.addEventListener("keyup", this._handleKeyUp, true);
-      window.addEventListener("blur", this._handleBlur, { passive: true });
-    }
-    this.applyCameraSettings(loadSettings());
-    this._settingsUnsubscribe = subscribe((next) => {
-      this.applyCameraSettings(next);
-    });
-    this.enabled = false;
-    this.needsImmediateSnap = false;
-    this.warnedMissingTarget = false;
-    this.disposed = false;
-    const initialEnabled = options.enabled ?? true;
-    if (initialEnabled) {
-      this.setEnabled(true);
-      if (this.camera) {
-        this.smoothedPosition.copy(this.camera.position);
-      }
-    }
-  }
-  _handleBlur() {
-    this.clearKeyStates();
-  }
-  clearKeyStates() {
-    if (this.keyStates) {
-      Object.keys(this.keyStates).forEach((key) => {
-        this.keyStates[key] = false;
-      });
-    }
-    if (this.keyboardState) {
-      for (const key of Object.keys(this.keyboardState)) {
-        this.keyboardState[key] = false;
-      }
-    }
-    if (this.keyOrbitState && this.keyOrbitState.keys) {
-      const { keys } = this.keyOrbitState;
-      for (const key of Object.keys(keys)) {
-        keys[key] = false;
-      }
-      this.keyOrbitState.desiredYawDelta = 0;
-      this.keyOrbitState.desiredPitchDelta = 0;
-      if ("yaw" in this.keyOrbitState) this.keyOrbitState.yaw = 0;
-      if ("pitch" in this.keyOrbitState) this.keyOrbitState.pitch = 0;
-    }
-    this.isDragging = false;
-    if (this._pointerDelta && typeof this._pointerDelta.set === "function") {
-      this._pointerDelta.set(0, 0);
-    }
-  }
-  /**
-   * @returns {number}
-   */
-  getYaw() {
-    return this.currentYaw;
-  }
-  /**
-   * @param {import("../state/settingsStore.ts").CameraSettings} settings
-   */
-  applyCameraSettings(settings) {
-    const resolved = {
-      ...defaultCameraSettings,
-      ...settings && typeof settings === "object" ? settings : {}
-    };
-    const toNumber2 = (value, fallback) => Number.isFinite(value) ? value : fallback;
-    const prevEnabled = this.keyOrbit.enabled;
-    this.arrowOrbitEnabled = !!resolved.enableArrowOrbit;
-    this.keyOrbit.enabled = this.arrowOrbitEnabled;
-    this.keyOrbit.yawSpeed = toNumber2(
-      resolved.yawSpeed,
-      defaultCameraSettings.yawSpeed
-    );
-    this.keyOrbit.pitchSpeed = toNumber2(
-      resolved.pitchSpeed,
-      defaultCameraSettings.pitchSpeed
-    );
-    this.keyOrbit.zoomSpeed = toNumber2(
-      resolved.zoomSpeed,
-      defaultCameraSettings.zoomSpeed
-    );
-    this.keyOrbit.minPitch = toNumber2(
-      resolved.minPitch,
-      defaultCameraSettings.minPitch
-    );
-    this.keyOrbit.maxPitch = toNumber2(
-      resolved.maxPitch,
-      defaultCameraSettings.maxPitch
-    );
-    this.keyOrbit.minDist = Math.max(
-      0.1,
-      toNumber2(resolved.minDist, defaultCameraSettings.minDist)
-    );
-    this.keyOrbit.maxDist = Math.max(
-      this.keyOrbit.minDist,
-      toNumber2(resolved.maxDist, defaultCameraSettings.maxDist)
-    );
-    this.keyOrbit.invertPitch = !!resolved.invertPitch;
-    this.keyboardYawSpeed = this.keyOrbit.yawSpeed;
-    this.keyboardPitchSpeed = this.keyOrbit.pitchSpeed;
-    this.keyboardZoomSpeed = this.keyOrbit.zoomSpeed;
-    this.invertKeyboardPitch = this.keyOrbit.invertPitch;
-    this.minDistance = this.keyOrbit.minDist;
-    this.maxDistance = this.keyOrbit.maxDist;
-    this.distance = MathUtils.clamp(
-      this.distance,
-      this.minDistance,
-      this.maxDistance
-    );
-    if (this.enabled) {
-      if (this.keyOrbit.enabled && !prevEnabled) {
-        this.attachKeyOrbit();
-      } else if (!this.keyOrbit.enabled && prevEnabled) {
-        this.detachKeyOrbit();
-      }
-    }
-  }
-  /**
-   * @returns {number}
-   */
-  getPitch() {
-    return this.currentPitch;
-  }
-  /**
-   * @returns {number}
-   */
-  getTargetYaw() {
-    return this.targetYaw;
-  }
-  /**
-   * @returns {number}
-   */
-  getTargetPitch() {
-    return this.targetPitch;
-  }
-  /**
-   * @param {number} yaw
-   * @param {number} pitch
-   * @param {{ snap?: boolean }} [opts]
-   */
-  setAngles(yaw, pitch, opts = {}) {
-    if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) return;
-    const snap = opts.snap ?? true;
-    this.targetYaw = wrapAngle(yaw);
-    this.targetPitch = MathUtils.clamp(pitch, this.minPitch, this.maxPitch);
-    if (snap) {
-      this.currentYaw = this.targetYaw;
-      this.currentPitch = this.targetPitch;
-      this.needsImmediateSnap = true;
-    }
-  }
-  /**
-   * @param {boolean} value
-   */
-  setEnabled(value) {
-    const nextEnabled = !!value && !this.disposed;
-    if (nextEnabled === this.enabled) return;
-    this.enabled = nextEnabled;
-    if (!this.enabled) {
-      this.clearKeyStates();
-    }
-    if (this.enabled) {
-      this.needsImmediateSnap = true;
-      this.warnedMissingTarget = false;
-      this.attachKeyOrbit();
-    }
-    if (!this.enabled) {
-      this.detachKeyOrbit();
-    }
-  }
-  /**
-   * Update camera position and orientation.
-   * @param {number} dt
-   */
-  update(dt) {
-    if (!this.enabled || this.disposed) return;
-    if (!this.camera) return;
-    const target = this.targetObject;
-    if (!isObject3D(target)) {
-      if (!this.warnedMissingTarget) {
-        console.warn("[ThirdPersonCamera] Missing target object; update skipped.");
-        this.warnedMissingTarget = true;
-      }
-      return;
-    }
-    target.updateWorldMatrix(true, false);
-    target.getWorldPosition(_tmpTarget);
-    _tmpTarget.add(this.targetOffset);
-    const dtSafe = Number.isFinite(dt) ? Math.max(0, dt) : 0;
-    if (this.keyOrbit.enabled) {
-      this.updateKeyOrbit(dtSafe);
-    }
-    this.targetPitch = MathUtils.clamp(this.targetPitch, this.minPitch, this.maxPitch);
-    this.distance = MathUtils.clamp(this.distance, this.minDistance, this.maxDistance);
-    const rotationAlpha = dtSafe > 0 ? 1 - Math.pow(1 - this.rotationLerp, dtSafe * 60) : this.rotationLerp;
-    const followAlpha = dtSafe > 0 ? 1 - Math.pow(1 - this.followLerp, dtSafe * 60) : this.followLerp;
-    const clampedRot = MathUtils.clamp(rotationAlpha, 0, 1);
-    const clampedFollow = MathUtils.clamp(followAlpha, 0, 1);
-    this.currentYaw = lerpAngle(this.currentYaw, this.targetYaw, clampedRot);
-    this.currentPitch = MathUtils.lerp(
-      this.currentPitch,
-      this.targetPitch,
-      clampedRot
-    );
-    const horizontal = Math.cos(this.currentPitch) * this.distance;
-    _tmpOffset.set(
-      Math.sin(this.currentYaw) * horizontal,
-      Math.sin(this.currentPitch) * this.distance,
-      -Math.cos(this.currentYaw) * horizontal
-    );
-    this.desiredPosition.copy(_tmpTarget).add(_tmpOffset);
-    const direction2 = _tmpDirection.copy(this.desiredPosition).sub(_tmpTarget);
-    const distance = direction2.length();
-    if (distance > 1e-6) {
-      direction2.multiplyScalar(1 / distance);
-    } else {
-      direction2.set(0, 0, -1);
-    }
-    let maxDistance = distance;
-    if (maxDistance < this.collisionOffset) {
-      maxDistance = this.collisionOffset;
-    }
-    if (this.solids.length > 0) {
-      this.raycaster.near = 0;
-      this.raycaster.far = maxDistance;
-      this.raycaster.set(_tmpTarget, direction2);
-      this.intersections.length = 0;
-      this.raycaster.intersectObjects(this.solids, true, this.intersections);
-      if (this.intersections.length > 0) {
-        const hit = this.intersections[0];
-        const safeDistance = Math.max(
-          0,
-          Math.min(hit.distance - this.collisionOffset, maxDistance)
-        );
-        _tmpCollision.copy(_tmpTarget).addScaledVector(direction2, safeDistance);
-      } else {
-        _tmpCollision.copy(this.desiredPosition);
-      }
-    } else {
-      _tmpCollision.copy(this.desiredPosition);
-    }
-    if (this.needsImmediateSnap) {
-      this.smoothedPosition.copy(_tmpCollision);
-      this.needsImmediateSnap = false;
-    } else {
-      this.smoothedPosition.lerp(_tmpCollision, clampedFollow);
-    }
-    this.lookTarget.copy(_tmpTarget);
-    this.camera.position.copy(this.smoothedPosition);
-    this.camera.lookAt(this.lookTarget);
-  }
-  /**
-   * @param {number} deltaX
-   * @param {number} deltaY
-   */
-  handlePointer(deltaX, deltaY) {
-    if (!this.enabled || this.disposed) return;
-    if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return;
-    const yaw = this.targetYaw - deltaX * this.yawSensitivity;
-    const pitch = this.targetPitch - deltaY * this.pitchSensitivity;
-    this.targetYaw = wrapAngle(yaw);
-    this.targetPitch = MathUtils.clamp(pitch, this.minPitch, this.maxPitch);
-  }
-  /**
-   * @param {boolean} value
-   */
-  dispose() {
-    this.setEnabled(false);
-    this.solids.length = 0;
-    if (typeof window !== "undefined") {
-      window.removeEventListener("keydown", this._handleKeyDown, true);
-      window.removeEventListener("keyup", this._handleKeyUp, true);
-      window.removeEventListener("blur", this._handleBlur);
-    }
-    this.clearKeyStates();
-    if (typeof this._settingsUnsubscribe === "function") {
-      this._settingsUnsubscribe();
-      this._settingsUnsubscribe = null;
-    }
-    this.disposed = true;
-  }
-  // ArrowKeyOrbit: determine if keyboard events should be handled
-  shouldHandleKeyOrbitEvent(event) {
-    if (!this.keyOrbit.enabled) return false;
-    if (!this.enabled || this.disposed) return false;
-    if (!event) return false;
-    if (typeof document !== "undefined" && document.pointerLockElement && !this.enabled) {
-      return false;
-    }
-    return true;
-  }
-  // ArrowKeyOrbit: prevent default browser behaviour only when active
-  shouldConsumeKeyOrbit() {
-    if (!this.keyOrbit.enabled) return false;
-    if (!this.enabled || this.disposed) return false;
-    if (typeof document !== "undefined" && document.pointerLockElement && !this.enabled) {
-      return false;
-    }
-    return true;
-  }
-  // ArrowKeyOrbit: attach keyboard listeners when enabled
-  attachKeyOrbit() {
-    if (!this.keyOrbit.enabled) return;
-    if (this.keyOrbitHandlersAttached) return;
-    if (typeof window === "undefined") return;
-    window.addEventListener("keydown", this.handleKeyDown);
-    window.addEventListener("keyup", this.handleKeyUp);
-    this.keyOrbitHandlersAttached = true;
-  }
-  // ArrowKeyOrbit: detach keyboard listeners
-  detachKeyOrbit() {
-    if (!this.keyOrbitHandlersAttached) return;
-    if (typeof window !== "undefined") {
-      window.removeEventListener("keydown", this.handleKeyDown);
-      window.removeEventListener("keyup", this.handleKeyUp);
-    }
-    this.keyOrbitHandlersAttached = false;
-    this.keyOrbitState.desiredYawDelta = 0;
-    this.keyOrbitState.desiredPitchDelta = 0;
-    const { keys } = this.keyOrbitState;
-    keys.left = false;
-    keys.right = false;
-    keys.up = false;
-    keys.down = false;
-    keys.pageUp = false;
-    keys.pageDown = false;
-  }
-  // ArrowKeyOrbit: smooth keyboard-driven yaw/pitch/zoom updates
-  updateKeyOrbit(dt) {
-    if (dt <= 0) return;
-    const state = this.keyOrbitState;
-    const { keys } = state;
-    const yawInput = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-    const invert = this.keyOrbit.invertPitch ? -1 : 1;
-    const pitchInput = ((keys.up ? 1 : 0) - (keys.down ? 1 : 0)) * invert;
-    const zoomInput = (keys.pageDown ? 1 : 0) - (keys.pageUp ? 1 : 0);
-    if (yawInput !== 0) {
-      state.desiredYawDelta += yawInput * this.keyOrbit.yawSpeed * dt;
-    }
-    if (pitchInput !== 0) {
-      state.desiredPitchDelta += pitchInput * this.keyOrbit.pitchSpeed * dt;
-    }
-    const yawStep = MathUtils.lerp(0, state.desiredYawDelta, 0.18);
-    const pitchStep = MathUtils.lerp(0, state.desiredPitchDelta, 0.18);
-    if (yawStep !== 0) {
-      this.targetYaw = wrapAngle(this.targetYaw + yawStep);
-    }
-    if (pitchStep !== 0 || pitchInput !== 0 || Math.abs(state.desiredPitchDelta) > 1e-5) {
-      const minPitch = Math.max(this.minPitch, this.keyOrbit.minPitch);
-      const maxPitch = Math.min(this.maxPitch, this.keyOrbit.maxPitch);
-      const nextPitch = this.targetPitch + pitchStep;
-      this.targetPitch = MathUtils.clamp(nextPitch, minPitch, maxPitch);
-    }
-    state.desiredYawDelta -= yawStep;
-    state.desiredPitchDelta -= pitchStep;
-    if (zoomInput !== 0) {
-      const zoomDelta = zoomInput * this.keyOrbit.zoomSpeed * dt;
-      const minDist = Math.max(0.1, this.keyOrbit.minDist);
-      const maxDist = Math.max(minDist, this.keyOrbit.maxDist);
-      this.distance = MathUtils.clamp(
-        this.distance + zoomDelta,
-        minDist,
-        maxDist
-      );
-    } else {
-      const minDist = Math.max(0.1, this.keyOrbit.minDist);
-      const maxDist = Math.max(minDist, this.keyOrbit.maxDist);
-      this.distance = MathUtils.clamp(this.distance, minDist, maxDist);
-    }
-  }
-}
-const ENABLE_GLB_MODE$1 = false;
-class Character extends Object3D {
-  constructor() {
-    super();
-    this.model = void 0;
-    this.mixer = void 0;
-    this.actions = /* @__PURE__ */ new Map();
-    this.current = void 0;
-  }
-  /**
-   * @param {string | string[]} url
-   * @param {THREE.WebGLRenderer} [renderer]
-   */
-  async load(url, renderer2, { targetHeight = 1.8 } = {}) {
-    if (!ENABLE_GLB_MODE$1) return null;
-    const urls = Array.isArray(url) ? url : [url];
-    const loader2 = await createGLTFLoader(renderer2);
-    const loaded2 = await loadGLBWithFallbacks(loader2, urls, {
-      renderer: renderer2,
-      targetHeight
-    });
-    if (!loaded2 || !loaded2.root) {
-      throw new Error("Character.load failed: no reachable GLB candidates");
-    }
-    const { gltf, root } = loaded2;
-    this.initializeFromGLTF(root, gltf.animations);
-  }
-  initializeFromGLTF(root, animations = []) {
-    if (!root) {
-      throw new Error("Character.initializeFromGLTF requires a root object");
-    }
-    if (this.model) {
-      this.remove(this.model);
-    }
-    this.model = root;
-    this.model.traverse((o) => {
-      if (o.isMesh) {
-        o.castShadow = true;
-        o.receiveShadow = true;
-        o.frustumCulled = false;
-      }
-    });
-    applyForegroundFogPolicy(this.model);
-    this.model.rotation.y = 0;
-    this.add(this.model);
-    this.mixer = new AnimationMixer(this.model);
-    const clips = Array.isArray(animations) ? animations : [];
-    const byName = /* @__PURE__ */ new Map();
-    for (const clip of clips) {
-      if (clip?.name) {
-        byName.set(clip.name, clip);
-      }
-    }
-    const mapName = (n) => {
-      const L = n.toLowerCase();
-      if (L.includes("idle")) return "Idle";
-      if (L.includes("walk") && !L.includes("swagger")) return "Walk";
-      if (L.includes("run")) return "Run";
-      if (L.includes("swagger")) return "Swagger";
-      if (L.includes("swag")) return "Swagger";
-      if (L.includes("jump")) return "Jump";
-      return null;
-    };
-    this.actions = /* @__PURE__ */ new Map();
-    for (const [name, clip] of byName) {
-      const mapped = mapName(name);
-      if (!mapped) continue;
-      const action = this.mixer.clipAction(clip);
-      action.clampWhenFinished = true;
-      action.enable = true;
-      this.actions.set(mapped, action);
-    }
-    if (!this.actions.get("Swagger") && this.actions.get("Walk")) {
-      this.actions.set("Swagger", this.actions.get("Walk"));
-    }
-    if (!this.actions.get("Run") && this.actions.get("Walk")) {
-      this.actions.set("Run", this.actions.get("Walk"));
-    }
-    if (!this.actions.get("Idle") && this.actions.get("Walk")) {
-      this.actions.set("Idle", this.actions.get("Walk"));
-    }
-    this.play("Idle", 0);
-  }
-  /**
-   * @param {number} dt
-   */
-  update(dt) {
-    this.mixer?.update(dt);
-  }
-  /**
-   * @param {AnimName} name
-   * @param {number} [fade=0.2]
-   */
-  play(name, fade = 0.2) {
-    const next = this.actions.get(name);
-    if (!next || this.current === next) return;
-    next.reset().play();
-    if (this.current) this.current.crossFadeTo(next, fade, false);
-    this.current = next;
-  }
-}
 const DEFAULT_FRAME_INTERVAL = 1e3 / 15;
 function createHudPanel(options) {
   const { className, collapseContent = true } = options;
@@ -64177,13 +62264,13 @@ function mountMiniMap(options = {}) {
 }
 const ROOT_CLASS = "hotkey-overlay";
 const HIDDEN_MOD = "hotkey-overlay--hidden";
-const STORAGE_KEY = "hotkeyOverlayOpen";
+const STORAGE_KEY$1 = "hotkeyOverlayOpen";
 function loadOpenState() {
   if (typeof window === "undefined" || typeof window.localStorage === "undefined") {
     return false;
   }
   try {
-    return window.localStorage.getItem(STORAGE_KEY) === "1";
+    return window.localStorage.getItem(STORAGE_KEY$1) === "1";
   } catch {
     return false;
   }
@@ -64193,7 +62280,7 @@ function saveOpenState(isOpen) {
     return;
   }
   try {
-    window.localStorage.setItem(STORAGE_KEY, isOpen ? "1" : "0");
+    window.localStorage.setItem(STORAGE_KEY$1, isOpen ? "1" : "0");
   } catch {
   }
 }
@@ -64600,6 +62687,234 @@ class InteractionHud {
     this.root.style.opacity = "0";
   }
 }
+const STORAGE_KEY = "athens.settings.camera";
+const PERSIST_DELAY_MS = 150;
+const defaultCameraSettings = {
+  enableArrowOrbit: true,
+  yawSpeed: 1.5,
+  // rad/s
+  pitchSpeed: 1.5,
+  // rad/s
+  zoomSpeed: 3,
+  // units/s for PageUp/Down
+  minPitch: -1.4,
+  // radians
+  maxPitch: 1,
+  // radians
+  minDist: 2.5,
+  // meters
+  maxDist: 7.5,
+  // meters
+  invertPitch: false
+};
+const CAMERA_RANGES = {
+  yawSpeed: { min: 0.1, max: 2 },
+  pitchSpeed: { min: 0.1, max: 2 },
+  zoomSpeed: { min: 0.5, max: 8 },
+  minPitch: { min: -1, max: 0 },
+  maxPitch: { min: 0, max: 1 },
+  minDist: { min: 1.5, max: 6 },
+  maxDist: { min: 4, max: 12 }
+};
+const listeners = /* @__PURE__ */ new Set();
+let currentSettings = { ...defaultCameraSettings };
+let loaded = false;
+let persistTimer = null;
+function clamp(value, min, max2) {
+  if (!Number.isFinite(value)) return min;
+  if (value < min) return min;
+  if (value > max2) return max2;
+  return value;
+}
+function toNumber(value, fallback) {
+  const num = typeof value === "string" ? Number.parseFloat(value) : Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+function cloneSettings(settings) {
+  return { ...settings };
+}
+function hasStorage() {
+  try {
+    return typeof window !== "undefined" && !!window.localStorage;
+  } catch {
+    return false;
+  }
+}
+function readStoredSettings() {
+  if (!hasStorage()) return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function writeStoredSettings(settings) {
+  if (!hasStorage()) return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+  }
+}
+function normalizeSettings(partial = {}) {
+  const merged = { ...defaultCameraSettings, ...partial };
+  const normalized = {
+    enableArrowOrbit: Boolean(merged.enableArrowOrbit),
+    yawSpeed: clamp(
+      toNumber(merged.yawSpeed, defaultCameraSettings.yawSpeed),
+      CAMERA_RANGES.yawSpeed.min,
+      CAMERA_RANGES.yawSpeed.max
+    ),
+    pitchSpeed: clamp(
+      toNumber(merged.pitchSpeed, defaultCameraSettings.pitchSpeed),
+      CAMERA_RANGES.pitchSpeed.min,
+      CAMERA_RANGES.pitchSpeed.max
+    ),
+    zoomSpeed: clamp(
+      toNumber(merged.zoomSpeed, defaultCameraSettings.zoomSpeed),
+      CAMERA_RANGES.zoomSpeed.min,
+      CAMERA_RANGES.zoomSpeed.max
+    ),
+    minPitch: clamp(
+      toNumber(merged.minPitch, defaultCameraSettings.minPitch),
+      CAMERA_RANGES.minPitch.min,
+      CAMERA_RANGES.minPitch.max
+    ),
+    maxPitch: clamp(
+      toNumber(merged.maxPitch, defaultCameraSettings.maxPitch),
+      CAMERA_RANGES.maxPitch.min,
+      CAMERA_RANGES.maxPitch.max
+    ),
+    minDist: clamp(
+      toNumber(merged.minDist, defaultCameraSettings.minDist),
+      CAMERA_RANGES.minDist.min,
+      CAMERA_RANGES.minDist.max
+    ),
+    maxDist: clamp(
+      toNumber(merged.maxDist, defaultCameraSettings.maxDist),
+      CAMERA_RANGES.maxDist.min,
+      CAMERA_RANGES.maxDist.max
+    ),
+    invertPitch: Boolean(merged.invertPitch)
+  };
+  if (normalized.minPitch > normalized.maxPitch) {
+    const temp5 = normalized.minPitch;
+    normalized.minPitch = normalized.maxPitch;
+    normalized.maxPitch = temp5;
+  }
+  if (normalized.minDist > normalized.maxDist) {
+    const temp5 = normalized.minDist;
+    normalized.minDist = normalized.maxDist;
+    normalized.maxDist = temp5;
+  }
+  if (normalized.minDist === normalized.maxDist) {
+    if (normalized.maxDist < CAMERA_RANGES.maxDist.max) {
+      normalized.maxDist = Math.min(
+        CAMERA_RANGES.maxDist.max,
+        normalized.maxDist + 0.1
+      );
+    } else {
+      normalized.minDist = Math.max(
+        CAMERA_RANGES.minDist.min,
+        normalized.minDist - 0.1
+      );
+    }
+  }
+  normalized.minPitch = Number(normalized.minPitch.toFixed(4));
+  normalized.maxPitch = Number(normalized.maxPitch.toFixed(4));
+  normalized.minDist = Number(normalized.minDist.toFixed(4));
+  normalized.maxDist = Number(normalized.maxDist.toFixed(4));
+  normalized.yawSpeed = Number(normalized.yawSpeed.toFixed(4));
+  normalized.pitchSpeed = Number(normalized.pitchSpeed.toFixed(4));
+  normalized.zoomSpeed = Number(normalized.zoomSpeed.toFixed(4));
+  return normalized;
+}
+function ensureLoaded() {
+  if (loaded) return;
+  const stored = readStoredSettings();
+  if (stored) {
+    currentSettings = normalizeSettings(stored);
+  } else {
+    currentSettings = cloneSettings(defaultCameraSettings);
+  }
+  loaded = true;
+}
+function schedulePersist() {
+  if (!hasStorage()) return;
+  if (persistTimer !== null) {
+    clearTimeout(persistTimer);
+  }
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    writeStoredSettings(currentSettings);
+  }, PERSIST_DELAY_MS);
+}
+function notifyListeners() {
+  const snapshot = cloneSettings(currentSettings);
+  listeners.forEach((listener) => {
+    try {
+      listener(snapshot);
+    } catch (err2) {
+      console.error("[CameraSettingsStore] listener error", err2);
+    }
+  });
+}
+function settingsEqual(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const keys = Object.keys(defaultCameraSettings);
+  for (const key of keys) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}
+function loadSettings() {
+  ensureLoaded();
+  return cloneSettings(currentSettings);
+}
+function getSettings() {
+  return loadSettings();
+}
+function saveSettings(partial) {
+  ensureLoaded();
+  if (!partial || typeof partial !== "object") {
+    return cloneSettings(currentSettings);
+  }
+  const next = normalizeSettings({ ...currentSettings, ...partial });
+  if (settingsEqual(next, currentSettings)) {
+    return cloneSettings(currentSettings);
+  }
+  currentSettings = next;
+  schedulePersist();
+  notifyListeners();
+  return cloneSettings(currentSettings);
+}
+function subscribe(listener) {
+  if (typeof listener !== "function") {
+    return () => {
+    };
+  }
+  ensureLoaded();
+  listeners.add(listener);
+  try {
+    listener(cloneSettings(currentSettings));
+  } catch (err2) {
+    console.error("[CameraSettingsStore] listener error", err2);
+  }
+  return () => {
+    listeners.delete(listener);
+  };
+}
+const settingsStore = {
+  loadSettings,
+  saveSettings,
+  subscribe,
+  getSettings,
+  defaultCameraSettings
+};
 const RANGE_CONFIG = {
   yawSpeed: { min: 0.1, max: 2, step: 0.05, label: "Yaw Speed", suffix: "rad/s" },
   pitchSpeed: { min: 0.1, max: 2, step: 0.05, label: "Pitch Speed", suffix: "rad/s" },
@@ -64881,6 +63196,107 @@ const UIManager = {
     return questHud;
   }
 };
+const ENABLE_GLB_MODE$1 = false;
+class Character extends Object3D {
+  constructor() {
+    super();
+    this.model = void 0;
+    this.mixer = void 0;
+    this.actions = /* @__PURE__ */ new Map();
+    this.current = void 0;
+  }
+  /**
+   * @param {string | string[]} url
+   * @param {THREE.WebGLRenderer} [renderer]
+   */
+  async load(url, renderer2, { targetHeight = 1.8 } = {}) {
+    if (!ENABLE_GLB_MODE$1) return null;
+    const urls = Array.isArray(url) ? url : [url];
+    const loader2 = await createGLTFLoader(renderer2);
+    const loaded2 = await loadGLBWithFallbacks(loader2, urls, {
+      renderer: renderer2,
+      targetHeight
+    });
+    if (!loaded2 || !loaded2.root) {
+      throw new Error("Character.load failed: no reachable GLB candidates");
+    }
+    const { gltf, root } = loaded2;
+    this.initializeFromGLTF(root, gltf.animations);
+  }
+  initializeFromGLTF(root, animations = []) {
+    if (!root) {
+      throw new Error("Character.initializeFromGLTF requires a root object");
+    }
+    if (this.model) {
+      this.remove(this.model);
+    }
+    this.model = root;
+    this.model.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = true;
+        o.receiveShadow = true;
+        o.frustumCulled = false;
+      }
+    });
+    applyForegroundFogPolicy(this.model);
+    this.model.rotation.y = 0;
+    this.add(this.model);
+    this.mixer = new AnimationMixer(this.model);
+    const clips = Array.isArray(animations) ? animations : [];
+    const byName = /* @__PURE__ */ new Map();
+    for (const clip of clips) {
+      if (clip?.name) {
+        byName.set(clip.name, clip);
+      }
+    }
+    const mapName = (n) => {
+      const L = n.toLowerCase();
+      if (L.includes("idle")) return "Idle";
+      if (L.includes("walk") && !L.includes("swagger")) return "Walk";
+      if (L.includes("run")) return "Run";
+      if (L.includes("swagger")) return "Swagger";
+      if (L.includes("swag")) return "Swagger";
+      if (L.includes("jump")) return "Jump";
+      return null;
+    };
+    this.actions = /* @__PURE__ */ new Map();
+    for (const [name, clip] of byName) {
+      const mapped = mapName(name);
+      if (!mapped) continue;
+      const action = this.mixer.clipAction(clip);
+      action.clampWhenFinished = true;
+      action.enable = true;
+      this.actions.set(mapped, action);
+    }
+    if (!this.actions.get("Swagger") && this.actions.get("Walk")) {
+      this.actions.set("Swagger", this.actions.get("Walk"));
+    }
+    if (!this.actions.get("Run") && this.actions.get("Walk")) {
+      this.actions.set("Run", this.actions.get("Walk"));
+    }
+    if (!this.actions.get("Idle") && this.actions.get("Walk")) {
+      this.actions.set("Idle", this.actions.get("Walk"));
+    }
+    this.play("Idle", 0);
+  }
+  /**
+   * @param {number} dt
+   */
+  update(dt) {
+    this.mixer?.update(dt);
+  }
+  /**
+   * @param {AnimName} name
+   * @param {number} [fade=0.2]
+   */
+  play(name, fade = 0.2) {
+    const next = this.actions.get(name);
+    if (!next || this.current === next) return;
+    next.reset().play();
+    if (this.current) this.current.crossFadeTo(next, fade, false);
+    this.current = next;
+  }
+}
 function sanitizeRelativePath$2(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
@@ -65582,6 +63998,117 @@ function snapAboveGround(mesh, terrain, x, z, epsilon = GROUND_EPSILON, opts = {
   const base = groundY(terrain, x, z, mesh.position?.y ?? 0, opts);
   mesh.position.y = base + epsilon;
   return mesh.position.y;
+}
+class Capsule {
+  /**
+   * Constructs a new capsule.
+   *
+   * @param {Vector3} [start] - The start vector.
+   * @param {Vector3} [end] - The end vector.
+   * @param {number} [radius=1] - The capsule's radius.
+   */
+  constructor(start = new Vector3(0, 0, 0), end = new Vector3(0, 1, 0), radius = 1) {
+    this.start = start;
+    this.end = end;
+    this.radius = radius;
+  }
+  /**
+   * Returns a new capsule with copied values from this instance.
+   *
+   * @return {Capsule} A clone of this instance.
+   */
+  clone() {
+    return new this.constructor().copy(this);
+  }
+  /**
+   * Sets the capsule components to the given values.
+   * Please note that this method only copies the values from the given objects.
+   *
+   * @param {Vector3} start - The start vector.
+   * @param {Vector3} end - The end vector
+   * @param {number} radius - The capsule's radius.
+   * @return {Capsule} A reference to this capsule.
+   */
+  set(start, end, radius) {
+    this.start.copy(start);
+    this.end.copy(end);
+    this.radius = radius;
+    return this;
+  }
+  /**
+   * Copies the values of the given capsule to this instance.
+   *
+   * @param {Capsule} capsule - The capsule to copy.
+   * @return {Capsule} A reference to this capsule.
+   */
+  copy(capsule) {
+    this.start.copy(capsule.start);
+    this.end.copy(capsule.end);
+    this.radius = capsule.radius;
+    return this;
+  }
+  /**
+   * Returns the center point of this capsule.
+   *
+   * @param {Vector3} target - The target vector that is used to store the method's result.
+   * @return {Vector3} The center point.
+   */
+  getCenter(target) {
+    return target.copy(this.end).add(this.start).multiplyScalar(0.5);
+  }
+  /**
+   * Adds the given offset to this capsule, effectively moving it in 3D space.
+   *
+   * @param {Vector3} v - The offset that should be used to translate the capsule.
+   * @return {Capsule} A reference to this capsule.
+   */
+  translate(v) {
+    this.start.add(v);
+    this.end.add(v);
+    return this;
+  }
+  /**
+   * Returns `true` if the given bounding box intersects with this capsule.
+   *
+   * @param {Box3} box - The bounding box to test.
+   * @return {boolean} Whether the given bounding box intersects with this capsule.
+   */
+  intersectsBox(box) {
+    return checkAABBAxis(
+      this.start.x,
+      this.start.y,
+      this.end.x,
+      this.end.y,
+      box.min.x,
+      box.max.x,
+      box.min.y,
+      box.max.y,
+      this.radius
+    ) && checkAABBAxis(
+      this.start.x,
+      this.start.z,
+      this.end.x,
+      this.end.z,
+      box.min.x,
+      box.max.x,
+      box.min.z,
+      box.max.z,
+      this.radius
+    ) && checkAABBAxis(
+      this.start.y,
+      this.start.z,
+      this.end.y,
+      this.end.z,
+      box.min.y,
+      box.max.y,
+      box.min.z,
+      box.max.z,
+      this.radius
+    );
+  }
+}
+function checkAABBAxis(p1x, p1y, p2x, p2y, minx, maxx, miny, maxy, radius) {
+  return (minx - p1x < radius || minx - p2x < radius) && (p1x - maxx < radius || p2x - maxx < radius) && (miny - p1y < radius || miny - p2y < radius) && (p1y - maxy < radius || p2y - maxy < radius);
 }
 const DEFAULT_SEARCH_RADIUS = 80;
 const DEFAULT_INNER_RADIUS = 10;
@@ -66437,6 +64964,201 @@ function applyTransformToObject(object, options = {}) {
     }
   }
 }
+const LIGHTING_PRESETS$1 = {
+  "Bright Noon": {
+    renderer: {
+      toneMappingExposure: 0.45
+      // Heavily reduced to fight sky blowout
+    },
+    starsVisible: 0,
+    moonElevation: -10,
+    moonLightIntensity: 0,
+    soundscapeMode: "day",
+    sun: {
+      color: "#ffffff",
+      // Neutral white light for clean midday look
+      intensity: 2.3,
+      azimuth: 180,
+      elevation: 75
+      // High sun angle for midday
+    },
+    ambient: {
+      color: "#dbe9ff",
+      // Light blue ambient to match clear sky
+      groundColor: "#cfdcec",
+      intensity: 0.1
+    },
+    fog: {
+      enabled: true,
+      color: "#96b9d8",
+      // darker blue fog to fight white sky
+      near: 2e3,
+      far: 7200,
+      density: 33e-6
+    },
+    skybox: {
+      exposureMultiplier: 0.45,
+      saturationMultiplier: 0.98,
+      skyKey: "high_noon"
+    },
+    grade: {
+      contrast: 0.08,
+      saturation: 0.05,
+      shadowTint: "#e8edf5",
+      midTint: "#f2f6fb",
+      highlightTint: "#ffffff"
+    },
+    env: {
+      envMapIntensity: 0.15
+      // Softer reflections to avoid washout
+    },
+    moon: {
+      visible: false,
+      intensity: 0,
+      elevation: -25
+    }
+  },
+  "Golden Hour": {
+    renderer: {
+      toneMappingExposure: 0.95
+    },
+    starsVisible: 0.08,
+    moonElevation: 10,
+    moonLightIntensity: 0.15,
+    soundscapeMode: "day",
+    sun: {
+      color: "#ffb36b",
+      intensity: 0.8,
+      azimuth: 260,
+      // Warm light from the west for evening feel
+      elevation: 15
+      // Low angle for long shadows
+    },
+    ambient: {
+      color: "#f0c193",
+      groundColor: "#c07a43",
+      intensity: 0.6
+      // Softer fill to ease shadow contrast
+    },
+    fog: {
+      enabled: true,
+      color: "#f2caa2",
+      near: 200,
+      far: 3500
+    },
+    skybox: {
+      exposureMultiplier: 0.95,
+      skyKey: "golden_hour"
+    },
+    grade: {
+      contrast: 0.12,
+      saturation: 0.04,
+      shadowTint: "#3a2b1f",
+      midTint: "#ffe2c4",
+      highlightTint: "#ffe9d6"
+    },
+    env: {
+      envMapIntensity: 0.7
+      // HDRI/sky reflections softened for evening
+    },
+    moon: {
+      visible: false,
+      intensity: 0,
+      elevation: -20
+    }
+  },
+  "Blue Hour": {
+    renderer: {
+      toneMappingExposure: 1.05
+    },
+    starsVisible: 0.55,
+    moonElevation: 8,
+    moonLightIntensity: 0.32,
+    soundscapeMode: "night",
+    sun: {
+      color: "#6f7fa5",
+      intensity: 0.2,
+      azimuth: 195,
+      elevation: -2
+    },
+    ambient: {
+      color: "#3f5473",
+      groundColor: "#273448",
+      intensity: 0.5
+    },
+    fog: {
+      enabled: true,
+      color: "#2f3f5d",
+      near: 250,
+      far: 2600
+    },
+    skybox: {
+      exposureMultiplier: 0.8,
+      skyKey: "blue_hour"
+    },
+    grade: {
+      contrast: 0.1,
+      saturation: -0.06,
+      shadowTint: "#223344",
+      midTint: "#3b5278",
+      highlightTint: "#9bb5e1"
+    },
+    env: {
+      envMapIntensity: 0.45
+      // Gentle reflections to match twilight sky
+    },
+    moon: {
+      visible: true,
+      intensity: 0.42,
+      elevation: 18
+    }
+  },
+  "Night": {
+    renderer: {
+      toneMappingExposure: 1
+    },
+    starsVisible: 1,
+    moonElevation: 20,
+    moonLightIntensity: 0.18,
+    soundscapeMode: "night",
+    sun: {
+      color: "#6f86a5",
+      intensity: 0.05,
+      azimuth: 120,
+      elevation: -45
+    },
+    ambient: {
+      color: "#0b1d38",
+      groundColor: "#0b1d2d",
+      intensity: 0.25
+    },
+    fog: {
+      enabled: true,
+      color: "#08162c",
+      near: 400,
+      far: 3200
+    },
+    skybox: {
+      exposureMultiplier: 0.6,
+      skyKey: "night_sky"
+    },
+    grade: {
+      contrast: 0.1,
+      saturation: -0.08,
+      shadowTint: "#223344",
+      midTint: "#10233d",
+      highlightTint: "#c6d7ff"
+    },
+    env: {
+      envMapIntensity: 0.2
+    },
+    moon: {
+      visible: true,
+      intensity: 0.2,
+      elevation: 40
+    }
+  }
+};
 function safeUrlSearchParams() {
   if (typeof window === "undefined" || typeof window.location === "undefined") {
     return new URLSearchParams("");
@@ -66458,8 +65180,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T13:37:13.291Z" : "",
-      sha: true ? "4abb9224462b0feaa62ee533f028b6faa06f66d2" : ""
+      time: true ? "2025-12-26T23:08:25.807Z" : "",
+      sha: true ? "39ed9a10d02a72ba7998953ac6a92753de91cb0b" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -67824,6 +66546,963 @@ function createColorGradePass({
     )
   });
   return new ShaderPass(material, "tDiffuse");
+}
+const DEFAULT_OFFSET = new Vector3(0, 2.2, -4.5);
+const DEFAULT_TARGET_OFFSET = new Vector3(0, 1.2, 0);
+const DEFAULT_MIN_PITCH = MathUtils.degToRad(-25);
+const DEFAULT_MAX_PITCH = MathUtils.degToRad(65);
+const DEFAULT_COLLISION_OFFSET = 0.25;
+const DEFAULT_FOLLOW_LERP = 0.12;
+const DEFAULT_ROTATION_LERP = 0.15;
+const DEFAULT_YAW_SENSITIVITY = 24e-4;
+const DEFAULT_PITCH_SENSITIVITY = 21e-4;
+const DEFAULT_KEY_ORBIT = {
+  enabled: false,
+  yawSpeed: 0.9,
+  pitchSpeed: 0.9,
+  minPitch: -0.6,
+  maxPitch: 0.6,
+  minDist: 2.5,
+  maxDist: 7.5,
+  zoomSpeed: 4,
+  invertPitch: false
+};
+const TAU = Math.PI * 2;
+const _tmpOffset = new Vector3();
+const _tmpDirection = new Vector3();
+const _tmpTarget = new Vector3();
+const _tmpCollision = new Vector3();
+const _tmpLookAt = new Vector3();
+const KEY_CODES = [
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "PageUp",
+  "PageDown"
+];
+function wrapAngle(angle) {
+  return MathUtils.euclideanModulo(angle + Math.PI, TAU) - Math.PI;
+}
+function lerpAngle(current, target, t) {
+  if (t >= 1) return wrapAngle(target);
+  const delta = wrapAngle(target - current);
+  return wrapAngle(current + delta * t);
+}
+function isObject3D(value) {
+  return value && typeof value === "object" && value.isObject3D === true;
+}
+class ThirdPersonCamera {
+  /**
+   * @param {THREE.Camera} camera
+   * @param {THREE.Object3D | null} targetObject
+   * @param {{
+   *   offset?: THREE.Vector3,
+   *   targetOffset?: THREE.Vector3,
+   *   minPitch?: number,
+   *   maxPitch?: number,
+   *   collisionOffset?: number,
+   *   followLerp?: number,
+   *   rotationLerp?: number,
+  *   yawSensitivity?: number,
+  *   pitchSensitivity?: number,
+  *   solids?: THREE.Object3D[],
+  *   enabled?: boolean,
+  *   keyOrbit?: {
+  *     enabled?: boolean,
+  *     yawSpeed?: number,
+  *     pitchSpeed?: number,
+  *     minPitch?: number,
+  *     maxPitch?: number,
+  *     minDist?: number,
+  *     maxDist?: number,
+  *     zoomSpeed?: number,
+  *   },
+  * }} [options]
+  */
+  constructor(camera2, targetObject, options = {}) {
+    this.camera = camera2;
+    this.targetObject = targetObject ?? null;
+    this.offset = (options.offset ?? DEFAULT_OFFSET).clone();
+    this.targetOffset = (options.targetOffset ?? DEFAULT_TARGET_OFFSET).clone();
+    this.followLerp = options.followLerp ?? DEFAULT_FOLLOW_LERP;
+    this.rotationLerp = options.rotationLerp ?? DEFAULT_ROTATION_LERP;
+    this.yawSensitivity = options.yawSensitivity ?? DEFAULT_YAW_SENSITIVITY;
+    this.pitchSensitivity = options.pitchSensitivity ?? DEFAULT_PITCH_SENSITIVITY;
+    this.minPitch = options.minPitch ?? DEFAULT_MIN_PITCH;
+    this.maxPitch = options.maxPitch ?? DEFAULT_MAX_PITCH;
+    this.collisionOffset = options.collisionOffset ?? DEFAULT_COLLISION_OFFSET;
+    this.distance = Math.max(0.1, this.offset.length());
+    const keyOrbitOptions = options.keyOrbit ?? DEFAULT_KEY_ORBIT;
+    const resolvedKeyOrbit = { ...DEFAULT_KEY_ORBIT, ...keyOrbitOptions };
+    resolvedKeyOrbit.minPitch = MathUtils.clamp(
+      resolvedKeyOrbit.minPitch,
+      -Math.PI * 0.5,
+      Math.PI * 0.5
+    );
+    resolvedKeyOrbit.maxPitch = MathUtils.clamp(
+      resolvedKeyOrbit.maxPitch,
+      -Math.PI * 0.5,
+      Math.PI * 0.5
+    );
+    if (resolvedKeyOrbit.maxPitch < resolvedKeyOrbit.minPitch) {
+      const swap = resolvedKeyOrbit.maxPitch;
+      resolvedKeyOrbit.maxPitch = resolvedKeyOrbit.minPitch;
+      resolvedKeyOrbit.minPitch = swap;
+    }
+    this.keyOrbit = resolvedKeyOrbit;
+    this.keyOrbitState = {
+      desiredYawDelta: 0,
+      desiredPitchDelta: 0,
+      keys: {
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+        pageUp: false,
+        pageDown: false
+      }
+    };
+    this.keyOrbitHandlersAttached = false;
+    this.handleKeyDown = (event) => {
+      if (!this.shouldHandleKeyOrbitEvent(event)) return;
+      let handled = false;
+      switch (event.code) {
+        case "ArrowLeft":
+          this.keyOrbitState.keys.left = true;
+          handled = true;
+          break;
+        case "ArrowRight":
+          this.keyOrbitState.keys.right = true;
+          handled = true;
+          break;
+        case "ArrowUp":
+          this.keyOrbitState.keys.up = true;
+          handled = true;
+          break;
+        case "ArrowDown":
+          this.keyOrbitState.keys.down = true;
+          handled = true;
+          break;
+        case "PageUp":
+          this.keyOrbitState.keys.pageUp = true;
+          handled = true;
+          break;
+        case "PageDown":
+          this.keyOrbitState.keys.pageDown = true;
+          handled = true;
+          break;
+        default:
+          break;
+      }
+      if (handled && this.shouldConsumeKeyOrbit()) {
+        event.preventDefault();
+      }
+    };
+    this.handleKeyUp = (event) => {
+      if (!this.keyOrbitHandlersAttached) return;
+      switch (event.code) {
+        case "ArrowLeft":
+          this.keyOrbitState.keys.left = false;
+          break;
+        case "ArrowRight":
+          this.keyOrbitState.keys.right = false;
+          break;
+        case "ArrowUp":
+          this.keyOrbitState.keys.up = false;
+          break;
+        case "ArrowDown":
+          this.keyOrbitState.keys.down = false;
+          break;
+        case "PageUp":
+          this.keyOrbitState.keys.pageUp = false;
+          break;
+        case "PageDown":
+          this.keyOrbitState.keys.pageDown = false;
+          break;
+        default:
+          break;
+      }
+    };
+    const clampedY = MathUtils.clamp(this.offset.y / this.distance, -1, 1);
+    this.basePitch = Math.asin(clampedY);
+    this.baseYaw = Math.atan2(this.offset.x, -this.offset.z);
+    this.targetYaw = wrapAngle(this.baseYaw);
+    this.targetPitch = MathUtils.clamp(this.basePitch, this.minPitch, this.maxPitch);
+    this.currentYaw = this.targetYaw;
+    this.currentPitch = this.targetPitch;
+    this.smoothedPosition = new Vector3();
+    this.desiredPosition = new Vector3();
+    this.lookTarget = new Vector3();
+    this.raycaster = new Raycaster();
+    this.intersections = [];
+    this.solids = Array.isArray(options.solids) ? options.solids.filter(isObject3D) : [];
+    this.keyboardState = {
+      ArrowLeft: false,
+      ArrowRight: false,
+      ArrowUp: false,
+      ArrowDown: false,
+      PageUp: false,
+      PageDown: false
+    };
+    this.arrowOrbitEnabled = defaultCameraSettings.enableArrowOrbit;
+    this.keyboardYawSpeed = defaultCameraSettings.yawSpeed;
+    this.keyboardPitchSpeed = defaultCameraSettings.pitchSpeed;
+    this.keyboardZoomSpeed = defaultCameraSettings.zoomSpeed;
+    this.minDistance = defaultCameraSettings.minDist;
+    this.maxDistance = defaultCameraSettings.maxDist;
+    this.invertKeyboardPitch = defaultCameraSettings.invertPitch;
+    this._settingsUnsubscribe = null;
+    this._handleKeyDown = (event) => {
+      if (!event || typeof event.code !== "string") return;
+      if (!KEY_CODES.includes(event.code)) return;
+      this.keyboardState[event.code] = true;
+    };
+    this._handleKeyUp = (event) => {
+      if (!event || typeof event.code !== "string") return;
+      if (!KEY_CODES.includes(event.code)) return;
+      this.keyboardState[event.code] = false;
+    };
+    this._handleBlur = this._handleBlur.bind(this);
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", this._handleKeyDown, true);
+      window.addEventListener("keyup", this._handleKeyUp, true);
+      window.addEventListener("blur", this._handleBlur, { passive: true });
+    }
+    this.applyCameraSettings(loadSettings());
+    this._settingsUnsubscribe = subscribe((next) => {
+      this.applyCameraSettings(next);
+    });
+    this.enabled = false;
+    this.needsImmediateSnap = false;
+    this.warnedMissingTarget = false;
+    this.disposed = false;
+    const initialEnabled = options.enabled ?? true;
+    if (initialEnabled) {
+      this.setEnabled(true);
+      if (this.camera) {
+        this.smoothedPosition.copy(this.camera.position);
+      }
+    }
+  }
+  _handleBlur() {
+    this.clearKeyStates();
+  }
+  clearKeyStates() {
+    if (this.keyStates) {
+      Object.keys(this.keyStates).forEach((key) => {
+        this.keyStates[key] = false;
+      });
+    }
+    if (this.keyboardState) {
+      for (const key of Object.keys(this.keyboardState)) {
+        this.keyboardState[key] = false;
+      }
+    }
+    if (this.keyOrbitState && this.keyOrbitState.keys) {
+      const { keys } = this.keyOrbitState;
+      for (const key of Object.keys(keys)) {
+        keys[key] = false;
+      }
+      this.keyOrbitState.desiredYawDelta = 0;
+      this.keyOrbitState.desiredPitchDelta = 0;
+      if ("yaw" in this.keyOrbitState) this.keyOrbitState.yaw = 0;
+      if ("pitch" in this.keyOrbitState) this.keyOrbitState.pitch = 0;
+    }
+    this.isDragging = false;
+    if (this._pointerDelta && typeof this._pointerDelta.set === "function") {
+      this._pointerDelta.set(0, 0);
+    }
+  }
+  /**
+   * @returns {number}
+   */
+  getYaw() {
+    return this.currentYaw;
+  }
+  /**
+   * @param {import("../state/settingsStore.ts").CameraSettings} settings
+   */
+  applyCameraSettings(settings) {
+    const resolved = {
+      ...defaultCameraSettings,
+      ...settings && typeof settings === "object" ? settings : {}
+    };
+    const toNumber2 = (value, fallback) => Number.isFinite(value) ? value : fallback;
+    const prevEnabled = this.keyOrbit.enabled;
+    this.arrowOrbitEnabled = !!resolved.enableArrowOrbit;
+    this.keyOrbit.enabled = this.arrowOrbitEnabled;
+    this.keyOrbit.yawSpeed = toNumber2(
+      resolved.yawSpeed,
+      defaultCameraSettings.yawSpeed
+    );
+    this.keyOrbit.pitchSpeed = toNumber2(
+      resolved.pitchSpeed,
+      defaultCameraSettings.pitchSpeed
+    );
+    this.keyOrbit.zoomSpeed = toNumber2(
+      resolved.zoomSpeed,
+      defaultCameraSettings.zoomSpeed
+    );
+    this.keyOrbit.minPitch = toNumber2(
+      resolved.minPitch,
+      defaultCameraSettings.minPitch
+    );
+    this.keyOrbit.maxPitch = toNumber2(
+      resolved.maxPitch,
+      defaultCameraSettings.maxPitch
+    );
+    this.keyOrbit.minDist = Math.max(
+      0.1,
+      toNumber2(resolved.minDist, defaultCameraSettings.minDist)
+    );
+    this.keyOrbit.maxDist = Math.max(
+      this.keyOrbit.minDist,
+      toNumber2(resolved.maxDist, defaultCameraSettings.maxDist)
+    );
+    this.keyOrbit.invertPitch = !!resolved.invertPitch;
+    this.keyboardYawSpeed = this.keyOrbit.yawSpeed;
+    this.keyboardPitchSpeed = this.keyOrbit.pitchSpeed;
+    this.keyboardZoomSpeed = this.keyOrbit.zoomSpeed;
+    this.invertKeyboardPitch = this.keyOrbit.invertPitch;
+    this.minDistance = this.keyOrbit.minDist;
+    this.maxDistance = this.keyOrbit.maxDist;
+    this.distance = MathUtils.clamp(
+      this.distance,
+      this.minDistance,
+      this.maxDistance
+    );
+    if (this.enabled) {
+      if (this.keyOrbit.enabled && !prevEnabled) {
+        this.attachKeyOrbit();
+      } else if (!this.keyOrbit.enabled && prevEnabled) {
+        this.detachKeyOrbit();
+      }
+    }
+  }
+  /**
+   * @returns {number}
+   */
+  getPitch() {
+    return this.currentPitch;
+  }
+  /**
+   * @returns {number}
+   */
+  getTargetYaw() {
+    return this.targetYaw;
+  }
+  /**
+   * @returns {number}
+   */
+  getTargetPitch() {
+    return this.targetPitch;
+  }
+  /**
+   * @param {number} yaw
+   * @param {number} pitch
+   * @param {{ snap?: boolean }} [opts]
+   */
+  setAngles(yaw, pitch, opts = {}) {
+    if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) return;
+    const snap = opts.snap ?? true;
+    this.targetYaw = wrapAngle(yaw);
+    this.targetPitch = MathUtils.clamp(pitch, this.minPitch, this.maxPitch);
+    if (snap) {
+      this.currentYaw = this.targetYaw;
+      this.currentPitch = this.targetPitch;
+      this.needsImmediateSnap = true;
+    }
+  }
+  /**
+   * @param {boolean} value
+   */
+  setEnabled(value) {
+    const nextEnabled = !!value && !this.disposed;
+    if (nextEnabled === this.enabled) return;
+    this.enabled = nextEnabled;
+    if (!this.enabled) {
+      this.clearKeyStates();
+    }
+    if (this.enabled) {
+      this.needsImmediateSnap = true;
+      this.warnedMissingTarget = false;
+      this.attachKeyOrbit();
+    }
+    if (!this.enabled) {
+      this.detachKeyOrbit();
+    }
+  }
+  /**
+   * Update camera position and orientation.
+   * @param {number} dt
+   */
+  update(dt) {
+    if (!this.enabled || this.disposed) return;
+    if (!this.camera) return;
+    const target = this.targetObject;
+    if (!isObject3D(target)) {
+      if (!this.warnedMissingTarget) {
+        console.warn("[ThirdPersonCamera] Missing target object; update skipped.");
+        this.warnedMissingTarget = true;
+      }
+      return;
+    }
+    target.updateWorldMatrix(true, false);
+    target.getWorldPosition(_tmpTarget);
+    _tmpTarget.add(this.targetOffset);
+    const dtSafe = Number.isFinite(dt) ? Math.max(0, dt) : 0;
+    if (this.keyOrbit.enabled) {
+      this.updateKeyOrbit(dtSafe);
+    }
+    this.targetPitch = MathUtils.clamp(this.targetPitch, this.minPitch, this.maxPitch);
+    this.distance = MathUtils.clamp(this.distance, this.minDistance, this.maxDistance);
+    const rotationAlpha = dtSafe > 0 ? 1 - Math.pow(1 - this.rotationLerp, dtSafe * 60) : this.rotationLerp;
+    const followAlpha = dtSafe > 0 ? 1 - Math.pow(1 - this.followLerp, dtSafe * 60) : this.followLerp;
+    const clampedRot = MathUtils.clamp(rotationAlpha, 0, 1);
+    const clampedFollow = MathUtils.clamp(followAlpha, 0, 1);
+    this.currentYaw = lerpAngle(this.currentYaw, this.targetYaw, clampedRot);
+    this.currentPitch = MathUtils.lerp(
+      this.currentPitch,
+      this.targetPitch,
+      clampedRot
+    );
+    const horizontal = Math.cos(this.currentPitch) * this.distance;
+    _tmpOffset.set(
+      Math.sin(this.currentYaw) * horizontal,
+      Math.sin(this.currentPitch) * this.distance,
+      -Math.cos(this.currentYaw) * horizontal
+    );
+    this.desiredPosition.copy(_tmpTarget).add(_tmpOffset);
+    const direction2 = _tmpDirection.copy(this.desiredPosition).sub(_tmpTarget);
+    const distance = direction2.length();
+    if (distance > 1e-6) {
+      direction2.multiplyScalar(1 / distance);
+    } else {
+      direction2.set(0, 0, -1);
+    }
+    let maxDistance = distance;
+    if (maxDistance < this.collisionOffset) {
+      maxDistance = this.collisionOffset;
+    }
+    if (this.solids.length > 0) {
+      this.raycaster.near = 0;
+      this.raycaster.far = maxDistance;
+      this.raycaster.set(_tmpTarget, direction2);
+      this.intersections.length = 0;
+      this.raycaster.intersectObjects(this.solids, true, this.intersections);
+      if (this.intersections.length > 0) {
+        const hit = this.intersections[0];
+        const safeDistance = Math.max(
+          0,
+          Math.min(hit.distance - this.collisionOffset, maxDistance)
+        );
+        _tmpCollision.copy(_tmpTarget).addScaledVector(direction2, safeDistance);
+      } else {
+        _tmpCollision.copy(this.desiredPosition);
+      }
+    } else {
+      _tmpCollision.copy(this.desiredPosition);
+    }
+    if (this.needsImmediateSnap) {
+      this.smoothedPosition.copy(_tmpCollision);
+      this.needsImmediateSnap = false;
+    } else {
+      this.smoothedPosition.lerp(_tmpCollision, clampedFollow);
+    }
+    this.lookTarget.copy(_tmpTarget);
+    this.camera.position.copy(this.smoothedPosition);
+    this.camera.lookAt(this.lookTarget);
+  }
+  /**
+   * @param {number} deltaX
+   * @param {number} deltaY
+   */
+  handlePointer(deltaX, deltaY) {
+    if (!this.enabled || this.disposed) return;
+    if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return;
+    const yaw = this.targetYaw - deltaX * this.yawSensitivity;
+    const pitch = this.targetPitch - deltaY * this.pitchSensitivity;
+    this.targetYaw = wrapAngle(yaw);
+    this.targetPitch = MathUtils.clamp(pitch, this.minPitch, this.maxPitch);
+  }
+  /**
+   * @param {boolean} value
+   */
+  dispose() {
+    this.setEnabled(false);
+    this.solids.length = 0;
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", this._handleKeyDown, true);
+      window.removeEventListener("keyup", this._handleKeyUp, true);
+      window.removeEventListener("blur", this._handleBlur);
+    }
+    this.clearKeyStates();
+    if (typeof this._settingsUnsubscribe === "function") {
+      this._settingsUnsubscribe();
+      this._settingsUnsubscribe = null;
+    }
+    this.disposed = true;
+  }
+  // ArrowKeyOrbit: determine if keyboard events should be handled
+  shouldHandleKeyOrbitEvent(event) {
+    if (!this.keyOrbit.enabled) return false;
+    if (!this.enabled || this.disposed) return false;
+    if (!event) return false;
+    if (typeof document !== "undefined" && document.pointerLockElement && !this.enabled) {
+      return false;
+    }
+    return true;
+  }
+  // ArrowKeyOrbit: prevent default browser behaviour only when active
+  shouldConsumeKeyOrbit() {
+    if (!this.keyOrbit.enabled) return false;
+    if (!this.enabled || this.disposed) return false;
+    if (typeof document !== "undefined" && document.pointerLockElement && !this.enabled) {
+      return false;
+    }
+    return true;
+  }
+  // ArrowKeyOrbit: attach keyboard listeners when enabled
+  attachKeyOrbit() {
+    if (!this.keyOrbit.enabled) return;
+    if (this.keyOrbitHandlersAttached) return;
+    if (typeof window === "undefined") return;
+    window.addEventListener("keydown", this.handleKeyDown);
+    window.addEventListener("keyup", this.handleKeyUp);
+    this.keyOrbitHandlersAttached = true;
+  }
+  // ArrowKeyOrbit: detach keyboard listeners
+  detachKeyOrbit() {
+    if (!this.keyOrbitHandlersAttached) return;
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", this.handleKeyDown);
+      window.removeEventListener("keyup", this.handleKeyUp);
+    }
+    this.keyOrbitHandlersAttached = false;
+    this.keyOrbitState.desiredYawDelta = 0;
+    this.keyOrbitState.desiredPitchDelta = 0;
+    const { keys } = this.keyOrbitState;
+    keys.left = false;
+    keys.right = false;
+    keys.up = false;
+    keys.down = false;
+    keys.pageUp = false;
+    keys.pageDown = false;
+  }
+  // ArrowKeyOrbit: smooth keyboard-driven yaw/pitch/zoom updates
+  updateKeyOrbit(dt) {
+    if (dt <= 0) return;
+    const state = this.keyOrbitState;
+    const { keys } = state;
+    const yawInput = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    const invert = this.keyOrbit.invertPitch ? -1 : 1;
+    const pitchInput = ((keys.up ? 1 : 0) - (keys.down ? 1 : 0)) * invert;
+    const zoomInput = (keys.pageDown ? 1 : 0) - (keys.pageUp ? 1 : 0);
+    if (yawInput !== 0) {
+      state.desiredYawDelta += yawInput * this.keyOrbit.yawSpeed * dt;
+    }
+    if (pitchInput !== 0) {
+      state.desiredPitchDelta += pitchInput * this.keyOrbit.pitchSpeed * dt;
+    }
+    const yawStep = MathUtils.lerp(0, state.desiredYawDelta, 0.18);
+    const pitchStep = MathUtils.lerp(0, state.desiredPitchDelta, 0.18);
+    if (yawStep !== 0) {
+      this.targetYaw = wrapAngle(this.targetYaw + yawStep);
+    }
+    if (pitchStep !== 0 || pitchInput !== 0 || Math.abs(state.desiredPitchDelta) > 1e-5) {
+      const minPitch = Math.max(this.minPitch, this.keyOrbit.minPitch);
+      const maxPitch = Math.min(this.maxPitch, this.keyOrbit.maxPitch);
+      const nextPitch = this.targetPitch + pitchStep;
+      this.targetPitch = MathUtils.clamp(nextPitch, minPitch, maxPitch);
+    }
+    state.desiredYawDelta -= yawStep;
+    state.desiredPitchDelta -= pitchStep;
+    if (zoomInput !== 0) {
+      const zoomDelta = zoomInput * this.keyOrbit.zoomSpeed * dt;
+      const minDist = Math.max(0.1, this.keyOrbit.minDist);
+      const maxDist = Math.max(minDist, this.keyOrbit.maxDist);
+      this.distance = MathUtils.clamp(
+        this.distance + zoomDelta,
+        minDist,
+        maxDist
+      );
+    } else {
+      const minDist = Math.max(0.1, this.keyOrbit.minDist);
+      const maxDist = Math.max(minDist, this.keyOrbit.maxDist);
+      this.distance = MathUtils.clamp(this.distance, minDist, maxDist);
+    }
+  }
+}
+const UP$1 = new Vector3(0, 1, 0);
+class PlayerController {
+  /**
+   * @param {import('../input/InputMap').InputMap} input
+   * @param {import('../env/EnvironmentCollider.js').EnvironmentCollider} env
+   * @param {PlayerOptions} [opts]
+   */
+  constructor(input, env, opts = {}) {
+    opts = opts ?? {};
+    this.object = new Object3D();
+    this.object.userData.noCollision = true;
+    this.moveSpeed = 4;
+    this.sprintMult = 1.8;
+    this.gravity = 12;
+    this.jumpSpeed = 5;
+    this.slopeLimit = 50;
+    this.input = input;
+    this.env = env;
+    this.camera = opts.camera;
+    this.terrainHeightSampler = typeof opts.terrainHeightSampler === "function" ? opts.terrainHeightSampler : null;
+    this.terrainSnapMaxDistance = Math.max(
+      Number.isFinite(opts.terrainSnapMaxDistance) ? opts.terrainSnapMaxDistance : 1.2,
+      0
+    );
+    this.terrainSnapThreshold = Math.max(
+      Number.isFinite(opts.terrainSnapThreshold) ? opts.terrainSnapThreshold : 5e-3,
+      0
+    );
+    this.height = opts.height ?? 1.8;
+    this.radius = opts.radius ?? 0.35;
+    this.cameraYaw = 0;
+    this.cameraPitch = MathUtils.degToRad(-15);
+    this.cameraMinPitch = MathUtils.degToRad(-80);
+    this.cameraMaxPitch = MathUtils.degToRad(60);
+    this.cameraDistance = 6;
+    this.cameraTargetHeight = this.height * 0.6;
+    this.cameraDamping = 10;
+    this.cameraTarget = new Vector3();
+    this.cameraDesired = new Vector3();
+    this.cameraEuler = new Euler(0, 0, 0, "YXZ");
+    this.cameraOffset = new Vector3();
+    const topOffset = this.height - this.radius;
+    this.capsule = new Capsule(
+      new Vector3(0, this.radius, 0),
+      new Vector3(0, topOffset, 0),
+      this.radius
+    );
+    this.object.position.set(0, this.height * 0.5, 0);
+    this.syncCapsuleToObject();
+    this.velocity = new Vector3();
+    this.groundNormal = new Vector3(0, 1, 0);
+    this.grounded = false;
+    this.jumpLocked = false;
+    this.flying = true;
+    this.flySpeed = 8;
+    this.flyIdleDecay = 0.9;
+    this.character = void 0;
+    this.desired = new Vector3();
+    this.tmpVec = new Vector3();
+    this.tmpVec2 = new Vector3();
+    this.tmpVec3 = new Vector3();
+    this.tmpVec4 = new Vector3();
+    this.tmpVecSnap = new Vector3();
+    this.tmpQuat = new Quaternion();
+    this.groundDamping = 16;
+    this.airDamping = 6;
+  }
+  get position() {
+    return this.object.position;
+  }
+  /**
+   * @param {import('../characters/Character.js').Character} char
+   */
+  attachCharacter(char) {
+    this.character = char;
+    this.object.add(char);
+    char.position.set(0, 0, 0);
+  }
+  /**
+   * @param {number} dt
+   */
+  update(dt) {
+    if (!Number.isFinite(dt) || dt <= 0) return;
+    const toggledFly = typeof this.input.consumeFlyToggle === "function" ? this.input.consumeFlyToggle() : false;
+    if (toggledFly) {
+      this.flying = !this.flying;
+      this.grounded = false;
+      this.velocity.y = 0;
+      if (!this.flying) {
+        this.jumpLocked = true;
+      }
+    }
+    const lookDelta = this.input.consumeLookDelta(dt);
+    if (this.camera) {
+      this.cameraYaw -= lookDelta.yaw;
+      this.cameraPitch -= lookDelta.pitch;
+      this.cameraPitch = MathUtils.clamp(
+        this.cameraPitch,
+        this.cameraMinPitch,
+        this.cameraMaxPitch
+      );
+      if (!Number.isFinite(this.cameraYaw)) this.cameraYaw = 0;
+      this.cameraYaw = MathUtils.euclideanModulo(this.cameraYaw + Math.PI, Math.PI * 2) - Math.PI;
+    }
+    const sprinting = this.input.sprint;
+    const baseSpeed = this.flying ? this.flySpeed : this.moveSpeed;
+    const speed = baseSpeed * (sprinting ? this.sprintMult : 1);
+    this.computeDesiredVelocity(speed, this.flying);
+    const damping = this.flying || !this.grounded ? this.airDamping : this.groundDamping;
+    this.velocity.x = MathUtils.damp(
+      this.velocity.x,
+      this.desired.x,
+      damping,
+      dt
+    );
+    this.velocity.z = MathUtils.damp(
+      this.velocity.z,
+      this.desired.z,
+      damping,
+      dt
+    );
+    if (this.flying) {
+      this.velocity.y = MathUtils.damp(
+        this.velocity.y,
+        this.desired.y,
+        this.airDamping,
+        dt
+      );
+    }
+    if (this.desired.lengthSq() === 0) {
+      if (this.flying) {
+        const decay = Math.pow(this.flyIdleDecay, dt);
+        this.velocity.multiplyScalar(decay);
+      } else {
+        const friction = this.grounded ? 0.85 : 0.95;
+        const decay = Math.pow(friction, dt);
+        this.velocity.x *= decay;
+        this.velocity.z *= decay;
+      }
+    }
+    if (!this.flying) {
+      if (this.grounded && this.input.jump && !this.jumpLocked) {
+        this.velocity.y = this.jumpSpeed;
+        this.grounded = false;
+        this.jumpLocked = true;
+      }
+      if (!this.input.jump) {
+        this.jumpLocked = false;
+      }
+      if (!this.grounded) {
+        this.velocity.y -= this.gravity * dt;
+      }
+    } else if (!this.input.flyUp) {
+      this.jumpLocked = false;
+    }
+    const delta = this.tmpVec.copy(this.velocity).multiplyScalar(dt);
+    this.capsule.translate(delta);
+    this.resolveCollisions(dt);
+    this.applyTerrainSnap();
+    const center = this.getCapsuleCenter(this.tmpVec);
+    this.object.position.copy(center);
+    this.updateCamera(dt);
+    if (this.character) {
+      const horizontalSpeed = Math.hypot(this.velocity.x, this.velocity.z);
+      const EPS = 0.05;
+      const yawFacing = Math.atan2(this.velocity.x, this.velocity.z);
+      if (horizontalSpeed > EPS) {
+        this.character.rotation.y = yawFacing;
+      }
+      const runThreshold = this.moveSpeed * 1.5;
+      const swaggerThreshold = this.moveSpeed * 0.8;
+      if (this.flying) {
+        this.character.play("Jump", 0.1);
+      } else if (!this.grounded) {
+        this.character.play("Jump", 0.1);
+      } else if (horizontalSpeed > runThreshold) {
+        this.character.play("Run", 0.1);
+      } else if (horizontalSpeed > swaggerThreshold) {
+        this.character.play("Swagger", 0.1);
+      } else if (horizontalSpeed > 0.1) {
+        this.character.play("Walk", 0.15);
+      } else {
+        this.character.play("Idle", 0.2);
+      }
+      this.character.update(dt);
+    }
+  }
+  /**
+   * @param {number} speed
+   */
+  computeDesiredVelocity(speed, allowVertical = false) {
+    this.desired.set(0, 0, 0);
+    const dirX = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
+    const dirZ = (this.input.forward ? 1 : 0) - (this.input.back ? 1 : 0);
+    const dirY = allowVertical ? (this.input.flyUp ? 1 : 0) - (this.input.flyDown ? 1 : 0) : 0;
+    if (dirX !== 0 || dirZ !== 0) {
+      this.tmpVec2.set(dirX, 0, dirZ).normalize();
+      if (this.camera) {
+        this.tmpQuat.setFromEuler(
+          this.cameraEuler.set(this.cameraPitch, this.cameraYaw, 0, "YXZ")
+        );
+        const forward = this.tmpVec3.set(0, 0, -1).applyQuaternion(this.tmpQuat);
+        forward.y = 0;
+        if (forward.lengthSq() < 1e-6) {
+          forward.set(0, 0, -1);
+        } else {
+          forward.normalize();
+        }
+        const right = this.tmpVec.copy(forward).cross(UP$1);
+        if (right.lengthSq() < 1e-6) {
+          right.set(1, 0, 0);
+        } else {
+          right.normalize();
+        }
+        this.desired.copy(forward).multiplyScalar(this.tmpVec2.z).addScaledVector(right, this.tmpVec2.x);
+      } else {
+        this.desired.copy(this.tmpVec2);
+      }
+    }
+    if (allowVertical && dirY !== 0) {
+      this.desired.y = dirY;
+    }
+    if (this.desired.lengthSq() === 0) {
+      return;
+    }
+    this.desired.normalize().multiplyScalar(speed);
+  }
+  updateCamera(dt) {
+    if (!this.camera) return;
+    this.cameraTarget.copy(this.object.position);
+    this.cameraTarget.y += this.cameraTargetHeight;
+    this.tmpQuat.setFromEuler(
+      this.cameraEuler.set(this.cameraPitch, this.cameraYaw, 0, "YXZ")
+    );
+    this.cameraOffset.set(0, 0, this.cameraDistance).applyQuaternion(this.tmpQuat);
+    this.cameraDesired.copy(this.cameraTarget).add(this.cameraOffset);
+    if (!Number.isFinite(dt) || dt <= 0) {
+      this.camera.position.copy(this.cameraDesired);
+    } else {
+      const t = 1 - Math.exp(-this.cameraDamping * dt);
+      this.camera.position.lerp(this.cameraDesired, t);
+    }
+    this.camera.lookAt(this.cameraTarget);
+  }
+  applyTerrainSnap() {
+    if (this.flying) return;
+    const sampler = this.terrainHeightSampler;
+    if (typeof sampler !== "function") return;
+    const center = this.getCapsuleCenter(this.tmpVecSnap);
+    const groundHeight = sampler(center.x, center.z);
+    if (!Number.isFinite(groundHeight)) return;
+    const halfHeight = this.height * 0.5;
+    const capsuleBottom = this.capsule.start.y - this.capsule.radius;
+    const penetration = groundHeight - capsuleBottom;
+    if (penetration <= this.terrainSnapThreshold || penetration > this.terrainSnapMaxDistance) {
+      return;
+    }
+    const targetCenterY = groundHeight + halfHeight;
+    const deltaY = targetCenterY - center.y;
+    if (Math.abs(deltaY) <= 1e-5) {
+      return;
+    }
+    this.tmpVecSnap.set(0, deltaY, 0);
+    this.capsule.translate(this.tmpVecSnap);
+    if (this.velocity.y < 0) {
+      this.velocity.y = 0;
+    }
+    this.grounded = true;
+    this.groundNormal.set(0, 1, 0);
+  }
+  resolveCollisions(dt) {
+    const collider = this.env;
+    const allowGrounding = !this.flying;
+    this.grounded = false;
+    let slopeNormal = null;
+    if (collider?.capsuleIntersect) {
+      const center = this.getCapsuleCenter(this.tmpVec3);
+      const ray2 = new Ray(center, new Vector3(0, -1, 0));
+      const hit = collider.boundsTree ? collider.boundsTree.raycastFirst(ray2) : null;
+      let groundDistance = Infinity;
+      if (hit) {
+        groundDistance = center.y - hit.point.y;
+      }
+      for (let i = 0; i < 3; i++) {
+        const result = collider.capsuleIntersect(this.capsule);
+        if (!result) break;
+        this.tmpVec.copy(result.normal).multiplyScalar(result.depth);
+        this.capsule.translate(this.tmpVec);
+        const normal = this.tmpVec2.copy(result.normal).normalize();
+        const velDot = normal.dot(this.velocity);
+        if (velDot < 0) {
+          this.velocity.addScaledVector(normal, -velDot);
+        }
+        const cosSlope = MathUtils.clamp(normal.dot(UP$1), -1, 1);
+        const slopeAngle = MathUtils.radToDeg(Math.acos(cosSlope));
+        if (normal.y > 0) {
+          if (slopeNormal === null) slopeNormal = this.tmpVec4;
+          slopeNormal.copy(normal);
+          if (allowGrounding && slopeAngle <= this.slopeLimit) {
+            this.grounded = true;
+            this.groundNormal.copy(normal);
+          } else if (!allowGrounding) {
+            this.groundNormal.copy(normal);
+          }
+        }
+      }
+      if (groundDistance < this.height * 0.5 + 0.1 && allowGrounding) {
+        this.grounded = true;
+      }
+    } else {
+      const center = this.getCapsuleCenter(this.tmpVec3);
+      const minY = this.height * 0.5;
+      if (center.y < minY) {
+        this.tmpVec.set(0, minY - center.y, 0);
+        this.capsule.translate(this.tmpVec);
+        if (this.velocity.y < 0) this.velocity.y = 0;
+        if (allowGrounding) {
+          this.grounded = true;
+        }
+        this.groundNormal.set(0, 1, 0);
+      }
+    }
+    if (allowGrounding && this.grounded) {
+      if (this.velocity.y < 0) this.velocity.y = 0;
+      const cosSlope = MathUtils.clamp(this.groundNormal.dot(UP$1), -1, 1);
+      const angle = MathUtils.radToDeg(Math.acos(cosSlope));
+      if (angle > this.slopeLimit) {
+        this.grounded = false;
+      }
+    }
+    if (allowGrounding && !this.grounded && slopeNormal) {
+      const slide = this.tmpVec.copy(slopeNormal).projectOnPlane(UP$1);
+      if (slide.lengthSq() > 1e-6) {
+        slide.normalize();
+        this.velocity.addScaledVector(slide, this.gravity * dt);
+      }
+      this.groundNormal.copy(slopeNormal);
+    }
+    if (allowGrounding && !this.grounded && this.velocity.y > 0 && slopeNormal) {
+      const normal = slopeNormal;
+      const velDot = normal.dot(this.velocity);
+      if (velDot < 0) {
+        this.velocity.addScaledVector(normal, -velDot);
+      }
+    }
+    if (!this.grounded && !slopeNormal) {
+      this.groundNormal.set(0, 1, 0);
+    }
+  }
+  syncCapsuleToObject() {
+    const center = this.object.position;
+    const halfHeight = this.height * 0.5;
+    this.capsule.start.set(
+      center.x,
+      center.y - halfHeight + this.radius,
+      center.z
+    );
+    this.capsule.end.set(
+      center.x,
+      center.y + halfHeight - this.radius,
+      center.z
+    );
+  }
+  /**
+   * @param {THREE.Vector3} target
+   */
+  getCapsuleCenter(target) {
+    return target.copy(this.capsule.start).add(this.capsule.end).multiplyScalar(0.5);
+  }
 }
 let camera, thirdPersonCamera, playerController, player;
 const CameraManager = {
@@ -70034,201 +69713,6 @@ function updateSkyForTimeOfDay(scene2, phase01) {
   applySkySettings(sky, preset);
   updateSkySunPosition(scene2, phase);
 }
-const LOOK_PROFILES = {
-  "Bright Noon": {
-    renderer: {
-      toneMappingExposure: 0.45
-      // Heavily reduced to fight sky blowout
-    },
-    starsVisible: 0,
-    moonElevation: -10,
-    moonLightIntensity: 0,
-    soundscapeMode: "day",
-    sun: {
-      color: "#ffffff",
-      // Neutral white light for clean midday look
-      intensity: 2.3,
-      azimuth: 180,
-      elevation: 75
-      // High sun angle for midday
-    },
-    ambient: {
-      color: "#dbe9ff",
-      // Light blue ambient to match clear sky
-      groundColor: "#cfdcec",
-      intensity: 0.1
-    },
-    fog: {
-      enabled: true,
-      color: "#96b9d8",
-      // darker blue fog to fight white sky
-      near: 2e3,
-      far: 7200,
-      density: 33e-6
-    },
-    skybox: {
-      exposureMultiplier: 0.45,
-      saturationMultiplier: 0.98,
-      skyKey: "high_noon"
-    },
-    grade: {
-      contrast: 0.08,
-      saturation: 0.05,
-      shadowTint: "#e8edf5",
-      midTint: "#f2f6fb",
-      highlightTint: "#ffffff"
-    },
-    env: {
-      envMapIntensity: 0.15
-      // Softer reflections to avoid washout
-    },
-    moon: {
-      visible: false,
-      intensity: 0,
-      elevation: -25
-    }
-  },
-  "Golden Hour": {
-    renderer: {
-      toneMappingExposure: 0.95
-    },
-    starsVisible: 0.08,
-    moonElevation: 10,
-    moonLightIntensity: 0.15,
-    soundscapeMode: "day",
-    sun: {
-      color: "#ffb36b",
-      intensity: 0.8,
-      azimuth: 260,
-      // Warm light from the west for evening feel
-      elevation: 15
-      // Low angle for long shadows
-    },
-    ambient: {
-      color: "#f0c193",
-      groundColor: "#c07a43",
-      intensity: 0.6
-      // Softer fill to ease shadow contrast
-    },
-    fog: {
-      enabled: true,
-      color: "#f2caa2",
-      near: 200,
-      far: 3500
-    },
-    skybox: {
-      exposureMultiplier: 0.95,
-      skyKey: "golden_hour"
-    },
-    grade: {
-      contrast: 0.12,
-      saturation: 0.04,
-      shadowTint: "#3a2b1f",
-      midTint: "#ffe2c4",
-      highlightTint: "#ffe9d6"
-    },
-    env: {
-      envMapIntensity: 0.7
-      // HDRI/sky reflections softened for evening
-    },
-    moon: {
-      visible: false,
-      intensity: 0,
-      elevation: -20
-    }
-  },
-  "Blue Hour": {
-    renderer: {
-      toneMappingExposure: 1.05
-    },
-    starsVisible: 0.55,
-    moonElevation: 8,
-    moonLightIntensity: 0.32,
-    soundscapeMode: "night",
-    sun: {
-      color: "#6f7fa5",
-      intensity: 0.2,
-      azimuth: 195,
-      elevation: -2
-    },
-    ambient: {
-      color: "#3f5473",
-      groundColor: "#273448",
-      intensity: 0.5
-    },
-    fog: {
-      enabled: true,
-      color: "#2f3f5d",
-      near: 250,
-      far: 2600
-    },
-    skybox: {
-      exposureMultiplier: 0.8,
-      skyKey: "blue_hour"
-    },
-    grade: {
-      contrast: 0.1,
-      saturation: -0.06,
-      shadowTint: "#223344",
-      midTint: "#3b5278",
-      highlightTint: "#9bb5e1"
-    },
-    env: {
-      envMapIntensity: 0.45
-      // Gentle reflections to match twilight sky
-    },
-    moon: {
-      visible: true,
-      intensity: 0.42,
-      elevation: 18
-    }
-  },
-  "Night": {
-    renderer: {
-      toneMappingExposure: 1
-    },
-    starsVisible: 1,
-    moonElevation: 20,
-    moonLightIntensity: 0.18,
-    soundscapeMode: "night",
-    sun: {
-      color: "#6f86a5",
-      intensity: 0.05,
-      azimuth: 120,
-      elevation: -45
-    },
-    ambient: {
-      color: "#0b1d38",
-      groundColor: "#0b1d2d",
-      intensity: 0.25
-    },
-    fog: {
-      enabled: true,
-      color: "#08162c",
-      near: 400,
-      far: 3200
-    },
-    skybox: {
-      exposureMultiplier: 0.6,
-      skyKey: "night_sky"
-    },
-    grade: {
-      contrast: 0.1,
-      saturation: -0.08,
-      shadowTint: "#223344",
-      midTint: "#10233d",
-      highlightTint: "#c6d7ff"
-    },
-    env: {
-      envMapIntensity: 0.2
-    },
-    moon: {
-      visible: true,
-      intensity: 0.2,
-      elevation: 40
-    }
-  }
-};
 const DEFAULT_LIGHTING_CONFIG = {
   cycle: {
     minutesPerDay: 20
@@ -74372,7 +73856,7 @@ function setGrassNightFactor(factor) {
 }
 function applyColorGrading(presetName) {
 }
-const LIGHTING_PRESETS$1 = LOOK_PROFILES;
+const LIGHTING_PRESETS = LIGHTING_PRESETS$1;
 const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
 const SUN_ELEVATION_STORAGE_KEY = "skybox.sunElevationDeg";
 function startTimeOfDayCycle(options = {}) {
@@ -74527,7 +74011,7 @@ class LightingSystem {
         hemisphereLight: scene2?.userData?.fallbackHemisphere || null,
         dynamicSky: this.dynamicSky || null
       });
-      const bn = LOOK_PROFILES?.["Bright Noon"] || null;
+      const bn = LIGHTING_PRESETS$1?.["Bright Noon"] || null;
       if (bn) {
         applyBasicLightingProfile({
           hemisphere: bn?.ambient?.intensity ?? 0.28,
@@ -74556,7 +74040,7 @@ class LightingSystem {
       };
       debugWindow.cycleLightingPreset = () => {
         const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
-          (preset) => !!LOOK_PROFILES[preset]
+          (preset) => !!LIGHTING_PRESETS$1[preset]
         );
         if (!presets.length) return;
         const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
@@ -74636,7 +74120,7 @@ class LightingSystem {
       updateMainHillRoadLighting(roadGroup, lights.nightFactor);
     }
     if (grassRoot) {
-      grassRoot.setNightFactor(lights.nightFactor);
+      setNightFactor(lights.nightFactor);
     }
     if (ocean) {
       updateOcean(ocean, deltaTime, alignedSunDir, lights.nightFactor, lights.sunLight.color);
@@ -74710,7 +74194,7 @@ class LightingSystem {
   };
   _applyEnvironmentFallbackForProfile = (profileName = "Bright Noon") => {
     const { scene: scene2, dynamicSky: dynamicSky2, hdriEnvMap } = this;
-    const profile = LOOK_PROFILES[profileName] || LOOK_PROFILES["Bright Noon"];
+    const profile = LIGHTING_PRESETS$1[profileName] || LIGHTING_PRESETS$1["Bright Noon"];
     const skyColor = profile?.ambient?.color || "#dbe9ff";
     const groundColor = profile?.ambient?.groundColor || "#9ba8b5";
     const hemiIntensity = profile?.ambient?.intensity ?? 0.28;
@@ -74834,7 +74318,7 @@ class LightingSystem {
   applyLookProfile = (profileName, options = {}) => {
     const { immediate = false, forceReapply = false, source = "manual" } = options;
     const resolvedProfileName = profileName || "Bright Noon";
-    const profile = LOOK_PROFILES[resolvedProfileName] || LOOK_PROFILES["Bright Noon"];
+    const profile = LIGHTING_PRESETS$1[resolvedProfileName] || LIGHTING_PRESETS$1["Bright Noon"];
     if (!profile) {
       return;
     }
@@ -74855,7 +74339,7 @@ class LightingSystem {
   };
   applyLookProfileImmediate = (profileName) => {
     const resolvedProfileName = profileName || "Bright Noon";
-    const profile = LOOK_PROFILES[resolvedProfileName] || LOOK_PROFILES["Bright Noon"];
+    const profile = LIGHTING_PRESETS$1[resolvedProfileName] || LIGHTING_PRESETS$1["Bright Noon"];
     if (!profile) {
       return;
     }
@@ -74993,17 +74477,453 @@ class LightingSystem {
     this.scene.userData.environmentIntensity = target;
   };
 }
+function freezeKeyList(keys) {
+  return Object.freeze([...keys]);
+}
+function createKeyGroups(groups) {
+  const entries2 = Object.entries(groups);
+  const frozen = {};
+  for (const [name, keys] of entries2) {
+    frozen[name] = freezeKeyList(keys);
+  }
+  return Object.freeze(frozen);
+}
+const MOVEMENT_KEYS = createKeyGroups({
+  forward: ["KeyW"],
+  back: ["KeyS"],
+  left: ["KeyA"],
+  right: ["KeyD"]
+});
+const LOOK_KEYS = createKeyGroups({
+  left: ["ArrowLeft", "KeyQ", "Comma"],
+  right: ["ArrowRight", "KeyE", "Period"],
+  up: ["ArrowUp", "KeyR"],
+  down: ["ArrowDown", "KeyX"]
+});
+const ALT_LOOK_KEYS = createKeyGroups({
+  left: ["KeyJ"],
+  right: ["KeyL"],
+  up: ["KeyI"],
+  down: ["KeyK"]
+});
+const ALL_LOOK_KEYS = createKeyGroups({
+  left: [...LOOK_KEYS.left, ...ALT_LOOK_KEYS.left],
+  right: [...LOOK_KEYS.right, ...ALT_LOOK_KEYS.right],
+  up: [...LOOK_KEYS.up, ...ALT_LOOK_KEYS.up],
+  down: [...LOOK_KEYS.down, ...ALT_LOOK_KEYS.down]
+});
+const ACTION_KEYS = createKeyGroups({
+  jump: ["Space"],
+  sprint: ["ShiftLeft", "ShiftRight"],
+  flyToggle: ["KeyG"],
+  crouch: ["ControlLeft", "ControlRight", "KeyC"],
+  interact: ["KeyF"]
+});
+function flattenKeyGroups(groups) {
+  const values = Object.values(groups);
+  return values.reduce((acc, codes) => {
+    acc.push(...codes);
+    return acc;
+  }, []);
+}
+const LOOK_KEY_SET = new Set(flattenKeyGroups(ALL_LOOK_KEYS));
+function filterMovementCodes(codes) {
+  if (!codes) {
+    return freezeKeyList([]);
+  }
+  const filtered = codes.filter(
+    (code) => typeof code === "string" && code.length > 0 && !LOOK_KEY_SET.has(code)
+  );
+  return freezeKeyList(filtered);
+}
+const MOVEMENT_ONLY_KEYS = createKeyGroups({
+  forward: filterMovementCodes(MOVEMENT_KEYS.forward),
+  back: filterMovementCodes(MOVEMENT_KEYS.back),
+  left: filterMovementCodes(MOVEMENT_KEYS.left),
+  right: filterMovementCodes(MOVEMENT_KEYS.right)
+});
+const LOOK_KEY_LIST = flattenKeyGroups(ALL_LOOK_KEYS);
+const MOVEMENT_KEY_LIST = flattenKeyGroups(MOVEMENT_ONLY_KEYS);
+const ACTION_KEY_LIST = flattenKeyGroups(ACTION_KEYS);
+const CONTROL_KEYS = /* @__PURE__ */ new Set([
+  ...MOVEMENT_KEY_LIST,
+  ...LOOK_KEY_LIST,
+  ...ACTION_KEY_LIST
+]);
+const NON_TYPING_INPUT_TYPES = /* @__PURE__ */ new Set([
+  "button",
+  "checkbox",
+  "radio",
+  "range",
+  "submit",
+  "reset",
+  "file",
+  "color",
+  "image"
+]);
+function isEditableTarget(target) {
+  if (!target || typeof target !== "object") {
+    return false;
+  }
+  if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) {
+    return false;
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  if (typeof HTMLInputElement !== "undefined" && target instanceof HTMLInputElement) {
+    const type = target.type?.toLowerCase?.() ?? "";
+    return !NON_TYPING_INPUT_TYPES.has(type);
+  }
+  if (typeof HTMLTextAreaElement !== "undefined" && target instanceof HTMLTextAreaElement) {
+    return true;
+  }
+  return false;
+}
+class InputMap {
+  keys = /* @__PURE__ */ new Set();
+  canvas;
+  flyToggleQueued = false;
+  interactQueued = false;
+  cameraSettings;
+  unsubscribeCameraSettings = null;
+  keyDownHandler;
+  keyUpHandler;
+  blurHandler;
+  constructor(canvas = null) {
+    this.canvas = canvas;
+    this.cameraSettings = loadSettings();
+    this.unsubscribeCameraSettings = subscribe((settings) => {
+      this.cameraSettings = settings;
+    });
+    this.keyDownHandler = (event) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      this.keys.add(event.code);
+      if (event.code === "KeyG" && !event.repeat) {
+        this.flyToggleQueued = true;
+      }
+      if (event.code === "KeyF" && !event.repeat) {
+        this.interactQueued = true;
+      }
+      if (CONTROL_KEYS.has(event.code)) {
+        event.preventDefault();
+      }
+    };
+    this.keyUpHandler = (event) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      this.keys.delete(event.code);
+      if (CONTROL_KEYS.has(event.code)) {
+        event.preventDefault();
+      }
+    };
+    this.blurHandler = () => {
+      this.resetKeys();
+      this.flyToggleQueued = false;
+      this.interactQueued = false;
+    };
+    window.addEventListener("keydown", this.keyDownHandler);
+    window.addEventListener("keyup", this.keyUpHandler);
+    window.addEventListener("blur", this.blurHandler);
+    window.addEventListener("focus", this.blurHandler);
+  }
+  dispose() {
+    window.removeEventListener("keydown", this.keyDownHandler);
+    window.removeEventListener("keyup", this.keyUpHandler);
+    window.removeEventListener("blur", this.blurHandler);
+    window.removeEventListener("focus", this.blurHandler);
+    this.unsubscribeCameraSettings?.();
+    this.unsubscribeCameraSettings = null;
+  }
+  consumeLookDelta(dt = 0) {
+    const settings = this.cameraSettings || defaultCameraSettings;
+    const yawInput = (this.lookRight ? 1 : 0) - (this.lookLeft ? 1 : 0);
+    const pitchInput = (this.lookDown ? 1 : 0) - (this.lookUp ? 1 : 0);
+    const yawSpeed = Number.isFinite(settings.yawSpeed) ? settings.yawSpeed : defaultCameraSettings.yawSpeed;
+    const pitchSpeed = Number.isFinite(settings.pitchSpeed) ? settings.pitchSpeed : defaultCameraSettings.pitchSpeed;
+    const invert = settings.invertPitch ? -1 : 1;
+    const dtSafe = Number.isFinite(dt) ? Math.max(0, dt) : 0;
+    const yawKeyDelta = yawInput * yawSpeed * dtSafe;
+    const pitchKeyDelta = pitchInput * pitchSpeed * dtSafe * invert;
+    return {
+      yaw: yawKeyDelta,
+      pitch: pitchKeyDelta
+    };
+  }
+  isDown(code) {
+    return this.keys.has(code);
+  }
+  isAnyDown(codes = []) {
+    if (!Array.isArray(codes) || codes.length === 0) {
+      return false;
+    }
+    for (const code of codes) {
+      if (this.keys.has(code)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  get forward() {
+    return this.isAnyDown(MOVEMENT_ONLY_KEYS.forward);
+  }
+  get back() {
+    return this.isAnyDown(MOVEMENT_ONLY_KEYS.back);
+  }
+  get left() {
+    return this.isAnyDown(MOVEMENT_ONLY_KEYS.left);
+  }
+  get right() {
+    return this.isAnyDown(MOVEMENT_ONLY_KEYS.right);
+  }
+  get sprint() {
+    return this.isDown("ShiftLeft") || this.isDown("ShiftRight");
+  }
+  get jump() {
+    return this.isDown("Space");
+  }
+  get flyUp() {
+    return this.isDown("Space");
+  }
+  get flyDown() {
+    return this.isDown("ControlLeft") || this.isDown("ControlRight");
+  }
+  get lookLeft() {
+    return this.isAnyDown(ALL_LOOK_KEYS.left);
+  }
+  get lookRight() {
+    return this.isAnyDown(ALL_LOOK_KEYS.right);
+  }
+  get lookUp() {
+    return this.isAnyDown(ALL_LOOK_KEYS.up);
+  }
+  get lookDown() {
+    return this.isAnyDown(ALL_LOOK_KEYS.down);
+  }
+  get crouch() {
+    return this.isAnyDown(ACTION_KEYS.crouch);
+  }
+  consumeFlyToggle() {
+    if (!this.flyToggleQueued) return false;
+    this.flyToggleQueued = false;
+    return true;
+  }
+  consumeInteract() {
+    if (!this.interactQueued) return false;
+    this.interactQueued = false;
+    return true;
+  }
+  resetKeys() {
+    this.keys.clear();
+  }
+}
+const USE_THIRD_PERSON = true;
+const ENABLE_HERO_GLB = true;
+class PlayerSystem {
+  constructor({ scene: scene2, camera: camera2, renderer: renderer2, envCollider, terrain, worldRoot, baseUrl: baseUrl2 }) {
+    this.scene = scene2;
+    this.camera = camera2;
+    this.renderer = renderer2;
+    this.envCollider = envCollider;
+    this.terrain = terrain;
+    this.worldRoot = worldRoot;
+    this.baseUrl = baseUrl2;
+    this.player = null;
+    this.thirdPersonCamera = null;
+    this.playerMovementEnabled = true;
+  }
+  async initialize() {
+    const { scene: scene2, camera: camera2, renderer: renderer2, envCollider, terrain, worldRoot, baseUrl: baseUrl2 } = this;
+    const input = new InputMap(renderer2.domElement);
+    this.player = new PlayerController(input, envCollider, {
+      camera: camera2,
+      terrainHeightSampler: terrain?.userData?.getHeightAt ?? null
+    });
+    worldRoot.add(this.player.object);
+    const spawnPosition = findSafePlayerSpawn({
+      envCollider,
+      terrain,
+      searchCenter: AGORA_CENTER_3D,
+      fallback: AGORA_CENTER_3D,
+      playerHeight: this.player.height,
+      playerRadius: this.player.radius,
+      verticalClearance: 3,
+      seaLevel: 0
+    });
+    this.player.object.position.copy(spawnPosition);
+    this.player.syncCapsuleToObject();
+    const thirdPersonSolids = [];
+    if (envCollider?.mesh) {
+      thirdPersonSolids.push(envCollider.mesh);
+    }
+    if (terrain) {
+      thirdPersonSolids.push(terrain);
+    }
+    const thirdPersonTargetOffset = new Vector3(
+      0,
+      this.player.height * 0.6,
+      0
+    );
+    if (USE_THIRD_PERSON) {
+      this.thirdPersonCamera = new ThirdPersonCamera(camera2, this.player.object, {
+        targetOffset: thirdPersonTargetOffset,
+        followLerp: 0.12,
+        rotationLerp: 0.15,
+        solids: thirdPersonSolids,
+        enabled: false,
+        keyOrbit: {
+          enabled: true,
+          yawSpeed: 0.9,
+          pitchSpeed: 0.9,
+          minPitch: -0.6,
+          maxPitch: 0.6,
+          minDist: 2.5,
+          maxDist: 7.5,
+          zoomSpeed: 4
+        }
+      });
+    }
+    await this.loadCharacter();
+    this.setThirdPersonEnabled(USE_THIRD_PERSON);
+  }
+  update(deltaTime) {
+    if (this.playerMovementEnabled) {
+      this.player.update(deltaTime);
+    } else {
+      this.player.velocity.set(0, 0, 0);
+    }
+    if (this.thirdPersonCamera) {
+      this.player.cameraYaw = this.thirdPersonCamera.getYaw();
+      this.player.cameraPitch = this.thirdPersonCamera.getPitch();
+      this.thirdPersonCamera.update(deltaTime);
+    }
+    const playerRoot = this.player?.object;
+    const seaLevel = getSeaLevelY();
+    if (playerRoot && playerRoot.position.y < seaLevel - 15) {
+      const respawnPos = findSafePlayerSpawn({
+        envCollider: this.envCollider,
+        terrain: this.terrain,
+        searchCenter: AGORA_CENTER_3D,
+        fallback: AGORA_CENTER_3D,
+        playerHeight: this.player.height,
+        playerRadius: this.player.radius,
+        verticalClearance: 0.5,
+        seaLevel
+      });
+      this.player.velocity.set(0, 0, 0);
+      playerRoot.position.copy(respawnPos);
+      this.player.syncCapsuleToObject();
+    }
+    const terrainSize = this.terrain?.geometry?.userData?.size;
+    if (playerRoot && Number.isFinite(terrainSize)) {
+      const halfSize = terrainSize * 0.5;
+      const margin = 2;
+      const minBound = -halfSize + margin;
+      const maxBound = halfSize - margin;
+      const pos = playerRoot.position;
+      const clampedX = MathUtils.clamp(pos.x, minBound, maxBound);
+      const clampedZ = MathUtils.clamp(pos.z, minBound, maxBound);
+      const clamped = clampedX !== pos.x || clampedZ !== pos.z;
+      if (clamped) {
+        pos.x = clampedX;
+        pos.z = clampedZ;
+        const sampler = typeof this.scene?.userData?.getHeightAt === "function" ? this.scene.userData.getHeightAt : typeof this.terrain?.userData?.getHeightAt === "function" ? this.terrain.userData.getHeightAt : null;
+        if (sampler) {
+          const groundHeight = sampler(pos.x, pos.z);
+          if (Number.isFinite(groundHeight)) {
+            pos.y = Math.max(pos.y, groundHeight + 0.1);
+          }
+        }
+      }
+    }
+  }
+  async loadCharacter() {
+    const character = new Character();
+    const heroRootPath = "models/character/hero.glb";
+    const bundledHeroName = encodeURIComponent("astronaut.glb");
+    const characterDir = joinPath(this.baseUrl, "models/character");
+    const bundledHeroPath = joinPath(characterDir, bundledHeroName);
+    const bundledHeroRootPath = `models/character/${bundledHeroName}`;
+    const heroCandidates = Array.from(
+      new Set(
+        [heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
+      )
+    );
+    if (ENABLE_HERO_GLB) {
+      try {
+        const heroLoader = await createGLTFLoader(this.renderer);
+        const loadedHero = await loadGLBWithFallbacks(
+          heroLoader,
+          heroCandidates,
+          {
+            renderer: this.renderer,
+            targetHeight: 1.8
+          }
+        );
+        if (!loadedHero || !loadedHero.root) {
+          throw new Error("No hero GLB candidates reachable");
+        }
+        const { root, gltf } = loadedHero;
+        character.initializeFromGLTF(root, gltf.animations);
+        this.player.attachCharacter(character);
+      } catch (error) {
+        this.attachFallbackAvatar();
+      }
+    } else {
+      this.attachFallbackAvatar();
+    }
+  }
+  attachFallbackAvatar() {
+    const fallbackAvatar = this.createFallbackAvatar();
+    this.player.object.add(fallbackAvatar);
+    fallbackAvatar.position.set(0, 0, 0);
+  }
+  createFallbackAvatar() {
+    const group = new Group();
+    group.name = "FallbackAvatar";
+    const bodyMaterial = new MeshStandardMaterial({
+      color: 5148407,
+      metalness: 0.2,
+      roughness: 0.6,
+      fog: false
+    });
+    const body = new Mesh(
+      new CylinderGeometry(0.35, 0.35, 1.2, 16),
+      bodyMaterial
+    );
+    body.castShadow = true;
+    body.receiveShadow = true;
+    body.position.y = 0.6;
+    group.add(body);
+    const head = new Mesh(
+      new SphereGeometry(0.32, 16, 16),
+      new MeshStandardMaterial({ color: 16054271, roughness: 0.4, fog: false })
+    );
+    head.castShadow = true;
+    head.position.y = 1.32;
+    group.add(head);
+    return group;
+  }
+  setThirdPersonEnabled(enabled) {
+    if (!this.thirdPersonCamera) return;
+    this.thirdPersonCamera.setEnabled(enabled);
+  }
+  setPlayerMovementEnabled(enabled) {
+    this.playerMovementEnabled = enabled;
+  }
+}
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$2();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES = engineConfig.districtRuleCandidates || [];
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 const ENABLE_GLB_MODE = false;
-const ENABLE_HERO_GLB = true;
 if (!ENABLE_GLB_MODE) {
   console.log("[glb] GLB mode disabled");
 }
 const DEFAULT_FORCE_GLB = ENABLE_GLB_MODE && typeof engineConfig.featureFlags?.forceGlb === "boolean" ? engineConfig.featureFlags.forceGlb : false;
 const DEFAULT_FORCE_PROC = typeof engineConfig.featureFlags?.forceProcedural === "boolean" ? engineConfig.featureFlags.forceProcedural : !DEFAULT_FORCE_GLB || !ENABLE_GLB_MODE;
-const USE_THIRD_PERSON = engineConfig.featureFlags?.useThirdPersonCamera !== false;
 function createFarOceanPlane(scene2, seaLevel, terrainSize) {
   const radius = Math.max(terrainSize * 2.4, 3200);
   const geometry = new CircleGeometry(radius, 64);
@@ -75054,6 +74974,7 @@ class Application {
     this.farOceanPlane = null;
     this.shoreTermination = null;
     this.skyboxTexture = null;
+    this.npcUpdaters = [];
   }
   async run() {
     const BASE_URL = this.baseUrl;
@@ -75196,7 +75117,6 @@ class Application {
       camera: camera2,
       composer,
       bloomPass,
-      colorGradePass,
       renderFrame,
       refreshWorldRoot,
       setFogEnabled,
@@ -75395,6 +75315,17 @@ class Application {
     scene2.add(envCollider.mesh);
     const worldRoot = refreshWorldRoot();
     worldRoot.add(terrain);
+    const playerSystem = new PlayerSystem({
+      scene: scene2,
+      camera: camera2,
+      renderer: renderer2,
+      envCollider,
+      terrain,
+      worldRoot,
+      baseUrl: BASE_URL
+    });
+    await playerSystem.initialize();
+    this.playerSystem = playerSystem;
     let grassRoot = null;
     let villagerSystem = null;
     let atmosphericParticles = null;
@@ -75408,9 +75339,6 @@ class Application {
     }
     if (grassEnabled) {
       grassRoot = mount$1(scene2);
-      if (grassRoot) {
-        setNightFactor(lightingSystem.lights.nightFactor);
-      }
     }
     let landmarkLoadPromise = Promise.resolve();
     if (ENABLE_GLB_MODE && !FORCE_PROC) {
@@ -75555,515 +75483,13 @@ class Application {
     collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z);
     collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);
     collectibles.onScoreChange(0, collectibles.total);
-    const input = new InputMap(renderer2.domElement);
-    const player2 = new PlayerController(input, envCollider, {
-      camera: camera2,
-      terrainHeightSampler: terrain?.userData?.getHeightAt ?? null
-    });
-    worldRoot.add(player2.object);
-    let playerMovementEnabled = true;
-    const setPlayerMovementEnabled = (enabled) => {
-      playerMovementEnabled = !!enabled;
-      if (!playerMovementEnabled) {
-        player2.velocity.set(0, 0, 0);
-        player2.desired.set(0, 0, 0);
-      }
-    };
-    const spawnPosition = findSafePlayerSpawn({
-      envCollider,
-      terrain,
-      searchCenter: AGORA_CENTER_3D,
-      fallback: AGORA_CENTER_3D,
-      playerHeight: player2.height,
-      playerRadius: player2.radius,
-      verticalClearance: 3,
-      seaLevel: resolvedSeaLevel
-    });
-    player2.object.position.copy(spawnPosition);
-    player2.syncCapsuleToObject();
-    let interactor = null;
-    const thirdPersonSolids = [];
-    if (envCollider?.mesh) {
-      thirdPersonSolids.push(envCollider.mesh);
-    }
-    if (terrain) {
-      thirdPersonSolids.push(terrain);
-    }
-    const thirdPersonTargetOffset = new Vector3(
-      0,
-      player2.height * 0.6,
-      0
-    );
-    let thirdPersonCamera2 = null;
-    let thirdPersonEnabled = false;
-    const thirdPersonPointerState = {
-      active: false,
-      pointerId: null,
-      lastX: 0,
-      lastY: 0,
-      pendingUse: false,
-      pointerType: null
-    };
-    let thirdPersonHandlersAttached = false;
-    const viewCanvas = renderer2.domElement;
-    const DRAG_THRESHOLD = 1.5;
-    const clearThirdPersonPointer = () => {
-      if (thirdPersonPointerState.pointerId !== null) {
-        try {
-          viewCanvas.releasePointerCapture(thirdPersonPointerState.pointerId);
-        } catch {
-        }
-      }
-      thirdPersonPointerState.active = false;
-      thirdPersonPointerState.pointerId = null;
-      thirdPersonPointerState.pendingUse = false;
-      thirdPersonPointerState.pointerType = null;
-    };
-    const onThirdPersonPointerDown = (event) => {
-      if (!thirdPersonEnabled || !thirdPersonCamera2) return;
-      if (!event.isPrimary) return;
-      if (event.pointerType !== "touch" && event.button !== 0) return;
-      thirdPersonPointerState.active = true;
-      thirdPersonPointerState.pointerId = event.pointerId;
-      thirdPersonPointerState.lastX = event.clientX;
-      thirdPersonPointerState.lastY = event.clientY;
-      thirdPersonPointerState.pointerType = event.pointerType;
-      thirdPersonPointerState.pendingUse = event.button === 0 || event.pointerType === "touch";
-      try {
-        viewCanvas.setPointerCapture(event.pointerId);
-      } catch {
-      }
-      event.preventDefault();
-    };
-    const onThirdPersonPointerMove = (event) => {
-      if (!thirdPersonPointerState.active) return;
-      if (thirdPersonPointerState.pointerId !== event.pointerId) return;
-      const deltaX = event.clientX - thirdPersonPointerState.lastX;
-      const deltaY = event.clientY - thirdPersonPointerState.lastY;
-      thirdPersonPointerState.lastX = event.clientX;
-      thirdPersonPointerState.lastY = event.clientY;
-      if (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD) {
-        thirdPersonPointerState.pendingUse = false;
-      }
-      if (thirdPersonCamera2) {
-        thirdPersonCamera2.handlePointer(deltaX, deltaY);
-      }
-      event.preventDefault();
-    };
-    const onThirdPersonPointerUp = (event) => {
-      if (thirdPersonPointerState.pointerId !== event.pointerId) return;
-      const shouldUse = thirdPersonPointerState.pendingUse && (event.button === 0 || thirdPersonPointerState.pointerType === "touch");
-      clearThirdPersonPointer();
-      if (shouldUse && interactor) {
-        interactor.useObject();
-      }
-      event.preventDefault();
-    };
-    const onThirdPersonPointerCancel = () => {
-      if (!thirdPersonPointerState.active) return;
-      clearThirdPersonPointer();
-    };
-    const attachThirdPersonPointer = () => {
-      if (thirdPersonHandlersAttached) return;
-      thirdPersonHandlersAttached = true;
-      viewCanvas.addEventListener("pointerdown", onThirdPersonPointerDown);
-      viewCanvas.addEventListener("pointermove", onThirdPersonPointerMove);
-      viewCanvas.addEventListener("pointerup", onThirdPersonPointerUp);
-      viewCanvas.addEventListener("pointercancel", onThirdPersonPointerCancel);
-      viewCanvas.addEventListener(
-        "lostpointercapture",
-        onThirdPersonPointerCancel
-      );
-      window.addEventListener("blur", onThirdPersonPointerCancel);
-    };
-    const detachThirdPersonPointer = () => {
-      if (!thirdPersonHandlersAttached) return;
-      thirdPersonHandlersAttached = false;
-      viewCanvas.removeEventListener("pointerdown", onThirdPersonPointerDown);
-      viewCanvas.removeEventListener("pointermove", onThirdPersonPointerMove);
-      viewCanvas.removeEventListener("pointerup", onThirdPersonPointerUp);
-      viewCanvas.removeEventListener(
-        "pointercancel",
-        onThirdPersonPointerCancel
-      );
-      viewCanvas.removeEventListener(
-        "lostpointercapture",
-        onThirdPersonPointerCancel
-      );
-      window.removeEventListener("blur", onThirdPersonPointerCancel);
-      clearThirdPersonPointer();
-    };
-    const setThirdPersonEnabled = (enabled) => {
-      if (!thirdPersonCamera2) return;
-      const next = !!enabled;
-      if (thirdPersonEnabled === next) return;
-      thirdPersonEnabled = next;
-      thirdPersonCamera2.setEnabled(next);
-      if (next) {
-        thirdPersonCamera2.setAngles(
-          player2.cameraYaw ?? 0,
-          player2.cameraPitch ?? 0,
-          {
-            snap: true
-          }
-        );
-        thirdPersonCamera2.update(0);
-        attachThirdPersonPointer();
-        if (typeof document !== "undefined" && document.pointerLockElement === viewCanvas && typeof document.exitPointerLock === "function") {
-          try {
-            document.exitPointerLock();
-          } catch {
-          }
-        }
-      } else {
-        thirdPersonCamera2.setAngles(
-          player2.cameraYaw ?? 0,
-          player2.cameraPitch ?? 0,
-          {
-            snap: true
-          }
-        );
-        detachThirdPersonPointer();
-      }
-    };
-    if (USE_THIRD_PERSON) {
-      thirdPersonCamera2 = new ThirdPersonCamera(camera2, player2.object, {
-        targetOffset: thirdPersonTargetOffset,
-        followLerp: 0.12,
-        rotationLerp: 0.15,
-        solids: thirdPersonSolids,
-        enabled: false,
-        keyOrbit: {
-          enabled: true,
-          yawSpeed: 0.9,
-          pitchSpeed: 0.9,
-          minPitch: -0.6,
-          maxPitch: 0.6,
-          minDist: 2.5,
-          maxDist: 7.5,
-          zoomSpeed: 4
-        }
-      });
-    }
     const questManager = new QuestManager();
     const questHud2 = new QuestHud(questManager);
     const interactionHud2 = new InteractionHud();
-    const interactionSystem = new InteractionSystem(input, camera2, scene2, interactionHud2);
-    const dialogueOverlay = document.createElement("div");
-    Object.assign(dialogueOverlay.style, {
-      position: "fixed",
-      bottom: "40px",
-      left: "50%",
-      transform: "translateX(-50%)",
-      padding: "16px 20px",
-      maxWidth: "560px",
-      background: "rgba(0, 0, 0, 0.8)",
-      color: "#f4f4f4",
-      borderRadius: "12px",
-      fontFamily: "Georgia, serif",
-      fontSize: "16px",
-      lineHeight: "1.4",
-      border: "1px solid rgba(255, 215, 160, 0.6)",
-      display: "none",
-      zIndex: 2e3,
-      cursor: "pointer",
-      textAlign: "center",
-      boxShadow: "0 10px 24px rgba(0,0,0,0.35)"
-    });
-    document.body.appendChild(dialogueOverlay);
-    let dialogueActive = false;
-    const waitForAdvance = () => new Promise((resolve) => {
-      const cleanup = () => {
-        window.removeEventListener("keydown", onKey);
-        dialogueOverlay.removeEventListener("click", onClick);
-        resolve();
-      };
-      const onKey = (event) => {
-        if (event.code === "Space" || event.code === "Enter") {
-          cleanup();
-        }
-      };
-      const onClick = () => cleanup();
-      window.addEventListener("keydown", onKey);
-      dialogueOverlay.addEventListener("click", onClick);
-    });
-    const runDialogueSequence = async (title, lines = []) => {
-      if (dialogueActive || !Array.isArray(lines) || lines.length === 0) return;
-      dialogueActive = true;
-      setPlayerMovementEnabled(false);
-      interactionHud2.hide();
-      for (const line of lines) {
-        dialogueOverlay.innerHTML = `<strong>${title}</strong><br/>${line}<br/><small>(Press Space/Enter or click to continue)</small>`;
-        dialogueOverlay.style.display = "block";
-        await waitForAdvance();
-      }
-      dialogueOverlay.style.display = "none";
-      setPlayerMovementEnabled(true);
-      dialogueActive = false;
-    };
-    const templeNpcGroup = new Group();
-    templeNpcGroup.name = "TempleNPC_QuestGiver";
-    const npcBodyMat = new MeshStandardMaterial({
-      color: 5148407,
-      roughness: 0.7,
-      fog: false
-    });
-    const npcBody = new Mesh(
-      new CapsuleGeometry(0.35, 1.1, 4, 16),
-      npcBodyMat
-    );
-    npcBody.position.y = 1.1 / 2 + 0.35;
-    npcBody.castShadow = true;
-    templeNpcGroup.add(npcBody);
-    const npcHead = new Mesh(
-      new SphereGeometry(0.3, 16, 16),
-      new MeshStandardMaterial({ color: 15388077, fog: false })
-    );
-    npcHead.position.y = 1.5;
-    npcHead.castShadow = true;
-    templeNpcGroup.add(npcHead);
-    const templePos = ACROPOLIS_PEAK_3D.clone().add(new Vector3(5, 0, 5));
-    const templeY = terrain?.userData?.getHeightAt?.(templePos.x, templePos.z) ?? templePos.y;
-    templeNpcGroup.position.set(templePos.x, templeY + 0.05, templePos.z);
-    worldRoot.add(templeNpcGroup);
-    const dockhand = new Group();
-    dockhand.name = "HarbourDockhand_NPC";
-    const dockhandBody = new Mesh(
-      new CapsuleGeometry(0.3, 1, 4, 12),
-      new MeshStandardMaterial({ color: 10254677, roughness: 0.8, fog: false })
-    );
-    dockhandBody.position.y = 0.95;
-    dockhandBody.castShadow = true;
-    dockhand.add(dockhandBody);
-    const dockhandHead = new Mesh(
-      new SphereGeometry(0.28, 16, 16),
-      new MeshStandardMaterial({ color: 14271649, fog: false })
-    );
-    dockhandHead.position.y = 1.5;
-    dockhandHead.castShadow = true;
-    dockhand.add(dockhandHead);
-    const dockhandPosition = new Vector3(
-      126,
-      seaLevel,
-      HARBOR_WATER_CENTER.z + 2
-    );
-    const dockhandY = terrain?.userData?.getHeightAt?.(dockhandPosition.x, dockhandPosition.z) ?? getSeaLevelY();
-    dockhand.position.set(
-      dockhandPosition.x,
-      dockhandY + 0.05,
-      dockhandPosition.z
-    );
-    worldRoot.add(dockhand);
-    const crateGroup = new Group();
-    crateGroup.name = "HarbourQuestCrate";
-    const crateGeo = new BoxGeometry(0.9, 0.9, 0.9);
-    const crateMat = new MeshStandardMaterial({
-      color: 9268037,
-      roughness: 0.9,
-      fog: false
-    });
-    const crateMesh = new Mesh(crateGeo, crateMat);
-    crateMesh.castShadow = true;
-    crateMesh.receiveShadow = true;
-    crateMesh.position.y = 0.45;
-    crateGroup.add(crateMesh);
-    const cratePosition = new Vector3(
-      130,
-      seaLevel,
-      HARBOR_WATER_CENTER.z + 2
-    );
-    const harborY = terrain?.userData?.getHeightAt?.(cratePosition.x, cratePosition.z) ?? getSeaLevelY();
-    crateGroup.position.set(
-      cratePosition.x,
-      harborY + 0.05,
-      cratePosition.z
-    );
-    worldRoot.add(crateGroup);
-    let dockhandBriefed = false;
-    let crateInspected = false;
-    const handleTempleInteract = () => {
-      const status = questManager.currentQuest.status;
-      if (status === QuestStatus.NOT_STARTED) {
-        questManager.startQuest(
-          "Harbour Errand",
-          "Meet the dockhand by the harbour."
-        );
-        templeNpcGroup.userData.interactable.label = "Ask about the dockhand";
-      } else if (status === QuestStatus.COMPLETED) {
-        runDialogueSequence("Temple Keeper", [
-          "You found the crate? The harbour folk will rest easier tonight."
-        ]);
-      } else {
-        runDialogueSequence("Temple Keeper", [
-          "The dockhand is waiting on the harbour quay."
-        ]);
-      }
-    };
-    templeNpcGroup.userData.onInteract = handleTempleInteract;
-    interactionSystem.register(templeNpcGroup, {
-      label: "Talk to Temple Keeper",
-      distance: 4,
-      onInteract: handleTempleInteract
-    });
-    const handleDockhandInteract = async () => {
-      if (questManager.currentQuest.status !== QuestStatus.IN_PROGRESS) {
-        await runDialogueSequence("Dockhand", [
-          "I've work to do. Orders come from the temple today."
-        ]);
-        return;
-      }
-      if (dockhandBriefed) {
-        await runDialogueSequence("Dockhand", [
-          "The crate is still marked. Inspect it and let me know it's secure."
-        ]);
-        return;
-      }
-      await runDialogueSequence("Dockhand", [
-        "So you're the one from the temple? We've had eyes on a suspicious crate.",
-        "It's waiting on the dock. Give it a look and make sure nothing's amiss."
-      ]);
-      dockhandBriefed = true;
-      questManager.updateObjective("Inspect the marked crate");
-      dockhand.userData.interactable.label = "Dockhand (waiting)";
-    };
-    dockhand.userData.onInteract = handleDockhandInteract;
-    interactionSystem.register(dockhand, {
-      label: "Talk to Dockhand",
-      distance: 4,
-      onInteract: handleDockhandInteract
-    });
-    const handleCrateInteract = async () => {
-      if (questManager.currentQuest.status !== QuestStatus.IN_PROGRESS) {
-        await runDialogueSequence("Crate", [
-          "An ordinary harbour crate. Nothing to report."
-        ]);
-        return;
-      }
-      if (!dockhandBriefed) {
-        await runDialogueSequence("Crate", [
-          "This must be the crate the dockhand mentioned. Speak with him first."
-        ]);
-        return;
-      }
-      if (crateInspected) {
-        await runDialogueSequence("Crate", [
-          "You've already checked this crate. Time to share the news."
-        ]);
-        return;
-      }
-      await runDialogueSequence("Crate", [
-        "The seal is intact and the contents undisturbed. Crisis averted."
-      ]);
-      crateInspected = true;
-      questManager.completeQuest();
-      crateGroup.userData.interactable.label = "Crate secured";
-      interactionSystem.unregister(crateGroup);
-    };
-    crateGroup.userData.onInteract = handleCrateInteract;
-    interactionSystem.register(crateGroup, {
-      label: "Inspect Harbour Crate",
-      distance: 3.5,
-      onInteract: handleCrateInteract
-    });
-    const createFallbackAvatar = () => {
-      const group = new Group();
-      group.name = "FallbackAvatar";
-      const bodyMaterial = new MeshStandardMaterial({
-        color: 5148407,
-        metalness: 0.2,
-        roughness: 0.6,
-        fog: false
-      });
-      const body = new Mesh(
-        new CylinderGeometry(0.35, 0.35, 1.2, 16),
-        bodyMaterial
-      );
-      body.castShadow = true;
-      body.receiveShadow = true;
-      body.position.y = 0.6;
-      group.add(body);
-      const head = new Mesh(
-        new SphereGeometry(0.32, 16, 16),
-        new MeshStandardMaterial({ color: 16054271, roughness: 0.4, fog: false })
-      );
-      head.castShadow = true;
-      head.position.y = 1.32;
-      group.add(head);
-      return group;
-    };
-    const removeExistingAvatar = () => {
-      if (player2.character) {
-        player2.object.remove(player2.character);
-        player2.character = void 0;
-      }
-      const fallbackAvatar = player2.object.children.find(
-        (child) => child.name === "FallbackAvatar"
-      );
-      if (fallbackAvatar) {
-        player2.object.remove(fallbackAvatar);
-      }
-    };
-    const character = new Character();
-    const heroRootPath = "models/character/hero.glb";
-    const bundledHeroName = encodeURIComponent("astronaut.glb");
-    const characterDir = joinPath(BASE_URL, "models/character");
-    const bundledHeroPath = joinPath(characterDir, bundledHeroName);
-    const bundledHeroRootPath = `models/character/${bundledHeroName}`;
-    const attachFallbackAvatar = () => {
-      removeExistingAvatar();
-      const fallbackAvatar = createFallbackAvatar();
-      player2.object.add(fallbackAvatar);
-      fallbackAvatar.position.set(0, 0, 0);
-    };
-    const heroCandidates = Array.from(
-      new Set(
-        [heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
-      )
-    );
-    if (ENABLE_HERO_GLB) {
-      try {
-        const heroLoader = await createGLTFLoader(renderer2);
-        const loadedHero = await loadGLBWithFallbacks(
-          heroLoader,
-          heroCandidates,
-          {
-            renderer: renderer2,
-            targetHeight: 1.8
-          }
-        );
-        if (!loadedHero || !loadedHero.root) {
-          throw new Error("No hero GLB candidates reachable");
-        }
-        const { url, gltf, root } = loadedHero;
-        removeExistingAvatar();
-        character.initializeFromGLTF(root, gltf.animations);
-        player2.attachCharacter(character);
-        const resolvedHeroRootPath = joinPath(BASE_URL, heroRootPath);
-      } catch (error) {
-        attachFallbackAvatar();
-      }
-    } else {
-      attachFallbackAvatar();
-    }
-    updateLoadingStatus("Welcoming Athenians to the city...");
-    const buildingMgr = new BuildingManager(envCollider);
-    const terrainHeightSampler = terrain?.userData?.getHeightAt;
-    scene2.userData = scene2.userData || {};
-    if (!scene2.userData.terrain) {
-      scene2.userData.terrain = terrain;
-    }
-    if (typeof terrainHeightSampler === "function") {
-      scene2.userData.terrainHeightSampler = terrainHeightSampler;
-      if (typeof scene2.userData.getHeightAt !== "function") {
-        scene2.userData.getHeightAt = terrainHeightSampler;
-      }
-    }
-    buildingMgr.clearBuildings();
-    disposeLandmarks();
-    const buildingsRoot = new Group();
-    buildingsRoot.name = "BuildingsRoot";
-    worldRoot.add(buildingsRoot);
-    const npcUpdaters = [];
+    const interactionSystem = new InteractionSystem(playerSystem.player.input, camera2, scene2, interactionHud2);
+    let interactor = createInteractor(renderer2, camera2, scene2);
+    applyTextureBudgetToObject(scene2, { safeMode: true });
+    const loop = this.gameLoop;
     if (civicDistrict.walkingLoop) {
       const crowd = spawnCitizenCrowd(worldRoot, civicDistrict.walkingLoop, {
         count: 8,
@@ -76071,220 +75497,40 @@ class Application {
         maxSpeed: 1.4,
         terrain
       });
-      npcUpdaters.push(...crowd.updaters);
+      this.npcUpdaters.push(...crowd.updaters);
     }
     if (ENABLE_GLB_MODE) {
       spawnGLBNPCs(worldRoot, mainRoad, { terrain }).then((glbNpcs) => {
         if (!glbNpcs) return;
         if (Array.isArray(glbNpcs.updaters)) {
-          npcUpdaters.push(...glbNpcs.updaters);
+          this.npcUpdaters.push(...glbNpcs.updaters);
         }
       }).catch(() => {
       });
     }
-    const createTerrainAlignedPosition = (x, z, offset = 0.05) => {
-      let y = offset;
-      if (typeof terrainHeightSampler === "function") {
-        const sampled = terrainHeightSampler(x, z);
-        if (Number.isFinite(sampled)) {
-          y = sampled + offset;
-        }
-      }
-      return new Vector3(x, y, z);
-    };
-    const sampleBuildingSpecs = [
-      {
-        url: joinPath(BASE_URL, "models/landmarks/poseidon_temple.glb"),
-        position: createTerrainAlignedPosition(-34, -12),
-        rotateY: -Math.PI * 0.12,
-        scale: 1,
-        collision: true,
-        name: "SamplePoseidonTemple"
-      },
-      {
-        url: joinPath(BASE_URL, "models/landmarks/akropol.glb"),
-        position: createTerrainAlignedPosition(6, -42),
-        rotateY: Math.PI * 0.08,
-        scale: 1,
-        collision: false,
-        name: "SampleAkropol"
-      }
-    ];
-    if (ENABLE_GLB_MODE && !FORCE_PROC) {
-      const sampleBuildingResults = await Promise.allSettled(
-        sampleBuildingSpecs.map(
-          (spec) => buildingMgr.loadBuilding(spec.url, {
-            position: spec.position,
-            rotateY: spec.rotateY,
-            scale: spec.scale,
-            collision: spec.collision,
-            parent: buildingsRoot,
-            heightSampler: terrainHeightSampler
-          }).then((object) => {
-            if (object && spec.name) {
-              object.name = spec.name;
-            }
-            return object;
-          })
-        )
-      );
-      sampleBuildingResults.forEach(() => {
-      });
-    } else {
-    }
-    const landmarkManager = new LandmarkManager({
-      scene: worldRoot,
-      parent: buildingsRoot,
-      terrain,
-      heightSampler: terrainHeightSampler,
-      envCollider,
-      renderer: renderer2,
-      forceProcedural: FORCE_PROC,
-      activeScenes: ["harbor"],
-      quietMissing: true
-    });
-    let configToLoad = athensLayoutConfig;
-    if (FORCE_PROCEDURAL_LANDMARKS) {
-      configToLoad = {
-        metadata: { description: "Procedural development layout" },
-        groups: [
-          {
-            id: "procedural-dev",
-            label: "Procedural Dev",
-            landmarks: [
-              {
-                id: "proc-temple-alpha",
-                name: "Procedural Temple Alpha",
-                type: "procedural",
-                proc: "temple",
-                params: {
-                  width: 22,
-                  depth: 42,
-                  colX: 6,
-                  colZ: 13,
-                  materialPreset: "marble"
-                },
-                placement: {
-                  position: createTerrainAlignedPosition(-34, -12),
-                  rotateY: -Math.PI * 0.12
-                },
-                collision: true
-              },
-              {
-                id: "proc-temple-beta",
-                name: "Procedural Temple Beta",
-                type: "procedural",
-                proc: "temple",
-                scale: 0.92,
-                params: {
-                  width: 18,
-                  depth: 32,
-                  colX: 5,
-                  colZ: 11,
-                  materialPreset: "marble"
-                },
-                placement: {
-                  position: createTerrainAlignedPosition(6, -42),
-                  rotateY: Math.PI * 0.08
-                },
-                collision: true
-              }
-            ]
-          }
-        ]
-      };
-    }
-    let landmarkResults = [];
-    try {
-      landmarkResults = await landmarkManager.loadConfig(configToLoad);
-    } catch {
-    }
-    proceduralLandmarkCount = landmarkResults.filter(
-      (entry) => entry?.object?.userData?.proceduralType
-    ).length;
-    interactor = createInteractor(renderer2, camera2, scene2);
-    if (thirdPersonCamera2) {
-      setThirdPersonEnabled(USE_THIRD_PERSON);
-    }
-    applyTextureBudgetToObject(scene2, { safeMode: true });
-    const loop = this.gameLoop;
     const onFrame = (deltaTime, elapsed) => {
       if (!scene2.background || scene2.background === null) {
         scene2.background = new Color("#dbe9ff");
       }
       lightingSystem.update(deltaTime, elapsed, { harbor, harborCity, hillCity, roadGroup, ocean, grassRoot });
+      playerSystem.update(deltaTime);
       updateTerrain(terrain, elapsed);
-      soundscape.update(player2?.position);
-      if (collectibles && player2?.object) {
-        collectibles.update(deltaTime, player2.object.position);
+      if (grassRoot) {
+        update(deltaTime, playerSystem.player?.position ?? null);
       }
-      if (!dialogueActive) {
-        interactionSystem.update(deltaTime);
-      } else {
-        interactionHud2.hide();
+      soundscape.update(playerSystem.player?.position);
+      if (collectibles && playerSystem.player?.object) {
+        collectibles.update(deltaTime, playerSystem.player.object.position);
       }
-      if (thirdPersonCamera2 && thirdPersonEnabled) {
-        player2.cameraYaw = thirdPersonCamera2.getYaw();
-        player2.cameraPitch = thirdPersonCamera2.getPitch();
-      }
-      if (playerMovementEnabled) {
-        player2.update(deltaTime);
-      } else {
-        player2.velocity.set(0, 0, 0);
-      }
-      const playerRoot = player2?.object;
-      if (playerRoot && playerRoot.position.y < seaLevel - 15) {
-        const respawnPos = findSafePlayerSpawn({
-          envCollider,
-          terrain,
-          searchCenter: AGORA_CENTER_3D,
-          fallback: AGORA_CENTER_3D,
-          playerHeight: player2.height,
-          playerRadius: player2.radius,
-          verticalClearance: 0.5,
-          seaLevel
-        });
-        player2.velocity.set(0, 0, 0);
-        playerRoot.position.copy(respawnPos);
-        player2.syncCapsuleToObject();
-      }
-      const terrainSize2 = terrain?.geometry?.userData?.size;
-      if (playerRoot && Number.isFinite(terrainSize2)) {
-        const halfSize = terrainSize2 * 0.5;
-        const margin = 2;
-        const minBound = -halfSize + margin;
-        const maxBound = halfSize - margin;
-        const pos = playerRoot.position;
-        const clampedX = MathUtils.clamp(pos.x, minBound, maxBound);
-        const clampedZ = MathUtils.clamp(pos.z, minBound, maxBound);
-        const clamped = clampedX !== pos.x || clampedZ !== pos.z;
-        if (clamped) {
-          pos.x = clampedX;
-          pos.z = clampedZ;
-          const sampler = typeof scene2?.userData?.getHeightAt === "function" ? scene2.userData.getHeightAt : typeof terrain?.userData?.getHeightAt === "function" ? terrain.userData.getHeightAt : null;
-          if (sampler) {
-            const groundHeight = sampler(pos.x, pos.z);
-            if (Number.isFinite(groundHeight)) {
-              pos.y = Math.max(pos.y, groundHeight + 0.1);
-            }
-          }
-        }
-      }
-      if (thirdPersonCamera2 && thirdPersonEnabled) {
-        player2.cameraYaw = thirdPersonCamera2.getYaw();
-        player2.cameraPitch = thirdPersonCamera2.getPitch();
-      }
-      if (thirdPersonCamera2) {
-        thirdPersonCamera2.update(deltaTime);
-      }
-      for (const updateNpc of npcUpdaters) updateNpc(deltaTime);
+      interactionSystem.update(deltaTime);
+      for (const updateNpc of this.npcUpdaters) updateNpc(deltaTime);
       if (villagerSystem) {
         villagerSystem.update(deltaTime);
       }
       if (atmosphericParticles) {
         atmosphericParticles.update(deltaTime, elapsed);
       }
-      const hovered = interactor.updateHover(deltaTime);
+      interactor.updateHover(deltaTime);
       const formattedTime = formatPhaseAsTime(lightingSystem.timeOfDayState.timeOfDayPhase);
       if (formattedTime !== lastDisplayedTime) {
         timeOfDayDisplay.textContent = `Time: ${formattedTime}`;
@@ -76328,8 +75574,8 @@ class Application {
     }
     const getPosition = () => {
       try {
-        if (player2 && player2.position && Number.isFinite(player2.position.x)) {
-          return player2.position;
+        if (playerSystem.player && playerSystem.player.position && Number.isFinite(playerSystem.player.position.x)) {
+          return playerSystem.player.position;
         }
       } catch {
       }
@@ -76364,7 +75610,7 @@ class Application {
         getDirection,
         lightingCallbacks: {
           onSetLightingPreset: (name) => lightingSystem.applyLookProfile(name, { source: "user" }),
-          lightingPresets: LIGHTING_PRESETS,
+          lightingPresets: lightingSystem.LIGHTING_PRESETS,
           getActivePresetName: () => lightingSystem.lastAppliedLightingPreset,
           setActivePreset: (name) => lightingSystem.applyLookProfile(name, { source: "user" })
         },
@@ -76401,23 +75647,18 @@ class Application {
     }
     renderer2.domElement.addEventListener("pointerdown", (event) => {
       if (event.button === 0) {
-        if (thirdPersonEnabled && thirdPersonCamera2) {
-          return;
-        }
         interactor.useObject();
       }
     });
     window.addEventListener("keydown", (event) => {
-      if (event.code === "KeyV" && !event.repeat && thirdPersonCamera2) {
-        setThirdPersonEnabled(!thirdPersonEnabled);
-      } else if (event.code === "KeyE") {
+      if (event.code === "KeyE") {
         interactor.useObject();
       } else if (event.code === "KeyG" && !event.repeat) {
         toggleFog();
       } else if (event.code === "KeyT" && !event.repeat) {
         lightingSystem.cycleLightingPreset();
       } else if (event.code === "F8" && !event.repeat) {
-        const position = player2?.object?.position;
+        const position = playerSystem.player?.object?.position;
         const x = position?.x;
         const z = position?.z;
         if (Number.isFinite(x) && Number.isFinite(z)) {
@@ -76676,4 +75917,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-C1bMG8Nf.js.map
+//# sourceMappingURL=index-1ib3LwLP.js.map
