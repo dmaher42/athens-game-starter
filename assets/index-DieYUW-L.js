@@ -51400,7 +51400,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DeGbC-RC.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C9yICpuR.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51910,7 +51910,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DPSffzIZ.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DpB3JCZD.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52685,7 +52685,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DeGbC-RC.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C9yICpuR.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -67350,8 +67350,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T07:41:57.668Z" : "",
-      sha: true ? "e4f9535967fa78866f7906e04bd54e72e9b0749a" : ""
+      time: true ? "2025-12-26T08:16:25.450Z" : "",
+      sha: true ? "e12545686ce4a4dba83432b4f7463ccae8037066" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77160,6 +77160,9 @@ function createApplicationBootConfig(source) {
   };
 }
 const applicationBootConfig$1 = createApplicationBootConfig(engineConfig);
+if (IS_DEV && typeof window !== "undefined") {
+  window.__ENGINE_CONFIG__ = engineConfig;
+}
 const app = new Application({
   baseUrl: applicationBootConfig$1.baseUrl,
   districtRuleCandidates: [...applicationBootConfig$1.districtRuleCandidates],
@@ -77310,4 +77313,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BO18XocJ.js.map
+//# sourceMappingURL=index-DieYUW-L.js.map
