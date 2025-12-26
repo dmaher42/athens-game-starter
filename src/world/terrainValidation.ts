@@ -1,3 +1,21 @@
+/**
+ * Terrain Validation Contract (Reject Island-like Seeds)
+ *
+ * Validation exists to enforce the project's world premise:
+ * - Mainland coastal city with open sea boundary on exactly ONE side (SEA_SIDE).
+ * - No island/ring water patterns; no disk/rim/bowl artifacts.
+ *
+ * A seed must FAIL if:
+ * - Water touches ALL four borders (surrounded / island-like).
+ * - Water forms a moat-like loop that separates the main landmass from borders.
+ * - The largest landmass touches fewer than 2 non-sea borders (mainland continuity).
+ * - City-core average slope exceeds CITY_SLOPE_MAX (walkability).
+ *
+ * Notes:
+ * - Keep checks cheap (run before expensive mesh work if possible).
+ * - If you change the macro-shape logic (coast width, inland rise, ridge),
+ *   adjust these checks so they continue to encode the same premise.
+ */
 import { CITY_SLOPE_MAX } from "../config/terrainShape";
 
 const CORE_DSEA_MIN = 0.15;
