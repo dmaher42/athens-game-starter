@@ -42118,8 +42118,10 @@ function resolveBaseUrl$2() {
   const globalBase = typeof window !== "undefined" && typeof window.__BASE_URL__ === "string" ? window.__BASE_URL__ : null;
   let base = globalBase || envBase || REPO_BASE;
   const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
-  if (hasDoubleRepo(base)) {
-    base = isAbsoluteBase ? normalizeAbsoluteRepoBase(base) : REPO_BASE;
+  if (isAbsoluteBase) {
+    base = normalizeAbsoluteRepoBase(base);
+  } else if (hasDoubleRepo(base)) {
+    base = REPO_BASE;
   }
   const onGithubPages = isGithubPagesHost();
   if (onGithubPages) {
@@ -51319,7 +51321,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BTxNTO9z.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-dHgEsUsu.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51829,7 +51831,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cu3OwMNo.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-m57uMp4H.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52604,7 +52606,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BTxNTO9z.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-dHgEsUsu.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -67258,8 +67260,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T02:18:31.102Z" : "",
-      sha: true ? "bf61b4668d73919d7169bd91f4e08f72e491e297" : ""
+      time: true ? "2025-12-26T02:21:15.111Z" : "",
+      sha: true ? "cafa819ff5b8cb2bf27423c8520aeb8876bf7149" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77218,4 +77220,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DFpFN0Cf.js.map
+//# sourceMappingURL=index-CRj4pq7c.js.map
