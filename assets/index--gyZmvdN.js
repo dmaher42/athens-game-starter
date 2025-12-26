@@ -48746,6 +48746,14 @@ function sanitizeRelativePath$6(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
+function stripLeadingRepoSegment(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed || /^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
+    return value;
+  }
+  return trimmed.replace(new RegExp(`^(?:\\./)?${REPO_SEGMENT$1}/`, "i"), "");
+}
 function normalizeAbsoluteRepoUrl(value) {
   if (typeof value !== "string") return value;
   if (!/^(?:[a-z]+:)?\/\//i.test(value)) return value;
@@ -48890,7 +48898,7 @@ class AssetLoader {
         districtCandidates.push(normalizeAbsoluteRepoUrl(trimmed));
         continue;
       }
-      const normalized = stripRepoSegment(trimmed);
+      const normalized = stripRepoSegment(stripLeadingRepoSegment(trimmed));
       if (!normalized) continue;
       const joined = joinPath(baseUrl2, normalized);
       districtCandidates.push(normalizeAbsoluteDistrictRuleUrl(joined));
@@ -48927,7 +48935,7 @@ class AssetLoader {
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
           targets.push(normalizeAbsoluteRepoUrl(pathValue));
         } else {
-          targets.push(joinPath(baseUrl2, pathValue));
+          targets.push(joinPath(baseUrl2, stripLeadingRepoSegment(pathValue)));
         }
       }
       if (typeof entry.candidateKey === "string" && entry.candidateKey.trim()) {
@@ -51349,7 +51357,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bczk85fa.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-jGwtRxGP.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51859,7 +51867,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CT8OCjhQ.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DkBwg5Ss.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52634,7 +52642,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bczk85fa.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-jGwtRxGP.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -67299,8 +67307,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T02:48:55.983Z" : "",
-      sha: true ? "39bdcdf3e8180a30babc9550054f5dd7bae0eaf7" : ""
+      time: true ? "2025-12-26T05:35:52.768Z" : "",
+      sha: true ? "659b87d91583af4a7056528079bef2ae156c23b0" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77259,4 +77267,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-C08b8Cxo.js.map
+//# sourceMappingURL=index--gyZmvdN.js.map
