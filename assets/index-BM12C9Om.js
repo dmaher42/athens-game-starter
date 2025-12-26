@@ -42076,9 +42076,9 @@ function getMaterialAmbientOcclusion(material) {
   };
 }
 const __vite_import_meta_env__ = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-const REPO_SEGMENT = "athens-game-starter";
-const REPO_BASE = `/${REPO_SEGMENT}/`;
-const DOUBLE_SEGMENT = `${REPO_SEGMENT}/${REPO_SEGMENT}`;
+const REPO_SEGMENT$1 = "athens-game-starter";
+const REPO_BASE = `/${REPO_SEGMENT$1}/`;
+const DOUBLE_SEGMENT = `${REPO_SEGMENT$1}/${REPO_SEGMENT$1}`;
 const REPO_BASE_PATH = REPO_BASE;
 function normalizeBase(path) {
   if (!path) return REPO_BASE;
@@ -42113,7 +42113,7 @@ function resolveBaseUrl$2() {
 }
 function stripRepoSegment(path) {
   if (!path || typeof path !== "string") return path;
-  return path.replace(new RegExp(`^/?${REPO_SEGMENT}/`, "i"), "").replace(/^\/+/, "");
+  return path.replace(new RegExp(`^/?${REPO_SEGMENT$1}/`, "i"), "").replace(/^\/+/, "");
 }
 function joinPath(base, rel) {
   if (!base) base = REPO_BASE;
@@ -42121,7 +42121,7 @@ function joinPath(base, rel) {
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) return rel;
   let relValue = String(rel);
   const baseValue = String(base);
-  const repoToken = `/${REPO_SEGMENT}/`;
+  const repoToken = `/${REPO_SEGMENT$1}/`;
   if (baseValue.toLowerCase().includes(repoToken)) {
     const hadLeadingSlash = relValue.startsWith("/");
     const stripped = stripRepoSegment(relValue);
@@ -51293,7 +51293,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BaGBoJtx.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CDomMmcU.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51803,7 +51803,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-yMWzV3Np.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-cAhJOfOx.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52578,7 +52578,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BaGBoJtx.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CDomMmcU.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -54571,11 +54571,29 @@ function createAthensLayoutConfig(environment = getRuntimeEnvironment(), overrid
   );
 }
 const baseUrl$1 = (path) => joinPath(resolveBaseUrl$2(), path);
+const REPO_SEGMENT = REPO_BASE_PATH.replace(/\//g, "");
+const DOUBLE_REPO_PREFIX = `${REPO_SEGMENT}/${REPO_SEGMENT}/`;
+function normalizeDistrictRuleCandidate(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) return trimmed;
+  let normalized = trimmed.replace(/^\.\//, "");
+  normalized = normalized.replace(
+    new RegExp(`^/?${DOUBLE_REPO_PREFIX}`, "i"),
+    REPO_BASE_PATH
+  );
+  if (REPO_SEGMENT && normalized.startsWith(`${REPO_SEGMENT}/`)) {
+    normalized = `/${normalized}`;
+  }
+  return normalized;
+}
 function buildDistrictRuleUrlCandidates(resolvedBase) {
   const urls = /* @__PURE__ */ new Set();
   const push = (value) => {
-    if (!value || urls.has(value)) return;
-    urls.add(value);
+    const normalized = normalizeDistrictRuleCandidate(value);
+    if (!normalized || urls.has(normalized)) return;
+    urls.add(normalized);
   };
   const pushJoined = (base, rel) => {
     if (!base) return;
@@ -67214,8 +67232,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T01:33:07.972Z" : "",
-      sha: true ? "1ef04bc374b96cd2eef134245b521ac1818da109" : ""
+      time: true ? "2025-12-26T01:40:28.596Z" : "",
+      sha: true ? "23643e5ca6d62fdee24403016b325e06f5633c0d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77174,4 +77192,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CQCgzZxo.js.map
+//# sourceMappingURL=index-BM12C9Om.js.map
