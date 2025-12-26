@@ -88,16 +88,15 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
 
     const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) ||
       /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
-    const startsAtRoot = !isAbsolute && raw.startsWith("/");
 
     const relative = sanitizeRelativePath(raw);
-    if (!relative && !(isAbsolute || startsAtRoot)) {
+    if (!relative && !isAbsolute) {
       continue;
     }
 
     const candidatesToTry = Array.from(
       new Set(
-        (isAbsolute || startsAtRoot)
+        isAbsolute
           ? [raw]
           : [joinPath(baseUrl, relative), relative]
       )

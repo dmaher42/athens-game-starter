@@ -28,7 +28,7 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
   }
 
   if (typeof window !== "undefined" && window.location) {
-    const { pathname, hostname } = window.location;
+    const { pathname } = window.location;
 
     if (REPO_BASE_PATH && pathname && pathname.includes(REPO_BASE_PATH)) {
       const idx = pathname.indexOf(REPO_BASE_PATH);
@@ -36,17 +36,8 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
       pushJoined(repoBase, "config/districts.json");
     }
 
-    const isLocalhost =
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname === "" ||
-      hostname === "[::1]";
-
-    if (isLocalhost) {
-      push("/public/config/districts.json");
-    }
   } else {
-    push("/public/config/districts.json");
+    push(joinPath(REPO_BASE_PATH, "config/districts.json"));
   }
 
   return Array.from(urls);

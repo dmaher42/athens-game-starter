@@ -11,6 +11,7 @@ import {
 } from "./groundTextures.js";
 import { getDistanceToCoast, isInHarborZone } from './coastalZones.js';
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
+import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 
@@ -402,7 +403,7 @@ export function createTerrain(scene) {
     // Skirt disabled: avoid overlapping secondary ground layer near harbor/ocean.
 
   // Load sand texture maps
-  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
+  const baseUrl = resolveBaseUrl();
   const textureOptions = {
     repeat: [28, 24],
     colorSpace: THREE.NoColorSpace,
@@ -410,13 +411,13 @@ export function createTerrain(scene) {
   };
 
   const sandNormal = loadTextureWithFallback(
-    `${baseUrl}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`,
+    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
     textureOptions,
     () => createFallbackDataTexture([128, 128, 255], textureOptions),
   );
 
   const sandARM = loadTextureWithFallback(
-    `${baseUrl}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`,
+    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
     textureOptions,
     () => createFallbackDataTexture([255, 255, 0], textureOptions),
   );

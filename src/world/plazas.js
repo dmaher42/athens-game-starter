@@ -5,6 +5,7 @@ import {
   ACROPOLIS_PEAK_3D,
   ACROPOLIS_RADIUS,
 } from "./locations.js";
+import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 
 const textureLoader = new THREE.TextureLoader();
 let marbleTextures = null;
@@ -12,21 +13,27 @@ let marbleTextures = null;
 function loadMarbleTextures() {
   if (marbleTextures) return marbleTextures;
   
-  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
+  const baseUrl = resolveBaseUrl();
   
-  const diffuse = textureLoader.load(`${baseUrl}textures/marble_albedo.jpg`);
+  const diffuse = textureLoader.load(
+    joinPath(baseUrl, "textures/marble_albedo.jpg"),
+  );
   diffuse.wrapS = diffuse.wrapT = THREE.RepeatWrapping;
   diffuse.colorSpace = THREE.SRGBColorSpace;
   
-  const normal = textureLoader.load(`${baseUrl}textures/marble_normal-dx.jpg`);
+  const normal = textureLoader.load(
+    joinPath(baseUrl, "textures/marble_normal-dx.jpg"),
+  );
   normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
   normal.colorSpace = THREE.NoColorSpace;
   
-  const roughness = textureLoader.load(`${baseUrl}textures/marble_rough.jpg`);
+  const roughness = textureLoader.load(
+    joinPath(baseUrl, "textures/marble_rough.jpg"),
+  );
   roughness.wrapS = roughness.wrapT = THREE.RepeatWrapping;
   roughness.colorSpace = THREE.NoColorSpace;
   
-  const ao = textureLoader.load(`${baseUrl}textures/marble_ao.jpg`);
+  const ao = textureLoader.load(joinPath(baseUrl, "textures/marble_ao.jpg"));
   ao.wrapS = ao.wrapT = THREE.RepeatWrapping;
   ao.colorSpace = THREE.NoColorSpace;
   
