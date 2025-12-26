@@ -3,6 +3,7 @@ import "./materials/enhanceStandardMaterial.js";
 import { Application } from "./core/Application.js";
 import { engineConfig } from "./config/EngineConfig.js";
 import { showLoadingError } from "./ui/loadingScreen.js";
+import { IS_DEV } from "./utils/env.js";
 
 function toUrlSearchParams(value) {
   if (value instanceof URLSearchParams) {
