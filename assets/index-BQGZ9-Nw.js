@@ -51321,7 +51321,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-dHgEsUsu.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CcjAt2Uo.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51831,7 +51831,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-m57uMp4H.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DrY30xYH.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52606,7 +52606,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-dHgEsUsu.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CcjAt2Uo.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -54605,7 +54605,18 @@ function normalizeDistrictRuleCandidate(value) {
   if (typeof value !== "string") return "";
   const trimmed = value.trim();
   if (!trimmed) return "";
-  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) return trimmed;
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      parsed.pathname = parsed.pathname.replace(
+        new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+        `/${REPO_SEGMENT}`
+      );
+      return parsed.toString();
+    } catch {
+      return trimmed;
+    }
+  }
   let normalized = trimmed.replace(/^\.\//, "");
   normalized = normalized.replace(
     new RegExp(`^/?${DOUBLE_REPO_PREFIX}`, "i"),
@@ -67260,8 +67271,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T02:21:15.111Z" : "",
-      sha: true ? "cafa819ff5b8cb2bf27423c8520aeb8876bf7149" : ""
+      time: true ? "2025-12-26T02:29:00.930Z" : "",
+      sha: true ? "d22b122834e692e479b5cfcc3c8f50dabd39f18b" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77220,4 +77231,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CRj4pq7c.js.map
+//# sourceMappingURL=index-BQGZ9-Nw.js.map
