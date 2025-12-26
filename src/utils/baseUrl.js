@@ -74,6 +74,19 @@ export function resolveBaseUrl() {
   return normalizeBase(base);
 }
 
+export function normalizeBaseUrl(base) {
+  let normalized = base || REPO_BASE;
+  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(normalized);
+
+  if (isAbsoluteBase) {
+    normalized = normalizeAbsoluteRepoBase(normalized);
+  } else if (hasDoubleRepo(normalized)) {
+    normalized = REPO_BASE;
+  }
+
+  return normalizeBase(normalized);
+}
+
 export function stripRepoSegment(path) {
   if (!path || typeof path !== "string") return path;
   // Remove leading repo segment(s) to avoid double-prefixing
