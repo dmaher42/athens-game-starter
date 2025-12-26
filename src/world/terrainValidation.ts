@@ -3,7 +3,36 @@ import { CITY_SLOPE_MAX } from "../config/terrainShape";
 const CORE_DSEA_MIN = 0.15;
 const CORE_DSEA_MAX = 0.55;
 
-const DEFAULT_RESULT = {
+type SeaSide = "north" | "south" | "east" | "west";
+
+type BorderTouches = Record<SeaSide, boolean>;
+
+interface FloodFillResult {
+  componentIds: Int32Array;
+  sizes: number[];
+  touches: BorderTouches[];
+}
+
+interface TerrainValidationResult {
+  valid: boolean;
+  failures: string[];
+  stats: {
+    waterTouchesAllBorders: boolean;
+    waterLoopSeparating: boolean;
+    nonSeaBordersTouched: number;
+    cityCoreSlopeAverage: number;
+  };
+}
+
+interface TerrainValidationInput {
+  baseHeights: Float32Array;
+  segments: number;
+  size: number;
+  seaLevel: number;
+  seaSide: SeaSide;
+}
+
+const DEFAULT_RESULT: TerrainValidationResult = {
   valid: false,
   failures: [],
   stats: {
@@ -14,7 +43,13 @@ const DEFAULT_RESULT = {
   },
 };
 
-function getDistanceToSeaNormalized(x, z, seaSide, halfSize, size) {
+function getDistanceToSeaNormalized(
+  x: number,
+  z: number,
+  seaSide: SeaSide,
+  halfSize: number,
+  size: number,
+) {
   switch (seaSide) {
     case "west":
       return Math.min(Math.max((x + halfSize) / size, 0), 1);
@@ -28,10 +63,10 @@ function getDistanceToSeaNormalized(x, z, seaSide, halfSize, size) {
   }
 }
 
-function buildLandGrid(baseHeights, seaLevel) {
+function buildLandGrid(baseHeights: Float32Array, seaLevel: number) {
   const land = new Uint8Array(baseHeights.length);
   for (let i = 0; i < baseHeights.length; i++) {
-    land[i] = baseHeights[i] >= seaLevel ? 1 : 0;
+    land[i] = (baseHeights[i] ?? 0) >= seaLevel ? 1 : 0;
   }
   return land;
 }
@@ -40,16 +75,20 @@ function floodFillComponents({
   grid,
   stride,
   targetValue,
-}) {
+}: {
+  grid: Uint8Array;
+  stride: number;
+  targetValue: number;
+}): FloodFillResult {
   const total = grid.length;
   const componentIds = new Int32Array(total);
   componentIds.fill(-1);
 
-  const sizes = [];
-  const touches = [];
+  const sizes: number[] = [];
+  const touches: BorderTouches[] = [];
   let currentId = 0;
 
-  const stack = [];
+  const stack: number[] = [];
 
   for (let index = 0; index < total; index++) {
     if (grid[index] !== targetValue || componentIds[index] !== -1) continue;
@@ -64,7 +103,7 @@ function floodFillComponents({
     stack.push(index);
 
     while (stack.length > 0) {
-      const current = stack.pop();
+      const current = stack.pop() as number;
       size += 1;
 
       const x = current % stride;
@@ -75,7 +114,7 @@ function floodFillComponents({
       if (x === 0) touchesWest = true;
       if (x === stride - 1) touchesEast = true;
 
-      const neighbors = [
+      const neighbors: number[] = [
         current - 1,
         current + 1,
         current - stride,
@@ -108,7 +147,7 @@ function floodFillComponents({
   return { componentIds, sizes, touches };
 }
 
-function findLargestComponent(sizes) {
+function findLargestComponent(sizes: number[]) {
   let maxSize = -1;
   let maxId = -1;
   sizes.forEach((size, id) => {
@@ -120,9 +159,12 @@ function findLargestComponent(sizes) {
   return maxId;
 }
 
-function countNonSeaBordersTouched(touches, seaSide) {
+function countNonSeaBordersTouched(
+  touches: BorderTouches | undefined,
+  seaSide: SeaSide,
+) {
   if (!touches) return 0;
-  const borders = ["north", "south", "east", "west"];
+  const borders: SeaSide[] = ["north", "south", "east", "west"];
   return borders.filter((border) => border !== seaSide && touches[border]).length;
 }
 
@@ -131,6 +173,11 @@ function computeCityCoreSlopeAverage({
   size,
   segments,
   seaSide,
+}: {
+  baseHeights: Float32Array;
+  size: number;
+  segments: number;
+  seaSide: SeaSide;
 }) {
   const stride = segments + 1;
   const halfSize = size * 0.5;
@@ -154,10 +201,11 @@ function computeCityCoreSlopeAverage({
       if (dSea < CORE_DSEA_MIN || dSea > CORE_DSEA_MAX) continue;
 
       const idx = z * stride + x;
-      const hL = baseHeights[idx - 1];
-      const hR = baseHeights[idx + 1];
-      const hD = baseHeights[idx - stride];
-      const hU = baseHeights[idx + stride];
+      const hCenter = baseHeights[idx] ?? 0;
+      const hL = baseHeights[idx - 1] ?? hCenter;
+      const hR = baseHeights[idx + 1] ?? hCenter;
+      const hD = baseHeights[idx - stride] ?? hCenter;
+      const hU = baseHeights[idx + stride] ?? hCenter;
 
       const dx = (hR - hL) / (2 * cellSize);
       const dz = (hU - hD) / (2 * cellSize);
@@ -181,7 +229,7 @@ export function validateTerrain({
   size,
   seaLevel,
   seaSide,
-}) {
+}: TerrainValidationInput): TerrainValidationResult {
   if (!baseHeights || !Number.isFinite(segments) || !Number.isFinite(size)) {
     return { ...DEFAULT_RESULT, failures: ["missing-inputs"] };
   }
@@ -239,7 +287,7 @@ export function validateTerrain({
     targetValue: 1,
   });
 
-  const adjacentWaterComponents = new Set();
+  const adjacentWaterComponents = new Set<number>();
   for (let i = 0; i < total; i++) {
     if (landComponents.componentIds[i] !== largestLandId) continue;
     const x = i % stride;
@@ -255,7 +303,7 @@ export function validateTerrain({
     for (const neighbor of neighbors) {
       if (!neighbor.valid) continue;
       if (waterGrid[neighbor.idx] !== 1) continue;
-      const waterId = waterComponents.componentIds[neighbor.idx];
+      const waterId = waterComponents.componentIds[neighbor.idx] ?? -1;
       if (waterId !== -1) {
         adjacentWaterComponents.add(waterId);
       }
@@ -264,14 +312,16 @@ export function validateTerrain({
 
   let waterLoopSeparating = false;
   if (adjacentWaterComponents.size === 1) {
-    const [waterId] = adjacentWaterComponents;
-    const waterTouches = waterComponents.touches[waterId];
-    if (waterTouches) {
-      waterLoopSeparating =
-        !waterTouches.north &&
-        !waterTouches.south &&
-        !waterTouches.east &&
-        !waterTouches.west;
+    const waterId = adjacentWaterComponents.values().next().value;
+    if (typeof waterId === "number") {
+      const waterTouches = waterComponents.touches[waterId];
+      if (waterTouches) {
+        waterLoopSeparating =
+          !waterTouches.north &&
+          !waterTouches.south &&
+          !waterTouches.east &&
+          !waterTouches.west;
+      }
     }
   }
 
@@ -282,7 +332,7 @@ export function validateTerrain({
     seaSide,
   });
 
-  const failures = [];
+  const failures: string[] = [];
 
   if (!(waterTouchesAllBorders || waterLoopSeparating)) {
     failures.push("water-border-coverage");
