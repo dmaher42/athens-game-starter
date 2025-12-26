@@ -3,7 +3,7 @@ import { DynamicSky } from "../world/sky/DynamicSky.js";
 import { createLighting, updateLighting } from "../world/lighting.js";
 import { azElToDirection } from "../world/lighting/sunAlignment.js";
 import { setTimeOfDayPhase } from "../world/sky.js";
-import { LOOK_PROFILES } from "../config/LookProfiles.js";
+import { LIGHTING_PRESETS as LOOK_PROFILES } from "../config/LookProfiles.js";
 import { lightingConfig } from "../config/LightingConfig.js";
 import { skyboxLightingConfig } from "../config/skyboxLightingConfig.js";
 import { loadHdriEnvironment } from "../world/env/loadHdriEnvironment.js";
