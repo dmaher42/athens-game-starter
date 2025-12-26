@@ -15,6 +15,7 @@ import {
 } from "../config/AssetConfig.js";
 
 const HTML_CONTENT_TYPE = /text\/html/i;
+const REPO_SEGMENT = "athens-game-starter";
 
 const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;
 const GLB_EXTENSION = /\.glb(?:$|[?#])/i;
@@ -39,26 +40,18 @@ function sanitizeRelativePath(value) {
     .replace(/^\.\//, "");
 }
 
-const REPO_SEGMENT = REPO_BASE_PATH.replace(/\//g, "");
-
-function normalizeAbsoluteDistrictRuleUrl(value) {
-  if (typeof value !== "string") return "";
-  const trimmed = value.trim();
-  if (!/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-  if (!REPO_SEGMENT) {
-    return trimmed;
-  }
+function normalizeAbsoluteRepoUrl(value) {
+  if (typeof value !== "string") return value;
+  if (!/^(?:[a-z]+:)?\/\//i.test(value)) return value;
   try {
-    const parsed = new URL(trimmed);
+    const parsed = new URL(value);
     parsed.pathname = parsed.pathname.replace(
       new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
       `/${REPO_SEGMENT}`,
     );
     return parsed.toString();
   } catch {
-    return trimmed;
+    return value;
   }
 }
 
@@ -212,10 +205,7 @@ export class AssetLoader {
       const trimmed = candidate.trim();
       if (!trimmed) continue;
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-        const normalized = /^(?:[a-z]+:)?\/\//i.test(trimmed)
-          ? normalizeAbsoluteDistrictRuleUrl(trimmed)
-          : trimmed;
-        districtCandidates.push(normalized);
+        districtCandidates.push(normalizeAbsoluteRepoUrl(trimmed));
         continue;
       }
       const normalized = stripRepoSegment(trimmed);
@@ -256,7 +246,7 @@ export class AssetLoader {
             targets.push(normalizeAbsoluteDistrictRuleUrl(candidate));
           }
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
-          targets.push(pathValue);
+          targets.push(normalizeAbsoluteRepoUrl(pathValue));
         } else {
           targets.push(joinPath(baseUrl, pathValue));
         }
