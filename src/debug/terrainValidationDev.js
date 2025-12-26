@@ -10,7 +10,6 @@ import {
   INLAND_RISE,
   RIDGE_START,
   RIDGE_HEIGHT,
-  CITY_SLOPE_MAX,
 } from "../config/terrainShape";
 import { validateTerrain } from "../world/terrainValidation";
 import { IS_DEV } from "../utils/env.js";
@@ -19,6 +18,7 @@ const TERRAIN_SIZE = 2400;
 const DEFAULT_SEGMENTS = 512;
 const TERRAIN_VALIDATION_ATTEMPTS = 5;
 const CITY_HEIGHT = 2.5;
+const MAINLAND_EDGE_BUFFER = 0.8;
 const NOISE_SCALE = 0.05;
 const NOISE_AMPLITUDE = 0.45;
 const ZERO_NOISE_OFFSET = { x: 0, z: 0 };
@@ -198,7 +198,8 @@ function getElevation(x, z, seaLevel, coastData, noiseOffset, halfSize, size) {
   const nonSeaBorderMask =
     nonSeaBorders.length > 0 ? Math.max(...nonSeaBorders) : 0;
   if (nonSeaBorderMask > 0) {
-    h = Math.max(h, seaLevel + CITY_SLOPE_MAX * nonSeaBorderMask);
+    // Islands can happen when a slope threshold is used as a height buffer on borders.
+    h = Math.max(h, seaLevel + MAINLAND_EDGE_BUFFER * nonSeaBorderMask);
   }
 
   h = applyHarbourCarve(x, z, seaLevel, h);
