@@ -22,6 +22,7 @@ import {
   RIDGE_HEIGHT,
   CITY_SLOPE_MAX,
 } from "../config/terrainShape";
+import { validateTerrain } from "./terrainValidation";
 
 const textureLoader = new THREE.TextureLoader();
 
@@ -135,6 +136,26 @@ const EAST_HARBOR_CENTER = new THREE.Vector2(-50, -100);
 // New Mainland/Coastal Constants
 const TERRAIN_SIZE = 2400; // Large terrain for mainland
 const HALF_TERRAIN_SIZE = TERRAIN_SIZE * 0.5;
+const TERRAIN_VALIDATION_ATTEMPTS = 5;
+const TERRAIN_NOISE_SEED = Math.floor(Math.random() * 1000000);
+const ZERO_NOISE_OFFSET = { x: 0, z: 0 };
+
+function seededRandom(seed) {
+  const value = Math.sin(seed) * 10000;
+  return value - Math.floor(value);
+}
+
+function getNoiseOffset(seed, attempt, size) {
+  if (attempt <= 0) return ZERO_NOISE_OFFSET;
+  const range = size * 0.35;
+  const base = seed + attempt * 1319;
+  const randA = seededRandom(base * 1.31);
+  const randB = seededRandom(base * 2.17 + 19.7);
+  return {
+    x: (randA * 2 - 1) * range,
+    z: (randB * 2 - 1) * range,
+  };
+}
 
 function getDistanceToSeaNormalized(x, z) {
   switch (SEA_SIDE) {
@@ -214,7 +235,13 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   return baseHeight;
 }
 
-function getElevation(x, z, seaLevel, coastData = null) {
+function getElevation(
+  x,
+  z,
+  seaLevel,
+  coastData = null,
+  noiseOffset = ZERO_NOISE_OFFSET,
+) {
   // Base Height calculation
   let h = seaLevel + CITY_HEIGHT;
 
@@ -227,12 +254,20 @@ function getElevation(x, z, seaLevel, coastData = null) {
   h += INLAND_RISE * (dSea + dSea * dSea);
 
   const ridgeNoise =
-    gradientNoise(x * NOISE_SCALE * 0.2, z * NOISE_SCALE * 0.2) * 0.5 + 0.5;
+    gradientNoise(
+      (x + noiseOffset.x) * NOISE_SCALE * 0.2,
+      (z + noiseOffset.z) * NOISE_SCALE * 0.2,
+    ) *
+      0.5 +
+    0.5;
   const ridgeMask = THREE.MathUtils.smoothstep(RIDGE_START, 1.0, dSea);
   h += ridgeMask * ridgeNoise * RIDGE_HEIGHT;
 
   // Apply Noise
-  const rawNoise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE);
+  const rawNoise = gradientNoise(
+    (x + noiseOffset.x) * NOISE_SCALE,
+    (z + noiseOffset.z) * NOISE_SCALE,
+  );
   // Keep noise below the inland bias so geography reads clearly and stay calmer to the east
   const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + dSea * 0.65);
 
@@ -366,42 +401,62 @@ export function createTerrain(scene) {
   const color = new THREE.Color();
   const white = new THREE.Color(1, 1, 1);
 
-  for (let i = 0; i < vertexCount; i++) {
-    const x = positionAttribute.getX(i);
-    const z = positionAttribute.getY(i);
+  const fillTerrain = (noiseOffset) => {
+    for (let i = 0; i < vertexCount; i++) {
+      const x = positionAttribute.getX(i);
+      const z = positionAttribute.getY(i);
 
-    const coastData = computeCoastData(x, z);
-    const height = getElevation(x, z, seaLevel, coastData);
-    positionAttribute.setZ(i, height);
-    baseHeights[i] = height;
+      const coastData = computeCoastData(x, z);
+      const height = getElevation(x, z, seaLevel, coastData, noiseOffset);
+      positionAttribute.setZ(i, height);
+      baseHeights[i] = height;
 
-    // Shoreline/Beach Band Logic
-    const beachHeight = 2.5;
-    const beachFade = 2.0;
-    const beachLimit = seaLevel + beachHeight;
+      // Shoreline/Beach Band Logic
+      const beachHeight = 2.5;
+      const beachFade = 2.0;
+      const beachLimit = seaLevel + beachHeight;
 
-    let beachFactor = 0.0;
-    if (height < beachLimit) {
-        beachFactor = 1.0;
-    } else if (height < beachLimit + beachFade) {
-        const t = (height - beachLimit) / beachFade;
-        beachFactor = 1.0 - t;
+      let beachFactor = 0.0;
+      if (height < beachLimit) {
+          beachFactor = 1.0;
+      } else if (height < beachLimit + beachFade) {
+          const t = (height - beachLimit) / beachFade;
+          beachFactor = 1.0 - t;
+      }
+
+      color.copy(GRASS_COLOR).lerp(white, beachFactor);
+
+      // Underwater terrain: Apply seabed color for terrain below water level
+      if (height < seaLevel) {
+         // Use sand color for shallow underwater terrain (< 0.1m below)
+         if (height > seaLevel - 0.1) {
+           color.lerp(SAND_COLOR, 0.7);
+         } else {
+           // Deeper water gets darker seabed color
+           color.lerp(SHALLOW_WATER_COLOR, 0.6);
+         }
+      }
+
+      colorAttribute.setXYZ(i, color.r, color.g, color.b);
     }
+  };
 
-    color.copy(GRASS_COLOR).lerp(white, beachFactor);
+  let validationResult = null;
+  for (let attempt = 0; attempt < TERRAIN_VALIDATION_ATTEMPTS; attempt++) {
+    const noiseOffset = getNoiseOffset(TERRAIN_NOISE_SEED, attempt, size);
+    fillTerrain(noiseOffset);
+    validationResult = validateTerrain({
+      baseHeights,
+      segments,
+      size,
+      seaLevel,
+      seaSide: SEA_SIDE,
+    });
+    if (validationResult.valid) break;
+  }
 
-    // Underwater terrain: Apply seabed color for terrain below water level
-    if (height < seaLevel) {
-       // Use sand color for shallow underwater terrain (< 0.1m below)
-       if (height > seaLevel - 0.1) {
-         color.lerp(SAND_COLOR, 0.7);
-       } else {
-         // Deeper water gets darker seabed color
-         color.lerp(SHALLOW_WATER_COLOR, 0.6);
-       }
-    }
-
-    colorAttribute.setXYZ(i, color.r, color.g, color.b);
+  if (validationResult && !validationResult.valid) {
+    console.warn("Terrain validation failed after retries.", validationResult);
   }
 
   positionAttribute.needsUpdate = true;
