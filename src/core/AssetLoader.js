@@ -40,13 +40,27 @@ function sanitizeRelativePath(value) {
     .replace(/^\.\//, "");
 }
 
-function stripLeadingRepoSegment(value) {
-  if (typeof value !== "string") return value;
+function normalizeRepoRelativeCandidate(value) {
+  if (typeof value !== "string") return "";
   const trimmed = value.trim();
-  if (!trimmed || /^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-    return value;
+  if (!trimmed) return "";
+  const withoutLeading = trimmed.replace(/^\/+/, "");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT}/)+`, "i");
+  return withoutLeading.replace(repoPrefix, "");
+}
+
+function normalizeRepoPrefixedPath(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (!trimmed.startsWith("/")) return trimmed;
+  const withoutLeading = trimmed.replace(/^\/+/, "");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT}/)+`, "i");
+  if (!repoPrefix.test(withoutLeading)) {
+    return trimmed;
   }
-  return trimmed.replace(new RegExp(`^(?:\\./)?${REPO_SEGMENT}/`, "i"), "");
+  const stripped = withoutLeading.replace(repoPrefix, "");
+  return `/${REPO_SEGMENT}/${stripped}`;
 }
 
 function normalizeAbsoluteRepoUrl(value) {
@@ -214,10 +228,11 @@ export class AssetLoader {
       const trimmed = candidate.trim();
       if (!trimmed) continue;
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-        districtCandidates.push(normalizeAbsoluteRepoUrl(trimmed));
+        const normalized = normalizeAbsoluteRepoUrl(trimmed);
+        districtCandidates.push(normalizeRepoPrefixedPath(normalized));
         continue;
       }
-      const normalized = stripRepoSegment(stripLeadingRepoSegment(trimmed));
+      const normalized = normalizeRepoRelativeCandidate(trimmed);
       if (!normalized) continue;
       const joined = joinPath(baseUrl, normalized);
       districtCandidates.push(normalizeAbsoluteDistrictRuleUrl(joined));
@@ -257,7 +272,10 @@ export class AssetLoader {
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
           targets.push(normalizeAbsoluteRepoUrl(pathValue));
         } else {
-          targets.push(joinPath(baseUrl, stripLeadingRepoSegment(pathValue)));
+          const normalizedPath = /athens-game-starter\//i.test(pathValue)
+            ? normalizeRepoRelativeCandidate(pathValue)
+            : pathValue;
+          targets.push(joinPath(baseUrl, normalizedPath));
         }
       }
 
