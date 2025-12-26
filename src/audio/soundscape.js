@@ -174,7 +174,7 @@ export class Soundscape {
     });
     this.zoneAmbience.registerTrack("city", {
       label: "Crowd Murmur",
-      url: joinPath(BASE, "audio/crowd_murmur.mp3"),
+      url: joinPath(BASE, "audio/ambient_sea.ogg"),
       noiseOptions: { duration: 2, amplitude: 0.06 },
       filter: { type: "bandpass", frequency: 450 },
     });
