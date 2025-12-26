@@ -369,7 +369,7 @@ function randFloat(low, high) {
 function randFloatSpread(range) {
   return range * (0.5 - Math.random());
 }
-function seededRandom$2(s) {
+function seededRandom$3(s) {
   if (s !== void 0) _seed = s;
   let t = _seed += 1831565813;
   t = Math.imul(t ^ t >>> 15, t | 1);
@@ -626,7 +626,7 @@ const MathUtils = {
    * @param {number} [s] - The integer seed.
    * @return {number} A random float.
    */
-  seededRandom: seededRandom$2,
+  seededRandom: seededRandom$3,
   /**
    * Converts degrees to radians.
    *
@@ -42280,7 +42280,7 @@ class Soundscape {
     });
     this.zoneAmbience.registerTrack("city", {
       label: "Crowd Murmur",
-      url: joinPath(BASE, "audio/crowd_murmur.mp3"),
+      url: joinPath(BASE, "audio/ambient_sea.ogg"),
       noiseOptions: { duration: 2, amplitude: 0.06 },
       filter: { type: "bandpass", frequency: 450 }
     });
@@ -45666,6 +45666,262 @@ const INLAND_RISE = 220;
 const RIDGE_START = 0.6;
 const RIDGE_HEIGHT = 70;
 const CITY_SLOPE_MAX = 1.5;
+const CORE_DSEA_MIN = 0.15;
+const CORE_DSEA_MAX = 0.55;
+const DEFAULT_RESULT = {
+  valid: false,
+  failures: [],
+  stats: {
+    waterTouchesAllBorders: false,
+    waterLoopSeparating: false,
+    nonSeaBordersTouched: 0,
+    cityCoreSlopeAverage: Number.POSITIVE_INFINITY
+  }
+};
+function getDistanceToSeaNormalized$1(x, z, seaSide, halfSize, size) {
+  switch (seaSide) {
+    case "west":
+      return Math.min(Math.max((x + halfSize) / size, 0), 1);
+    case "north":
+      return Math.min(Math.max((z + halfSize) / size, 0), 1);
+    case "south":
+      return Math.min(Math.max((halfSize - z) / size, 0), 1);
+    case "east":
+    default:
+      return Math.min(Math.max((halfSize - x) / size, 0), 1);
+  }
+}
+function buildLandGrid(baseHeights, seaLevel) {
+  const land = new Uint8Array(baseHeights.length);
+  for (let i = 0; i < baseHeights.length; i++) {
+    land[i] = (baseHeights[i] ?? 0) >= seaLevel ? 1 : 0;
+  }
+  return land;
+}
+function floodFillComponents({
+  grid,
+  stride,
+  targetValue
+}) {
+  const total = grid.length;
+  const componentIds = new Int32Array(total);
+  componentIds.fill(-1);
+  const sizes = [];
+  const touches = [];
+  let currentId = 0;
+  const stack = [];
+  for (let index = 0; index < total; index++) {
+    if (grid[index] !== targetValue || componentIds[index] !== -1) continue;
+    let size = 0;
+    let touchesNorth = false;
+    let touchesSouth = false;
+    let touchesWest = false;
+    let touchesEast = false;
+    componentIds[index] = currentId;
+    stack.push(index);
+    while (stack.length > 0) {
+      const current = stack.pop();
+      size += 1;
+      const x = current % stride;
+      const z = Math.floor(current / stride);
+      if (z === 0) touchesNorth = true;
+      if (z === stride - 1) touchesSouth = true;
+      if (x === 0) touchesWest = true;
+      if (x === stride - 1) touchesEast = true;
+      const neighbors = [
+        current - 1,
+        current + 1,
+        current - stride,
+        current + stride
+      ];
+      for (const neighbor of neighbors) {
+        if (neighbor < 0 || neighbor >= total) continue;
+        if (grid[neighbor] !== targetValue) continue;
+        if (componentIds[neighbor] !== -1) continue;
+        const nx = neighbor % stride;
+        const nz = Math.floor(neighbor / stride);
+        if (Math.abs(nx - x) + Math.abs(nz - z) !== 1) continue;
+        componentIds[neighbor] = currentId;
+        stack.push(neighbor);
+      }
+    }
+    sizes[currentId] = size;
+    touches[currentId] = {
+      north: touchesNorth,
+      south: touchesSouth,
+      west: touchesWest,
+      east: touchesEast
+    };
+    currentId += 1;
+  }
+  return { componentIds, sizes, touches };
+}
+function findLargestComponent(sizes) {
+  let maxSize = -1;
+  let maxId = -1;
+  sizes.forEach((size, id) => {
+    if (size > maxSize) {
+      maxSize = size;
+      maxId = id;
+    }
+  });
+  return maxId;
+}
+function countNonSeaBordersTouched(touches, seaSide) {
+  if (!touches) return 0;
+  const borders = ["north", "south", "east", "west"];
+  return borders.filter((border) => border !== seaSide && touches[border]).length;
+}
+function computeCityCoreSlopeAverage({
+  baseHeights,
+  size,
+  segments,
+  seaSide
+}) {
+  const stride = segments + 1;
+  const halfSize = size * 0.5;
+  const cellSize = size / segments;
+  let slopeSum = 0;
+  let sampleCount = 0;
+  for (let z = 1; z < stride - 1; z++) {
+    const worldZ = z / segments * size - halfSize;
+    for (let x = 1; x < stride - 1; x++) {
+      const worldX = x / segments * size - halfSize;
+      const dSea = getDistanceToSeaNormalized$1(
+        worldX,
+        worldZ,
+        seaSide,
+        halfSize,
+        size
+      );
+      if (dSea < CORE_DSEA_MIN || dSea > CORE_DSEA_MAX) continue;
+      const idx = z * stride + x;
+      const hCenter = baseHeights[idx] ?? 0;
+      const hL = baseHeights[idx - 1] ?? hCenter;
+      const hR = baseHeights[idx + 1] ?? hCenter;
+      const hD = baseHeights[idx - stride] ?? hCenter;
+      const hU = baseHeights[idx + stride] ?? hCenter;
+      const dx = (hR - hL) / (2 * cellSize);
+      const dz = (hU - hD) / (2 * cellSize);
+      const slope = Math.hypot(dx, dz);
+      slopeSum += slope;
+      sampleCount += 1;
+    }
+  }
+  if (sampleCount === 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return slopeSum / sampleCount;
+}
+function validateTerrain({
+  baseHeights,
+  segments,
+  size,
+  seaLevel,
+  seaSide
+}) {
+  if (!baseHeights || !Number.isFinite(segments) || !Number.isFinite(size)) {
+    return { ...DEFAULT_RESULT, failures: ["missing-inputs"] };
+  }
+  const stride = segments + 1;
+  const total = stride * stride;
+  if (baseHeights.length !== total) {
+    return { ...DEFAULT_RESULT, failures: ["invalid-grid"] };
+  }
+  const landGrid = buildLandGrid(baseHeights, seaLevel);
+  const landComponents = floodFillComponents({
+    grid: landGrid,
+    stride,
+    targetValue: 1
+  });
+  const largestLandId = findLargestComponent(landComponents.sizes);
+  if (largestLandId === -1) {
+    return { ...DEFAULT_RESULT, failures: ["no-land"] };
+  }
+  const largestTouches = landComponents.touches[largestLandId];
+  const nonSeaBordersTouched = countNonSeaBordersTouched(
+    largestTouches,
+    seaSide
+  );
+  let waterOnNorth = false;
+  let waterOnSouth = false;
+  let waterOnWest = false;
+  let waterOnEast = false;
+  for (let x = 0; x < stride; x++) {
+    if (landGrid[x] === 0) waterOnNorth = true;
+    if (landGrid[(stride - 1) * stride + x] === 0) waterOnSouth = true;
+  }
+  for (let z = 0; z < stride; z++) {
+    if (landGrid[z * stride] === 0) waterOnWest = true;
+    if (landGrid[z * stride + (stride - 1)] === 0) waterOnEast = true;
+  }
+  const waterTouchesAllBorders = waterOnNorth && waterOnSouth && waterOnWest && waterOnEast;
+  const waterGrid = new Uint8Array(total);
+  for (let i = 0; i < total; i++) {
+    waterGrid[i] = landGrid[i] === 1 ? 0 : 1;
+  }
+  const waterComponents = floodFillComponents({
+    grid: waterGrid,
+    stride,
+    targetValue: 1
+  });
+  const adjacentWaterComponents = /* @__PURE__ */ new Set();
+  for (let i = 0; i < total; i++) {
+    if (landComponents.componentIds[i] !== largestLandId) continue;
+    const x = i % stride;
+    const z = Math.floor(i / stride);
+    const neighbors = [
+      { idx: i - 1, valid: x > 0 },
+      { idx: i + 1, valid: x < stride - 1 },
+      { idx: i - stride, valid: z > 0 },
+      { idx: i + stride, valid: z < stride - 1 }
+    ];
+    for (const neighbor of neighbors) {
+      if (!neighbor.valid) continue;
+      if (waterGrid[neighbor.idx] !== 1) continue;
+      const waterId = waterComponents.componentIds[neighbor.idx] ?? -1;
+      if (waterId !== -1) {
+        adjacentWaterComponents.add(waterId);
+      }
+    }
+  }
+  let waterLoopSeparating = false;
+  if (adjacentWaterComponents.size === 1) {
+    const waterId = adjacentWaterComponents.values().next().value;
+    if (typeof waterId === "number") {
+      const waterTouches = waterComponents.touches[waterId];
+      if (waterTouches) {
+        waterLoopSeparating = !waterTouches.north && !waterTouches.south && !waterTouches.east && !waterTouches.west;
+      }
+    }
+  }
+  const cityCoreSlopeAverage = computeCityCoreSlopeAverage({
+    baseHeights,
+    size,
+    segments,
+    seaSide
+  });
+  const failures = [];
+  if (!(waterTouchesAllBorders || waterLoopSeparating)) {
+    failures.push("water-border-coverage");
+  }
+  if (nonSeaBordersTouched < 2) {
+    failures.push("landmass-border-coverage");
+  }
+  if (cityCoreSlopeAverage > CITY_SLOPE_MAX) {
+    failures.push("city-core-slope");
+  }
+  return {
+    valid: failures.length === 0,
+    failures,
+    stats: {
+      waterTouchesAllBorders,
+      waterLoopSeparating,
+      nonSeaBordersTouched,
+      cityCoreSlopeAverage
+    }
+  };
+}
 const textureLoader$2 = new TextureLoader();
 function configureMapTexture(texture, options = {}) {
   texture.wrapS = texture.wrapT = RepeatWrapping;
@@ -45759,6 +46015,24 @@ const HARBOUR_TARGET_DEPTH = 2;
 const EAST_HARBOR_CENTER = new Vector2(-50, -100);
 const TERRAIN_SIZE = 2400;
 const HALF_TERRAIN_SIZE = TERRAIN_SIZE * 0.5;
+const TERRAIN_VALIDATION_ATTEMPTS = 5;
+const TERRAIN_NOISE_SEED = Math.floor(Math.random() * 1e6);
+const ZERO_NOISE_OFFSET = { x: 0, z: 0 };
+function seededRandom$2(seed) {
+  const value = Math.sin(seed) * 1e4;
+  return value - Math.floor(value);
+}
+function getNoiseOffset(seed, attempt, size) {
+  if (attempt <= 0) return ZERO_NOISE_OFFSET;
+  const range = size * 0.35;
+  const base = seed + attempt * 1319;
+  const randA = seededRandom$2(base * 1.31);
+  const randB = seededRandom$2(base * 2.17 + 19.7);
+  return {
+    x: (randA * 2 - 1) * range,
+    z: (randB * 2 - 1) * range
+  };
+}
 function getDistanceToSeaNormalized(x, z) {
   switch (SEA_SIDE) {
     case "west":
@@ -45813,15 +46087,21 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   }
   return baseHeight;
 }
-function getElevation$1(x, z, seaLevel, coastData = null) {
+function getElevation$1(x, z, seaLevel, coastData = null, noiseOffset = ZERO_NOISE_OFFSET) {
   let h = seaLevel + CITY_HEIGHT;
   const coast = coastData ?? computeCoastData(x, z);
   const dSea = coast.dSea;
   h += INLAND_RISE * (dSea + dSea * dSea);
-  const ridgeNoise = gradientNoise(x * NOISE_SCALE * 0.2, z * NOISE_SCALE * 0.2) * 0.5 + 0.5;
+  const ridgeNoise = gradientNoise(
+    (x + noiseOffset.x) * NOISE_SCALE * 0.2,
+    (z + noiseOffset.z) * NOISE_SCALE * 0.2
+  ) * 0.5 + 0.5;
   const ridgeMask = MathUtils.smoothstep(RIDGE_START, 1, dSea);
   h += ridgeMask * ridgeNoise * RIDGE_HEIGHT;
-  const rawNoise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE);
+  const rawNoise = gradientNoise(
+    (x + noiseOffset.x) * NOISE_SCALE,
+    (z + noiseOffset.z) * NOISE_SCALE
+  );
   const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + dSea * 0.65);
   const coastalNoiseAttenuation = 1 - coast.coastMask;
   const shapedNoise = noise * (0.4 + coastalNoiseAttenuation * 0.6);
@@ -45917,32 +46197,50 @@ function createTerrain(scene2) {
   const seaLevel = getSeaLevelY();
   const color = new Color();
   const white = new Color(1, 1, 1);
-  for (let i = 0; i < vertexCount; i++) {
-    const x = positionAttribute.getX(i);
-    const z = positionAttribute.getY(i);
-    const coastData = computeCoastData(x, z);
-    const height = getElevation$1(x, z, seaLevel, coastData);
-    positionAttribute.setZ(i, height);
-    baseHeights[i] = height;
-    const beachHeight = 2.5;
-    const beachFade = 2;
-    const beachLimit = seaLevel + beachHeight;
-    let beachFactor = 0;
-    if (height < beachLimit) {
-      beachFactor = 1;
-    } else if (height < beachLimit + beachFade) {
-      const t = (height - beachLimit) / beachFade;
-      beachFactor = 1 - t;
-    }
-    color.copy(GRASS_COLOR).lerp(white, beachFactor);
-    if (height < seaLevel) {
-      if (height > seaLevel - 0.1) {
-        color.lerp(SAND_COLOR, 0.7);
-      } else {
-        color.lerp(SHALLOW_WATER_COLOR, 0.6);
+  const fillTerrain = (noiseOffset) => {
+    for (let i = 0; i < vertexCount; i++) {
+      const x = positionAttribute.getX(i);
+      const z = positionAttribute.getY(i);
+      const coastData = computeCoastData(x, z);
+      const height = getElevation$1(x, z, seaLevel, coastData, noiseOffset);
+      positionAttribute.setZ(i, height);
+      baseHeights[i] = height;
+      const beachHeight = 2.5;
+      const beachFade = 2;
+      const beachLimit = seaLevel + beachHeight;
+      let beachFactor = 0;
+      if (height < beachLimit) {
+        beachFactor = 1;
+      } else if (height < beachLimit + beachFade) {
+        const t = (height - beachLimit) / beachFade;
+        beachFactor = 1 - t;
       }
+      color.copy(GRASS_COLOR).lerp(white, beachFactor);
+      if (height < seaLevel) {
+        if (height > seaLevel - 0.1) {
+          color.lerp(SAND_COLOR, 0.7);
+        } else {
+          color.lerp(SHALLOW_WATER_COLOR, 0.6);
+        }
+      }
+      colorAttribute.setXYZ(i, color.r, color.g, color.b);
     }
-    colorAttribute.setXYZ(i, color.r, color.g, color.b);
+  };
+  let validationResult = null;
+  for (let attempt = 0; attempt < TERRAIN_VALIDATION_ATTEMPTS; attempt++) {
+    const noiseOffset = getNoiseOffset(TERRAIN_NOISE_SEED, attempt, size);
+    fillTerrain(noiseOffset);
+    validationResult = validateTerrain({
+      baseHeights,
+      segments,
+      size,
+      seaLevel,
+      seaSide: SEA_SIDE
+    });
+    if (validationResult.valid) break;
+  }
+  if (validationResult && !validationResult.valid) {
+    console.warn("Terrain validation failed after retries.", validationResult);
   }
   positionAttribute.needsUpdate = true;
   colorAttribute.needsUpdate = true;
@@ -50975,7 +51273,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B9QBA6RA.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dbz7g81_.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51485,7 +51783,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CXknOm0L.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DH67ezOS.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52260,7 +52558,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B9QBA6RA.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dbz7g81_.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -66897,8 +67195,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T00:40:51.879Z" : "",
-      sha: true ? "8186723fc36d880ccaa340fa112d1c4520c7491a" : ""
+      time: true ? "2025-12-26T00:57:32.788Z" : "",
+      sha: true ? "351697192f95cf08cd64e112f9cc571526f2df28" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -73919,6 +74217,7 @@ const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$2();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES = engineConfig.districtRuleCandidates || [];
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 const ENABLE_GLB_MODE = false;
+const ENABLE_HERO_GLB = true;
 if (!ENABLE_GLB_MODE) {
   console.log("[glb] GLB mode disabled");
 }
@@ -75362,7 +75661,7 @@ class Application {
         [heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
       )
     );
-    if (ENABLE_GLB_MODE) {
+    if (ENABLE_HERO_GLB) {
       try {
         const heroLoader = await createGLTFLoader(renderer2);
         const loadedHero = await loadGLBWithFallbacks(
@@ -76856,4 +77155,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BjhA53uu.js.map
+//# sourceMappingURL=index-4JcOCpQW.js.map
