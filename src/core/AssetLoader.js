@@ -1,6 +1,11 @@
 import * as THREE from "three";
 
-import { joinPath, resolveBaseUrl, stripRepoSegment } from "../utils/baseUrl.js";
+import {
+  joinPath,
+  resolveBaseUrl,
+  stripRepoSegment,
+  REPO_BASE_PATH,
+} from "../utils/baseUrl.js";
 import { IS_DEV } from "../utils/env.js";
 import {
   getManifestProbes,
@@ -242,7 +247,8 @@ export class AssetLoader {
       }
       const normalized = normalizeRepoRelativeCandidate(trimmed);
       if (!normalized) continue;
-      districtCandidates.push(joinPath(baseUrl, normalized));
+      const joined = joinPath(baseUrl, normalized);
+      districtCandidates.push(normalizeAbsoluteDistrictRuleUrl(joined));
     }
     let resolvedDistrictPath = null;
     for (const candidate of districtCandidates) {
@@ -271,9 +277,11 @@ export class AssetLoader {
         const pathValue = entry.path.trim();
         if (/config\/districts\.json$/i.test(pathValue)) {
           if (resolvedDistrictPath) {
-            targets.push(resolvedDistrictPath);
+            targets.push(normalizeAbsoluteDistrictRuleUrl(resolvedDistrictPath));
           }
-          targets.push(...districtCandidates);
+          for (const candidate of districtCandidates) {
+            targets.push(normalizeAbsoluteDistrictRuleUrl(candidate));
+          }
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
           targets.push(normalizeAbsoluteRepoUrl(pathValue));
         } else {
