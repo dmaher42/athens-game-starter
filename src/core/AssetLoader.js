@@ -40,6 +40,15 @@ function sanitizeRelativePath(value) {
     .replace(/^\.\//, "");
 }
 
+function stripLeadingRepoSegment(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed || /^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
+    return value;
+  }
+  return trimmed.replace(new RegExp(`^(?:\\./)?${REPO_SEGMENT}/`, "i"), "");
+}
+
 function normalizeAbsoluteRepoUrl(value) {
   if (typeof value !== "string") return value;
   if (!/^(?:[a-z]+:)?\/\//i.test(value)) return value;
@@ -208,7 +217,7 @@ export class AssetLoader {
         districtCandidates.push(normalizeAbsoluteRepoUrl(trimmed));
         continue;
       }
-      const normalized = stripRepoSegment(trimmed);
+      const normalized = stripRepoSegment(stripLeadingRepoSegment(trimmed));
       if (!normalized) continue;
       const joined = joinPath(baseUrl, normalized);
       districtCandidates.push(normalizeAbsoluteDistrictRuleUrl(joined));
@@ -248,7 +257,7 @@ export class AssetLoader {
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
           targets.push(normalizeAbsoluteRepoUrl(pathValue));
         } else {
-          targets.push(joinPath(baseUrl, pathValue));
+          targets.push(joinPath(baseUrl, stripLeadingRepoSegment(pathValue)));
         }
       }
 
