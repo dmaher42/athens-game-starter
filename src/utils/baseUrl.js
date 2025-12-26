@@ -59,8 +59,10 @@ export function resolveBaseUrl() {
   let base = globalBase || envBase || REPO_BASE;
   const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
 
-  if (hasDoubleRepo(base)) {
-    base = isAbsoluteBase ? normalizeAbsoluteRepoBase(base) : REPO_BASE;
+  if (isAbsoluteBase) {
+    base = normalizeAbsoluteRepoBase(base);
+  } else if (hasDoubleRepo(base)) {
+    base = REPO_BASE;
   }
 
   const onGithubPages = isGithubPagesHost();
