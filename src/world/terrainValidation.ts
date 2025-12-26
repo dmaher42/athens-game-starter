@@ -334,7 +334,7 @@ export function validateTerrain({
 
   const failures: string[] = [];
 
-  if (!(waterTouchesAllBorders || waterLoopSeparating)) {
+  if (waterTouchesAllBorders || waterLoopSeparating) {
     failures.push("water-border-coverage");
   }
 
