@@ -88,7 +88,7 @@ function floodFillComponents({
   const touches: BorderTouches[] = [];
   let currentId = 0;
 
-  const stack = [];
+  const stack: number[] = [];
 
   for (let index = 0; index < total; index++) {
     if (grid[index] !== targetValue || componentIds[index] !== -1) continue;
@@ -332,7 +332,7 @@ export function validateTerrain({
     seaSide,
   });
 
-  const failures = [];
+  const failures: string[] = [];
 
   if (!(waterTouchesAllBorders || waterLoopSeparating)) {
     failures.push("water-border-coverage");
