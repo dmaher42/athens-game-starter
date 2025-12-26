@@ -130,6 +130,7 @@ const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 
 const ENABLE_GLB_MODE = false;
+const ENABLE_HERO_GLB = true;
 if (!ENABLE_GLB_MODE) {
   console.log("[glb] GLB mode disabled");
 }
@@ -1909,7 +1910,7 @@ export class Application {
       ),
     );
 
-    if (ENABLE_GLB_MODE) {
+    if (ENABLE_HERO_GLB) {
       try {
         const heroLoader = await createGLTFLoader(renderer);
         const loadedHero = await loadGLBWithFallbacks(
