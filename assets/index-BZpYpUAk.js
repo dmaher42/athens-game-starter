@@ -42080,6 +42080,21 @@ const REPO_SEGMENT$1 = "athens-game-starter";
 const REPO_BASE = `/${REPO_SEGMENT$1}/`;
 const DOUBLE_SEGMENT = `${REPO_SEGMENT$1}/${REPO_SEGMENT$1}`;
 const REPO_BASE_PATH = REPO_BASE;
+function normalizeAbsoluteRepoBase(path) {
+  if (!path || !/^(?:[a-z]+:)?\/\//i.test(path)) {
+    return path;
+  }
+  try {
+    const parsed = new URL(path);
+    parsed.pathname = parsed.pathname.replace(
+      new RegExp(`/${REPO_SEGMENT$1}/${REPO_SEGMENT$1}(?=/|$)`, "g"),
+      `/${REPO_SEGMENT$1}`
+    );
+    return parsed.toString();
+  } catch {
+    return path;
+  }
+}
 function normalizeBase(path) {
   if (!path) return REPO_BASE;
   if (/^(?:[a-z]+:)?\/\//i.test(path)) {
@@ -42101,9 +42116,10 @@ function hasDoubleRepo(base) {
 function resolveBaseUrl$2() {
   const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true && "/athens-game-starter/" || null;
   const globalBase = typeof window !== "undefined" && typeof window.__BASE_URL__ === "string" ? window.__BASE_URL__ : null;
-  let base = normalizeBase(globalBase || envBase || REPO_BASE);
+  let base = globalBase || envBase || REPO_BASE;
+  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
   if (hasDoubleRepo(base)) {
-    base = REPO_BASE;
+    base = isAbsoluteBase ? normalizeAbsoluteRepoBase(base) : REPO_BASE;
   }
   const onGithubPages = isGithubPagesHost();
   if (onGithubPages) {
@@ -51293,7 +51309,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CDomMmcU.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BeJ-cFW0.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51803,7 +51819,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-cAhJOfOx.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DubYZJRh.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52578,7 +52594,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CDomMmcU.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BeJ-cFW0.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -67232,8 +67248,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T01:40:28.596Z" : "",
-      sha: true ? "23643e5ca6d62fdee24403016b325e06f5633c0d" : ""
+      time: true ? "2025-12-26T02:02:16.124Z" : "",
+      sha: true ? "ad4ff47b3ad7949c969ce808f89ddfe9b52e4af5" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77192,4 +77208,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BM12C9Om.js.map
+//# sourceMappingURL=index-BZpYpUAk.js.map
