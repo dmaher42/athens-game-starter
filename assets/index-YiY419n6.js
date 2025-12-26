@@ -42081,7 +42081,7 @@ const REPO_BASE = `/${REPO_SEGMENT}/`;
 const DOUBLE_SEGMENT = `${REPO_SEGMENT}/${REPO_SEGMENT}`;
 const REPO_BASE_PATH = REPO_BASE;
 function normalizeBase(path) {
-  if (!path) return "/";
+  if (!path) return REPO_BASE;
   if (/^(?:[a-z]+:)?\/\//i.test(path)) {
     return path.endsWith("/") ? path : `${path}/`;
   }
@@ -42101,15 +42101,13 @@ function hasDoubleRepo(base) {
 function resolveBaseUrl$2() {
   const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true && "/athens-game-starter/" || null;
   const globalBase = typeof window !== "undefined" && typeof window.__BASE_URL__ === "string" ? window.__BASE_URL__ : null;
-  let base = normalizeBase(globalBase || envBase || "/");
+  let base = normalizeBase(globalBase || envBase || REPO_BASE);
   if (hasDoubleRepo(base)) {
     base = REPO_BASE;
   }
   const onGithubPages = isGithubPagesHost();
   if (onGithubPages) {
     base = REPO_BASE;
-  } else if (typeof window !== "undefined" && !globalBase && !envBase) {
-    base = "/";
   }
   return normalizeBase(base);
 }
@@ -42118,14 +42116,12 @@ function stripRepoSegment(path) {
   return path.replace(new RegExp(`^/?${REPO_SEGMENT}/`, "i"), "").replace(/^\/+/, "");
 }
 function joinPath(base, rel) {
-  if (!base) base = "/";
+  if (!base) base = REPO_BASE;
   if (!rel) return base;
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) return rel;
-  if (rel.startsWith("/")) {
-    return rel;
-  }
+  const trimmedRel = rel.startsWith("/") ? rel.replace(/^\/+/, "") : rel;
   const b = base.endsWith("/") ? base : `${base}/`;
-  const r = String(rel).replace(/^\/+/, "");
+  const r = String(trimmedRel).replace(/^\/+/, "");
   return b + r;
 }
 function createNoiseBuffer(context, { duration = 1, amplitude = 0.12 } = {}) {
@@ -44022,12 +44018,15 @@ const NEUTRAL_GROUND_FALLBACK_TINT = {
   contrast: 0.95
 };
 function textureUrl(file) {
-  const baseUrl2 = "/athens-game-starter/";
-  return `${baseUrl2}textures/ground/${file}`;
+  const baseUrl2 = resolveBaseUrl$2();
+  return joinPath(baseUrl2, `textures/ground/${file}`);
 }
 function sandTextureUrl() {
-  const baseUrl2 = "/athens-game-starter/";
-  return `${baseUrl2}textures/gravelly_sand/gravelly_sand_diff_1k.jpg`;
+  const baseUrl2 = resolveBaseUrl$2();
+  return joinPath(
+    baseUrl2,
+    "textures/gravelly_sand/gravelly_sand_diff_1k.jpg"
+  );
 }
 const GROUND_TEXTURE_CONFIG = {
   /**
@@ -45938,19 +45937,19 @@ function createTerrain(scene2) {
     );
     geometry.setAttribute("basePos", basePos);
   }
-  const baseUrl2 = "/athens-game-starter/";
+  const baseUrl2 = resolveBaseUrl$2();
   const textureOptions = {
     repeat: [28, 24],
     colorSpace: NoColorSpace,
     anisotropy: 8
   };
   const sandNormal = loadTextureWithFallback(
-    `${baseUrl2}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`,
+    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
     textureOptions,
     () => createFallbackDataTexture([128, 128, 255], textureOptions)
   );
   const sandARM = loadTextureWithFallback(
-    `${baseUrl2}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`,
+    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
     textureOptions,
     () => createFallbackDataTexture([255, 255, 0], textureOptions)
   );
@@ -47558,16 +47557,22 @@ function createHarborPad(harborGroundY) {
     );
   }
   const textureLoader2 = new TextureLoader();
-  const baseUrl2 = "/athens-game-starter/";
-  const sandDiffuse = textureLoader2.load(`${baseUrl2}textures/gravelly_sand/gravelly_sand_diff_1k.jpg`);
+  const baseUrl2 = resolveBaseUrl$2();
+  const sandDiffuse = textureLoader2.load(
+    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_diff_1k.jpg")
+  );
   sandDiffuse.wrapS = sandDiffuse.wrapT = RepeatWrapping;
   sandDiffuse.repeat.set(28, 24);
   sandDiffuse.colorSpace = SRGBColorSpace;
-  const sandNormal = textureLoader2.load(`${baseUrl2}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`);
+  const sandNormal = textureLoader2.load(
+    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg")
+  );
   sandNormal.wrapS = sandNormal.wrapT = RepeatWrapping;
   sandNormal.repeat.set(28, 24);
   sandNormal.colorSpace = NoColorSpace;
-  const sandARM = textureLoader2.load(`${baseUrl2}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`);
+  const sandARM = textureLoader2.load(
+    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg")
+  );
   sandARM.wrapS = sandARM.wrapT = RepeatWrapping;
   sandARM.repeat.set(28, 24);
   sandARM.colorSpace = NoColorSpace;
@@ -48474,14 +48479,13 @@ class AssetLoader {
         seen2.add(trimmed);
         continue;
       }
-      const startsAtRoot = trimmed.startsWith("/");
       const relative = sanitizeRelativePath$6(trimmed);
-      if (!relative && !startsAtRoot) {
+      if (!relative) {
         continue;
       }
       const candidatesToTry = Array.from(
-        new Set(
-          startsAtRoot ? [trimmed] : [joinPath(this.baseUrl, relative), relative]
+        /* @__PURE__ */ new Set(
+          [joinPath(this.baseUrl, relative), relative]
         )
       );
       for (const candidate of candidatesToTry) {
@@ -49520,17 +49524,23 @@ const textureLoader = new TextureLoader();
 let marbleTextures = null;
 function loadMarbleTextures() {
   if (marbleTextures) return marbleTextures;
-  const baseUrl2 = "/athens-game-starter/";
-  const diffuse = textureLoader.load(`${baseUrl2}textures/marble_albedo.jpg`);
+  const baseUrl2 = resolveBaseUrl$2();
+  const diffuse = textureLoader.load(
+    joinPath(baseUrl2, "textures/marble_albedo.jpg")
+  );
   diffuse.wrapS = diffuse.wrapT = RepeatWrapping;
   diffuse.colorSpace = SRGBColorSpace;
-  const normal = textureLoader.load(`${baseUrl2}textures/marble_normal-dx.jpg`);
+  const normal = textureLoader.load(
+    joinPath(baseUrl2, "textures/marble_normal-dx.jpg")
+  );
   normal.wrapS = normal.wrapT = RepeatWrapping;
   normal.colorSpace = NoColorSpace;
-  const roughness = textureLoader.load(`${baseUrl2}textures/marble_rough.jpg`);
+  const roughness = textureLoader.load(
+    joinPath(baseUrl2, "textures/marble_rough.jpg")
+  );
   roughness.wrapS = roughness.wrapT = RepeatWrapping;
   roughness.colorSpace = NoColorSpace;
-  const ao = textureLoader.load(`${baseUrl2}textures/marble_ao.jpg`);
+  const ao = textureLoader.load(joinPath(baseUrl2, "textures/marble_ao.jpg"));
   ao.wrapS = ao.wrapT = RepeatWrapping;
   ao.colorSpace = NoColorSpace;
   marbleTextures = { diffuse, normal, roughness, ao };
@@ -50863,22 +50873,22 @@ function ensureTrailingSlash$1(value) {
 }
 function resolveDocumentBasePath$1() {
   if (typeof document === "undefined" || !document.baseURI) {
-    return "/";
+    return "/athens-game-starter/";
   }
   try {
     const url = new URL(document.baseURI);
     let { pathname } = url;
     if (!pathname) {
-      return "/";
+      return "/athens-game-starter/";
     }
     if (!pathname.endsWith("/")) {
       const lastSlash = pathname.lastIndexOf("/");
       pathname = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
     }
-    return pathname || "/";
+    return pathname || "/athens-game-starter/";
   } catch (error) {
     console.warn("Unable to parse document.baseURI for BASE_URL fallback", error);
-    return "/";
+    return "/athens-game-starter/";
   }
 }
 function resolveBaseUrl$1() {
@@ -50945,7 +50955,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DvJgDf6z.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CNSDWL13.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51351,22 +51361,22 @@ function ensureTrailingSlash(value) {
 }
 function resolveDocumentBasePath() {
   if (typeof document === "undefined" || !document.baseURI) {
-    return "/";
+    return "/athens-game-starter/";
   }
   try {
     const url = new URL(document.baseURI);
     let { pathname } = url;
     if (!pathname) {
-      return "/";
+      return "/athens-game-starter/";
     }
     if (!pathname.endsWith("/")) {
       const lastSlash = pathname.lastIndexOf("/");
       pathname = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
     }
-    return pathname || "/";
+    return pathname || "/athens-game-starter/";
   } catch (error) {
     console.warn("Unable to parse document.baseURI for BASE_URL fallback", error);
-    return "/";
+    return "/athens-game-starter/";
   }
 }
 function resolveBaseUrl() {
@@ -51455,7 +51465,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DXfbxol2.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CnNx69CF.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51513,14 +51523,13 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
       continue;
     }
     const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
-    const startsAtRoot = !isAbsolute && raw.startsWith("/");
     const relative = sanitizeRelativePath$4(raw);
-    if (!relative && !(isAbsolute || startsAtRoot)) {
+    if (!relative && !isAbsolute) {
       continue;
     }
     const candidatesToTry = Array.from(
       new Set(
-        isAbsolute || startsAtRoot ? [raw] : [joinPath(baseUrl2, relative), relative]
+        isAbsolute ? [raw] : [joinPath(baseUrl2, relative), relative]
       )
     );
     for (const url of candidatesToTry) {
@@ -51619,11 +51628,11 @@ function resolveTextureUrl(baseUrl2, candidate) {
   if (typeof candidate !== "string") return null;
   const trimmed = candidate.trim();
   if (!trimmed) return null;
-  if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
     return trimmed;
   }
   const root = typeof baseUrl2 === "string" && baseUrl2 ? baseUrl2 : resolveBaseUrl$2();
-  return joinPath(root, trimmed);
+  return joinPath(root, trimmed.replace(/^\/+/, ""));
 }
 async function loadTextureCandidate({ baseUrl: baseUrl2, candidate, colorSpace }) {
   const url = resolveTextureUrl(baseUrl2, candidate);
@@ -52229,7 +52238,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DvJgDf6z.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CNSDWL13.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -54221,7 +54230,7 @@ function createAthensLayoutConfig(environment = getRuntimeEnvironment(), overrid
     )
   );
 }
-const baseUrl = (path) => joinPath(resolveBaseUrl$2(), path);
+const baseUrl$1 = (path) => joinPath(resolveBaseUrl$2(), path);
 function buildDistrictRuleUrlCandidates(resolvedBase) {
   const urls = /* @__PURE__ */ new Set();
   const push = (value) => {
@@ -54232,24 +54241,20 @@ function buildDistrictRuleUrlCandidates(resolvedBase) {
     if (!base) return;
     push(joinPath(base, rel));
   };
-  push(baseUrl("config/districts.json"));
+  push(baseUrl$1("config/districts.json"));
   pushJoined(resolvedBase, "config/districts.json");
   if (REPO_BASE_PATH && (!resolvedBase || !resolvedBase.includes(REPO_BASE_PATH))) {
     pushJoined(REPO_BASE_PATH, "config/districts.json");
   }
   if (typeof window !== "undefined" && window.location) {
-    const { pathname, hostname } = window.location;
+    const { pathname } = window.location;
     if (REPO_BASE_PATH && pathname && pathname.includes(REPO_BASE_PATH)) {
       const idx = pathname.indexOf(REPO_BASE_PATH);
       const repoBase = pathname.slice(0, idx + REPO_BASE_PATH.length);
       pushJoined(repoBase, "config/districts.json");
     }
-    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1" || hostname === "" || hostname === "[::1]";
-    if (isLocalhost) {
-      push("/public/config/districts.json");
-    }
   } else {
-    push("/public/config/districts.json");
+    push(joinPath(REPO_BASE_PATH, "config/districts.json"));
   }
   return Array.from(urls);
 }
@@ -54871,13 +54876,14 @@ async function createCivicDistrict(scene2, options = {}) {
   };
   const tl = new TextureLoader();
   const baseUrl2 = typeof scene2?.userData?.baseUrl === "string" ? scene2.userData.baseUrl : "";
+  const resolvedBase = baseUrl2 || resolveBaseUrl$2();
   let plazaMat;
   try {
-    const baseMap = await tl.loadAsync(joinPath(baseUrl2 || "/", "textures/marble_base.jpg"));
+    const baseMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
     baseMap.wrapS = baseMap.wrapT = RepeatWrapping;
     baseMap.repeat.set(4, 4);
     baseMap.colorSpace = SRGBColorSpace;
-    const normalMap = await tl.loadAsync(joinPath(baseUrl2 || "/", "textures/marble_normal-dx.jpg"));
+    const normalMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
     normalMap.wrapS = normalMap.wrapT = RepeatWrapping;
     normalMap.repeat.set(4, 4);
     plazaMat = new MeshStandardMaterial({
@@ -66864,8 +66870,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T00:02:53.167Z" : "",
-      sha: true ? "30a83dca6ea2b11dca35a5b07e74db48a1893bb2" : ""
+      time: true ? "2025-12-26T00:19:47.217Z" : "",
+      sha: true ? "a8987d4cf2333c44f49d3317fab7557922e9d356" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -67271,9 +67277,10 @@ const LOOK_PROFILES = {
     }
   }
 };
+const baseUrl = resolveBaseUrl$2();
 const skyboxLightingConfig = {
   // Load the custom Athens sunset skybox shipped in public/assets/skyboxes.
-  skyboxUrl: "/assets/skyboxes/athens_sunset_360.png",
+  skyboxUrl: joinPath(baseUrl, "assets/skyboxes/athens_sunset_360.png"),
   sunAzimuthDeg: 110,
   sunElevationDeg: 12,
   sunDistance: 2e3,
@@ -76809,4 +76816,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-Dni_fJtb.js.map
+//# sourceMappingURL=index-YiY419n6.js.map
