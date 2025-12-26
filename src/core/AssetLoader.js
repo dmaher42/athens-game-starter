@@ -2,9 +2,9 @@ import * as THREE from "three";
 
 import {
   joinPath,
-  normalizeBaseUrl,
   resolveBaseUrl,
   stripRepoSegment,
+  REPO_BASE_PATH,
 } from "../utils/baseUrl.js";
 import { IS_DEV } from "../utils/env.js";
 import {
@@ -37,6 +37,29 @@ function sanitizeRelativePath(value) {
     .replace(/^docs\//i, "")
     .replace(/^athens-game-starter\//i, "")
     .replace(/^\.\//, "");
+}
+
+const REPO_SEGMENT = REPO_BASE_PATH.replace(/\//g, "");
+
+function normalizeAbsoluteDistrictRuleUrl(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (!REPO_SEGMENT) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    parsed.pathname = parsed.pathname.replace(
+      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+      `/${REPO_SEGMENT}`,
+    );
+    return parsed.toString();
+  } catch {
+    return trimmed;
+  }
 }
 
 export class AssetLoader {
@@ -189,12 +212,16 @@ export class AssetLoader {
       const trimmed = candidate.trim();
       if (!trimmed) continue;
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-        districtCandidates.push(trimmed);
+        const normalized = /^(?:[a-z]+:)?\/\//i.test(trimmed)
+          ? normalizeAbsoluteDistrictRuleUrl(trimmed)
+          : trimmed;
+        districtCandidates.push(normalized);
         continue;
       }
       const normalized = stripRepoSegment(trimmed);
       if (!normalized) continue;
-      districtCandidates.push(joinPath(baseUrl, normalized));
+      const joined = joinPath(baseUrl, normalized);
+      districtCandidates.push(normalizeAbsoluteDistrictRuleUrl(joined));
     }
     let resolvedDistrictPath = null;
     for (const candidate of districtCandidates) {
@@ -223,9 +250,11 @@ export class AssetLoader {
         const pathValue = entry.path.trim();
         if (/config\/districts\.json$/i.test(pathValue)) {
           if (resolvedDistrictPath) {
-            targets.push(resolvedDistrictPath);
+            targets.push(normalizeAbsoluteDistrictRuleUrl(resolvedDistrictPath));
           }
-          targets.push(...districtCandidates);
+          for (const candidate of districtCandidates) {
+            targets.push(normalizeAbsoluteDistrictRuleUrl(candidate));
+          }
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
           targets.push(pathValue);
         } else {
