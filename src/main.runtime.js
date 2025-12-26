@@ -56,7 +56,7 @@ function createApplicationBootConfig(source) {
 
 export const applicationBootConfig = createApplicationBootConfig(engineConfig);
 
-if (IS_DEV && typeof window !== "undefined") {
+if (typeof window !== "undefined") {
   window.__ENGINE_CONFIG__ = engineConfig;
 }
 
