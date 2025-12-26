@@ -291,6 +291,8 @@ function getElevation(
     nonSeaBorders.length > 0 ? Math.max(...nonSeaBorders) : 0;
   if (nonSeaBorderMask > 0) {
     // Islands can happen when a slope threshold is used as a height buffer on borders.
+    // IMPORTANT: This must be a HEIGHT buffer (in elevation units), not a slope threshold.
+    // Using a slope constant here can accidentally allow water at non-sea borders -> island ring.
     h = Math.max(h, seaLevel + MAINLAND_EDGE_BUFFER * nonSeaBorderMask);
   }
 
