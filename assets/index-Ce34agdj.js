@@ -48660,6 +48660,10 @@ function sanitizeCandidatePath(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
+function sanitizeQuickCheckPath(value) {
+  if (typeof value !== "string") return "";
+  return value.trim().replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
+}
 function validateQuickChecks(config) {
   assert(Array.isArray(config.quickChecks), "quickChecks must be an array");
   for (const entry of config.quickChecks) {
@@ -48680,6 +48684,17 @@ function validateCandidates(map) {
 function createAssetConfig(environment = getRuntimeEnvironment(), overrides = {}) {
   const envOverrides = ENVIRONMENT_OVERRIDES$3[environment] || {};
   const merged = mergeDeep({}, DEFAULT_ASSET_CONFIG, envOverrides, overrides);
+  if (Array.isArray(merged.quickChecks)) {
+    merged.quickChecks = merged.quickChecks.map((entry) => {
+      if (!entry || typeof entry !== "object" || typeof entry.path !== "string") {
+        return entry;
+      }
+      return {
+        ...entry,
+        path: sanitizeQuickCheckPath(entry.path)
+      };
+    });
+  }
   validateCandidates(merged.candidates);
   validateQuickChecks(merged);
   const frozen = deepFreeze(merged);
@@ -51357,7 +51372,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-jGwtRxGP.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BxLw4XQw.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51867,7 +51882,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DkBwg5Ss.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BLs-kckY.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52642,7 +52657,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-jGwtRxGP.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BxLw4XQw.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -67307,8 +67322,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T05:35:52.768Z" : "",
-      sha: true ? "659b87d91583af4a7056528079bef2ae156c23b0" : ""
+      time: true ? "2025-12-26T05:41:35.627Z" : "",
+      sha: true ? "435238ce2ff6ee19e8847bcf6098f241654c71fb" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77267,4 +77282,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index--gyZmvdN.js.map
+//# sourceMappingURL=index-Ce34agdj.js.map
