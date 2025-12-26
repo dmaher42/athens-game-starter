@@ -50338,7 +50338,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CR4olHZV.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BWiROBFO.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50842,13 +50842,14 @@ function createDracoLoader() {
   }
   return sharedDracoLoader;
 }
+const ENABLE_GLB_MODE$4 = false;
 function sanitizeRelativePath$4(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-lDfN3iKV.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C1ynbKoN.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -50900,6 +50901,7 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
   }
   const baseUrl2 = resolveBaseUrl$2();
   const seen2 = /* @__PURE__ */ new Set();
+  const allowHero = options?.allowHero;
   for (const candidate of urls) {
     const raw = typeof candidate === "string" ? candidate.trim() : "";
     if (!raw) {
@@ -50922,8 +50924,10 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
       }
       seen2.add(url);
       if (url.endsWith(".glb")) {
-        console.warn(`[GLB Disabled] Skipping model load: ${url}`);
-        continue;
+        if (!ENABLE_GLB_MODE$4 && !(allowHero && /hero\.glb$/i.test(url))) {
+          console.warn(`[GLB Disabled] Skipping model load: ${url}`);
+          continue;
+        }
       }
       if (!await headOk$3(url)) {
         continue;
@@ -51623,7 +51627,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CR4olHZV.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BWiROBFO.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -65180,8 +65184,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T23:15:49.586Z" : "",
-      sha: true ? "91840d98f3e90875ad05a2ff2f21d775cdd9197c" : ""
+      time: true ? "2025-12-26T23:27:42.638Z" : "",
+      sha: true ? "723f5cb9bec2287af18ae9cb66e705df86e3bf8d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74859,6 +74863,7 @@ class PlayerSystem {
           heroLoader,
           heroCandidates,
           {
+            allowHero: true,
             renderer: this.renderer,
             targetHeight: 1.8
           }
@@ -75917,4 +75922,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CjqzVBjR.js.map
+//# sourceMappingURL=index-D23gSIn4.js.map
