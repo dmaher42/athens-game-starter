@@ -20,7 +20,6 @@ import {
   INLAND_RISE,
   RIDGE_START,
   RIDGE_HEIGHT,
-  CITY_SLOPE_MAX,
 } from "../config/terrainShape";
 import { validateTerrain } from "./terrainValidation";
 
@@ -121,6 +120,7 @@ const NOISE_SCALE = 0.05;
 const NOISE_AMPLITUDE = 0.45;
 const OCEAN_DEPTH = -12.0;
 const CITY_HEIGHT = 2.5; // Base city height (above sea level)
+const MAINLAND_EDGE_BUFFER = 0.8;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
@@ -290,7 +290,8 @@ function getElevation(
   const nonSeaBorderMask =
     nonSeaBorders.length > 0 ? Math.max(...nonSeaBorders) : 0;
   if (nonSeaBorderMask > 0) {
-    h = Math.max(h, seaLevel + CITY_SLOPE_MAX * nonSeaBorderMask);
+    // Islands can happen when a slope threshold is used as a height buffer on borders.
+    h = Math.max(h, seaLevel + MAINLAND_EDGE_BUFFER * nonSeaBorderMask);
   }
 
   // Carves

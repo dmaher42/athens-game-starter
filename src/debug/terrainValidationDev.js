@@ -10,15 +10,14 @@ import {
   INLAND_RISE,
   RIDGE_START,
   RIDGE_HEIGHT,
-  CITY_SLOPE_MAX,
 } from "../config/terrainShape";
 import { validateTerrain } from "../world/terrainValidation";
-import { IS_DEV } from "../utils/env.js";
-
+const DEFAULT_SEED_START = 1337;
 const TERRAIN_SIZE = 2400;
 const DEFAULT_SEGMENTS = 512;
 const TERRAIN_VALIDATION_ATTEMPTS = 5;
 const CITY_HEIGHT = 2.5;
+const MAINLAND_EDGE_BUFFER = 0.8;
 const NOISE_SCALE = 0.05;
 const NOISE_AMPLITUDE = 0.45;
 const ZERO_NOISE_OFFSET = { x: 0, z: 0 };
@@ -198,7 +197,8 @@ function getElevation(x, z, seaLevel, coastData, noiseOffset, halfSize, size) {
   const nonSeaBorderMask =
     nonSeaBorders.length > 0 ? Math.max(...nonSeaBorders) : 0;
   if (nonSeaBorderMask > 0) {
-    h = Math.max(h, seaLevel + CITY_SLOPE_MAX * nonSeaBorderMask);
+    // Islands can happen when a slope threshold is used as a height buffer on borders.
+    h = Math.max(h, seaLevel + MAINLAND_EDGE_BUFFER * nonSeaBorderMask);
   }
 
   h = applyHarbourCarve(x, z, seaLevel, h);
@@ -252,13 +252,12 @@ function buildBaseHeights({
 }
 
 export function runTerrainValidationDev({
+  seedStart = DEFAULT_SEED_START,
   seedCount = 50,
-  seedStart = Math.floor(Math.random() * 1_000_000),
   attempts = TERRAIN_VALIDATION_ATTEMPTS,
-  segments = DEFAULT_SEGMENTS,
-  size = TERRAIN_SIZE,
 } = {}) {
-  if (!IS_DEV) {
+  const isDev = Boolean(import.meta?.env?.DEV);
+  if (!isDev) {
     console.warn(
       "[TerrainValidationDev] Skipping dev validation run outside development mode.",
     );
@@ -266,6 +265,8 @@ export function runTerrainValidationDev({
   }
 
   const seaLevel = getSeaLevelY();
+  const size = TERRAIN_SIZE;
+  const segments = DEFAULT_SEGMENTS;
   const halfSize = size * 0.5;
   const failureCounts = new Map();
   let failureTotal = 0;
@@ -309,7 +310,12 @@ export function runTerrainValidationDev({
     b[1] === a[1] ? a[0].localeCompare(b[0]) : b[1] - a[1],
   );
 
-  console.log("[TerrainValidationDev] Seeds:", seedCount, "Start:", seedStart);
+  console.log(
+    "[TerrainValidationDev] Runs:",
+    seedCount,
+    "Start:",
+    seedStart,
+  );
   console.log(
     "[TerrainValidationDev] Failures:",
     failureTotal,
@@ -333,6 +339,6 @@ export function runTerrainValidationDev({
   };
 }
 
-if (IS_DEV && typeof window !== "undefined") {
+if (import.meta?.env?.DEV && typeof window !== "undefined") {
   window.runTerrainValidationDev = runTerrainValidationDev;
 }

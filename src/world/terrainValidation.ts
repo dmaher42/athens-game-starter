@@ -334,8 +334,12 @@ export function validateTerrain({
 
   const failures: string[] = [];
 
-  if (waterTouchesAllBorders || waterLoopSeparating) {
-    failures.push("water-border-coverage");
+  if (waterTouchesAllBorders) {
+    failures.push("water-touches-all-borders");
+  }
+
+  if (waterLoopSeparating) {
+    failures.push("water-loop-separating");
   }
 
   if (nonSeaBordersTouched < 2) {
@@ -343,7 +347,7 @@ export function validateTerrain({
   }
 
   if (cityCoreSlopeAverage > CITY_SLOPE_MAX) {
-    failures.push("city-core-slope");
+    failures.push("city-core-too-steep");
   }
 
   return {
