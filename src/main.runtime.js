@@ -55,6 +55,10 @@ function createApplicationBootConfig(source) {
 
 export const applicationBootConfig = createApplicationBootConfig(engineConfig);
 
+if (typeof window !== "undefined") {
+  window.__ENGINE_CONFIG__ = engineConfig;
+}
+
 const app = new Application({
   baseUrl: applicationBootConfig.baseUrl,
   districtRuleCandidates: [...applicationBootConfig.districtRuleCandidates],
