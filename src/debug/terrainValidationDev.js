@@ -12,8 +12,7 @@ import {
   RIDGE_HEIGHT,
 } from "../config/terrainShape";
 import { validateTerrain } from "../world/terrainValidation";
-import { IS_DEV } from "../utils/env.js";
-
+const DEFAULT_SEED_START = 1337;
 const TERRAIN_SIZE = 2400;
 const DEFAULT_SEGMENTS = 512;
 const TERRAIN_VALIDATION_ATTEMPTS = 5;
@@ -253,13 +252,12 @@ function buildBaseHeights({
 }
 
 export function runTerrainValidationDev({
+  seedStart = DEFAULT_SEED_START,
   seedCount = 50,
-  seedStart = Math.floor(Math.random() * 1_000_000),
   attempts = TERRAIN_VALIDATION_ATTEMPTS,
-  segments = DEFAULT_SEGMENTS,
-  size = TERRAIN_SIZE,
 } = {}) {
-  if (!IS_DEV) {
+  const isDev = Boolean(import.meta?.env?.DEV);
+  if (!isDev) {
     console.warn(
       "[TerrainValidationDev] Skipping dev validation run outside development mode.",
     );
@@ -267,6 +265,8 @@ export function runTerrainValidationDev({
   }
 
   const seaLevel = getSeaLevelY();
+  const size = TERRAIN_SIZE;
+  const segments = DEFAULT_SEGMENTS;
   const halfSize = size * 0.5;
   const failureCounts = new Map();
   let failureTotal = 0;
@@ -310,7 +310,12 @@ export function runTerrainValidationDev({
     b[1] === a[1] ? a[0].localeCompare(b[0]) : b[1] - a[1],
   );
 
-  console.log("[TerrainValidationDev] Seeds:", seedCount, "Start:", seedStart);
+  console.log(
+    "[TerrainValidationDev] Runs:",
+    seedCount,
+    "Start:",
+    seedStart,
+  );
   console.log(
     "[TerrainValidationDev] Failures:",
     failureTotal,
@@ -334,6 +339,6 @@ export function runTerrainValidationDev({
   };
 }
 
-if (IS_DEV && typeof window !== "undefined") {
+if (import.meta?.env?.DEV && typeof window !== "undefined") {
   window.runTerrainValidationDev = runTerrainValidationDev;
 }
