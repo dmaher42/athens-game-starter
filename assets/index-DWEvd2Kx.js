@@ -42076,9 +42076,9 @@ function getMaterialAmbientOcclusion(material) {
   };
 }
 const __vite_import_meta_env__ = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-const REPO_SEGMENT$1 = "athens-game-starter";
-const REPO_BASE = `/${REPO_SEGMENT$1}/`;
-const DOUBLE_SEGMENT = `${REPO_SEGMENT$1}/${REPO_SEGMENT$1}`;
+const REPO_SEGMENT$2 = "athens-game-starter";
+const REPO_BASE = `/${REPO_SEGMENT$2}/`;
+const DOUBLE_SEGMENT = `${REPO_SEGMENT$2}/${REPO_SEGMENT$2}`;
 const REPO_BASE_PATH = REPO_BASE;
 function normalizeAbsoluteRepoBase(path) {
   if (!path || !/^(?:[a-z]+:)?\/\//i.test(path)) {
@@ -42087,8 +42087,8 @@ function normalizeAbsoluteRepoBase(path) {
   try {
     const parsed = new URL(path);
     parsed.pathname = parsed.pathname.replace(
-      new RegExp(`/${REPO_SEGMENT$1}/${REPO_SEGMENT$1}(?=/|$)`, "g"),
-      `/${REPO_SEGMENT$1}`
+      new RegExp(`/${REPO_SEGMENT$2}/${REPO_SEGMENT$2}(?=/|$)`, "g"),
+      `/${REPO_SEGMENT$2}`
     );
     return parsed.toString();
   } catch {
@@ -42129,7 +42129,7 @@ function resolveBaseUrl$2() {
   }
   return normalizeBase(base);
 }
-function normalizeBaseUrl(base) {
+function normalizeBaseUrl$1(base) {
   let normalized = base || REPO_BASE;
   const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(normalized);
   if (isAbsoluteBase) {
@@ -42141,7 +42141,7 @@ function normalizeBaseUrl(base) {
 }
 function stripRepoSegment(path) {
   if (!path || typeof path !== "string") return path;
-  return path.replace(new RegExp(`^/?${REPO_SEGMENT$1}/`, "i"), "").replace(/^\/+/, "");
+  return path.replace(new RegExp(`^/?${REPO_SEGMENT$2}/`, "i"), "").replace(/^\/+/, "");
 }
 function joinPath(base, rel) {
   if (!base) base = REPO_BASE;
@@ -42149,7 +42149,7 @@ function joinPath(base, rel) {
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) return rel;
   let relValue = String(rel);
   const baseValue = String(base);
-  const repoToken = `/${REPO_SEGMENT$1}/`;
+  const repoToken = `/${REPO_SEGMENT$2}/`;
   if (baseValue.toLowerCase().includes(repoToken)) {
     const hadLeadingSlash = relValue.startsWith("/");
     const stripped = stripRepoSegment(relValue);
@@ -48745,6 +48745,27 @@ function sanitizeRelativePath$6(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
+const REPO_SEGMENT$1 = REPO_BASE_PATH.replace(/\//g, "");
+function normalizeAbsoluteDistrictRuleUrl(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  if (!REPO_SEGMENT$1) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    parsed.pathname = parsed.pathname.replace(
+      new RegExp(`/${REPO_SEGMENT$1}/${REPO_SEGMENT$1}(?=/|$)`, "g"),
+      `/${REPO_SEGMENT$1}`
+    );
+    return parsed.toString();
+  } catch {
+    return trimmed;
+  }
+}
 class AssetLoader {
   constructor({
     baseUrl: baseUrl2 = resolveBaseUrl$2(),
@@ -48872,12 +48893,14 @@ class AssetLoader {
       const trimmed = candidate.trim();
       if (!trimmed) continue;
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-        districtCandidates.push(trimmed);
+        const normalized2 = /^(?:[a-z]+:)?\/\//i.test(trimmed) ? normalizeAbsoluteDistrictRuleUrl(trimmed) : trimmed;
+        districtCandidates.push(normalized2);
         continue;
       }
       const normalized = stripRepoSegment(trimmed);
       if (!normalized) continue;
-      districtCandidates.push(joinPath(baseUrl2, normalized));
+      const joined = joinPath(baseUrl2, normalized);
+      districtCandidates.push(normalizeAbsoluteDistrictRuleUrl(joined));
     }
     let resolvedDistrictPath = null;
     for (const candidate of districtCandidates) {
@@ -48903,9 +48926,11 @@ class AssetLoader {
         const pathValue = entry.path.trim();
         if (/config\/districts\.json$/i.test(pathValue)) {
           if (resolvedDistrictPath) {
-            targets.push(resolvedDistrictPath);
+            targets.push(normalizeAbsoluteDistrictRuleUrl(resolvedDistrictPath));
           }
-          targets.push(...districtCandidates);
+          for (const candidate of districtCandidates) {
+            targets.push(normalizeAbsoluteDistrictRuleUrl(candidate));
+          }
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
           targets.push(pathValue);
         } else {
@@ -51331,7 +51356,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-5lnGi2PD.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-OoJj8yE4.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51841,7 +51866,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DKqqdyUQ.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-6WmbtCCK.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52616,7 +52641,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-5lnGi2PD.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-OoJj8yE4.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -67281,8 +67306,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T02:39:36.576Z" : "",
-      sha: true ? "f942614dd5284e32d6fe8234c01f3f5830f8f0cf" : ""
+      time: true ? "2025-12-26T02:45:24.554Z" : "",
+      sha: true ? "8c50a3e788c83948200cfa92418f9061cf970e9d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77241,4 +77266,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DvJM5a8l.js.map
+//# sourceMappingURL=index-DWEvd2Kx.js.map
