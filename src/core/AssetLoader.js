@@ -78,6 +78,19 @@ function normalizeAbsoluteRepoUrl(value) {
   }
 }
 
+function normalizeBaseUrl(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
+    return normalizeAbsoluteRepoUrl(trimmed);
+  }
+  if (trimmed.startsWith("/")) {
+    return normalizeRepoPrefixedPath(trimmed);
+  }
+  return normalizeRepoPrefixedPath(`/${trimmed}`);
+}
+
 export class AssetLoader {
   constructor({
     baseUrl = resolveBaseUrl(),
