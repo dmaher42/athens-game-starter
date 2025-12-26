@@ -144,7 +144,8 @@ export class AssetLoader {
   }
 
   async headOk(url) {
-    const target = typeof url === "string" ? url : String(url ?? "");
+    const rawTarget = typeof url === "string" ? url : String(url ?? "");
+    const target = normalizeAbsoluteRepoUrl(rawTarget);
     const isJsonProbe = TRUE_JSON_PROBE.test(target);
     const isGlbProbe = GLB_EXTENSION.test(target);
     const fallbackStatuses = new Set([403, 405, 501]);
