@@ -48761,13 +48761,26 @@ function sanitizeRelativePath$6(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
-function stripLeadingRepoSegment(value) {
-  if (typeof value !== "string") return value;
+function normalizeRepoRelativeCandidate(value) {
+  if (typeof value !== "string") return "";
   const trimmed = value.trim();
-  if (!trimmed || /^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-    return value;
+  if (!trimmed) return "";
+  const withoutLeading = trimmed.replace(/^\/+/, "");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT$1}/)+`, "i");
+  return withoutLeading.replace(repoPrefix, "");
+}
+function normalizeRepoPrefixedPath(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (!trimmed.startsWith("/")) return trimmed;
+  const withoutLeading = trimmed.replace(/^\/+/, "");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT$1}/)+`, "i");
+  if (!repoPrefix.test(withoutLeading)) {
+    return trimmed;
   }
-  return trimmed.replace(new RegExp(`^(?:\\./)?${REPO_SEGMENT$1}/`, "i"), "");
+  const stripped = withoutLeading.replace(repoPrefix, "");
+  return `/${REPO_SEGMENT$1}/${stripped}`;
 }
 function normalizeAbsoluteRepoUrl(value) {
   if (typeof value !== "string") return value;
@@ -48910,10 +48923,11 @@ class AssetLoader {
       const trimmed = candidate.trim();
       if (!trimmed) continue;
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-        districtCandidates.push(normalizeAbsoluteRepoUrl(trimmed));
+        const normalized2 = normalizeAbsoluteRepoUrl(trimmed);
+        districtCandidates.push(normalizeRepoPrefixedPath(normalized2));
         continue;
       }
-      const normalized = stripRepoSegment(stripLeadingRepoSegment(trimmed));
+      const normalized = normalizeRepoRelativeCandidate(trimmed);
       if (!normalized) continue;
       const joined = joinPath(baseUrl2, normalized);
       districtCandidates.push(normalizeAbsoluteDistrictRuleUrl(joined));
@@ -48950,7 +48964,8 @@ class AssetLoader {
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
           targets.push(normalizeAbsoluteRepoUrl(pathValue));
         } else {
-          targets.push(joinPath(baseUrl2, stripLeadingRepoSegment(pathValue)));
+          const normalizedPath = /athens-game-starter\//i.test(pathValue) ? normalizeRepoRelativeCandidate(pathValue) : pathValue;
+          targets.push(joinPath(baseUrl2, normalizedPath));
         }
       }
       if (typeof entry.candidateKey === "string" && entry.candidateKey.trim()) {
@@ -51372,7 +51387,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BxLw4XQw.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bj10U20L.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51882,7 +51897,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BLs-kckY.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CYEdzcGJ.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52657,7 +52672,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BxLw4XQw.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bj10U20L.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -67322,8 +67337,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T05:41:35.627Z" : "",
-      sha: true ? "435238ce2ff6ee19e8847bcf6098f241654c71fb" : ""
+      time: true ? "2025-12-26T06:08:55.697Z" : "",
+      sha: true ? "c56f1a5deb364d33cf22e50f2dbbb661c6470b71" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77282,4 +77297,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-Ce34agdj.js.map
+//# sourceMappingURL=index-D1CaRnSs.js.map
