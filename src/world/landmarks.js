@@ -539,7 +539,6 @@ function copyMaterialFlags(source, target) {
 }
 
 export async function loadLandmark(scene, url, options = {}) {
-  if (!ENABLE_GLB_MODE) return null;
   const timerLabel = `loadLandmark:${url}`;
   if (typeof console?.time === "function") {
     // A quick console benchmark so you can compare compressed vs. uncompressed
@@ -610,7 +609,7 @@ export async function loadLandmark(scene, url, options = {}) {
       throw new Error("loadLandmark requires a non-empty URL");
     }
 
-    if (sanitizedUrl.endsWith(".glb")) {
+    if (!ENABLE_GLB_MODE) {
       console.warn(`[GLB Disabled] Skipping model load: ${sanitizedUrl}`);
       const fallbackObject = await tryProceduralFallback("glb-disabled");
       if (fallbackObject) {
