@@ -5,6 +5,22 @@ const REPO_BASE = `/${REPO_SEGMENT}/`;
 const DOUBLE_SEGMENT = `${REPO_SEGMENT}/${REPO_SEGMENT}`;
 export const REPO_BASE_PATH = REPO_BASE;
 
+function normalizeAbsoluteRepoBase(path) {
+  if (!path || !/^(?:[a-z]+:)?\/\//i.test(path)) {
+    return path;
+  }
+  try {
+    const parsed = new URL(path);
+    parsed.pathname = parsed.pathname.replace(
+      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+      `/${REPO_SEGMENT}`
+    );
+    return parsed.toString();
+  } catch {
+    return path;
+  }
+}
+
 function normalizeBase(path) {
   if (!path) return REPO_BASE;
   // If it's a full URL, just ensure trailing slash
@@ -40,10 +56,11 @@ export function resolveBaseUrl() {
       ? window.__BASE_URL__
       : null;
 
-  let base = normalizeBase(globalBase || envBase || REPO_BASE);
+  let base = globalBase || envBase || REPO_BASE;
+  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
 
   if (hasDoubleRepo(base)) {
-    base = REPO_BASE;
+    base = isAbsoluteBase ? normalizeAbsoluteRepoBase(base) : REPO_BASE;
   }
 
   const onGithubPages = isGithubPagesHost();
