@@ -68,6 +68,16 @@ export function joinPath(base, rel) {
   if (!rel) return base;
   // If rel is a full URL, return it as-is.
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) return rel;
+  if (rel.startsWith("/")) {
+    if (/^(?:[a-z]+:)?\/\//i.test(base)) {
+      try {
+        return new URL(rel, base).toString();
+      } catch {
+        return rel;
+      }
+    }
+    return rel;
+  }
   const trimmedRel = rel.startsWith("/") ? rel.replace(/^\/+/, "") : rel;
   const b = base.endsWith("/") ? base : `${base}/`;
   const r = String(trimmedRel).replace(/^\/+/, "");
