@@ -45140,14 +45140,17 @@ function validateTerrain({
     seaSide
   });
   const failures = [];
-  if (!(waterTouchesAllBorders || waterLoopSeparating)) {
-    failures.push("water-border-coverage");
+  if (waterTouchesAllBorders) {
+    failures.push("water-touches-all-borders");
+  }
+  if (waterLoopSeparating) {
+    failures.push("water-loop-separating");
   }
   if (nonSeaBordersTouched < 2) {
     failures.push("landmass-border-coverage");
   }
   if (cityCoreSlopeAverage > CITY_SLOPE_MAX) {
-    failures.push("city-core-slope");
+    failures.push("city-core-too-steep");
   }
   return {
     valid: failures.length === 0,
@@ -45245,6 +45248,7 @@ const NOISE_SCALE = 0.05;
 const NOISE_AMPLITUDE = 0.45;
 const OCEAN_DEPTH = -12;
 const CITY_HEIGHT = 2.5;
+const MAINLAND_EDGE_BUFFER = 0.8;
 const SAND_COLOR = new Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new Color(2051929);
@@ -45354,7 +45358,7 @@ function getElevation$1(x, z, seaLevel, coastData = null, noiseOffset = ZERO_NOI
   const nonSeaBorders = Object.entries(borderDistances).filter(([side]) => side !== SEA_SIDE).map(([, distance]) => 1 - MathUtils.smoothstep(0, borderBand, distance));
   const nonSeaBorderMask = nonSeaBorders.length > 0 ? Math.max(...nonSeaBorders) : 0;
   if (nonSeaBorderMask > 0) {
-    h = Math.max(h, seaLevel + CITY_SLOPE_MAX * nonSeaBorderMask);
+    h = Math.max(h, seaLevel + MAINLAND_EDGE_BUFFER * nonSeaBorderMask);
   }
   h = applyHarbourCarve(x, z, seaLevel, h);
   h = clampHarborBandHeight(x, z, seaLevel, h);
@@ -48133,7 +48137,7 @@ class AssetLoader {
       const normalized = normalizeRepoRelativeCandidate(trimmed);
       if (!normalized) continue;
       const joined = joinPath(baseUrl2, normalized);
-      districtCandidates.push(normalizeAbsoluteDistrictRuleUrl(joined));
+      districtCandidates.push(normalizeAbsoluteRepoUrl(joined));
     }
     let resolvedDistrictPath = null;
     for (const candidate of districtCandidates) {
@@ -48159,10 +48163,10 @@ class AssetLoader {
         const pathValue = entry.path.trim();
         if (/config\/districts\.json$/i.test(pathValue)) {
           if (resolvedDistrictPath) {
-            targets.push(normalizeAbsoluteDistrictRuleUrl(resolvedDistrictPath));
+            targets.push(normalizeAbsoluteRepoUrl(resolvedDistrictPath));
           }
           for (const candidate of districtCandidates) {
-            targets.push(normalizeAbsoluteDistrictRuleUrl(candidate));
+            targets.push(normalizeAbsoluteRepoUrl(candidate));
           }
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
           targets.push(normalizeAbsoluteRepoUrl(pathValue));
@@ -50590,7 +50594,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B1mesY3Q.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-tYg628GG.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51100,7 +51104,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BXqtLY1Z.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DWzbp1qZ.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51875,7 +51879,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B1mesY3Q.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-tYg628GG.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -66416,6 +66420,201 @@ function applyTransformToObject(object, options = {}) {
     }
   }
 }
+const LIGHTING_PRESETS$1 = {
+  "Bright Noon": {
+    renderer: {
+      toneMappingExposure: 0.45
+      // Heavily reduced to fight sky blowout
+    },
+    starsVisible: 0,
+    moonElevation: -10,
+    moonLightIntensity: 0,
+    soundscapeMode: "day",
+    sun: {
+      color: "#ffffff",
+      // Neutral white light for clean midday look
+      intensity: 2.3,
+      azimuth: 180,
+      elevation: 75
+      // High sun angle for midday
+    },
+    ambient: {
+      color: "#dbe9ff",
+      // Light blue ambient to match clear sky
+      groundColor: "#cfdcec",
+      intensity: 0.1
+    },
+    fog: {
+      enabled: true,
+      color: "#96b9d8",
+      // darker blue fog to fight white sky
+      near: 2e3,
+      far: 7200,
+      density: 33e-6
+    },
+    skybox: {
+      exposureMultiplier: 0.45,
+      saturationMultiplier: 0.98,
+      skyKey: "high_noon"
+    },
+    grade: {
+      contrast: 0.08,
+      saturation: 0.05,
+      shadowTint: "#e8edf5",
+      midTint: "#f2f6fb",
+      highlightTint: "#ffffff"
+    },
+    env: {
+      envMapIntensity: 0.15
+      // Softer reflections to avoid washout
+    },
+    moon: {
+      visible: false,
+      intensity: 0,
+      elevation: -25
+    }
+  },
+  "Golden Hour": {
+    renderer: {
+      toneMappingExposure: 0.95
+    },
+    starsVisible: 0.08,
+    moonElevation: 10,
+    moonLightIntensity: 0.15,
+    soundscapeMode: "day",
+    sun: {
+      color: "#ffb36b",
+      intensity: 0.8,
+      azimuth: 260,
+      // Warm light from the west for evening feel
+      elevation: 15
+      // Low angle for long shadows
+    },
+    ambient: {
+      color: "#f0c193",
+      groundColor: "#c07a43",
+      intensity: 0.6
+      // Softer fill to ease shadow contrast
+    },
+    fog: {
+      enabled: true,
+      color: "#f2caa2",
+      near: 200,
+      far: 3500
+    },
+    skybox: {
+      exposureMultiplier: 0.95,
+      skyKey: "golden_hour"
+    },
+    grade: {
+      contrast: 0.12,
+      saturation: 0.04,
+      shadowTint: "#3a2b1f",
+      midTint: "#ffe2c4",
+      highlightTint: "#ffe9d6"
+    },
+    env: {
+      envMapIntensity: 0.7
+      // HDRI/sky reflections softened for evening
+    },
+    moon: {
+      visible: false,
+      intensity: 0,
+      elevation: -20
+    }
+  },
+  "Blue Hour": {
+    renderer: {
+      toneMappingExposure: 1.05
+    },
+    starsVisible: 0.55,
+    moonElevation: 8,
+    moonLightIntensity: 0.32,
+    soundscapeMode: "night",
+    sun: {
+      color: "#6f7fa5",
+      intensity: 0.2,
+      azimuth: 195,
+      elevation: -2
+    },
+    ambient: {
+      color: "#3f5473",
+      groundColor: "#273448",
+      intensity: 0.5
+    },
+    fog: {
+      enabled: true,
+      color: "#2f3f5d",
+      near: 250,
+      far: 2600
+    },
+    skybox: {
+      exposureMultiplier: 0.8,
+      skyKey: "blue_hour"
+    },
+    grade: {
+      contrast: 0.1,
+      saturation: -0.06,
+      shadowTint: "#223344",
+      midTint: "#3b5278",
+      highlightTint: "#9bb5e1"
+    },
+    env: {
+      envMapIntensity: 0.45
+      // Gentle reflections to match twilight sky
+    },
+    moon: {
+      visible: true,
+      intensity: 0.42,
+      elevation: 18
+    }
+  },
+  "Night": {
+    renderer: {
+      toneMappingExposure: 1
+    },
+    starsVisible: 1,
+    moonElevation: 20,
+    moonLightIntensity: 0.18,
+    soundscapeMode: "night",
+    sun: {
+      color: "#6f86a5",
+      intensity: 0.05,
+      azimuth: 120,
+      elevation: -45
+    },
+    ambient: {
+      color: "#0b1d38",
+      groundColor: "#0b1d2d",
+      intensity: 0.25
+    },
+    fog: {
+      enabled: true,
+      color: "#08162c",
+      near: 400,
+      far: 3200
+    },
+    skybox: {
+      exposureMultiplier: 0.6,
+      skyKey: "night_sky"
+    },
+    grade: {
+      contrast: 0.1,
+      saturation: -0.08,
+      shadowTint: "#223344",
+      midTint: "#10233d",
+      highlightTint: "#c6d7ff"
+    },
+    env: {
+      envMapIntensity: 0.2
+    },
+    moon: {
+      visible: true,
+      intensity: 0.2,
+      elevation: 40
+    }
+  }
+};
 function safeUrlSearchParams() {
   if (typeof window === "undefined" || typeof window.location === "undefined") {
     return new URLSearchParams("");
@@ -66437,8 +66636,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T13:13:12.166Z" : "",
-      sha: true ? "" : ""
+      time: true ? "2025-12-26T23:03:19.278Z" : "",
+      sha: true ? "d4b0e2d3872780219bb688946b7d5e8af91c5531" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -69913,16 +70112,16 @@ function createSky(scene2) {
       uniform vec3 horizonColor;
       uniform vec3 sunColor;
       uniform vec3 sunDirection;
-
+ 
       void main() {
         vec3 dir = normalize(vWorldPosition);
         float t = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
         vec3 base = mix(horizonColor, zenithColor, pow(t, 1.2));
-
+ 
         float sunAmount = max(dot(dir, normalize(sunDirection)), 0.0);
         float sunGlow = pow(sunAmount, 6.0);
         vec3 finalColor = base + sunColor * sunGlow * 0.20;
-
+ 
         gl_FragColor = vec4(finalColor, 1.0);
       }
     `
@@ -70013,201 +70212,6 @@ function updateSkyForTimeOfDay(scene2, phase01) {
   applySkySettings(sky, preset);
   updateSkySunPosition(scene2, phase);
 }
-const LOOK_PROFILES = {
-  "Bright Noon": {
-    renderer: {
-      toneMappingExposure: 0.45
-      // Heavily reduced to fight sky blowout
-    },
-    starsVisible: 0,
-    moonElevation: -10,
-    moonLightIntensity: 0,
-    soundscapeMode: "day",
-    sun: {
-      color: "#ffffff",
-      // Neutral white light for clean midday look
-      intensity: 2.3,
-      azimuth: 180,
-      elevation: 75
-      // High sun angle for midday
-    },
-    ambient: {
-      color: "#dbe9ff",
-      // Light blue ambient to match clear sky
-      groundColor: "#cfdcec",
-      intensity: 0.1
-    },
-    fog: {
-      enabled: true,
-      color: "#96b9d8",
-      // darker blue fog to fight white sky
-      near: 2e3,
-      far: 7200,
-      density: 33e-6
-    },
-    skybox: {
-      exposureMultiplier: 0.45,
-      saturationMultiplier: 0.98,
-      skyKey: "high_noon"
-    },
-    grade: {
-      contrast: 0.08,
-      saturation: 0.05,
-      shadowTint: "#e8edf5",
-      midTint: "#f2f6fb",
-      highlightTint: "#ffffff"
-    },
-    env: {
-      envMapIntensity: 0.15
-      // Softer reflections to avoid washout
-    },
-    moon: {
-      visible: false,
-      intensity: 0,
-      elevation: -25
-    }
-  },
-  "Golden Hour": {
-    renderer: {
-      toneMappingExposure: 0.95
-    },
-    starsVisible: 0.08,
-    moonElevation: 10,
-    moonLightIntensity: 0.15,
-    soundscapeMode: "day",
-    sun: {
-      color: "#ffb36b",
-      intensity: 0.8,
-      azimuth: 260,
-      // Warm light from the west for evening feel
-      elevation: 15
-      // Low angle for long shadows
-    },
-    ambient: {
-      color: "#f0c193",
-      groundColor: "#c07a43",
-      intensity: 0.6
-      // Softer fill to ease shadow contrast
-    },
-    fog: {
-      enabled: true,
-      color: "#f2caa2",
-      near: 200,
-      far: 3500
-    },
-    skybox: {
-      exposureMultiplier: 0.95,
-      skyKey: "golden_hour"
-    },
-    grade: {
-      contrast: 0.12,
-      saturation: 0.04,
-      shadowTint: "#3a2b1f",
-      midTint: "#ffe2c4",
-      highlightTint: "#ffe9d6"
-    },
-    env: {
-      envMapIntensity: 0.7
-      // HDRI/sky reflections softened for evening
-    },
-    moon: {
-      visible: false,
-      intensity: 0,
-      elevation: -20
-    }
-  },
-  "Blue Hour": {
-    renderer: {
-      toneMappingExposure: 1.05
-    },
-    starsVisible: 0.55,
-    moonElevation: 8,
-    moonLightIntensity: 0.32,
-    soundscapeMode: "night",
-    sun: {
-      color: "#6f7fa5",
-      intensity: 0.2,
-      azimuth: 195,
-      elevation: -2
-    },
-    ambient: {
-      color: "#3f5473",
-      groundColor: "#273448",
-      intensity: 0.5
-    },
-    fog: {
-      enabled: true,
-      color: "#2f3f5d",
-      near: 250,
-      far: 2600
-    },
-    skybox: {
-      exposureMultiplier: 0.8,
-      skyKey: "blue_hour"
-    },
-    grade: {
-      contrast: 0.1,
-      saturation: -0.06,
-      shadowTint: "#223344",
-      midTint: "#3b5278",
-      highlightTint: "#9bb5e1"
-    },
-    env: {
-      envMapIntensity: 0.45
-      // Gentle reflections to match twilight sky
-    },
-    moon: {
-      visible: true,
-      intensity: 0.42,
-      elevation: 18
-    }
-  },
-  "Night": {
-    renderer: {
-      toneMappingExposure: 1
-    },
-    starsVisible: 1,
-    moonElevation: 20,
-    moonLightIntensity: 0.18,
-    soundscapeMode: "night",
-    sun: {
-      color: "#6f86a5",
-      intensity: 0.05,
-      azimuth: 120,
-      elevation: -45
-    },
-    ambient: {
-      color: "#0b1d38",
-      groundColor: "#0b1d2d",
-      intensity: 0.25
-    },
-    fog: {
-      enabled: true,
-      color: "#08162c",
-      near: 400,
-      far: 3200
-    },
-    skybox: {
-      exposureMultiplier: 0.6,
-      skyKey: "night_sky"
-    },
-    grade: {
-      contrast: 0.1,
-      saturation: -0.08,
-      shadowTint: "#223344",
-      midTint: "#10233d",
-      highlightTint: "#c6d7ff"
-    },
-    env: {
-      envMapIntensity: 0.2
-    },
-    moon: {
-      visible: true,
-      intensity: 0.2,
-      elevation: 40
-    }
-  }
-};
 const DEFAULT_LIGHTING_CONFIG = {
   cycle: {
     minutesPerDay: 20
@@ -74351,7 +74355,7 @@ function setGrassNightFactor(factor) {
 }
 function applyColorGrading(presetName) {
 }
-const LIGHTING_PRESETS$1 = LOOK_PROFILES;
+const LIGHTING_PRESETS = LIGHTING_PRESETS$1;
 const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
 const SUN_ELEVATION_STORAGE_KEY = "skybox.sunElevationDeg";
 function startTimeOfDayCycle(options = {}) {
@@ -74506,7 +74510,7 @@ class LightingSystem {
         hemisphereLight: scene2?.userData?.fallbackHemisphere || null,
         dynamicSky: this.dynamicSky || null
       });
-      const bn = LOOK_PROFILES?.["Bright Noon"] || null;
+      const bn = LIGHTING_PRESETS$1?.["Bright Noon"] || null;
       if (bn) {
         applyBasicLightingProfile({
           hemisphere: bn?.ambient?.intensity ?? 0.28,
@@ -74535,7 +74539,7 @@ class LightingSystem {
       };
       debugWindow.cycleLightingPreset = () => {
         const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
-          (preset) => !!LOOK_PROFILES[preset]
+          (preset) => !!LIGHTING_PRESETS$1[preset]
         );
         if (!presets.length) return;
         const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
@@ -74689,7 +74693,7 @@ class LightingSystem {
   };
   _applyEnvironmentFallbackForProfile = (profileName = "Bright Noon") => {
     const { scene: scene2, dynamicSky: dynamicSky2, hdriEnvMap } = this;
-    const profile = LOOK_PROFILES[profileName] || LOOK_PROFILES["Bright Noon"];
+    const profile = LIGHTING_PRESETS$1[profileName] || LIGHTING_PRESETS$1["Bright Noon"];
     const skyColor = profile?.ambient?.color || "#dbe9ff";
     const groundColor = profile?.ambient?.groundColor || "#9ba8b5";
     const hemiIntensity = profile?.ambient?.intensity ?? 0.28;
@@ -74813,7 +74817,7 @@ class LightingSystem {
   applyLookProfile = (profileName, options = {}) => {
     const { immediate = false, forceReapply = false, source = "manual" } = options;
     const resolvedProfileName = profileName || "Bright Noon";
-    const profile = LOOK_PROFILES[resolvedProfileName] || LOOK_PROFILES["Bright Noon"];
+    const profile = LIGHTING_PRESETS$1[resolvedProfileName] || LIGHTING_PRESETS$1["Bright Noon"];
     if (!profile) {
       return;
     }
@@ -74834,7 +74838,7 @@ class LightingSystem {
   };
   applyLookProfileImmediate = (profileName) => {
     const resolvedProfileName = profileName || "Bright Noon";
-    const profile = LOOK_PROFILES[resolvedProfileName] || LOOK_PROFILES["Bright Noon"];
+    const profile = LIGHTING_PRESETS$1[resolvedProfileName] || LIGHTING_PRESETS$1["Bright Noon"];
     if (!profile) {
       return;
     }
@@ -76343,7 +76347,7 @@ class Application {
         getDirection,
         lightingCallbacks: {
           onSetLightingPreset: (name) => lightingSystem.applyLookProfile(name, { source: "user" }),
-          lightingPresets: LIGHTING_PRESETS,
+          lightingPresets: LIGHTING_PRESETS$1,
           getActivePresetName: () => lightingSystem.lastAppliedLightingPreset,
           setActivePreset: (name) => lightingSystem.applyLookProfile(name, { source: "user" })
         },
@@ -76655,4 +76659,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DZBpUOli.js.map
+//# sourceMappingURL=index-CECwfoHR.js.map
