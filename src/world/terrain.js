@@ -21,7 +21,7 @@ import {
   RIDGE_START,
   RIDGE_HEIGHT,
 } from "../config/terrainShape";
-import { validateTerrain } from "./terrainValidation";
+import { validateTerrain } from "./terrainValidation.js";
 
 const textureLoader = new THREE.TextureLoader();
 
