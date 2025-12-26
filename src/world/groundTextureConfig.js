@@ -1,6 +1,7 @@
 // Configuration describing how terrain textures should be layered on top of the
 // existing vertex-colored ground. The JPG files referenced here should live in
 // the public/textures/ground directory.
+import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 
 // PRESERVED EXPORT: Required by src/world/groundTextures.js
 export const NEUTRAL_GROUND_FALLBACK_TINT = {
@@ -29,13 +30,16 @@ export const NEUTRAL_GROUND_FALLBACK_TINT = {
 function textureUrl(file) {
   // Keep this helper identical to what the project expects.
   // Reuse existing logic to include base URL and path to ground textures.
-  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
-  return `${baseUrl}textures/ground/${file}`;
+  const baseUrl = resolveBaseUrl();
+  return joinPath(baseUrl, `textures/ground/${file}`);
 }
 
 function sandTextureUrl() {
-  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
-  return `${baseUrl}textures/gravelly_sand/gravelly_sand_diff_1k.jpg`;
+  const baseUrl = resolveBaseUrl();
+  return joinPath(
+    baseUrl,
+    "textures/gravelly_sand/gravelly_sand_diff_1k.jpg",
+  );
 }
 
 /**

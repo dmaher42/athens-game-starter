@@ -16,23 +16,23 @@ function ensureTrailingSlash(value) {
 
 function resolveDocumentBasePath() {
   if (typeof document === "undefined" || !document.baseURI) {
-    return "/";
+    return "/athens-game-starter/";
   }
 
   try {
     const url = new URL(document.baseURI);
     let { pathname } = url;
     if (!pathname) {
-      return "/";
+      return "/athens-game-starter/";
     }
     if (!pathname.endsWith("/")) {
       const lastSlash = pathname.lastIndexOf("/");
       pathname = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
     }
-    return pathname || "/";
+    return pathname || "/athens-game-starter/";
   } catch (error) {
     console.warn("Unable to parse document.baseURI for BASE_URL fallback", error);
-    return "/";
+    return "/athens-game-starter/";
   }
 }
 

@@ -153,17 +153,14 @@ export class AssetLoader {
         continue;
       }
 
-      const startsAtRoot = trimmed.startsWith("/");
       const relative = sanitizeRelativePath(trimmed);
-      if (!relative && !startsAtRoot) {
+      if (!relative) {
         continue;
       }
 
       const candidatesToTry = Array.from(
         new Set(
-          startsAtRoot
-            ? [trimmed]
-            : [joinPath(this.baseUrl, relative), relative],
+          [joinPath(this.baseUrl, relative), relative],
         ),
       );
 

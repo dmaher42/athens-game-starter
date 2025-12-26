@@ -61,12 +61,12 @@ function resolveTextureUrl(baseUrl, candidate) {
   if (typeof candidate !== "string") return null;
   const trimmed = candidate.trim();
   if (!trimmed) return null;
-  if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
     return trimmed;
   }
   const root =
     typeof baseUrl === "string" && baseUrl ? baseUrl : resolveBaseUrl();
-  return joinPath(root, trimmed);
+  return joinPath(root, trimmed.replace(/^\/+/, ""));
 }
 
 async function loadTextureCandidate({ baseUrl, candidate, colorSpace }) {

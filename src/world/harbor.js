@@ -19,6 +19,7 @@ import {
   HARBOR_ZONE_CONFIG,
 } from "./coastalZones.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
+import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 
 const DOCK_SECTION_LENGTH = 9.5;
 const DOCK_SECTION_WIDTH = 5.8;
@@ -109,19 +110,25 @@ function createHarborPad(harborGroundY) {
   
   // Create material matching terrain texture for seamless appearance underwater
   const textureLoader = new THREE.TextureLoader();
-  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
+  const baseUrl = resolveBaseUrl();
   
-  const sandDiffuse = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_diff_1k.jpg`);
+  const sandDiffuse = textureLoader.load(
+    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_diff_1k.jpg"),
+  );
   sandDiffuse.wrapS = sandDiffuse.wrapT = THREE.RepeatWrapping;
   sandDiffuse.repeat.set(28, 24); // Match terrain repeat scale
   sandDiffuse.colorSpace = THREE.SRGBColorSpace;
   
-  const sandNormal = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`);
+  const sandNormal = textureLoader.load(
+    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
+  );
   sandNormal.wrapS = sandNormal.wrapT = THREE.RepeatWrapping;
   sandNormal.repeat.set(28, 24); // Match terrain repeat scale
   sandNormal.colorSpace = THREE.NoColorSpace;
   
-  const sandARM = textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`);
+  const sandARM = textureLoader.load(
+    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
+  );
   sandARM.wrapS = sandARM.wrapT = THREE.RepeatWrapping;
   sandARM.repeat.set(28, 24); // Match terrain repeat scale
   sandARM.colorSpace = THREE.NoColorSpace;

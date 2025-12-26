@@ -6,7 +6,7 @@ const DOUBLE_SEGMENT = `${REPO_SEGMENT}/${REPO_SEGMENT}`;
 export const REPO_BASE_PATH = REPO_BASE;
 
 function normalizeBase(path) {
-  if (!path) return "/";
+  if (!path) return REPO_BASE;
   // If it's a full URL, just ensure trailing slash
   if (/^(?:[a-z]+:)?\/\//i.test(path)) {
     return path.endsWith("/") ? path : `${path}/`;
@@ -40,7 +40,7 @@ export function resolveBaseUrl() {
       ? window.__BASE_URL__
       : null;
 
-  let base = normalizeBase(globalBase || envBase || "/");
+  let base = normalizeBase(globalBase || envBase || REPO_BASE);
 
   if (hasDoubleRepo(base)) {
     base = REPO_BASE;
@@ -50,9 +50,6 @@ export function resolveBaseUrl() {
   if (onGithubPages) {
     // Always serve from the repo base when hosted on GitHub Pages.
     base = REPO_BASE;
-  } else if (typeof window !== "undefined" && !globalBase && !envBase) {
-    // Local dev or non-GitHub Pages hosts should resolve from root when no explicit base is provided.
-    base = "/";
   }
 
   return normalizeBase(base);
@@ -67,15 +64,12 @@ export function stripRepoSegment(path) {
 }
 
 export function joinPath(base, rel) {
-  if (!base) base = "/";
+  if (!base) base = REPO_BASE;
   if (!rel) return base;
   // If rel is a full URL, return it as-is.
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) return rel;
-  // Treat root-absolute rels as absolute (don't re-join).
-  if (rel.startsWith("/")) {
-    return rel;
-  }
+  const trimmedRel = rel.startsWith("/") ? rel.replace(/^\/+/, "") : rel;
   const b = base.endsWith("/") ? base : `${base}/`;
-  const r = String(rel).replace(/^\/+/, "");
+  const r = String(trimmedRel).replace(/^\/+/, "");
   return b + r;
 }

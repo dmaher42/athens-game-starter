@@ -535,14 +535,15 @@ export async function createCivicDistrict(scene, options = {}) {
   // Pre-load textures for roads/plazas
   const tl = new THREE.TextureLoader();
   const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
+  const resolvedBase = baseUrl || resolveBaseUrl();
   let plazaMat;
   try {
-      const baseMap = await tl.loadAsync(joinPath(baseUrl || "/", "textures/marble_base.jpg"));
+      const baseMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
       baseMap.wrapS = baseMap.wrapT = THREE.RepeatWrapping;
       baseMap.repeat.set(4, 4);
       baseMap.colorSpace = THREE.SRGBColorSpace;
 
-      const normalMap = await tl.loadAsync(joinPath(baseUrl || "/", "textures/marble_normal-dx.jpg"));
+      const normalMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
       normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
       normalMap.repeat.set(4, 4);
 

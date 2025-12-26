@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 
 const _point = new THREE.Vector3();
@@ -19,20 +20,26 @@ let _roadARM = null;
 function loadRoadTextures() {
   if (_roadDiffuse) return; // Already loaded
   
-  const baseUrl = import.meta?.env?.BASE_URL ?? "/";
+  const baseUrl = resolveBaseUrl();
   
   // Use gravelly sand for packed earth road appearance
-  _roadDiffuse = _textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_diff_1k.jpg`);
+  _roadDiffuse = _textureLoader.load(
+    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_diff_1k.jpg"),
+  );
   _roadDiffuse.wrapS = _roadDiffuse.wrapT = THREE.RepeatWrapping;
   _roadDiffuse.repeat.set(4, 1); // Stretch along road length
   _roadDiffuse.colorSpace = THREE.SRGBColorSpace;
   
-  _roadNormal = _textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg`);
+  _roadNormal = _textureLoader.load(
+    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
+  );
   _roadNormal.wrapS = _roadNormal.wrapT = THREE.RepeatWrapping;
   _roadNormal.repeat.set(4, 1);
   _roadNormal.colorSpace = THREE.NoColorSpace;
   
-  _roadARM = _textureLoader.load(`${baseUrl}textures/gravelly_sand/gravelly_sand_arm_1k.jpg`);
+  _roadARM = _textureLoader.load(
+    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
+  );
   _roadARM.wrapS = _roadARM.wrapT = THREE.RepeatWrapping;
   _roadARM.repeat.set(4, 1);
   _roadARM.colorSpace = THREE.NoColorSpace;
