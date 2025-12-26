@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
+import { joinPath, resolveBaseUrl, stripRepoSegment } from "../utils/baseUrl.js";
 import { IS_DEV } from "../utils/env.js";
 import {
   getManifestProbes,
@@ -178,9 +178,19 @@ export class AssetLoader {
 
   async runAssetQuickChecks() {
     const baseUrl = this.baseUrl ?? resolveBaseUrl();
-    const districtCandidates = this.districtRuleCandidates.map((rel) =>
-      joinPath(baseUrl, rel),
-    );
+    const districtCandidates = [];
+    for (const candidate of this.districtRuleCandidates) {
+      if (typeof candidate !== "string") continue;
+      const trimmed = candidate.trim();
+      if (!trimmed) continue;
+      if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
+        districtCandidates.push(trimmed);
+        continue;
+      }
+      const normalized = stripRepoSegment(trimmed);
+      if (!normalized) continue;
+      districtCandidates.push(joinPath(baseUrl, normalized));
+    }
     let resolvedDistrictPath = null;
     for (const candidate of districtCandidates) {
       if (await this.headOk(candidate)) {
