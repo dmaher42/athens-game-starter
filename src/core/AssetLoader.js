@@ -69,7 +69,7 @@ export class AssetLoader {
     districtRuleCandidates = [],
     enableGlbMode = true,
   } = {}) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = normalizeBaseUrl(baseUrl);
     this.forceProcedural = Boolean(forceProcedural);
     this.districtRuleCandidates = districtRuleCandidates;
     this.enableGlbMode = Boolean(enableGlbMode);
