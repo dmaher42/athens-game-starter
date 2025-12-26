@@ -51273,7 +51273,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-cZl-lhDe.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DMpvOmJa.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51783,7 +51783,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BCzBuiuM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-OSCB6OCt.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52558,7 +52558,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-cZl-lhDe.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DMpvOmJa.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -52885,7 +52885,6 @@ function copyMaterialFlags(source, target) {
   return target;
 }
 async function loadLandmark(scene2, url, options = {}) {
-  if (!ENABLE_GLB_MODE$3) return null;
   const timerLabel = `loadLandmark:${url}`;
   if (typeof console?.time === "function") {
     console.time(timerLabel);
@@ -52939,7 +52938,7 @@ async function loadLandmark(scene2, url, options = {}) {
     if (!sanitizedUrl) {
       throw new Error("loadLandmark requires a non-empty URL");
     }
-    if (sanitizedUrl.endsWith(".glb")) {
+    if (!ENABLE_GLB_MODE$3) {
       console.warn(`[GLB Disabled] Skipping model load: ${sanitizedUrl}`);
       const fallbackObject = await tryProceduralFallback("glb-disabled");
       if (fallbackObject) {
@@ -67195,8 +67194,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T01:10:20.031Z" : "",
-      sha: true ? "7703fce28c01fbe9853dc736719ff87baadc607f" : ""
+      time: true ? "2025-12-26T01:12:15.768Z" : "",
+      sha: true ? "7e9f4ce0467bb0fb8e9f3c0361c493eb47fb7d76" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77155,4 +77154,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CIqbxevt.js.map
+//# sourceMappingURL=index-Ciw79VZd.js.map
