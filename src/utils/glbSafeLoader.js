@@ -5,6 +5,8 @@ import { createDracoLoader } from "./draco.js";
 import { applyTextureBudgetToObject } from "./textureBudget.js";
 import { joinPath, resolveBaseUrl } from "./baseUrl.js";
 
+const ENABLE_GLB_MODE = false;
+
 function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
   return value
@@ -79,6 +81,7 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
 
   const baseUrl = resolveBaseUrl();
   const seen = new Set();
+  const allowHero = options?.allowHero;
 
   for (const candidate of urls) {
     const raw = typeof candidate === "string" ? candidate.trim() : "";
@@ -110,8 +113,10 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
         seen.add(url);
 
         if (url.endsWith(".glb")) {
-          console.warn(`[GLB Disabled] Skipping model load: ${url}`);
-          continue;
+          if (!ENABLE_GLB_MODE && !(allowHero && /hero\.glb$/i.test(url))) {
+            console.warn(`[GLB Disabled] Skipping model load: ${url}`);
+            continue;
+          }
         }
 
         if (!(await headOk(url))) {

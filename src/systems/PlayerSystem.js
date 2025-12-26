@@ -170,6 +170,7 @@ export class PlayerSystem {
           heroLoader,
           heroCandidates,
           {
+            allowHero: true,
             renderer: this.renderer,
             targetHeight: 1.8,
           },
