@@ -50955,7 +50955,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CNSDWL13.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DDVw4i0V.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51465,7 +51465,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CnNx69CF.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-yLhnKNeT.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52166,6 +52166,7 @@ function alignToGround(object, terrain, x, z, surfaceOffset = 0) {
   const offset = Number.isFinite(surfaceOffset) ? surfaceOffset : 0;
   object.position.y = height + offset;
 }
+const ENABLE_GLB_MODE$3 = false;
 function sanitizeRelativePath$3(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
@@ -52229,6 +52230,7 @@ let hasWarnedUnsupportedKTX2 = false;
 let currentTranscoderPath = null;
 let hasLoggedCdnFallback = false;
 async function initializeAssetTranscoders(renderer2) {
+  if (!ENABLE_GLB_MODE$3) return null;
   if (!renderer2 || typeof renderer2.getContext !== "function") {
     return;
   }
@@ -52238,7 +52240,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CNSDWL13.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DDVw4i0V.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -52565,6 +52567,7 @@ function copyMaterialFlags(source, target) {
   return target;
 }
 async function loadLandmark(scene2, url, options = {}) {
+  if (!ENABLE_GLB_MODE$3) return null;
   const timerLabel = `loadLandmark:${url}`;
   if (typeof console?.time === "function") {
     console.time(timerLabel);
@@ -61986,6 +61989,7 @@ class EnvironmentCollider {
     return target1.distanceTo(target2);
   }
 }
+const ENABLE_GLB_MODE$2 = false;
 const BUILDINGS_ROOT_NAME = "BuildingsRoot";
 async function headOk$1(url) {
   if (!url) return { ok: false, reason: "missing-url" };
@@ -62049,6 +62053,7 @@ class BuildingManager {
    * }} [options]
    */
   async loadBuilding(url, options) {
+    if (!ENABLE_GLB_MODE$2) return null;
     if (typeof url === "string" && url.endsWith(".glb")) {
       console.warn(`[GLB Disabled] Skipping model load: ${url}`);
       return null;
@@ -63249,6 +63254,7 @@ class ThirdPersonCamera {
     }
   }
 }
+const ENABLE_GLB_MODE$1 = false;
 class Character extends Object3D {
   constructor() {
     super();
@@ -63262,6 +63268,7 @@ class Character extends Object3D {
    * @param {THREE.WebGLRenderer} [renderer]
    */
   async load(url, renderer2, { targetHeight = 1.8 } = {}) {
+    if (!ENABLE_GLB_MODE$1) return null;
     const urls = Array.isArray(url) ? url : [url];
     const loader2 = await createGLTFLoader(renderer2);
     const loaded2 = await loadGLBWithFallbacks(loader2, urls, {
@@ -66870,8 +66877,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T00:19:47.217Z" : "",
-      sha: true ? "a8987d4cf2333c44f49d3317fab7557922e9d356" : ""
+      time: true ? "2025-12-26T00:25:42.248Z" : "",
+      sha: true ? "4d48e251df4831dc552a9b68e6746678c4f92e01" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -73892,6 +73899,9 @@ const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$2();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES = engineConfig.districtRuleCandidates || [];
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 const ENABLE_GLB_MODE = false;
+if (!ENABLE_GLB_MODE) {
+  console.log("[glb] GLB mode disabled");
+}
 const LIGHTING_PRESETS = LOOK_PROFILES;
 const LIGHTING_PRESET_ORDER = [
   "Bright Noon",
@@ -74080,9 +74090,9 @@ class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
-    const ARISTOTLE_CANDIDATES2 = getAssetCandidates("aristotle");
-    const POSEIDON_CANDIDATES2 = getAssetCandidates("poseidon");
-    const AKROPOL_CANDIDATES2 = getAssetCandidates("akropol");
+    const ARISTOTLE_CANDIDATES2 = ENABLE_GLB_MODE ? getAssetCandidates("aristotle") : [];
+    const POSEIDON_CANDIDATES2 = ENABLE_GLB_MODE ? getAssetCandidates("poseidon") : [];
+    const AKROPOL_CANDIDATES2 = ENABLE_GLB_MODE ? getAssetCandidates("akropol") : [];
     showLoadingScreen({
       initialStatus: "Preparing the experience..."
     });
@@ -74111,14 +74121,16 @@ class Application {
       );
       return;
     }
-    assetLoader.probeInitialAssets({
-      glbCandidates: [
-        "models/landmarks/poseidon_temple.glb",
-        "models/landmarks/akropol.glb"
-      ],
-      includeGlbCandidates: !FORCE_PROC
-    }).catch(() => {
-    });
+    if (ENABLE_GLB_MODE) {
+      assetLoader.probeInitialAssets({
+        glbCandidates: [
+          "models/landmarks/poseidon_temple.glb",
+          "models/landmarks/akropol.glb"
+        ],
+        includeGlbCandidates: !FORCE_PROC
+      }).catch(() => {
+      });
+    }
     const readStoredNumber = (key, fallback) => {
       try {
         if (typeof window !== "undefined" && window.localStorage) {
@@ -74215,7 +74227,9 @@ class Application {
     renderer2.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer2.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer2.domElement);
-    initializeAssetTranscoders(renderer2);
+    if (ENABLE_GLB_MODE) {
+      initializeAssetTranscoders(renderer2);
+    }
     attachCrosshair();
     advanceLoadingStage("Listening for the bustle of ancient Athens...");
     let devHud2 = this.devHud = null;
@@ -74712,7 +74726,7 @@ class Application {
       }
     }
     let landmarkLoadPromise = Promise.resolve();
-    if (!FORCE_PROC) {
+    if (ENABLE_GLB_MODE && !FORCE_PROC) {
       const landmarkTasks = [
         (async () => {
           try {
@@ -75328,25 +75342,29 @@ class Application {
         [heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
       )
     );
-    try {
-      const heroLoader = await createGLTFLoader(renderer2);
-      const loadedHero = await loadGLBWithFallbacks(
-        heroLoader,
-        heroCandidates,
-        {
-          renderer: renderer2,
-          targetHeight: 1.8
+    if (ENABLE_GLB_MODE) {
+      try {
+        const heroLoader = await createGLTFLoader(renderer2);
+        const loadedHero = await loadGLBWithFallbacks(
+          heroLoader,
+          heroCandidates,
+          {
+            renderer: renderer2,
+            targetHeight: 1.8
+          }
+        );
+        if (!loadedHero || !loadedHero.root) {
+          throw new Error("No hero GLB candidates reachable");
         }
-      );
-      if (!loadedHero || !loadedHero.root) {
-        throw new Error("No hero GLB candidates reachable");
+        const { url, gltf, root } = loadedHero;
+        removeExistingAvatar();
+        character.initializeFromGLTF(root, gltf.animations);
+        player2.attachCharacter(character);
+        const resolvedHeroRootPath = joinPath(BASE_URL, heroRootPath);
+      } catch (error) {
+        attachFallbackAvatar();
       }
-      const { url, gltf, root } = loadedHero;
-      removeExistingAvatar();
-      character.initializeFromGLTF(root, gltf.animations);
-      player2.attachCharacter(character);
-      const resolvedHeroRootPath = joinPath(BASE_URL, heroRootPath);
-    } catch (error) {
+    } else {
       attachFallbackAvatar();
     }
     updateLoadingStatus("Welcoming Athenians to the city...");
@@ -75377,13 +75395,15 @@ class Application {
       });
       npcUpdaters.push(...crowd.updaters);
     }
-    spawnGLBNPCs(worldRoot, mainRoad, { terrain }).then((glbNpcs) => {
-      if (!glbNpcs) return;
-      if (Array.isArray(glbNpcs.updaters)) {
-        npcUpdaters.push(...glbNpcs.updaters);
-      }
-    }).catch(() => {
-    });
+    if (ENABLE_GLB_MODE) {
+      spawnGLBNPCs(worldRoot, mainRoad, { terrain }).then((glbNpcs) => {
+        if (!glbNpcs) return;
+        if (Array.isArray(glbNpcs.updaters)) {
+          npcUpdaters.push(...glbNpcs.updaters);
+        }
+      }).catch(() => {
+      });
+    }
     const PLACEHOLDER_LIGHT_SHADOW_BUDGET = 12;
     let placeholderShadowSlotsRemaining = PLACEHOLDER_LIGHT_SHADOW_BUDGET;
     const tryConsumePlaceholderShadowSlot = () => {
@@ -75645,7 +75665,7 @@ class Application {
         name: "SampleAkropol"
       }
     ];
-    if (!FORCE_PROC) {
+    if (ENABLE_GLB_MODE && !FORCE_PROC) {
       const sampleBuildingResults = await Promise.allSettled(
         sampleBuildingSpecs.map(
           (spec) => buildingMgr.loadBuilding(spec.url, {
@@ -76816,4 +76836,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-YiY419n6.js.map
+//# sourceMappingURL=index-BkdJx8c9.js.map
