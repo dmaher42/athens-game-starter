@@ -45660,6 +45660,12 @@ const RENDER_LAYERS = Object.freeze({
   TERRAIN: 1,
   DETAIL: 2
 });
+const SEA_SIDE = "east";
+const COAST_WIDTH = 120;
+const INLAND_RISE = 220;
+const RIDGE_START = 0.6;
+const RIDGE_HEIGHT = 70;
+const CITY_SLOPE_MAX = 1.5;
 const textureLoader$2 = new TextureLoader();
 function configureMapTexture(texture, options = {}) {
   texture.wrapS = texture.wrapT = RepeatWrapping;
@@ -45751,26 +45757,26 @@ const SHALLOW_WATER_COLOR = new Color(2051929);
 const HARBOUR_RADIUS$1 = 70;
 const HARBOUR_TARGET_DEPTH = 2;
 const EAST_HARBOR_CENTER = new Vector2(-50, -100);
-const INLAND_ELEVATION_SCALE = 220;
 const TERRAIN_SIZE = 2400;
 const HALF_TERRAIN_SIZE = TERRAIN_SIZE * 0.5;
-const COAST_X_START = 80;
-const INLAND_X_START = -50;
-function computeCoastData(x, z) {
-  let coastFactor = 0;
-  if (x > COAST_X_START) {
-    const dist = x - COAST_X_START;
-    const fade2 = dist / 120;
-    coastFactor = Math.max(coastFactor, fade2);
+function getDistanceToSeaNormalized(x, z) {
+  switch (SEA_SIDE) {
+    case "west":
+      return MathUtils.clamp((x + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1);
+    case "north":
+      return MathUtils.clamp((z + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1);
+    case "south":
+      return MathUtils.clamp((HALF_TERRAIN_SIZE - z) / TERRAIN_SIZE, 0, 1);
+    case "east":
+    default:
+      return MathUtils.clamp((HALF_TERRAIN_SIZE - x) / TERRAIN_SIZE, 0, 1);
   }
-  const t = MathUtils.clamp(coastFactor, 0, 1);
-  const fade = MathUtils.smoothstep(0, 1, t);
-  return { t, fade };
 }
-function computeWestBias(x) {
-  const normalizedX = MathUtils.clamp(x / HALF_TERRAIN_SIZE, -1, 1);
-  const westBias = MathUtils.clamp(-normalizedX, 0, 1);
-  return Math.pow(westBias, 1.55);
+function computeCoastData(x, z) {
+  const dSea = getDistanceToSeaNormalized(x, z);
+  const coastBand = MathUtils.clamp(COAST_WIDTH / TERRAIN_SIZE, 0, 1);
+  const coastMask = MathUtils.smoothstep(0, coastBand, dSea);
+  return { dSea, coastMask };
 }
 function applyHarbourCarve(x, z, seaLevel, height) {
   const dx = x - EAST_HARBOR_CENTER.x;
@@ -45809,23 +45815,37 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
 }
 function getElevation$1(x, z, seaLevel, coastData = null) {
   let h = seaLevel + CITY_HEIGHT;
-  const westBias = computeWestBias(x);
-  h += westBias * INLAND_ELEVATION_SCALE;
-  const rawNoise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE);
-  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + westBias * 0.65);
   const coast = coastData ?? computeCoastData(x, z);
-  const coastalNoiseAttenuation = 1 - MathUtils.smoothstep(0.2, 0.8, coast.t);
+  const dSea = coast.dSea;
+  h += INLAND_RISE * (dSea + dSea * dSea);
+  const ridgeNoise = gradientNoise(x * NOISE_SCALE * 0.2, z * NOISE_SCALE * 0.2) * 0.5 + 0.5;
+  const ridgeMask = MathUtils.smoothstep(RIDGE_START, 1, dSea);
+  h += ridgeMask * ridgeNoise * RIDGE_HEIGHT;
+  const rawNoise = gradientNoise(x * NOISE_SCALE, z * NOISE_SCALE);
+  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + dSea * 0.65);
+  const coastalNoiseAttenuation = 1 - coast.coastMask;
   const shapedNoise = noise * (0.4 + coastalNoiseAttenuation * 0.6);
   h += shapedNoise;
+  const borderBand = MathUtils.clamp(COAST_WIDTH / TERRAIN_SIZE, 0, 1);
+  const borderDistances = {
+    east: MathUtils.clamp((HALF_TERRAIN_SIZE - x) / TERRAIN_SIZE, 0, 1),
+    west: MathUtils.clamp((x + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1),
+    north: MathUtils.clamp((z + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1),
+    south: MathUtils.clamp((HALF_TERRAIN_SIZE - z) / TERRAIN_SIZE, 0, 1)
+  };
+  const nonSeaBorders = Object.entries(borderDistances).filter(([side]) => side !== SEA_SIDE).map(([, distance]) => 1 - MathUtils.smoothstep(0, borderBand, distance));
+  const nonSeaBorderMask = nonSeaBorders.length > 0 ? Math.max(...nonSeaBorders) : 0;
+  if (nonSeaBorderMask > 0) {
+    h = Math.max(h, seaLevel + CITY_SLOPE_MAX * nonSeaBorderMask);
+  }
   h = applyHarbourCarve(x, z, seaLevel, h);
   h = clampHarborBandHeight(x, z, seaLevel, h);
   const agoraDist = Math.hypot(x - AGORA_CENTER_3D.x, z - AGORA_CENTER_3D.z);
   if (agoraDist < 60) {
     h = h * 0.7 + (seaLevel + CITY_HEIGHT) * 0.3;
   }
-  if (coast.t > 0) {
-    const deepOcean = seaLevel + OCEAN_DEPTH;
-    h = MathUtils.lerp(h, deepOcean, coast.fade);
+  if (coast.coastMask < 1) {
+    h = MathUtils.lerp(seaLevel, h, coast.coastMask);
   }
   return h;
 }
@@ -50955,7 +50975,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DDVw4i0V.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B9QBA6RA.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51465,7 +51485,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-yLhnKNeT.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CXknOm0L.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52240,7 +52260,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DDVw4i0V.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B9QBA6RA.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -66877,8 +66897,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T00:25:42.248Z" : "",
-      sha: true ? "4d48e251df4831dc552a9b68e6746678c4f92e01" : ""
+      time: true ? "2025-12-26T00:40:51.879Z" : "",
+      sha: true ? "8186723fc36d880ccaa340fa112d1c4520c7491a" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -76836,4 +76856,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BkdJx8c9.js.map
+//# sourceMappingURL=index-BjhA53uu.js.map
