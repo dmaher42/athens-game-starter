@@ -22,7 +22,7 @@ import {
   RIDGE_HEIGHT,
   CITY_SLOPE_MAX,
 } from "../config/terrainShape";
-import { validateTerrain } from "./terrainValidation";
+import { validateTerrain } from "./terrainValidation.js";
 
 const textureLoader = new THREE.TextureLoader();
 

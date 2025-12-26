@@ -13,6 +13,7 @@ import { updateOcean } from "../world/ocean.js";
 import { updateHarborLighting } from "../world/harbor.js";
 import { updateCityLighting } from "../world/city.js";
 import { updateMainHillRoadLighting } from "../world/roads_hillcity.js";
+import { setNightFactor as setGrassNightFactor } from "../world/grass.js";
 
 const LIGHTING_PRESETS = LOOK_PROFILES;
 const SUN_AZIMUTH_STORAGE_KEY = "skybox.sunAzimuthDeg";
@@ -334,7 +335,7 @@ export class LightingSystem {
         }
 
         if (grassRoot) {
-            grassRoot.setNightFactor(lights.nightFactor);
+            setGrassNightFactor(lights.nightFactor);
         }
         if (ocean) {
             updateOcean(ocean, deltaTime, alignedSunDir, lights.nightFactor, lights.sunLight.color);
