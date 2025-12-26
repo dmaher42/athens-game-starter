@@ -170,7 +170,7 @@ export class PlayerSystem {
           heroLoader,
           heroCandidates,
           {
-            allowHero: true,
+            allowSingleModel: true,
             renderer: this.renderer,
             targetHeight: 1.8,
           },
