@@ -130,6 +130,9 @@ const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 
 const ENABLE_GLB_MODE = false;
+if (!ENABLE_GLB_MODE) {
+  console.log("[glb] GLB mode disabled");
+}
 
 // Use Look Profiles as the primary presets
 const LIGHTING_PRESETS = LOOK_PROFILES;
@@ -376,9 +379,15 @@ export class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
-    const ARISTOTLE_CANDIDATES = getAssetCandidates("aristotle");
-    const POSEIDON_CANDIDATES = getAssetCandidates("poseidon");
-    const AKROPOL_CANDIDATES = getAssetCandidates("akropol");
+    const ARISTOTLE_CANDIDATES = ENABLE_GLB_MODE
+      ? getAssetCandidates("aristotle")
+      : [];
+    const POSEIDON_CANDIDATES = ENABLE_GLB_MODE
+      ? getAssetCandidates("poseidon")
+      : [];
+    const AKROPOL_CANDIDATES = ENABLE_GLB_MODE
+      ? getAssetCandidates("akropol")
+      : [];
 
     showLoadingScreen({
       initialStatus: "Preparing the experience...",
@@ -417,15 +426,17 @@ export class Application {
       );
       return;
     }
-    assetLoader
-      .probeInitialAssets({
-        glbCandidates: [
-          "models/landmarks/poseidon_temple.glb",
-          "models/landmarks/akropol.glb",
-        ],
-        includeGlbCandidates: !FORCE_PROC,
-      })
-      .catch(() => {});
+    if (ENABLE_GLB_MODE) {
+      assetLoader
+        .probeInitialAssets({
+          glbCandidates: [
+            "models/landmarks/poseidon_temple.glb",
+            "models/landmarks/akropol.glb",
+          ],
+          includeGlbCandidates: !FORCE_PROC,
+        })
+        .catch(() => {});
+    }
 
     const readStoredNumber = (key, fallback) => {
       try {
@@ -545,7 +556,9 @@ export class Application {
     
     // Exposure slider and hotkey overlay will be mounted by UIManager later with all other HUD overlays
     
-    initializeAssetTranscoders(renderer);
+    if (ENABLE_GLB_MODE) {
+      initializeAssetTranscoders(renderer);
+    }
     attachCrosshair();
     advanceLoadingStage("Listening for the bustle of ancient Athens...");
 
@@ -1148,7 +1161,7 @@ export class Application {
     }
 
     let landmarkLoadPromise = Promise.resolve();
-    if (!FORCE_PROC) {
+    if (ENABLE_GLB_MODE && !FORCE_PROC) {
       // --- Landmarks ---
       const landmarkTasks = [
         (async () => {
@@ -1896,29 +1909,33 @@ export class Application {
       ),
     );
 
-    try {
-      const heroLoader = await createGLTFLoader(renderer);
-      const loadedHero = await loadGLBWithFallbacks(
-        heroLoader,
-        heroCandidates,
-        {
-          renderer,
-          targetHeight: 1.8,
-        },
-      );
+    if (ENABLE_GLB_MODE) {
+      try {
+        const heroLoader = await createGLTFLoader(renderer);
+        const loadedHero = await loadGLBWithFallbacks(
+          heroLoader,
+          heroCandidates,
+          {
+            renderer,
+            targetHeight: 1.8,
+          },
+        );
 
-      if (!loadedHero || !loadedHero.root) {
-        throw new Error("No hero GLB candidates reachable");
+        if (!loadedHero || !loadedHero.root) {
+          throw new Error("No hero GLB candidates reachable");
+        }
+
+        const { url, gltf, root } = loadedHero;
+
+        removeExistingAvatar();
+        character.initializeFromGLTF(root, gltf.animations);
+        player.attachCharacter(character);
+
+        const resolvedHeroRootPath = joinPath(BASE_URL, heroRootPath);
+      } catch (error) {
+        attachFallbackAvatar();
       }
-
-      const { url, gltf, root } = loadedHero;
-
-      removeExistingAvatar();
-      character.initializeFromGLTF(root, gltf.animations);
-      player.attachCharacter(character);
-
-      const resolvedHeroRootPath = joinPath(BASE_URL, heroRootPath);
-    } catch (error) {
+    } else {
       attachFallbackAvatar();
     }
     updateLoadingStatus("Welcoming Athenians to the city...");
@@ -1954,14 +1971,16 @@ export class Application {
       });
       npcUpdaters.push(...crowd.updaters);
     }
-    spawnGLBNPCs(worldRoot, mainRoad, { terrain })
-      .then((glbNpcs) => {
-        if (!glbNpcs) return;
-        if (Array.isArray(glbNpcs.updaters)) {
-          npcUpdaters.push(...glbNpcs.updaters);
-        }
-      })
-      .catch(() => {});
+    if (ENABLE_GLB_MODE) {
+      spawnGLBNPCs(worldRoot, mainRoad, { terrain })
+        .then((glbNpcs) => {
+          if (!glbNpcs) return;
+          if (Array.isArray(glbNpcs.updaters)) {
+            npcUpdaters.push(...glbNpcs.updaters);
+          }
+        })
+        .catch(() => {});
+    }
     // Limit the number of placeholder light shadow maps so we stay under the
     // WebGL texture unit cap when many placeholders are visible at once.
     const PLACEHOLDER_LIGHT_SHADOW_BUDGET = 12;
@@ -2270,7 +2289,7 @@ export class Application {
       },
     ];
 
-    if (!FORCE_PROC) {
+    if (ENABLE_GLB_MODE && !FORCE_PROC) {
       const sampleBuildingResults = await Promise.allSettled(
         sampleBuildingSpecs.map((spec) =>
           buildingMgr

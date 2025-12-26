@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { createGLTFLoader, loadGLBWithFallbacks } from '../utils/glbSafeLoader.js';
 import { applyForegroundFogPolicy } from '../utils/materialUtils.js';
 
+const ENABLE_GLB_MODE = false;
+
 /** @typedef {'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump'} AnimName */
 
 export class Character extends THREE.Object3D {
@@ -18,6 +20,7 @@ export class Character extends THREE.Object3D {
    * @param {THREE.WebGLRenderer} [renderer]
    */
   async load(url, renderer, { targetHeight = 1.8 } = {}) {
+    if (!ENABLE_GLB_MODE) return null;
     const urls = Array.isArray(url) ? url : [url];
     const loader = await createGLTFLoader(renderer);
     const loaded = await loadGLBWithFallbacks(loader, urls, {
