@@ -1,6 +1,11 @@
 import * as THREE from "three";
 
-import { joinPath, resolveBaseUrl, stripRepoSegment } from "../utils/baseUrl.js";
+import {
+  joinPath,
+  normalizeBaseUrl,
+  resolveBaseUrl,
+  stripRepoSegment,
+} from "../utils/baseUrl.js";
 import { IS_DEV } from "../utils/env.js";
 import {
   getManifestProbes,
@@ -41,7 +46,7 @@ export class AssetLoader {
     districtRuleCandidates = [],
     enableGlbMode = true,
   } = {}) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = normalizeBaseUrl(baseUrl);
     this.forceProcedural = Boolean(forceProcedural);
     this.districtRuleCandidates = districtRuleCandidates;
     this.enableGlbMode = Boolean(enableGlbMode);
