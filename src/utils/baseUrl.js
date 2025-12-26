@@ -87,41 +87,26 @@ export function normalizeBaseUrl(base) {
   return normalizeBase(normalized);
 }
 
-export function stripRepoSegment(path) {
-  if (!path || typeof path !== "string") return path;
-  // Remove leading repo segment(s) to avoid double-prefixing
-  return path
-    .replace(new RegExp(`^/?${REPO_SEGMENT}/`, "i"), "")
-    .replace(/^\/+/, "");
-}
-
 export function joinPath(base, rel) {
-  if (!base) base = REPO_BASE;
-  if (!rel) return base;
-  // If rel is a full URL, return it as-is.
-  if (/^(?:[a-z]+:)?\/\//i.test(rel)) return rel;
-  let relValue = String(rel);
-  const baseValue = String(base);
-  const repoToken = `/${REPO_SEGMENT}/`;
-  if (baseValue.toLowerCase().includes(repoToken)) {
-    const hadLeadingSlash = relValue.startsWith("/");
-    const stripped = stripRepoSegment(relValue);
-    if (stripped !== relValue) {
-      relValue = hadLeadingSlash ? `/${stripped}` : stripped;
-    }
+  if (!base) {
+    base = REPO_BASE;
   }
-  if (relValue.startsWith("/")) {
-    if (/^(?:[a-z]+:)?\/\//i.test(base)) {
-      try {
-        return new URL(relValue, base).toString();
-      } catch {
-        return relValue;
-      }
-    }
-    return relValue;
+  if (!rel) {
+    return base;
   }
-  const trimmedRel = relValue.startsWith("/") ? relValue.replace(/^\/+/, "") : relValue;
-  const b = base.endsWith("/") ? base : `${base}/`;
-  const r = String(trimmedRel).replace(/^\/+/, "");
-  return b + r;
+
+  // If `rel` is an absolute URL, return it as-is.
+  if (/^(?:[a-z]+:)?\/\//i.test(rel)) {
+    return rel;
+  }
+
+  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
+  // To handle base paths that are not full URLs (like /athens-game-starter/),
+  // we need a dummy base for the URL constructor.
+  const dummyOrigin = 'http://dummy.com';
+
+  const baseUrl = isAbsoluteBase ? base : new URL(base, dummyOrigin).href;
+  const resolvedUrl = new URL(rel, baseUrl);
+
+  return isAbsoluteBase ? resolvedUrl.href : resolvedUrl.pathname;
 }
