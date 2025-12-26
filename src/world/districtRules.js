@@ -8,11 +8,34 @@ import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 // Helper requested by user to simplify path resolution
 const baseUrl = (path) => joinPath(resolveBaseUrl(), path);
 
+const REPO_SEGMENT = REPO_BASE_PATH.replace(/\//g, "");
+const DOUBLE_REPO_PREFIX = `${REPO_SEGMENT}/${REPO_SEGMENT}/`;
+
+function normalizeDistrictRuleCandidate(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) return trimmed;
+
+  let normalized = trimmed.replace(/^\.\//, "");
+  normalized = normalized.replace(
+    new RegExp(`^/?${DOUBLE_REPO_PREFIX}`, "i"),
+    REPO_BASE_PATH,
+  );
+
+  if (REPO_SEGMENT && normalized.startsWith(`${REPO_SEGMENT}/`)) {
+    normalized = `/${normalized}`;
+  }
+
+  return normalized;
+}
+
 export function buildDistrictRuleUrlCandidates(resolvedBase) {
   const urls = new Set();
   const push = (value) => {
-    if (!value || urls.has(value)) return;
-    urls.add(value);
+    const normalized = normalizeDistrictRuleCandidate(value);
+    if (!normalized || urls.has(normalized)) return;
+    urls.add(normalized);
   };
   const pushJoined = (base, rel) => {
     if (!base) return;
