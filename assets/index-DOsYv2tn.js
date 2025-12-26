@@ -50660,7 +50660,7 @@ function toCreasedNormals(geometry, creaseAngle = Math.PI / 3) {
 }
 function sanitizeRelativePath$5(value) {
   if (typeof value !== "string") return "";
-  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
+  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
 const headCache = /* @__PURE__ */ new Map();
 async function urlExists(url) {
@@ -51273,7 +51273,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DhsVRaMw.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dv_ukOPa.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51783,7 +51783,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-858EY6P3.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-IzIwLz4J.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52487,7 +52487,7 @@ function alignToGround(object, terrain, x, z, surfaceOffset = 0) {
 const ENABLE_GLB_MODE$3 = false;
 function sanitizeRelativePath$3(value) {
   if (typeof value !== "string") return "";
-  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
+  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
 function deriveGithubRawCandidates(relativePath) {
   if (typeof window === "undefined") return [];
@@ -52558,7 +52558,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DhsVRaMw.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dv_ukOPa.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -67137,7 +67137,7 @@ class LandmarkManager {
 }
 function sanitizeRelativePath$1(value) {
   if (typeof value !== "string") return "";
-  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
+  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
 function applyTransformToObject(object, options = {}) {
   if (!object) return;
@@ -67195,8 +67195,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T01:05:52.005Z" : "",
-      sha: true ? "1e0da52b9dca33948b7d6501c51cf8bc1f034659" : ""
+      time: true ? "2025-12-26T01:09:17.112Z" : "",
+      sha: true ? "4f7374945c5a04f41ea2a85b29cfe78577409dfe" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71748,7 +71748,7 @@ class InteractionSystem {
 }
 function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
-  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
+  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
 async function attachAristotleMarblePBR(options) {
   const {
@@ -77155,4 +77155,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-HafQdJdL.js.map
+//# sourceMappingURL=index-DOsYv2tn.js.map
