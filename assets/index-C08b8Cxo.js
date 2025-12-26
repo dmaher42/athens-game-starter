@@ -48732,6 +48732,7 @@ if (void 0) {
   });
 }
 const HTML_CONTENT_TYPE = /text\/html/i;
+const REPO_SEGMENT$1 = "athens-game-starter";
 const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;
 const GLB_EXTENSION = /\.glb(?:$|[?#])/i;
 const GLB_MODELS_PATH = /models\/(?:landmarks|buildings)\/.+\.glb(?:$|[?#])/i;
@@ -48745,25 +48746,18 @@ function sanitizeRelativePath$6(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
-const REPO_SEGMENT$1 = REPO_BASE_PATH.replace(/\//g, "");
-function normalizeAbsoluteDistrictRuleUrl(value) {
-  if (typeof value !== "string") return "";
-  const trimmed = value.trim();
-  if (!/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-  if (!REPO_SEGMENT$1) {
-    return trimmed;
-  }
+function normalizeAbsoluteRepoUrl(value) {
+  if (typeof value !== "string") return value;
+  if (!/^(?:[a-z]+:)?\/\//i.test(value)) return value;
   try {
-    const parsed = new URL(trimmed);
+    const parsed = new URL(value);
     parsed.pathname = parsed.pathname.replace(
       new RegExp(`/${REPO_SEGMENT$1}/${REPO_SEGMENT$1}(?=/|$)`, "g"),
       `/${REPO_SEGMENT$1}`
     );
     return parsed.toString();
   } catch {
-    return trimmed;
+    return value;
   }
 }
 class AssetLoader {
@@ -48893,8 +48887,7 @@ class AssetLoader {
       const trimmed = candidate.trim();
       if (!trimmed) continue;
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-        const normalized2 = /^(?:[a-z]+:)?\/\//i.test(trimmed) ? normalizeAbsoluteDistrictRuleUrl(trimmed) : trimmed;
-        districtCandidates.push(normalized2);
+        districtCandidates.push(normalizeAbsoluteRepoUrl(trimmed));
         continue;
       }
       const normalized = stripRepoSegment(trimmed);
@@ -48932,7 +48925,7 @@ class AssetLoader {
             targets.push(normalizeAbsoluteDistrictRuleUrl(candidate));
           }
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
-          targets.push(pathValue);
+          targets.push(normalizeAbsoluteRepoUrl(pathValue));
         } else {
           targets.push(joinPath(baseUrl2, pathValue));
         }
@@ -51356,7 +51349,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-OoJj8yE4.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bczk85fa.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -51866,7 +51859,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-6WmbtCCK.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CT8OCjhQ.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -52641,7 +52634,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-OoJj8yE4.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bczk85fa.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -67306,8 +67299,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T02:45:24.554Z" : "",
-      sha: true ? "8c50a3e788c83948200cfa92418f9061cf970e9d" : ""
+      time: true ? "2025-12-26T02:48:55.983Z" : "",
+      sha: true ? "39bdcdf3e8180a30babc9550054f5dd7bae0eaf7" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -77266,4 +77259,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DWEvd2Kx.js.map
+//# sourceMappingURL=index-C08b8Cxo.js.map
