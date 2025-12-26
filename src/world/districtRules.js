@@ -15,7 +15,18 @@ function normalizeDistrictRuleCandidate(value) {
   if (typeof value !== "string") return "";
   const trimmed = value.trim();
   if (!trimmed) return "";
-  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) return trimmed;
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      parsed.pathname = parsed.pathname.replace(
+        new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+        `/${REPO_SEGMENT}`,
+      );
+      return parsed.toString();
+    } catch {
+      return trimmed;
+    }
+  }
 
   let normalized = trimmed.replace(/^\.\//, "");
   normalized = normalized.replace(
