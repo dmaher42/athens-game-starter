@@ -18,6 +18,8 @@ import { queueSceneInteractable } from "./interactions.js";
 import { buildTemple } from "../features/temples.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
+const ENABLE_GLB_MODE = false;
+
 /**
  * Example usage:
  *
@@ -134,6 +136,7 @@ let hasLoggedCdnFallback = false;
  * continue to render without any changes.
  */
 export async function initializeAssetTranscoders(renderer) {
+  if (!ENABLE_GLB_MODE) return null;
   if (!renderer || typeof renderer.getContext !== "function") {
     return;
   }
@@ -535,6 +538,7 @@ function copyMaterialFlags(source, target) {
 }
 
 export async function loadLandmark(scene, url, options = {}) {
+  if (!ENABLE_GLB_MODE) return null;
   const timerLabel = `loadLandmark:${url}`;
   if (typeof console?.time === "function") {
     // A quick console benchmark so you can compare compressed vs. uncompressed

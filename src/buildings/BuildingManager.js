@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { createGLTFLoader } from '../utils/glbSafeLoader.js';
 
+const ENABLE_GLB_MODE = false;
+
 const BUILDINGS_ROOT_NAME = 'BuildingsRoot';
 
 /**
@@ -81,6 +83,7 @@ export class BuildingManager {
    * }} [options]
    */
   async loadBuilding(url, options) {
+    if (!ENABLE_GLB_MODE) return null;
     if (typeof url === 'string' && url.endsWith('.glb')) {
       console.warn(`[GLB Disabled] Skipping model load: ${url}`);
       return null;
