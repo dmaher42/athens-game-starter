@@ -10,6 +10,7 @@ import {
 } from "../config/AssetConfig.js";
 
 const HTML_CONTENT_TYPE = /text\/html/i;
+const REPO_SEGMENT = "athens-game-starter";
 
 const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;
 const GLB_EXTENSION = /\.glb(?:$|[?#])/i;
@@ -34,6 +35,57 @@ function sanitizeRelativePath(value) {
     .replace(/^\.\//, "");
 }
 
+function normalizeRepoRelativeCandidate(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const withoutLeading = trimmed.replace(/^\/+/, "");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT}/)+`, "i");
+  return withoutLeading.replace(repoPrefix, "");
+}
+
+function normalizeRepoPrefixedPath(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (!trimmed.startsWith("/")) return trimmed;
+  const withoutLeading = trimmed.replace(/^\/+/, "");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT}/)+`, "i");
+  if (!repoPrefix.test(withoutLeading)) {
+    return trimmed;
+  }
+  const stripped = withoutLeading.replace(repoPrefix, "");
+  return `/${REPO_SEGMENT}/${stripped}`;
+}
+
+function normalizeAbsoluteRepoUrl(value) {
+  if (typeof value !== "string") return value;
+  if (!/^(?:[a-z]+:)?\/\//i.test(value)) return value;
+  try {
+    const parsed = new URL(value);
+    parsed.pathname = parsed.pathname.replace(
+      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+      `/${REPO_SEGMENT}`,
+    );
+    return parsed.toString();
+  } catch {
+    return value;
+  }
+}
+
+function normalizeBaseUrl(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
+    return normalizeAbsoluteRepoUrl(trimmed);
+  }
+  if (trimmed.startsWith("/")) {
+    return normalizeRepoPrefixedPath(trimmed);
+  }
+  return normalizeRepoPrefixedPath(`/${trimmed}`);
+}
+
 export class AssetLoader {
   constructor({
     baseUrl = resolveBaseUrl(),
@@ -41,7 +93,7 @@ export class AssetLoader {
     districtRuleCandidates = [],
     enableGlbMode = true,
   } = {}) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = normalizeBaseUrl(baseUrl);
     this.forceProcedural = Boolean(forceProcedural);
     this.districtRuleCandidates = districtRuleCandidates;
     this.enableGlbMode = Boolean(enableGlbMode);
@@ -87,7 +139,8 @@ export class AssetLoader {
   }
 
   async headOk(url) {
-    const target = typeof url === "string" ? url : String(url ?? "");
+    const rawTarget = typeof url === "string" ? url : String(url ?? "");
+    const target = normalizeAbsoluteRepoUrl(rawTarget);
     const isJsonProbe = TRUE_JSON_PROBE.test(target);
     const isGlbProbe = GLB_EXTENSION.test(target);
     const fallbackStatuses = new Set([403, 405, 501]);
@@ -184,10 +237,11 @@ export class AssetLoader {
       const trimmed = candidate.trim();
       if (!trimmed) continue;
       if (/^(?:[a-z]+:)?\/\//i.test(trimmed) || trimmed.startsWith("/")) {
-        districtCandidates.push(trimmed);
+        const normalized = normalizeAbsoluteRepoUrl(trimmed);
+        districtCandidates.push(normalizeRepoPrefixedPath(normalized));
         continue;
       }
-      const normalized = stripRepoSegment(trimmed);
+      const normalized = normalizeRepoRelativeCandidate(trimmed);
       if (!normalized) continue;
       districtCandidates.push(joinPath(baseUrl, normalized));
     }
@@ -222,9 +276,12 @@ export class AssetLoader {
           }
           targets.push(...districtCandidates);
         } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
-          targets.push(pathValue);
+          targets.push(normalizeAbsoluteRepoUrl(pathValue));
         } else {
-          targets.push(joinPath(baseUrl, pathValue));
+          const normalizedPath = /athens-game-starter\//i.test(pathValue)
+            ? normalizeRepoRelativeCandidate(pathValue)
+            : pathValue;
+          targets.push(joinPath(baseUrl, normalizedPath));
         }
       }
 
