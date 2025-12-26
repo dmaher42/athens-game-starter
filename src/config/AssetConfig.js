@@ -61,6 +61,15 @@ function sanitizeCandidatePath(value) {
     .replace(/^\.\//, "");
 }
 
+function sanitizeQuickCheckPath(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .trim()
+    .replace(/^\/+/, "")
+    .replace(/^athens-game-starter\//i, "")
+    .replace(/^\.\//, "");
+}
+
 function validateQuickChecks(config) {
   assert(Array.isArray(config.quickChecks), "quickChecks must be an array");
   for (const entry of config.quickChecks) {
@@ -83,6 +92,17 @@ function validateCandidates(map) {
 export function createAssetConfig(environment = getRuntimeEnvironment(), overrides = {}) {
   const envOverrides = ENVIRONMENT_OVERRIDES[environment] || {};
   const merged = mergeDeep({}, DEFAULT_ASSET_CONFIG, envOverrides, overrides);
+  if (Array.isArray(merged.quickChecks)) {
+    merged.quickChecks = merged.quickChecks.map((entry) => {
+      if (!entry || typeof entry !== "object" || typeof entry.path !== "string") {
+        return entry;
+      }
+      return {
+        ...entry,
+        path: sanitizeQuickCheckPath(entry.path),
+      };
+    });
+  }
   validateCandidates(merged.candidates);
   validateQuickChecks(merged);
   const frozen = deepFreeze(merged);
