@@ -3,6 +3,7 @@ import "./materials/enhanceStandardMaterial.js";
 import { Application } from "./core/Application.js";
 import { engineConfig } from "./config/EngineConfig.js";
 import { showLoadingError } from "./ui/loadingScreen.js";
+import { IS_DEV } from "./utils/env.js";
 
 function toUrlSearchParams(value) {
   if (value instanceof URLSearchParams) {
@@ -54,6 +55,10 @@ function createApplicationBootConfig(source) {
 }
 
 export const applicationBootConfig = createApplicationBootConfig(engineConfig);
+
+if (IS_DEV && typeof window !== "undefined") {
+  window.__ENGINE_CONFIG__ = engineConfig;
+}
 
 const app = new Application({
   baseUrl: applicationBootConfig.baseUrl,
