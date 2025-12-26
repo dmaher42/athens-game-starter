@@ -1,5 +1,5 @@
 
-export const LOOK_PROFILES = {
+export const LIGHTING_PRESETS = {
   "Bright Noon": {
     renderer: {
       toneMappingExposure: 0.45, // Heavily reduced to fight sky blowout

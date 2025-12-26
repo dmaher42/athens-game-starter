@@ -84,6 +84,7 @@ import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { LandmarkManager } from "../world/LandmarkManager.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
+import { LIGHTING_PRESETS } from "../config/LookProfiles.js";
 import { getAssetCandidates } from "../config/AssetConfig.js";
 import {
   engineConfig,
