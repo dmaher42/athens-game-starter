@@ -68,17 +68,27 @@ export function joinPath(base, rel) {
   if (!rel) return base;
   // If rel is a full URL, return it as-is.
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) return rel;
-  if (rel.startsWith("/")) {
+  let relValue = String(rel);
+  const baseValue = String(base);
+  const repoToken = `/${REPO_SEGMENT}/`;
+  if (baseValue.toLowerCase().includes(repoToken)) {
+    const hadLeadingSlash = relValue.startsWith("/");
+    const stripped = stripRepoSegment(relValue);
+    if (stripped !== relValue) {
+      relValue = hadLeadingSlash ? `/${stripped}` : stripped;
+    }
+  }
+  if (relValue.startsWith("/")) {
     if (/^(?:[a-z]+:)?\/\//i.test(base)) {
       try {
-        return new URL(rel, base).toString();
+        return new URL(relValue, base).toString();
       } catch {
-        return rel;
+        return relValue;
       }
     }
-    return rel;
+    return relValue;
   }
-  const trimmedRel = rel.startsWith("/") ? rel.replace(/^\/+/, "") : rel;
+  const trimmedRel = relValue.startsWith("/") ? relValue.replace(/^\/+/, "") : relValue;
   const b = base.endsWith("/") ? base : `${base}/`;
   const r = String(trimmedRel).replace(/^\/+/, "");
   return b + r;
