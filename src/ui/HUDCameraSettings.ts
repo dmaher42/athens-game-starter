@@ -166,8 +166,11 @@ export function mount(rootEl: HTMLElement | null): HUDCameraSettingsHandle {
   toggleButton.className = "hud-camera-settings__toggle";
 
   const panel = document.createElement("div");
+  panel.id = "hud-camera-settings-panel";
   panel.className = "hud-camera-settings__panel";
   panel.style.display = "none";
+  panel.setAttribute("aria-hidden", "true");
+  toggleButton.setAttribute("aria-controls", panel.id);
 
   const controls: Partial<Record<RangeKey, SliderControl>> = {};
   const slidersContainer = document.createElement("div");
@@ -243,6 +246,7 @@ export function mount(rootEl: HTMLElement | null): HUDCameraSettingsHandle {
       panel.style.display = "block";
       toggleButton.setAttribute("aria-expanded", "true");
     }
+    panel.setAttribute("aria-hidden", String(isVisible));
   };
 
   const onToggleClick = (event: MouseEvent) => {
