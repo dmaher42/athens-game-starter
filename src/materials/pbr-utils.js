@@ -52,15 +52,20 @@ async function loadAny(loader, stem, { isSRGB = false } = {}) {
     .replace("marble/roughness", "marble_rough")
     .replace("marble/ao", "marble_ao");
 
+  const albedoVariant = trimmedStem
+    .replace("basecolor", "albedo")
+    .replace("gravel/", "gravel_path-");
+  const useAlbedoVariant =
+    albedoVariant !== trimmedStem &&
+    !(flatMarble !== trimmedStem && albedoVariant.includes("textures/marble/"));
+
   const variants = Array.from(
     new Set(
       [
-        // Prioritize flat marble paths (e.g. textures/marble_base) to avoid 404s on directory paths
-        ...(flatMarble !== trimmedStem ? [flatMarble] : []),
-        trimmedStem,
-        trimmedStem
-          .replace("basecolor", "albedo")
-          .replace("gravel/", "gravel_path-"),
+        // Prioritize flat marble paths (e.g. textures/marble_base) and skip directory stems
+        // to prevent avoidable 404s on nonexistent marble/* files.
+        ...(flatMarble !== trimmedStem ? [flatMarble] : [trimmedStem]),
+        useAlbedoVariant ? albedoVariant : null,
         // Fallback for missing gravel textures: reuse marble_base
         trimmedStem.includes("textures/gravel")
           ? "textures/marble_base"
