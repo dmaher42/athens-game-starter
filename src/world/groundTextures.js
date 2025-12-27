@@ -206,6 +206,8 @@ function loadTexture(url, options, onError) {
         placeholder.format = loadedTexture.format;
         placeholder.type = loadedTexture.type;
         placeholder.colorSpace = loadedTexture.colorSpace;
+        // Fix: Turn off isDataTexture since it's now an image-backed texture
+        placeholder.isDataTexture = false;
         configureTexture(placeholder, options);
       },
       undefined,
