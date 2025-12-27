@@ -1,6 +1,6 @@
 import "./materials/enhanceStandardMaterial.js";
 
-import { Application } from "./core/Application.js";
+import { Application } from "./core/Application.ts";
 import { engineConfig } from "./config/EngineConfig.js";
 import { runTextureAssetCheck } from "./debug/assetChecks.js";
 import { showLoadingError } from "./ui/loadingScreen.js";
