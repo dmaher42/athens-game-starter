@@ -54,7 +54,15 @@ function configureWaterNormalsTexture(texture) {
   if ("colorSpace" in texture && THREE.LinearSRGBColorSpace !== undefined) {
     texture.colorSpace = THREE.LinearSRGBColorSpace;
   }
-  texture.needsUpdate = true;
+  const hasPixelData = Boolean(
+    texture.isDataTexture ||
+      texture.isCanvasTexture ||
+      texture.isCompressedTexture ||
+      texture.image,
+  );
+  if (hasPixelData) {
+    texture.needsUpdate = true;
+  }
 }
 
 function loadWaterNormalsTexture(url) {
@@ -77,7 +85,6 @@ function loadWaterNormalsTexture(url) {
           reject(error);
         },
       );
-      configureWaterNormalsTexture(texture);
     } catch (error) {
       reject(error);
     }

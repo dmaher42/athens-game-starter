@@ -175,15 +175,42 @@ function configureTexture(texture, options = {}) {
     }
   }
 
-  texture.needsUpdate = true;
+  const hasPixelData = Boolean(
+    texture.isDataTexture ||
+      texture.isCanvasTexture ||
+      texture.isCompressedTexture ||
+      texture.image,
+  );
+  if (hasPixelData) {
+    texture.needsUpdate = true;
+  }
 }
 
 function loadTexture(url, options, onError) {
   try {
-    const texture = textureLoader.load(
+    const fallbackData = new Uint8Array([255, 255, 255, 255]);
+    const placeholder = new THREE.DataTexture(
+      fallbackData,
+      1,
+      1,
+      THREE.RGBAFormat,
+    );
+    if (options?.colorSpace === "srgb") {
+      placeholder.colorSpace = THREE.SRGBColorSpace;
+    } else if (options?.colorSpace === "linear") {
+      placeholder.colorSpace = THREE.LinearSRGBColorSpace;
+    }
+    configureTexture(placeholder, options);
+
+    textureLoader.load(
       url,
-      () => {
-        configureTexture(texture, options);
+      (loadedTexture) => {
+        if (!loadedTexture?.image) return;
+        placeholder.image = loadedTexture.image;
+        placeholder.format = loadedTexture.format;
+        placeholder.type = loadedTexture.type;
+        placeholder.colorSpace = loadedTexture.colorSpace;
+        configureTexture(placeholder, options);
       },
       undefined,
       (event) => {
@@ -191,7 +218,7 @@ function loadTexture(url, options, onError) {
         if (onError) onError(event);
       },
     );
-    return texture;
+    return placeholder;
   } catch (error) {
     console.warn(`Failed to load ground texture: ${url}`, error);
     if (onError) onError(error);

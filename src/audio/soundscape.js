@@ -133,12 +133,66 @@ export class Soundscape {
     this.lightingRef = lightingRef;
     this.anchors = anchors;
 
-    // Audio graph
+    // Audio graph (initialized after user gesture)
+    this.listener = null;
+    this.loader = null;
+    this.masterGain = null;
+    this.bus = null;
+    this._audioInitialized = false;
+    this._zoneTrackConfigs = new Map();
+
+    // State
+    this.buffers = new Map();
+    this.emitters = [];
+    this.oneShotTimers = [];
+    this.pendingSources = new Set();
+    this.ready = false;
+    this.manifestLoaded = false;
+    this._manifest = null;
+    this.zoneAmbience = null;
+    const BASE = resolveBaseUrl();
+    this._registerZoneTrack("harbor", {
+      label: "Ocean Waves",
+      url: joinPath(BASE, "audio/ocean_waves.mp3"),
+      noiseOptions: { duration: 2, amplitude: 0.08 },
+      filter: { type: "lowpass", frequency: 600 },
+    });
+    this._registerZoneTrack("city", {
+      label: "Crowd Murmur",
+      url: joinPath(BASE, "audio/ambient_sea.ogg"),
+      noiseOptions: { duration: 2, amplitude: 0.06 },
+      filter: { type: "bandpass", frequency: 450 },
+    });
+    this._registerZoneTrack("wind", {
+      label: "Wind",
+      url: "",
+      noiseOptions: { duration: 2, amplitude: 0.05 },
+      filter: { type: "highpass", frequency: 300 },
+    });
+
+    // Zones
+    this.zones = {
+      harbor: { pos: anchors.harbor, radius: 50 },
+      agora: { pos: anchors.agora, radius: 40 },
+      acropolis: { pos: anchors.acropolis, radius: 40 }
+    };
+
+    this.mode = null;
+  }
+
+  _registerZoneTrack(key, config) {
+    this._zoneTrackConfigs.set(key, config || {});
+    if (this.zoneAmbience) {
+      this.zoneAmbience.registerTrack(key, config || {});
+    }
+  }
+
+  _initAudioGraph() {
+    if (this._audioInitialized) return;
     this.listener = new THREE.AudioListener();
     this.camera.add(this.listener);
     this.loader = new THREE.AudioLoader();
 
-    // Mixers (master + groups)
     const ctx = this.listener.context;
     this.masterGain = ctx.createGain();
     this.masterGain.gain.value = 0.9;
@@ -156,51 +210,20 @@ export class Soundscape {
     this.bus.voices.connect(this.masterGain);
     this.bus.effects.connect(this.masterGain);
 
-    // State
-    this.buffers = new Map();
-    this.emitters = [];
-    this.oneShotTimers = [];
-    this.pendingSources = new Set();
-    this.ready = false;
-    this.manifestLoaded = false;
-    this._manifest = null;
     this.zoneAmbience = new ZoneAmbienceManager(
       this.listener,
       (name, url) => this.loadBuffer(name, url),
       this.bus.ambience,
     );
-    const BASE = resolveBaseUrl();
-    this.zoneAmbience.registerTrack("harbor", {
-      label: "Ocean Waves",
-      url: joinPath(BASE, "audio/ocean_waves.mp3"),
-      noiseOptions: { duration: 2, amplitude: 0.08 },
-      filter: { type: "lowpass", frequency: 600 },
-    });
-    this.zoneAmbience.registerTrack("city", {
-      label: "Crowd Murmur",
-      url: joinPath(BASE, "audio/ambient_sea.ogg"),
-      noiseOptions: { duration: 2, amplitude: 0.06 },
-      filter: { type: "bandpass", frequency: 450 },
-    });
-    this.zoneAmbience.registerTrack("wind", {
-      label: "Wind",
-      url: joinPath(BASE, "audio/wind.mp3"),
-      noiseOptions: { duration: 2, amplitude: 0.05 },
-      filter: { type: "highpass", frequency: 300 },
-    });
-
-    // Zones
-    this.zones = {
-      harbor: { pos: anchors.harbor, radius: 50 },
-      agora: { pos: anchors.agora, radius: 40 },
-      acropolis: { pos: anchors.acropolis, radius: 40 }
-    };
-
-    this.mode = null;
+    for (const [key, config] of this._zoneTrackConfigs.entries()) {
+      this.zoneAmbience.registerTrack(key, config);
+    }
+    this._audioInitialized = true;
   }
 
   _safePlay(source) {
     if (!source) return;
+    if (!this.listener) return;
     if (this.listener.context.state === "running") {
       source.play();
     } else {
@@ -215,6 +238,7 @@ export class Soundscape {
 
   async loadBuffer(name, url) {
     if (!url) return null;
+    if (!this.loader) return null;
     // Skip problematic audio file to prevent console errors
     if (name === "agora" || url.includes("ambience_agora.mp3")) {
       return null;
@@ -236,7 +260,7 @@ export class Soundscape {
   }
 
   _makePositional(buffer, position, group = "ambience", { loop = true, volume = 0.6, refDistance = 12, maxDistance = 80, rolloff = 1 } = {}) {
-    if (!buffer) return null;
+    if (!buffer || !this.listener) return null;
     const src = new THREE.PositionalAudio(this.listener);
     src.setBuffer(buffer);
     src.setLoop(loop);
@@ -265,7 +289,7 @@ export class Soundscape {
   }
 
   _makeGlobal(buffer, group = "ambience", { loop = true, volume = 0.3 } = {}) {
-    if (!buffer) return null;
+    if (!buffer || !this.listener) return null;
     const src = new THREE.Audio(this.listener);
     src.setBuffer(buffer);
     src.setLoop(loop);
@@ -504,7 +528,7 @@ export class Soundscape {
    * @param {THREE.Vector3} playerPos  (optional, for future distance-based mixing)
    */
   update(playerPos) {
-    if (!this.ready) return;
+    if (!this.ready || !this.bus) return;
     const nightPreference = this.mode === "night" ? 1 : this.mode === "day" ? 0 : null;
     const night =
       nightPreference ?? (this.lightingRef?.getNightFactor?.() ?? 0);
@@ -541,10 +565,19 @@ export class Soundscape {
   }
 
   async ensureUserGestureResume() {
-    const ctx = this.listener.context;
-    if (ctx.state === "running") return;
     const resume = async () => {
-      try { await ctx.resume(); } catch {}
+      if (!this._audioInitialized) {
+        this._initAudioGraph();
+      }
+      const ctx = this.listener?.context;
+      if (ctx && ctx.state !== "running") {
+        try { await ctx.resume(); } catch {}
+      }
+      if (!this.ready) {
+        try {
+          await this.initFromManifest();
+        } catch {}
+      }
       // Play pending
       for (const src of this.pendingSources) {
         try {
@@ -554,9 +587,11 @@ export class Soundscape {
       this.pendingSources.clear();
       window.removeEventListener("pointerdown", resume);
       window.removeEventListener("keydown", resume);
+      window.removeEventListener("touchstart", resume);
     };
-    window.addEventListener("pointerdown", resume);
-    window.addEventListener("keydown", resume);
+    window.addEventListener("pointerdown", resume, { once: true });
+    window.addEventListener("keydown", resume, { once: true });
+    window.addEventListener("touchstart", resume, { once: true });
   }
 
   dispose() {
