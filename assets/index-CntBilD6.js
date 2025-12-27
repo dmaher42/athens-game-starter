@@ -42257,6 +42257,7 @@ class Soundscape {
       acropolis: { pos: anchors.acropolis, radius: 40 }
     };
     this.mode = null;
+    this._initAudioGraph();
   }
   _registerZoneTrack(key, config) {
     this._zoneTrackConfigs.set(key, config || {});
@@ -50195,7 +50196,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CtsrdyMk.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BQ52us_v.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50684,7 +50685,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CerxMJEk.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CtCb61cZ.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51477,7 +51478,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CtsrdyMk.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BQ52us_v.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63636,8 +63637,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T19:51:58.414Z" : "",
-      sha: true ? "9c56202ca40ffaef7fc6df2f357bf01e2ece2b22" : ""
+      time: true ? "2025-12-27T20:05:37.416Z" : "",
+      sha: true ? "613d52b59766da37f38083cf9761d015d4ac4d3d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74895,4 +74896,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-D7u6u5ON.js.map
+//# sourceMappingURL=index-CntBilD6.js.map
