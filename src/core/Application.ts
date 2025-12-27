@@ -158,7 +158,7 @@ function createFarOceanPlane(scene: any, seaLevel: number, terrainSize: number) 
 export class Application {
   baseUrl: string;
   districtRuleCandidates: string[];
-  queryParams: URLSearchParams;
+  queryParams: URLSearchParams | undefined;
   forceGlb: boolean;
   forceProc: boolean;
   assetLoader: any;

@@ -50172,7 +50172,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-b2UDqFbw.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CGvZKTlD.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50683,7 +50683,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-akDr9Y2X.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-EAMMuBzr.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51476,7 +51476,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-b2UDqFbw.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CGvZKTlD.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63668,7 +63668,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T03:07:29.967Z" : "",
+      time: true ? "2025-12-27T03:09:02.229Z" : "",
       sha: true ? "746203a144ddecc5325da090762068c8c1dcf73c" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -74107,7 +74107,7 @@ class Application {
     updateLoadingStatus("Sculpting the Attic landscape...");
     const terrain = createTerrain(scene2);
     this.terrain = terrain;
-    const terrainSize = terrain?.geometry?.userData?.size;
+    const terrainSize = terrain?.geometry?.userData?.["size"];
     const seaLevel = getSeaLevelY();
     const oceanRadius = Math.max(
       Number.isFinite(terrainSize) ? terrainSize * 2.2 : 0,
@@ -74167,10 +74167,10 @@ class Application {
     }
     ocean = this.ocean;
     attachHeightSampler(terrain);
-    scene2.userData.terrain = terrain;
-    scene2.userData.getHeightAt = terrain?.userData?.getHeightAt;
-    if (typeof terrain?.userData?.getHeightAt === "function") {
-      scene2.userData.terrainHeightSampler = terrain.userData.getHeightAt;
+    scene2.userData["terrain"] = terrain;
+    scene2.userData["getHeightAt"] = terrain?.userData?.["getHeightAt"];
+    if (typeof terrain?.userData?.["getHeightAt"] === "function") {
+      scene2.userData["terrainHeightSampler"] = terrain.userData["getHeightAt"];
     }
     advanceLoadingStage("Terrain ready. Mapping the hills...");
     const shouldAddOccluder = (() => {
@@ -74361,25 +74361,25 @@ class Application {
     if (roadCurves && roadCurves.length > 0) {
       villagerSystem = new VillagerSystem(scene2, terrain);
       scene2.userData = scene2.userData || {};
-      scene2.userData.villagerSystem = villagerSystem;
+      scene2.userData["villagerSystem"] = villagerSystem;
     }
     const hillCity = await createHillCity(worldRoot, terrain, mainRoad, {
       seed: 42,
       buildingCount: 140,
-      foundationPadMaterial: harborCity?.userData?.foundationPadMaterial ?? null
+      foundationPadMaterial: harborCity?.userData?.["foundationPadMaterial"] ?? null
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
     applyGravelToRoads({ scene: scene2, baseUrl: BASE_URL2, repeat: [6, 6] }).catch(() => {
     });
     updateTerrainCoverageMask(terrain, {
-      buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
+      buildingPlacements: harborCity?.userData?.["buildingPlacements"] ?? [],
       roadCurves: roadCurves ?? [],
       mainRoadCurve: mainRoad ?? null,
       mainRoadWidth: MAIN_ROAD_WIDTH,
       roadWidth: 3.2
     });
     scatterGroundProps(worldRoot, terrain, {
-      buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
+      buildingPlacements: harborCity?.userData?.["buildingPlacements"] ?? [],
       roadCurves: roadCurves ?? [],
       mainRoadCurve: mainRoad ?? null,
       roadPadding: MAIN_ROAD_WIDTH * 0.7,
@@ -74549,7 +74549,7 @@ class Application {
     };
     const onPin = (p) => {
       const pin = createPin(worldRoot, p);
-      const y = terrain?.userData?.getHeightAt?.(p.x, p.z);
+      const y = terrain?.userData?.["getHeightAt"]?.(p.x, p.z);
       if (Number.isFinite(y)) pin.position.y = y;
     };
     const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: true, devDefault: true };
@@ -74922,4 +74922,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-D945fUUv.js.map
+//# sourceMappingURL=index-BssVa3sW.js.map
