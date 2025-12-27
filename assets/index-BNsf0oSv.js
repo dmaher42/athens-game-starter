@@ -42267,8 +42267,12 @@ class Soundscape {
   /**
    * @param {THREE.Scene} scene
    * @param {THREE.Camera} camera
-   * @param {{ getNightFactor: ()=>number }} lightingRef  returns 0..1 (0=day,1=night)
-   * @param {{ harbor: THREE.Vector3, agora: THREE.Vector3, acropolis: THREE.Vector3 }} anchors
+   * @param {Object} lightingRef returns 0..1 (0=day,1=night)
+   * @param {function()} lightingRef.getNightFactor
+   * @param {Object} anchors
+   * @param {THREE.Vector3} anchors.harbor
+   * @param {THREE.Vector3} anchors.agora
+   * @param {THREE.Vector3} anchors.acropolis
    */
   constructor(scene2, camera2, lightingRef, anchors) {
     this.scene = scene2;
@@ -43608,7 +43612,7 @@ function createDryGrassDetailTexture(options = {}) {
     contrast: options.contrast ?? 1.1
   });
 }
-const textureLoader$3 = new TextureLoader();
+const textureLoader$2 = new TextureLoader();
 const DEFAULT_MASK_RESOLUTION = 128;
 const fallbackMask = (() => {
   const data = new Uint8Array([0]);
@@ -43756,7 +43760,7 @@ function configureTexture(texture, options = {}) {
 }
 function loadTexture$1(url, options, onError) {
   try {
-    const texture = textureLoader$3.load(
+    const texture = textureLoader$2.load(
       url,
       () => {
         configureTexture(texture, options);
@@ -44915,7 +44919,7 @@ const CITY_SLOPE_MAX = 1.5;
 function validateTerrain(options) {
   return { valid: true };
 }
-const textureLoader$2 = new TextureLoader();
+const textureLoader$1 = new TextureLoader();
 function configureMapTexture(texture, options = {}) {
   texture.wrapS = texture.wrapT = RepeatWrapping;
   if (options.repeat) {
@@ -44947,7 +44951,7 @@ function loadTextureWithFallback(url, options, fallbackFactory) {
   const fallbackTexture = fallbackFactory();
   configureMapTexture(fallbackTexture, options);
   try {
-    textureLoader$2.load(
+    textureLoader$1.load(
       url,
       (loadedTexture) => {
         if (!loadedTexture) return;
@@ -46197,14 +46201,14 @@ function generateNormalComponent(x, y, octave) {
   const angle = (x * frequency + y * frequency * 1.3) * 0.12;
   return Math.sin(angle * 1.7 + octave * 1.1) * 0.6;
 }
-const textureLoader$1 = new TextureLoader();
-function sanitizeRelativePath$6(value) {
+const textureLoader = new TextureLoader();
+function sanitizeRelativePath$5(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
 function getDefaultWaterNormalCandidates(base = resolveBaseUrl$4()) {
   return HARBOR_WATER_NORMAL_CANDIDATES.map((relative) => {
-    const sanitized = sanitizeRelativePath$6(relative);
+    const sanitized = sanitizeRelativePath$5(relative);
     if (!sanitized) {
       return null;
     }
@@ -46225,7 +46229,7 @@ function loadWaterNormalsTexture(url) {
   return new Promise((resolve, reject) => {
     let disposed = false;
     try {
-      const texture = textureLoader$1.load(
+      const texture = textureLoader.load(
         url,
         () => {
           if (disposed) return;
@@ -46315,7 +46319,7 @@ async function resolveWaterNormalsTexture(options) {
     const normalized = candidate.trim();
     if (!normalized) continue;
     const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(normalized) || normalized.startsWith("data:");
-    const resolved = isAbsolute ? normalized : joinPath(base, sanitizeRelativePath$6(normalized));
+    const resolved = isAbsolute ? normalized : joinPath(base, sanitizeRelativePath$5(normalized));
     if (!resolved || tried.has(resolved)) continue;
     tried.add(resolved);
     if (cachedWaterNormalsTexture && cachedWaterNormalsKey === resolved) {
@@ -46948,7 +46952,7 @@ function scatterDockProps(target, dockSections, seaLevel) {
     target.add(prop);
   }
 }
-function scatterShoreProps(target, groundY2) {
+function scatterShoreProps(target, groundY) {
   const scatterBounds = {
     west: 70 + 2,
     // Local coordinates
@@ -46966,7 +46970,7 @@ function scatterShoreProps(target, groundY2) {
     target.add(prop);
   }
 }
-function createShed(size, groundY2, position) {
+function createShed(size, groundY, position) {
   const shed = new Group();
   shed.name = "HarborWarehouse";
   const base = new Mesh(
@@ -46994,7 +46998,7 @@ function createShed(size, groundY2, position) {
   enableShadows(roof);
   shed.add(roof);
   shed.position.copy(position);
-  shed.position.y = groundY2;
+  shed.position.y = groundY;
   return shed;
 }
 function createCityHarborConnector(cityGroundY, harborGroundY) {
@@ -47379,23 +47383,23 @@ const FALSE_VALUES = /* @__PURE__ */ new Set(["0", "false", "off", "no", "n"]);
 function getRuntimeEnvironment() {
   return "unified";
 }
-function isPlainObject$1(value) {
+function isPlainObject(value) {
   if (value == null || typeof value !== "object") return false;
   return Object.prototype.toString.call(value) === PLAIN_OBJECT_TAG;
 }
 function mergeDeep(target = {}, ...sources) {
-  let output = Array.isArray(target) ? [...target] : isPlainObject$1(target) ? { ...target } : target;
+  let output = Array.isArray(target) ? [...target] : isPlainObject(target) ? { ...target } : target;
   for (const source of sources) {
     if (source == null) continue;
     if (Array.isArray(source)) {
       output = [...source];
       continue;
     }
-    if (!isPlainObject$1(source)) {
+    if (!isPlainObject(source)) {
       output = source;
       continue;
     }
-    if (!isPlainObject$1(output)) {
+    if (!isPlainObject(output)) {
       output = {};
     }
     for (const [key, value] of Object.entries(source)) {
@@ -47403,7 +47407,7 @@ function mergeDeep(target = {}, ...sources) {
         output[key] = [...value];
         continue;
       }
-      if (isPlainObject$1(value)) {
+      if (isPlainObject(value)) {
         output[key] = mergeDeep(output[key] ?? {}, value);
         continue;
       }
@@ -47419,7 +47423,7 @@ function deepFreeze(value) {
     }
     return Object.freeze(value);
   }
-  if (isPlainObject$1(value)) {
+  if (isPlainObject(value)) {
     for (const v of Object.values(value)) {
       deepFreeze(v);
     }
@@ -47598,7 +47602,7 @@ let AKROPOL_CANDIDATES = getAssetCandidates("akropol");
 function isHtmlResponse(res) {
   return HTML_CONTENT_TYPE.test(res.headers.get("content-type") || "");
 }
-function sanitizeRelativePath$5(value) {
+function sanitizeRelativePath$4(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
@@ -47750,7 +47754,7 @@ class AssetLoader {
         seen2.add(trimmed);
         continue;
       }
-      const relative = sanitizeRelativePath$5(trimmed);
+      const relative = sanitizeRelativePath$4(trimmed);
       if (!relative) {
         continue;
       }
@@ -48806,106 +48810,6 @@ function createMainHillRoad(scene2, terrain) {
 }
 function updateMainHillRoadLighting() {
 }
-function shouldFlipNormalGreen(url) {
-  if (typeof url !== "string") return false;
-  return url.includes("normal_dx") || url.includes("normal-dx");
-}
-function invertNormalMapGreen(texture) {
-  if (!texture || typeof document === "undefined") return texture;
-  const image = texture.image;
-  if (!image || !image.width || !image.height) return texture;
-  const canvas = document.createElement("canvas");
-  canvas.width = image.width;
-  canvas.height = image.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return texture;
-  ctx.drawImage(image, 0, 0);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData.data;
-  for (let i = 0; i < data.length; i += 4) {
-    data[i + 1] = 255 - data[i + 1];
-  }
-  ctx.putImageData(imageData, 0, 0);
-  texture.image = canvas;
-  texture.needsUpdate = true;
-  return texture;
-}
-function applyNormalMapConvention(texture, url) {
-  if (shouldFlipNormalGreen(url)) {
-    return invertNormalMapGreen(texture);
-  }
-  return texture;
-}
-const textureLoader = new TextureLoader();
-let marbleTextures = null;
-function loadMarbleTextures() {
-  if (marbleTextures) return marbleTextures;
-  const baseUrl2 = resolveBaseUrl$4();
-  const diffuse = textureLoader.load(
-    joinPath(baseUrl2, "textures/marble_albedo.jpg")
-  );
-  diffuse.wrapS = diffuse.wrapT = RepeatWrapping;
-  diffuse.colorSpace = SRGBColorSpace;
-  const normalUrl = joinPath(baseUrl2, "textures/marble_normal-dx.jpg");
-  const normal = textureLoader.load(normalUrl, (texture) => {
-    applyNormalMapConvention(texture, normalUrl);
-  });
-  normal.wrapS = normal.wrapT = RepeatWrapping;
-  normal.colorSpace = NoColorSpace;
-  const roughness = textureLoader.load(
-    joinPath(baseUrl2, "textures/marble_rough.jpg")
-  );
-  roughness.wrapS = roughness.wrapT = RepeatWrapping;
-  roughness.colorSpace = NoColorSpace;
-  const ao = textureLoader.load(joinPath(baseUrl2, "textures/marble_ao.jpg"));
-  ao.wrapS = ao.wrapT = RepeatWrapping;
-  ao.colorSpace = NoColorSpace;
-  marbleTextures = { diffuse, normal, roughness, ao };
-  return marbleTextures;
-}
-function makeDisc(center, radius, color) {
-  const geo = new CircleGeometry(radius, 48);
-  if (geo.attributes.uv && !geo.attributes.uv2) {
-    geo.setAttribute("uv2", new BufferAttribute(
-      new Float32Array(geo.attributes.uv.array),
-      2
-    ));
-  }
-  const textures = loadMarbleTextures();
-  const repeat = radius / 8;
-  textures.diffuse.repeat.set(repeat, repeat);
-  textures.normal.repeat.set(repeat, repeat);
-  textures.roughness.repeat.set(repeat, repeat);
-  textures.ao.repeat.set(repeat, repeat);
-  const mat = new MeshStandardMaterial({
-    map: textures.diffuse,
-    normalMap: textures.normal,
-    normalScale: new Vector2(0.3, 0.3),
-    roughnessMap: textures.roughness,
-    aoMap: textures.ao,
-    aoMapIntensity: 0.4,
-    color,
-    roughness: 0.7,
-    metalness: 0.1,
-    side: DoubleSide
-  });
-  const mesh = new Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.position.copy(center);
-  mesh.position.y += 0.05;
-  mesh.renderOrder = 1;
-  mesh.receiveShadow = true;
-  mesh.name = "Plaza";
-  return mesh;
-}
-function createPlazas(scene2) {
-  const group = new Group();
-  group.name = "Plazas";
-  group.add(makeDisc(AGORA_CENTER_3D, AGORA_RADIUS, 15131350));
-  group.add(makeDisc(ACROPOLIS_PEAK_3D, ACROPOLIS_RADIUS, 15591644));
-  scene2.add(group);
-  return group;
-}
 function computeMikkTSpaceTangents(geometry, MikkTSpace, negateSign = true) {
   if (!MikkTSpace || !MikkTSpace.isReady) {
     throw new Error("BufferGeometryUtils: Initialized MikkTSpace library required.");
@@ -49657,6 +49561,36 @@ function toCreasedNormals(geometry, creaseAngle = Math.PI / 3) {
   resultGeometry.setAttribute("normal", normAttr);
   return resultGeometry;
 }
+function shouldFlipNormalGreen(url) {
+  if (typeof url !== "string") return false;
+  return url.includes("normal_dx") || url.includes("normal-dx");
+}
+function invertNormalMapGreen(texture) {
+  if (!texture || typeof document === "undefined") return texture;
+  const image = texture.image;
+  if (!image || !image.width || !image.height) return texture;
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return texture;
+  ctx.drawImage(image, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i + 1] = 255 - data[i + 1];
+  }
+  ctx.putImageData(imageData, 0, 0);
+  texture.image = canvas;
+  texture.needsUpdate = true;
+  return texture;
+}
+function applyNormalMapConvention(texture, url) {
+  if (shouldFlipNormalGreen(url)) {
+    return invertNormalMapGreen(texture);
+  }
+  return texture;
+}
 const warnedKeys = /* @__PURE__ */ new Set();
 function warnOnce$1(key, message) {
   if (warnedKeys.has(key)) return;
@@ -50238,7 +50172,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BTKLr_8D.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C-NPSUt1.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50742,14 +50676,14 @@ function createDracoLoader() {
   }
   return sharedDracoLoader;
 }
-const ENABLE_GLB_MODE$4 = true;
-function sanitizeRelativePath$4(value) {
+const ENABLE_GLB_MODE$3 = true;
+function sanitizeRelativePath$3(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Ggeqr0QV.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DxpJWM42.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -50772,7 +50706,7 @@ async function createGLTFLoader(renderer2) {
   loader2.setMeshoptDecoder(MeshoptDecoder);
   return loader2;
 }
-async function headOk$3(url) {
+async function headOk$2(url) {
   if (!url) return false;
   try {
     const res = await fetch(url, { method: "HEAD" });
@@ -50817,7 +50751,7 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
   if (forceProcedural) {
     return null;
   }
-  if (!ENABLE_GLB_MODE$4 && !options.allowSingleModel) {
+  if (!ENABLE_GLB_MODE$3 && !options.allowSingleModel) {
     return null;
   }
   const baseUrl2 = resolveBaseUrl$4();
@@ -50828,7 +50762,7 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
       continue;
     }
     const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
-    const relative = sanitizeRelativePath$4(raw);
+    const relative = sanitizeRelativePath$3(raw);
     if (!relative && !isAbsolute) {
       continue;
     }
@@ -50843,7 +50777,7 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
         continue;
       }
       seen2.add(url);
-      if (!await headOk$3(url)) {
+      if (!await headOk$2(url)) {
         continue;
       }
       try {
@@ -51468,8 +51402,8 @@ function alignToGround(object, terrain, x, z, surfaceOffset = 0) {
   const offset = Number.isFinite(surfaceOffset) ? surfaceOffset : 0;
   object.position.y = height + offset;
 }
-const ENABLE_GLB_MODE$3 = true;
-function sanitizeRelativePath$3(value) {
+const ENABLE_GLB_MODE$2 = true;
+function sanitizeRelativePath$2(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
@@ -51505,7 +51439,7 @@ function deriveGithubRawCandidates(relativePath) {
   }
   return urls;
 }
-async function headOk$2(url) {
+async function headOk$1(url) {
   if (!url) return false;
   try {
     const response = await fetch(url, { method: "HEAD", cache: "no-cache" });
@@ -51532,7 +51466,7 @@ let hasWarnedUnsupportedKTX2 = false;
 let currentTranscoderPath = null;
 let hasLoggedCdnFallback = false;
 async function initializeAssetTranscoders(renderer2) {
-  if (!ENABLE_GLB_MODE$3) return null;
+  if (!ENABLE_GLB_MODE$2) return null;
   if (!renderer2 || typeof renderer2.getContext !== "function") {
     return;
   }
@@ -51542,7 +51476,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BTKLr_8D.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C-NPSUt1.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -51724,7 +51658,7 @@ function liftObjectAboveGround(scene2, object, offset = 0.05) {
   }
   return null;
 }
-function disposeObject$1(object, scene2) {
+function disposeObject(object, scene2) {
   if (!object) return;
   if (scene2) {
     scene2.remove(object);
@@ -51759,7 +51693,7 @@ function finalizeLandmarkObject(entry, object, scene2, options, materialPreset) 
   applyTransform(object, options || {});
   removePlaceholder(entry);
   if (entry.disposed) {
-    disposeObject$1(object);
+    disposeObject(object);
     trackedLandmarks.delete(entry);
     return null;
   }
@@ -51922,7 +51856,7 @@ async function loadLandmark(scene2, url, options = {}) {
     if (!sanitizedUrl) {
       throw new Error("loadLandmark requires a non-empty URL");
     }
-    if (!ENABLE_GLB_MODE$3) {
+    if (!ENABLE_GLB_MODE$2) {
       console.warn(`[GLB Disabled] Skipping model load: ${sanitizedUrl}`);
       const fallbackObject = await tryProceduralFallback("glb-disabled");
       if (fallbackObject) {
@@ -51941,7 +51875,7 @@ async function loadLandmark(scene2, url, options = {}) {
       return null;
     }
     const isProtocolAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(sanitizedUrl) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(sanitizedUrl);
-    const normalized = sanitizeRelativePath$3(sanitizedUrl);
+    const normalized = sanitizeRelativePath$2(sanitizedUrl);
     const urlSet = /* @__PURE__ */ new Set();
     if (isProtocolAbsolute) {
       urlSet.add(sanitizedUrl);
@@ -51962,7 +51896,7 @@ async function loadLandmark(scene2, url, options = {}) {
     const cacheKey = isProtocolAbsolute ? sanitizedUrl : normalized;
     let availableUrl = null;
     for (const candidate of urls) {
-      const ok = await headOk$2(candidate);
+      const ok = await headOk$1(candidate);
       if (ok) {
         availableUrl = candidate;
         break;
@@ -52057,7 +51991,7 @@ async function loadLandmark(scene2, url, options = {}) {
 function disposeLandmarks() {
   for (const entry of trackedLandmarks) {
     entry.disposed = true;
-    disposeObject$1(entry.object, entry.scene);
+    disposeObject(entry.object, entry.scene);
     removePlaceholder(entry);
   }
   trackedLandmarks.clear();
@@ -60537,7 +60471,8 @@ class EnvironmentCollider {
   }
   /**
    * @param {THREE.Object3D} root
-   * @param {{ debug?: boolean }} [opts]
+   * @param {Object} [opts]
+   * @param {boolean} [opts.debug]
    */
   fromStaticScene(root, opts = {}) {
     const source = root ?? this.lastRoot ?? (this.mesh ? this.mesh.parent : null);
@@ -60634,7 +60569,7 @@ class EnvironmentCollider {
   }
   /**
    * @param {import('three/examples/jsm/math/Capsule.js').Capsule} capsule
-   * @returns {{ normal: THREE.Vector3, depth: number } | null}
+   * @returns {Object|null} hit result with normal and depth properties
    */
   capsuleIntersect(capsule) {
     const geometry = this.mesh.geometry;
@@ -60848,203 +60783,6 @@ class EnvironmentCollider {
     target1.copy(d1).multiplyScalar(s).add(p1);
     target2.copy(d2).multiplyScalar(t).add(p2);
     return target1.distanceTo(target2);
-  }
-}
-const ENABLE_GLB_MODE$2 = true;
-const BUILDINGS_ROOT_NAME = "BuildingsRoot";
-async function headOk$1(url) {
-  if (!url) return { ok: false, reason: "missing-url" };
-  try {
-    const res = await fetch(url, { method: "HEAD" });
-    if (res.ok) {
-      const contentType = (res.headers.get("content-type") || "").toLowerCase();
-      if (contentType.includes("text/html")) {
-        return { ok: false, reason: "html-response" };
-      }
-      return { ok: true };
-    }
-    if (res.status === 405 || res.status === 501) {
-      return { ok: true, skipped: true };
-    }
-    return { ok: false, reason: `status-${res.status}` };
-  } catch (error) {
-    console.warn("[BuildingManager] HEAD request failed; falling back to GET", url, error);
-    return { ok: true, skipped: true };
-  }
-}
-function disposeMaterial(material) {
-  if (!material) return;
-  if (Array.isArray(material)) {
-    for (const mat of material) disposeMaterial(mat);
-    return;
-  }
-  if (typeof material.dispose === "function") {
-    material.dispose();
-  }
-}
-function disposeObject(object) {
-  if (!object) return;
-  object.traverse?.((child) => {
-    if (child.isMesh) {
-      child.geometry?.dispose?.();
-      disposeMaterial(child.material);
-    }
-  });
-}
-class BuildingManager {
-  /**
-   * @param {import('../env/EnvironmentCollider.js').EnvironmentCollider} envCollider
-   */
-  constructor(envCollider) {
-    this.envCollider = envCollider;
-    this.loader = null;
-    this.rootGroup = null;
-  }
-  /**
-   * @param {string} url
-   * @param {{
-   *   position?: THREE.Vector3,
-   *   scale?: number,
-   *   rotateY?: number,
-   *   collision?: boolean,
-   *   parent?: THREE.Object3D,
-   *   heightSampler?: (x: number, z: number) => number,
-   *   terrainSampler?: (x: number, z: number) => number,
-   *   terrain?: THREE.Object3D,
-   * }} [options]
-   */
-  async loadBuilding(url, options) {
-    if (!ENABLE_GLB_MODE$2) return null;
-    if (typeof url === "string" && url.endsWith(".glb")) {
-      console.warn(`[GLB Disabled] Skipping model load: ${url}`);
-      return null;
-    }
-    if (!this.loader) {
-      this.loader = await createGLTFLoader(null);
-    }
-    const headResult = await headOk$1(url);
-    if (!headResult.ok) {
-      throw new Error(
-        `Building file not found or not accessible: ${url} (${headResult.reason ?? "unknown"})`
-      );
-    }
-    const gltf = await this.loader.loadAsync(url);
-    const obj = gltf.scene;
-    const opts = options ?? {};
-    if (opts.scale !== void 0) obj.scale.setScalar(opts.scale);
-    if (opts.rotateY !== void 0) obj.rotation.y = opts.rotateY;
-    if (opts.position) obj.position.copy(opts.position);
-    const sampler = this.#resolveHeightSampler(opts);
-    if (opts.position) {
-      const { x, z } = obj.position;
-      let desiredY = obj.position.y;
-      if (typeof sampler === "function") {
-        const sampled = sampler(x, z);
-        if (Number.isFinite(sampled)) {
-          desiredY = Number.isFinite(opts.position.y) ? Math.max(opts.position.y, sampled + 0.05) : sampled + 0.05;
-        } else if (Number.isFinite(opts.position.y)) {
-          desiredY = opts.position.y;
-        } else if (!Number.isFinite(desiredY)) {
-          desiredY = 0.05;
-        }
-      } else if (Number.isFinite(opts.position.y)) {
-        desiredY = opts.position.y;
-      } else if (!Number.isFinite(desiredY)) {
-        desiredY = 0.05;
-      }
-      obj.position.set(x, desiredY ?? 0.05, z);
-    }
-    const parent = this.#resolveParent(opts);
-    if (parent) {
-      parent.add(obj);
-    } else {
-      const fallbackParent = this.envCollider?.mesh?.parent;
-      if (fallbackParent) {
-        fallbackParent.add(obj);
-      } else {
-        console.warn(
-          "EnvironmentCollider mesh has no parent; building was loaded without being attached to the scene graph."
-        );
-      }
-    }
-    if (opts?.collision) {
-      obj.traverse((child) => {
-        if (child.isMesh) {
-          child.userData.noCollision = false;
-        }
-      });
-      this.envCollider.refresh();
-    } else {
-      obj.traverse((child) => {
-        if (child.isMesh) {
-          child.userData.noCollision = true;
-        }
-      });
-    }
-    return obj;
-  }
-  clearBuildings() {
-    const scene2 = this.#getScene();
-    const target = this.rootGroup ?? scene2?.getObjectByName(BUILDINGS_ROOT_NAME);
-    if (!target) return;
-    disposeObject(target);
-    target.parent?.remove(target);
-    this.rootGroup = null;
-    if (typeof this.envCollider?.refresh === "function") {
-      this.envCollider.refresh();
-    }
-  }
-  #getScene() {
-    return this.envCollider?.mesh?.parent ?? null;
-  }
-  #resolveParent(options) {
-    if (options?.parent) {
-      this.rootGroup = options.parent;
-      if (!this.rootGroup.name) {
-        this.rootGroup.name = BUILDINGS_ROOT_NAME;
-      }
-      return options.parent;
-    }
-    if (this.rootGroup && this.rootGroup.parent) {
-      return this.rootGroup;
-    }
-    const scene2 = this.#getScene();
-    if (!scene2) return null;
-    let root = scene2.getObjectByName(BUILDINGS_ROOT_NAME);
-    if (!root) {
-      root = new Group();
-      root.name = BUILDINGS_ROOT_NAME;
-      scene2.add(root);
-    }
-    this.rootGroup = root;
-    return root;
-  }
-  #resolveHeightSampler(options) {
-    const candidates = [
-      options?.heightSampler,
-      options?.terrainSampler,
-      options?.terrain?.userData?.getHeightAt
-    ];
-    const scene2 = this.#getScene();
-    if (scene2?.userData) {
-      const { userData } = scene2;
-      candidates.push(
-        userData.heightSampler,
-        userData.terrainSampler,
-        userData.terrainHeightSampler,
-        userData.getHeightAt
-      );
-      const terrain = userData.terrain;
-      if (terrain?.userData?.getHeightAt) {
-        candidates.push(terrain.userData.getHeightAt);
-      }
-    }
-    for (const candidate of candidates) {
-      if (typeof candidate === "function") {
-        return candidate;
-      }
-    }
-    return null;
   }
 }
 const DEFAULT_FRAME_INTERVAL = 1e3 / 15;
@@ -63207,7 +62945,7 @@ class Character extends Object3D {
     this.mixer?.update(dt);
   }
   /**
-   * @param {AnimName} name
+   * @param {string} name
    * @param {number} [fade=0.2]
    */
   play(name, fade = 0.2) {
@@ -63218,7 +62956,7 @@ class Character extends Object3D {
     this.current = next;
   }
 }
-function sanitizeRelativePath$2(value) {
+function sanitizeRelativePath$1(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
@@ -63382,7 +63120,7 @@ async function spawnGLBNPCs(scene2, pathCurve, options = {}) {
   if (!entries2.length) {
     return { npcs: [], updaters: [] };
   }
-  const fileNames = entries2.map((value) => typeof value === "string" ? sanitizeRelativePath$2(value) : "").filter((value) => value.length > 0);
+  const fileNames = entries2.map((value) => typeof value === "string" ? sanitizeRelativePath$1(value) : "").filter((value) => value.length > 0);
   if (!fileNames.length) {
     return { npcs: [], updaters: [] };
   }
@@ -63909,1178 +63647,6 @@ function addDepthOccluderRibbon(scene2, terrain, p1XZ, p2XZ, width = 6, segments
   scene2.add(mesh);
   return mesh;
 }
-const GROUND_EPSILON = 0.2;
-function groundY(terrain, x, z, fallback = 0, { clampToSea = false, seaLevel = 0, minAboveSea = 0 } = {}) {
-  const h = terrain?.userData?.getHeightAt?.(x, z);
-  let y = Number.isFinite(h) ? h : fallback;
-  if (clampToSea) y = Math.max(y, seaLevel + minAboveSea);
-  return y;
-}
-function snapAboveGround(mesh, terrain, x, z, epsilon = GROUND_EPSILON, opts = {}) {
-  const base = groundY(terrain, x, z, mesh.position?.y ?? 0, opts);
-  mesh.position.y = base + epsilon;
-  return mesh.position.y;
-}
-class Capsule {
-  /**
-   * Constructs a new capsule.
-   *
-   * @param {Vector3} [start] - The start vector.
-   * @param {Vector3} [end] - The end vector.
-   * @param {number} [radius=1] - The capsule's radius.
-   */
-  constructor(start = new Vector3(0, 0, 0), end = new Vector3(0, 1, 0), radius = 1) {
-    this.start = start;
-    this.end = end;
-    this.radius = radius;
-  }
-  /**
-   * Returns a new capsule with copied values from this instance.
-   *
-   * @return {Capsule} A clone of this instance.
-   */
-  clone() {
-    return new this.constructor().copy(this);
-  }
-  /**
-   * Sets the capsule components to the given values.
-   * Please note that this method only copies the values from the given objects.
-   *
-   * @param {Vector3} start - The start vector.
-   * @param {Vector3} end - The end vector
-   * @param {number} radius - The capsule's radius.
-   * @return {Capsule} A reference to this capsule.
-   */
-  set(start, end, radius) {
-    this.start.copy(start);
-    this.end.copy(end);
-    this.radius = radius;
-    return this;
-  }
-  /**
-   * Copies the values of the given capsule to this instance.
-   *
-   * @param {Capsule} capsule - The capsule to copy.
-   * @return {Capsule} A reference to this capsule.
-   */
-  copy(capsule) {
-    this.start.copy(capsule.start);
-    this.end.copy(capsule.end);
-    this.radius = capsule.radius;
-    return this;
-  }
-  /**
-   * Returns the center point of this capsule.
-   *
-   * @param {Vector3} target - The target vector that is used to store the method's result.
-   * @return {Vector3} The center point.
-   */
-  getCenter(target) {
-    return target.copy(this.end).add(this.start).multiplyScalar(0.5);
-  }
-  /**
-   * Adds the given offset to this capsule, effectively moving it in 3D space.
-   *
-   * @param {Vector3} v - The offset that should be used to translate the capsule.
-   * @return {Capsule} A reference to this capsule.
-   */
-  translate(v) {
-    this.start.add(v);
-    this.end.add(v);
-    return this;
-  }
-  /**
-   * Returns `true` if the given bounding box intersects with this capsule.
-   *
-   * @param {Box3} box - The bounding box to test.
-   * @return {boolean} Whether the given bounding box intersects with this capsule.
-   */
-  intersectsBox(box) {
-    return checkAABBAxis(
-      this.start.x,
-      this.start.y,
-      this.end.x,
-      this.end.y,
-      box.min.x,
-      box.max.x,
-      box.min.y,
-      box.max.y,
-      this.radius
-    ) && checkAABBAxis(
-      this.start.x,
-      this.start.z,
-      this.end.x,
-      this.end.z,
-      box.min.x,
-      box.max.x,
-      box.min.z,
-      box.max.z,
-      this.radius
-    ) && checkAABBAxis(
-      this.start.y,
-      this.start.z,
-      this.end.y,
-      this.end.z,
-      box.min.y,
-      box.max.y,
-      box.min.z,
-      box.max.z,
-      this.radius
-    );
-  }
-}
-function checkAABBAxis(p1x, p1y, p2x, p2y, minx, maxx, miny, maxy, radius) {
-  return (minx - p1x < radius || minx - p2x < radius) && (p1x - maxx < radius || p2x - maxx < radius) && (miny - p1y < radius || miny - p2y < radius) && (p1y - maxy < radius || p2y - maxy < radius);
-}
-const DEFAULT_SEARCH_RADIUS = 80;
-const DEFAULT_INNER_RADIUS = 10;
-const DEFAULT_RADIAL_STEP = 4;
-const DEFAULT_ARC_LENGTH = 6;
-const DEFAULT_SLOPE_SAMPLE = 2;
-const DEFAULT_MAX_SLOPE = 0.55;
-const _workVec = new Vector3();
-const _fallbackVec = new Vector3();
-const _centerVec = new Vector3();
-const _capsule = new Capsule();
-function getDefaultRespawnPoint() {
-  return AGORA_CENTER_3D.clone();
-}
-const toVector3 = (value, target = new Vector3()) => {
-  if (value instanceof Vector3) {
-    return target.copy(value);
-  }
-  if (value && typeof value === "object") {
-    const { x = 0, y = 0, z = 0 } = value;
-    return target.set(Number(x) || 0, Number(y) || 0, Number(z) || 0);
-  }
-  return target.set(0, 0, 0);
-};
-const sampleHeight = (terrain, x, z) => {
-  const sampler = terrain?.userData?.getHeightAt;
-  if (typeof sampler !== "function") return null;
-  const height = sampler(x, z);
-  return Number.isFinite(height) ? height : null;
-};
-const slopeIsAcceptable = (terrain, x, z, baseHeight, spacing, maxSlope) => {
-  if (!(terrain && Number.isFinite(baseHeight))) return false;
-  const dist = Math.max(spacing, 0.5);
-  const east = sampleHeight(terrain, x + dist, z);
-  const west = sampleHeight(terrain, x - dist, z);
-  const north = sampleHeight(terrain, x, z + dist);
-  const south = sampleHeight(terrain, x, z - dist);
-  if (east === null || west === null || north === null || south === null) {
-    return false;
-  }
-  const slopeX = Math.max(
-    Math.abs(east - baseHeight),
-    Math.abs(baseHeight - west)
-  );
-  const slopeZ = Math.max(
-    Math.abs(north - baseHeight),
-    Math.abs(baseHeight - south)
-  );
-  const slope = Math.hypot(slopeX, slopeZ) / dist;
-  return slope <= maxSlope;
-};
-const evaluateCandidate = (envCollider, terrain, x, z, {
-  halfHeight,
-  baseClearance,
-  seaLevel,
-  minAboveSea,
-  horizontalBuffer,
-  slopeSpacing,
-  maxSlope
-}) => {
-  const groundHeight = sampleHeight(terrain, x, z);
-  if (groundHeight === null) return null;
-  if (Number.isFinite(seaLevel) && groundHeight < seaLevel + (Number.isFinite(minAboveSea) ? minAboveSea : 0)) {
-    return null;
-  }
-  if (!slopeIsAcceptable(terrain, x, z, groundHeight, slopeSpacing, maxSlope)) {
-    return null;
-  }
-  const expandedRadius = Math.max(0, horizontalBuffer);
-  const spawnY = groundHeight + halfHeight + baseClearance;
-  const startY = spawnY - halfHeight + expandedRadius;
-  const endY = spawnY + halfHeight - expandedRadius;
-  if (endY <= startY) return null;
-  _capsule.radius = expandedRadius;
-  _capsule.start.set(x, startY, z);
-  _capsule.end.set(x, endY, z);
-  if (envCollider?.capsuleIntersect?.(_capsule)) {
-    return null;
-  }
-  return _workVec.set(x, spawnY, z);
-};
-function findSafePlayerSpawn(options = {}) {
-  const {
-    envCollider,
-    terrain,
-    searchCenter,
-    fallback,
-    playerHeight = 1.8,
-    playerRadius = 0.35,
-    verticalClearance = 0.15,
-    horizontalClearance = 0.35,
-    searchRadius = DEFAULT_SEARCH_RADIUS,
-    innerRadius = DEFAULT_INNER_RADIUS,
-    radialStep = DEFAULT_RADIAL_STEP,
-    arcLength = DEFAULT_ARC_LENGTH,
-    slopeSampleDistance = DEFAULT_SLOPE_SAMPLE,
-    maxSlope = DEFAULT_MAX_SLOPE,
-    seaLevel = void 0,
-    minAboveSea = 0.25
-  } = options;
-  const fallbackPosition = toVector3(
-    fallback ?? { x: 0, y: 0, z: 10 },
-    _fallbackVec
-  );
-  const resolvedCenter = toVector3(
-    searchCenter ?? fallbackPosition,
-    _centerVec
-  );
-  const halfHeight = Math.max(playerHeight * 0.5, playerRadius + 0.1);
-  const maxExtraRadius = Math.max(0, halfHeight - playerRadius - 0.05);
-  const expandedBuffer = Math.min(Math.max(horizontalClearance, 0), maxExtraRadius);
-  const baseClearance = Math.max(verticalClearance, 0.1) + 0.02;
-  const config = {
-    halfHeight,
-    baseClearance,
-    seaLevel,
-    minAboveSea,
-    horizontalBuffer: playerRadius + expandedBuffer,
-    slopeSpacing: Math.max(slopeSampleDistance, 0.5),
-    maxSlope: Math.max(maxSlope, 0)
-  };
-  const sampler = terrain?.userData?.getHeightAt;
-  if (typeof sampler !== "function") {
-    return fallbackPosition.clone();
-  }
-  const maybeReturn = (candidate2) => {
-    if (!candidate2) return null;
-    return candidate2.clone();
-  };
-  let candidate = evaluateCandidate(
-    envCollider,
-    terrain,
-    fallbackPosition.x,
-    fallbackPosition.z,
-    config
-  );
-  if (candidate) return maybeReturn(candidate);
-  candidate = evaluateCandidate(
-    envCollider,
-    terrain,
-    resolvedCenter.x,
-    resolvedCenter.z,
-    config
-  );
-  if (candidate) return maybeReturn(candidate);
-  const preferredOffsets = [
-    [12, 0],
-    [-12, 0],
-    [0, 12],
-    [0, -12],
-    [18, 8],
-    [-18, -8]
-  ];
-  for (const [dx, dz] of preferredOffsets) {
-    candidate = evaluateCandidate(
-      envCollider,
-      terrain,
-      resolvedCenter.x + dx,
-      resolvedCenter.z + dz,
-      config
-    );
-    if (candidate) return maybeReturn(candidate);
-  }
-  const effectiveInner = Math.max(innerRadius, playerRadius + 2);
-  const maxRadius = Math.max(effectiveInner, searchRadius);
-  const radialStepSize = Math.max(radialStep, 2);
-  const arc = Math.max(arcLength, 4);
-  for (let radius = effectiveInner; radius <= maxRadius; radius += radialStepSize) {
-    const circumference = Math.max(arc, Math.PI * 2 * radius);
-    const steps = Math.max(8, Math.round(circumference / arc));
-    for (let step = 0; step < steps; step++) {
-      const angle = step / steps * Math.PI * 2;
-      const x = resolvedCenter.x + Math.cos(angle) * radius;
-      const z = resolvedCenter.z + Math.sin(angle) * radius;
-      candidate = evaluateCandidate(envCollider, terrain, x, z, config);
-      if (candidate) return maybeReturn(candidate);
-    }
-  }
-  const fallbackHeight = sampleHeight(terrain, fallbackPosition.x, fallbackPosition.z);
-  if (Number.isFinite(fallbackHeight)) {
-    const spawnY = fallbackHeight + config.halfHeight + Math.max(verticalClearance, 0.1);
-    return new Vector3(
-      fallbackPosition.x,
-      spawnY,
-      fallbackPosition.z
-    );
-  }
-  const finalFallback = fallbackPosition.clone();
-  finalFallback.y += config.halfHeight + config.baseClearance;
-  return finalFallback;
-}
-const DEBUG_FLAGS = {
-  harbor: false,
-  // Hides Harbor District debug planes
-  drawZones: false,
-  // Hides general zoning heatmaps
-  showDistricts: false
-  // Hides district boundaries
-  // Keep the logic below commented out in case you need it later
-  /*
-  harbor: (typeof import.meta !== "undefined" && import.meta.env?.DEBUG_HARBOR === "1") ||
-          (typeof process !== "undefined" && process.env?.DEBUG_HARBOR === "1") ||
-          (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("DEBUG_HARBOR") === "1"),
-  */
-};
-function isPlainObject(value) {
-  return Object.prototype.toString.call(value) === "[object Object]";
-}
-function mergeSettings(...sources) {
-  const output = {};
-  for (const source of sources) {
-    if (!isPlainObject(source)) continue;
-    for (const [key, value] of Object.entries(source)) {
-      if (isPlainObject(value)) {
-        output[key] = mergeSettings(output[key], value);
-      } else if (Array.isArray(value)) {
-        output[key] = [...value];
-      } else {
-        output[key] = value;
-      }
-    }
-  }
-  return output;
-}
-function normalizeSceneName(value) {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim().toLowerCase();
-  return trimmed.length ? trimmed : null;
-}
-function cloneVector3Like(value) {
-  if (!value) return null;
-  if (value.isVector3) return value.clone();
-  if (Array.isArray(value)) {
-    return new Vector3(value[0] ?? 0, value[1] ?? 0, value[2] ?? 0);
-  }
-  if (typeof value === "object") {
-    const { x = 0, y = 0, z = 0 } = value;
-    return new Vector3(x, y, z);
-  }
-  if (typeof value === "number") {
-    return new Vector3(value, value, value);
-  }
-  return null;
-}
-function cloneEulerLike(value, fallbackY = 0) {
-  if (!value) return new Euler(0, fallbackY, 0);
-  if (value.isEuler) return value.clone();
-  if (Array.isArray(value)) {
-    return new Euler(value[0] ?? 0, value[1] ?? fallbackY, value[2] ?? 0);
-  }
-  if (typeof value === "object") {
-    return new Euler(
-      value.x ?? value.pitch ?? 0,
-      value.y ?? value.yaw ?? fallbackY,
-      value.z ?? value.roll ?? 0
-    );
-  }
-  if (typeof value === "number") {
-    return new Euler(0, value, 0);
-  }
-  return new Euler(0, fallbackY, 0);
-}
-function cloneTransformOptions(options = {}) {
-  const cloned = { ...options };
-  if (options.position) {
-    cloned.position = cloneVector3Like(options.position);
-  }
-  if (options.rotation) {
-    cloned.rotation = cloneEulerLike(options.rotation);
-  }
-  if (options.scale?.isVector3) {
-    cloned.scale = options.scale.clone();
-  } else if (Array.isArray(options.scale)) {
-    cloned.scale = [...options.scale];
-  } else if (isPlainObject(options.scale)) {
-    cloned.scale = { ...options.scale };
-  }
-  return cloned;
-}
-const PROCEDURAL_BUILDERS = {
-  temple: buildTemple
-};
-function logHarborLandmark(name, obj) {
-  if (!DEBUG_FLAGS.harbor) return;
-  const label = typeof name === "string" ? name : "";
-  if (!label.toLowerCase().includes("harbor")) return;
-  if (!obj) return;
-}
-class LandmarkManager {
-  constructor({
-    scene: scene2 = null,
-    parent = null,
-    terrain = null,
-    heightSampler = null,
-    envCollider = null,
-    renderer: renderer2 = null,
-    spawnPlaceholder = null,
-    logger = console,
-    quietMissing = false,
-    forceProcedural = false,
-    activeScenes = null
-  } = {}) {
-    this.scene = scene2;
-    this.parent = parent || scene2;
-    this.terrain = terrain;
-    this.heightSampler = typeof heightSampler === "function" ? heightSampler : scene2?.userData?.getHeightAt || null;
-    this.envCollider = envCollider;
-    this.renderer = renderer2;
-    this.spawnPlaceholder = typeof spawnPlaceholder === "function" ? spawnPlaceholder : null;
-    this.logger = logger || console;
-    this.quietMissing = !!quietMissing;
-    this.baseUrl = resolveBaseUrl$4();
-    this.globalDefaults = {};
-    this.results = [];
-    this.forceProcedural = Boolean(forceProcedural);
-    this.activeScenes = null;
-    this.setActiveScenes(activeScenes);
-  }
-  setTerrain(terrain) {
-    this.terrain = terrain;
-  }
-  setHeightSampler(sampler) {
-    if (typeof sampler === "function") {
-      this.heightSampler = sampler;
-    }
-  }
-  setParent(parent) {
-    this.parent = parent || this.scene;
-  }
-  setSpawnPlaceholder(spawnPlaceholder) {
-    this.spawnPlaceholder = typeof spawnPlaceholder === "function" ? spawnPlaceholder : null;
-  }
-  setActiveScenes(scenes) {
-    if (scenes == null) {
-      this.activeScenes = null;
-      return;
-    }
-    const list = Array.isArray(scenes) ? scenes : [scenes];
-    const normalized = list.map((value) => normalizeSceneName(value)).filter((value) => value);
-    this.activeScenes = normalized.length ? new Set(normalized) : null;
-  }
-  addActiveScene(scene2) {
-    const normalized = normalizeSceneName(scene2);
-    if (!normalized) return;
-    if (!this.activeScenes) {
-      this.activeScenes = /* @__PURE__ */ new Set([normalized]);
-      return;
-    }
-    this.activeScenes.add(normalized);
-  }
-  isGroupActive(group) {
-    if (!group) return false;
-    if (!this.activeScenes || this.activeScenes.size === 0) {
-      return true;
-    }
-    const groupScenes = Array.isArray(group.scenes) ? group.scenes : [];
-    if (groupScenes.length === 0) {
-      return true;
-    }
-    return groupScenes.map((value) => normalizeSceneName(value)).some((value) => value && this.activeScenes.has(value));
-  }
-  resolveSurfaceOffset(spec = {}) {
-    const placementOffset = spec.placement?.surfaceOffset;
-    if (typeof placementOffset === "number") return placementOffset;
-    if (typeof spec.surfaceOffset === "number") return spec.surfaceOffset;
-    if (typeof this.globalDefaults.surfaceOffset === "number") {
-      return this.globalDefaults.surfaceOffset;
-    }
-    return 0.05;
-  }
-  resolveSnapOptions(spec = {}) {
-    const merged = mergeSettings(
-      { clampToSea: true, seaLevel: getSeaLevelY() },
-      this.globalDefaults.snapOptions,
-      spec.snapOptions,
-      spec.placement?.snapOptions
-    );
-    if (typeof merged.minAboveSea !== "number") {
-      merged.minAboveSea = 0.02;
-    }
-    if (typeof merged.seaLevel !== "number") {
-      merged.seaLevel = getSeaLevelY();
-    }
-    return merged;
-  }
-  resolvePosition(spec = {}) {
-    const placement = spec.placement || {};
-    const alignPreference = placement.alignToTerrain ?? spec.alignToTerrain ?? this.globalDefaults.alignToTerrain;
-    const shouldAlign = alignPreference !== false;
-    const position = cloneVector3Like(placement.position);
-    if (!position) return null;
-    const offset = this.resolveSurfaceOffset(spec);
-    if (shouldAlign && typeof this.heightSampler === "function") {
-      const sampled = this.heightSampler(position.x, position.z);
-      if (Number.isFinite(sampled)) {
-        position.y = sampled + offset;
-      } else if (!Number.isFinite(position.y)) {
-        position.y = offset;
-      }
-    } else if (!Number.isFinite(position.y)) {
-      position.y = offset;
-    }
-    return position;
-  }
-  prepareTransform(spec = {}) {
-    const placement = spec.placement || {};
-    const options = mergeSettings(this.globalDefaults.loadOptions, spec.loadOptions);
-    if (this.renderer && typeof options.renderer === "undefined") {
-      options.renderer = this.renderer;
-    }
-    const position = this.resolvePosition(spec);
-    if (position) {
-      options.position = position;
-    }
-    const rotation = placement.rotation || placement.euler;
-    const rotateY = typeof placement.rotateY === "number" ? placement.rotateY : typeof spec.rotateY === "number" ? spec.rotateY : void 0;
-    if (rotation || typeof rotateY === "number") {
-      options.rotation = cloneEulerLike(rotation, rotateY ?? 0);
-    }
-    if (placement.scale !== void 0) {
-      options.scale = placement.scale;
-    } else if (spec.scale !== void 0) {
-      options.scale = spec.scale;
-    }
-    if (spec.materialPreset && !options.materialPreset) {
-      options.materialPreset = spec.materialPreset;
-    }
-    return {
-      options,
-      position: options.position ? cloneVector3Like(options.position) : null,
-      rotation: options.rotation ? options.rotation.clone?.() ?? cloneEulerLike(options.rotation) : null,
-      scale: placement.scale ?? spec.scale,
-      surfaceOffset: this.resolveSurfaceOffset(spec),
-      snapOptions: this.resolveSnapOptions(spec)
-    };
-  }
-  resolveUrls(files = []) {
-    const urls = [];
-    const seen2 = /* @__PURE__ */ new Set();
-    const push = (value) => {
-      if (typeof value !== "string") return;
-      const trimmed = value.trim();
-      if (!trimmed) return;
-      if (seen2.has(trimmed)) return;
-      seen2.add(trimmed);
-      urls.push(trimmed);
-    };
-    for (const file of files) {
-      if (typeof file !== "string") continue;
-      const trimmed = file.trim();
-      if (!trimmed) continue;
-      if (/^https?:/i.test(trimmed) || trimmed.startsWith("data:")) {
-        push(trimmed);
-        continue;
-      }
-      const normalised = sanitizeRelativePath$1(trimmed);
-      if (!normalised) continue;
-      push(joinPath(this.baseUrl, normalised));
-      push(normalised);
-    }
-    return urls;
-  }
-  applyCollisionSettings(object, shouldCollide) {
-    if (!object) return;
-    const collidable = Boolean(shouldCollide);
-    object.traverse?.((child) => {
-      if (!child?.isMesh) return;
-      child.userData = child.userData || {};
-      child.userData.noCollision = !collidable;
-    });
-    if (collidable && typeof this.envCollider?.refresh === "function") {
-      this.envCollider.refresh();
-    }
-  }
-  resolveProceduralBuilder(name) {
-    if (!name) return null;
-    const normalized = String(name).trim().toLowerCase();
-    return PROCEDURAL_BUILDERS[normalized] || null;
-  }
-  applyTransformToObject(object, transformInfo) {
-    if (!object || !transformInfo) return;
-    const { position, rotation, scale } = transformInfo;
-    if (position && object.position) {
-      if (typeof object.position.copy === "function") {
-        object.position.copy(position);
-      } else {
-        object.position.set(position.x ?? position[0] ?? 0, position.y ?? position[1] ?? 0, position.z ?? position[2] ?? 0);
-      }
-    }
-    if (rotation && object.rotation) {
-      if (typeof object.rotation.copy === "function") {
-        object.rotation.copy(rotation);
-      } else {
-        object.rotation.set(
-          rotation.x ?? rotation[0] ?? 0,
-          rotation.y ?? rotation[1] ?? 0,
-          rotation.z ?? rotation[2] ?? 0
-        );
-      }
-    }
-    if (scale !== void 0 && object.scale) {
-      if (typeof scale === "number") {
-        object.scale.setScalar(scale);
-      } else if (scale?.isVector3) {
-        object.scale.copy(scale);
-      } else if (Array.isArray(scale)) {
-        object.scale.set(scale[0] ?? object.scale.x, scale[1] ?? object.scale.y, scale[2] ?? object.scale.z);
-      } else if (isPlainObject(scale)) {
-        object.scale.set(
-          scale.x ?? scale.width ?? object.scale.x,
-          scale.y ?? scale.height ?? object.scale.y,
-          scale.z ?? scale.depth ?? object.scale.z
-        );
-      }
-    }
-  }
-  async spawnProcedural(spec = {}, transformInfo = {}, overrides = {}) {
-    const procNameRaw = overrides.proc || spec.proc || spec.kind;
-    if (!procNameRaw) {
-      return null;
-    }
-    const builder = this.resolveProceduralBuilder(procNameRaw);
-    if (typeof builder !== "function") {
-      if (!this.quietMissing) {
-        const label = spec.name || spec.id || "landmark";
-        this.logMessage(
-          "warn",
-          `[LandmarkManager] Unknown procedural builder '${procNameRaw}' for ${label}.`
-        );
-      }
-      return null;
-    }
-    const params = { ...spec.params || {} };
-    if (isPlainObject(overrides.params)) {
-      Object.assign(params, overrides.params);
-    }
-    if (spec.materialPreset && params.materialPreset == null) {
-      params.materialPreset = spec.materialPreset;
-    }
-    if (typeof overrides.materialPreset === "string" && !params.materialPreset) {
-      params.materialPreset = overrides.materialPreset;
-    }
-    if (overrides.scale != null && params.scale == null) {
-      params.scale = overrides.scale;
-    }
-    let builtObject = null;
-    try {
-      builtObject = await builder(params);
-    } catch (error) {
-      this.logMessage(
-        "warn",
-        `[LandmarkManager] Procedural builder '${procNameRaw}' failed: ${error?.message || error}`
-      );
-      return null;
-    }
-    if (!builtObject) {
-      return null;
-    }
-    this.reparent(builtObject);
-    this.applyTransformToObject(builtObject, transformInfo);
-    this.snapObject(builtObject, transformInfo);
-    const shouldCollide = overrides.collision ?? spec.collision ?? true;
-    this.applyCollisionSettings(builtObject, shouldCollide);
-    builtObject.updateMatrixWorld?.(true);
-    if (shouldCollide && typeof this.envCollider?.refresh === "function") {
-      this.envCollider.refresh();
-    }
-    return builtObject;
-  }
-  async spawnProceduralFallback(spec = {}, transformInfo = {}, context = {}) {
-    if (spec.type === "procedural" && !context.force) {
-      return null;
-    }
-    const fallbackProc = context.proc || context.kind || spec.proc || "temple";
-    const mergedParams = { ...spec.params || {} };
-    if (isPlainObject(context.params)) {
-      Object.assign(mergedParams, context.params);
-    }
-    const materialPreset = context.materialPreset || spec.materialPreset;
-    if (materialPreset && mergedParams.materialPreset == null) {
-      mergedParams.materialPreset = materialPreset;
-    }
-    if (context.scale != null) {
-      mergedParams.scale = context.scale;
-    }
-    if (!this.quietMissing) {
-      const label = spec.name || spec.id || "landmark";
-      this.logMessage("info", `[LandmarkManager] Using procedural fallback '${fallbackProc}' for ${label}.`);
-    }
-    return this.spawnProcedural(
-      {
-        ...spec,
-        type: "procedural",
-        proc: fallbackProc,
-        params: mergedParams,
-        collision: context.collision ?? spec.collision ?? true
-      },
-      transformInfo,
-      {
-        proc: fallbackProc,
-        params: mergedParams,
-        collision: context.collision ?? spec.collision ?? true,
-        materialPreset,
-        scale: mergedParams.scale,
-        force: true
-      }
-    );
-  }
-  snapObject(object, transformInfo) {
-    if (!object || !transformInfo?.position) return;
-    const { position, surfaceOffset, snapOptions } = transformInfo;
-    const x = position.x ?? object.position?.x;
-    const z = position.z ?? object.position?.z;
-    if (!Number.isFinite(x) || !Number.isFinite(z)) return;
-    if (this.terrain) {
-      snapAboveGround(object, this.terrain, x, z, surfaceOffset, snapOptions);
-    }
-  }
-  reparent(object) {
-    if (!object || !this.parent || object.parent === this.parent) {
-      return;
-    }
-    object.parent?.remove?.(object);
-    this.parent.add(object);
-  }
-  logMessage(level, message) {
-    if (!message) return;
-    const logger = this.logger || console;
-    if (typeof logger?.[level] === "function") {
-      logger[level](message);
-    } else if (typeof logger?.log === "function") {
-      logger.log(message);
-    }
-  }
-  spawnFallbackPlaceholder(spec, transformInfo) {
-    const placeholderConfig = spec.placeholder || {};
-    if (placeholderConfig.enabled === false) {
-      return null;
-    }
-    if (typeof this.spawnPlaceholder !== "function") {
-      return null;
-    }
-    const settings = { ...placeholderConfig };
-    delete settings.enabled;
-    if (!settings.position) {
-      settings.position = transformInfo?.position ? transformInfo.position.clone?.() ?? cloneVector3Like(transformInfo.position) : null;
-    }
-    if (typeof settings.rotateY !== "number" && transformInfo?.rotation) {
-      settings.rotateY = transformInfo.rotation.y;
-    }
-    if (settings.scale === void 0 && transformInfo?.scale !== void 0) {
-      settings.scale = transformInfo.scale;
-    }
-    if (settings.collision === void 0) {
-      settings.collision = Boolean(spec.collision);
-    }
-    if (!settings.parent) {
-      settings.parent = this.parent || this.scene;
-    }
-    try {
-      return this.spawnPlaceholder(settings);
-    } catch (error) {
-      this.logMessage(
-        "warn",
-        `[LandmarkManager] Failed to spawn placeholder for ${spec.name || spec.id || "landmark"}`
-      );
-      this.logMessage("warn", error);
-      return null;
-    }
-  }
-  async attemptLoad(urls, spec, transformInfo, label) {
-    if (!urls.length) return null;
-    if (spec?.type === "procedural") {
-      return this.placeProcedural(spec);
-    }
-    const name = spec.name || spec.id || "Landmark";
-    for (const url of urls) {
-      const loadOptions = cloneTransformOptions(transformInfo.options);
-      loadOptions.proceduralFallback = (context = {}) => this.spawnProceduralFallback(spec, transformInfo, context);
-      loadOptions.forceProcedural = this.forceProcedural === true;
-      try {
-        const object = await loadLandmark(this.scene, url, loadOptions);
-        if (!object) continue;
-        this.reparent(object);
-        this.snapObject(object, transformInfo);
-        this.applyCollisionSettings(object, spec.collision);
-        if (typeof spec.onLoaded === "function") {
-          try {
-            spec.onLoaded(object, { url, label });
-          } catch (hookError) {
-            this.logMessage(
-              "warn",
-              `[LandmarkManager] onLoaded hook failed for ${name}: ${hookError?.message || hookError}`
-            );
-          }
-        }
-        return { object, url };
-      } catch (error) {
-        this.logMessage(
-          "warn",
-          `[LandmarkManager] ${name} failed to load from ${url}${label === "fallback" ? " (fallback)" : ""}`
-        );
-        this.logMessage("warn", error);
-      }
-    }
-    return null;
-  }
-  async placeLandmark(spec = {}) {
-    const name = spec.name || spec.id || "Landmark";
-    const transformInfo = this.prepareTransform(spec);
-    const type = typeof spec.type === "string" ? spec.type.trim().toLowerCase() : "";
-    const forceProcedural = this.forceProcedural === true;
-    const wantsProcedural = type === "procedural" || Boolean(spec.proc);
-    const shouldProcedural = forceProcedural || wantsProcedural;
-    if (shouldProcedural) {
-      const forcedProcName = spec.proc || spec.kind || "temple";
-      const procSpec = {
-        ...spec,
-        type: "procedural",
-        proc: forcedProcName
-      };
-      const object = await this.spawnProcedural(procSpec, transformInfo, {
-        proc: forcedProcName,
-        collision: spec.collision
-      });
-      if (!object) {
-        if (!this.quietMissing) {
-          this.logMessage(
-            "warn",
-            `[LandmarkManager] Failed to spawn procedural landmark ${name}.`
-          );
-        }
-        this.spawnFallbackPlaceholder(spec, transformInfo);
-      }
-      if (object) {
-        logHarborLandmark(name, object);
-      }
-      return object ?? null;
-    }
-    if (forceProcedural) {
-      return null;
-    }
-    const primaryUrls = this.resolveUrls(spec.assetFiles || []);
-    const fallbackUrls = this.resolveUrls(spec.fallbackFiles || []);
-    const messages = spec.messages || {};
-    if (!primaryUrls.length && messages.missingPrimary && !this.quietMissing) {
-      this.logMessage("info", messages.missingPrimary);
-    }
-    let result = await this.attemptLoad(primaryUrls, spec, transformInfo, "primary");
-    if (!result && fallbackUrls.length) {
-      if (messages.missingPrimary && !this.quietMissing) {
-        this.logMessage("info", messages.missingPrimary);
-      }
-      const fallbackResult = await this.attemptLoad(fallbackUrls, spec, transformInfo, "fallback");
-      if (fallbackResult) {
-        if (messages.fallbackUsed && !this.quietMissing) {
-          this.logMessage("info", messages.fallbackUsed);
-        }
-        result = fallbackResult;
-      } else if (messages.fallbackMissing && !this.quietMissing) {
-        this.logMessage("warn", messages.fallbackMissing);
-      }
-    }
-    if (!result) {
-      if (!fallbackUrls.length && messages.allMissing && !this.quietMissing) {
-        this.logMessage("info", messages.allMissing);
-      }
-      this.spawnFallbackPlaceholder(spec, transformInfo);
-    }
-    const placedObject = result?.object ?? null;
-    if (placedObject) {
-      logHarborLandmark(name, placedObject);
-    }
-    return placedObject;
-  }
-  async loadConfig(config) {
-    if (!config) return [];
-    this.globalDefaults = mergeSettings(config.defaults);
-    this.results = [];
-    const groups = Array.isArray(config.groups) ? config.groups : [];
-    for (const group of groups) {
-      if (group?.enabled === false) {
-        continue;
-      }
-      if (!this.isGroupActive(group)) {
-        continue;
-      }
-      const groupDefaults = mergeSettings(this.globalDefaults, group?.defaults);
-      const landmarks = Array.isArray(group?.landmarks) ? group.landmarks : [];
-      for (const entry of landmarks) {
-        if (entry?.enabled === false) {
-          continue;
-        }
-        const entryType = typeof entry?.type === "string" ? entry.type.trim().toLowerCase() : "";
-        const treatAsProcedural = entryType === "procedural" || this.forceProcedural === true;
-        const spec = mergeSettings(groupDefaults, entry);
-        if (treatAsProcedural) {
-          spec.type = "procedural";
-        }
-        spec.groupId = group?.id;
-        spec.groupLabel = group?.label;
-        const object = await this.placeLandmark(spec);
-        this.results.push({ spec, object });
-      }
-    }
-    if (config.metadata?.description) {
-      this.logMessage(
-        "info",
-        `[LandmarkManager] Loaded ${this.results.length} landmarks: ${config.metadata.description}`
-      );
-    } else {
-      this.logMessage("info", `[LandmarkManager] Loaded ${this.results.length} landmarks.`);
-    }
-    return this.results;
-  }
-}
-function sanitizeRelativePath$1(value) {
-  if (typeof value !== "string") return "";
-  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
-}
-function applyTransformToObject(object, options = {}) {
-  if (!object) return;
-  const { position, rotation, scale } = options;
-  if (position) {
-    object.position.set(
-      position.x ?? position[0] ?? 0,
-      position.y ?? position[1] ?? 0,
-      position.z ?? position[2] ?? 0
-    );
-  }
-  if (rotation) {
-    object.rotation.set(
-      rotation.x ?? rotation[0] ?? 0,
-      rotation.y ?? rotation[1] ?? 0,
-      rotation.z ?? rotation[2] ?? 0
-    );
-  }
-  if (scale !== void 0) {
-    if (typeof scale === "number") {
-      object.scale.setScalar(scale);
-    } else if (scale?.isVector3) {
-      object.scale.copy(scale);
-    } else if (Array.isArray(scale)) {
-      const sx = scale[0] ?? 1;
-      const sy = scale[1] ?? sx;
-      const sz = scale[2] ?? sx;
-      object.scale.set(sx, sy, sz);
-    } else if (typeof scale === "object") {
-      const sx = scale.x ?? 1;
-      const sy = scale.y ?? sx;
-      const sz = scale.z ?? sx;
-      object.scale.set(sx, sy, sz);
-    }
-  }
-}
-const LIGHTING_PRESETS$1 = {
-  "Bright Noon": {
-    renderer: {
-      toneMappingExposure: 0.45
-      // Heavily reduced to fight sky blowout
-    },
-    starsVisible: 0,
-    moonElevation: -10,
-    moonLightIntensity: 0,
-    soundscapeMode: "day",
-    sun: {
-      color: "#ffffff",
-      // Neutral white light for clean midday look
-      intensity: 2.3,
-      azimuth: 180,
-      elevation: 75
-      // High sun angle for midday
-    },
-    ambient: {
-      color: "#dbe9ff",
-      // Light blue ambient to match clear sky
-      groundColor: "#cfdcec",
-      intensity: 0.1
-    },
-    fog: {
-      enabled: true,
-      color: "#96b9d8",
-      // darker blue fog to fight white sky
-      near: 2e3,
-      far: 7200,
-      density: 33e-6
-    },
-    skybox: {
-      exposureMultiplier: 0.45,
-      saturationMultiplier: 0.98,
-      skyKey: "high_noon"
-    },
-    grade: {
-      contrast: 0.08,
-      saturation: 0.05,
-      shadowTint: "#e8edf5",
-      midTint: "#f2f6fb",
-      highlightTint: "#ffffff"
-    },
-    env: {
-      envMapIntensity: 0.15
-      // Softer reflections to avoid washout
-    },
-    moon: {
-      visible: false,
-      intensity: 0,
-      elevation: -25
-    }
-  },
-  "Golden Hour": {
-    renderer: {
-      toneMappingExposure: 0.95
-    },
-    starsVisible: 0.08,
-    moonElevation: 10,
-    moonLightIntensity: 0.15,
-    soundscapeMode: "day",
-    sun: {
-      color: "#ffb36b",
-      intensity: 0.8,
-      azimuth: 260,
-      // Warm light from the west for evening feel
-      elevation: 15
-      // Low angle for long shadows
-    },
-    ambient: {
-      color: "#f0c193",
-      groundColor: "#c07a43",
-      intensity: 0.6
-      // Softer fill to ease shadow contrast
-    },
-    fog: {
-      enabled: true,
-      color: "#f2caa2",
-      near: 200,
-      far: 3500
-    },
-    skybox: {
-      exposureMultiplier: 0.95,
-      skyKey: "golden_hour"
-    },
-    grade: {
-      contrast: 0.12,
-      saturation: 0.04,
-      shadowTint: "#3a2b1f",
-      midTint: "#ffe2c4",
-      highlightTint: "#ffe9d6"
-    },
-    env: {
-      envMapIntensity: 0.7
-      // HDRI/sky reflections softened for evening
-    },
-    moon: {
-      visible: false,
-      intensity: 0,
-      elevation: -20
-    }
-  },
-  "Blue Hour": {
-    renderer: {
-      toneMappingExposure: 1.05
-    },
-    starsVisible: 0.55,
-    moonElevation: 8,
-    moonLightIntensity: 0.32,
-    soundscapeMode: "night",
-    sun: {
-      color: "#6f7fa5",
-      intensity: 0.2,
-      azimuth: 195,
-      elevation: -2
-    },
-    ambient: {
-      color: "#3f5473",
-      groundColor: "#273448",
-      intensity: 0.5
-    },
-    fog: {
-      enabled: true,
-      color: "#2f3f5d",
-      near: 250,
-      far: 2600
-    },
-    skybox: {
-      exposureMultiplier: 0.8,
-      skyKey: "blue_hour"
-    },
-    grade: {
-      contrast: 0.1,
-      saturation: -0.06,
-      shadowTint: "#223344",
-      midTint: "#3b5278",
-      highlightTint: "#9bb5e1"
-    },
-    env: {
-      envMapIntensity: 0.45
-      // Gentle reflections to match twilight sky
-    },
-    moon: {
-      visible: true,
-      intensity: 0.42,
-      elevation: 18
-    }
-  },
-  "Night": {
-    renderer: {
-      toneMappingExposure: 1
-    },
-    starsVisible: 1,
-    moonElevation: 20,
-    moonLightIntensity: 0.18,
-    soundscapeMode: "night",
-    sun: {
-      color: "#6f86a5",
-      intensity: 0.05,
-      azimuth: 120,
-      elevation: -45
-    },
-    ambient: {
-      color: "#0b1d38",
-      groundColor: "#0b1d2d",
-      intensity: 0.25
-    },
-    fog: {
-      enabled: true,
-      color: "#08162c",
-      near: 400,
-      far: 3200
-    },
-    skybox: {
-      exposureMultiplier: 0.6,
-      skyKey: "night_sky"
-    },
-    grade: {
-      contrast: 0.1,
-      saturation: -0.08,
-      shadowTint: "#223344",
-      midTint: "#10233d",
-      highlightTint: "#c6d7ff"
-    },
-    env: {
-      envMapIntensity: 0.2
-    },
-    moon: {
-      visible: true,
-      intensity: 0.2,
-      elevation: 40
-    }
-  }
-};
 function safeUrlSearchParams() {
   if (typeof window === "undefined" || typeof window.location === "undefined") {
     return new URLSearchParams("");
@@ -65102,8 +63668,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T02:44:36.867Z" : "",
-      sha: true ? "1c978483a5120c329329b71ad08a2d9f0b7a843f" : ""
+      time: true ? "2025-12-27T03:27:15.990Z" : "",
+      sha: true ? "d4067bfcb49eb67801cab332fd72f87a686bc543" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -66553,30 +65119,28 @@ class ThirdPersonCamera {
   /**
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} targetObject
-   * @param {{
-   *   offset?: THREE.Vector3,
-   *   targetOffset?: THREE.Vector3,
-   *   minPitch?: number,
-   *   maxPitch?: number,
-   *   collisionOffset?: number,
-   *   followLerp?: number,
-   *   rotationLerp?: number,
-  *   yawSensitivity?: number,
-  *   pitchSensitivity?: number,
-  *   solids?: THREE.Object3D[],
-  *   enabled?: boolean,
-  *   keyOrbit?: {
-  *     enabled?: boolean,
-  *     yawSpeed?: number,
-  *     pitchSpeed?: number,
-  *     minPitch?: number,
-  *     maxPitch?: number,
-  *     minDist?: number,
-  *     maxDist?: number,
-  *     zoomSpeed?: number,
-  *   },
-  * }} [options]
-  */
+   * @param {Object} [options]
+   * @param {THREE.Vector3} [options.offset]
+   * @param {THREE.Vector3} [options.targetOffset]
+   * @param {number} [options.minPitch]
+   * @param {number} [options.maxPitch]
+   * @param {number} [options.collisionOffset]
+   * @param {number} [options.followLerp]
+   * @param {number} [options.rotationLerp]
+   * @param {number} [options.yawSensitivity]
+   * @param {number} [options.pitchSensitivity]
+   * @param {THREE.Object3D[]} [options.solids]
+   * @param {boolean} [options.enabled]
+   * @param {Object} [options.keyOrbit]
+   * @param {boolean} [options.keyOrbit.enabled]
+   * @param {number} [options.keyOrbit.yawSpeed]
+   * @param {number} [options.keyOrbit.pitchSpeed]
+   * @param {number} [options.keyOrbit.minPitch]
+   * @param {number} [options.keyOrbit.maxPitch]
+   * @param {number} [options.keyOrbit.minDist]
+   * @param {number} [options.keyOrbit.maxDist]
+   * @param {number} [options.keyOrbit.zoomSpeed]
+   */
   constructor(camera2, targetObject, options = {}) {
     this.camera = camera2;
     this.targetObject = targetObject ?? null;
@@ -66858,7 +65422,8 @@ class ThirdPersonCamera {
   /**
    * @param {number} yaw
    * @param {number} pitch
-   * @param {{ snap?: boolean }} [opts]
+   * @param {Object} [opts]
+   * @param {boolean} [opts.snap]
    */
   setAngles(yaw, pitch, opts = {}) {
     if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) return;
@@ -67091,12 +65656,129 @@ class ThirdPersonCamera {
     }
   }
 }
+class Capsule {
+  /**
+   * Constructs a new capsule.
+   *
+   * @param {Vector3} [start] - The start vector.
+   * @param {Vector3} [end] - The end vector.
+   * @param {number} [radius=1] - The capsule's radius.
+   */
+  constructor(start = new Vector3(0, 0, 0), end = new Vector3(0, 1, 0), radius = 1) {
+    this.start = start;
+    this.end = end;
+    this.radius = radius;
+  }
+  /**
+   * Returns a new capsule with copied values from this instance.
+   *
+   * @return {Capsule} A clone of this instance.
+   */
+  clone() {
+    return new this.constructor().copy(this);
+  }
+  /**
+   * Sets the capsule components to the given values.
+   * Please note that this method only copies the values from the given objects.
+   *
+   * @param {Vector3} start - The start vector.
+   * @param {Vector3} end - The end vector
+   * @param {number} radius - The capsule's radius.
+   * @return {Capsule} A reference to this capsule.
+   */
+  set(start, end, radius) {
+    this.start.copy(start);
+    this.end.copy(end);
+    this.radius = radius;
+    return this;
+  }
+  /**
+   * Copies the values of the given capsule to this instance.
+   *
+   * @param {Capsule} capsule - The capsule to copy.
+   * @return {Capsule} A reference to this capsule.
+   */
+  copy(capsule) {
+    this.start.copy(capsule.start);
+    this.end.copy(capsule.end);
+    this.radius = capsule.radius;
+    return this;
+  }
+  /**
+   * Returns the center point of this capsule.
+   *
+   * @param {Vector3} target - The target vector that is used to store the method's result.
+   * @return {Vector3} The center point.
+   */
+  getCenter(target) {
+    return target.copy(this.end).add(this.start).multiplyScalar(0.5);
+  }
+  /**
+   * Adds the given offset to this capsule, effectively moving it in 3D space.
+   *
+   * @param {Vector3} v - The offset that should be used to translate the capsule.
+   * @return {Capsule} A reference to this capsule.
+   */
+  translate(v) {
+    this.start.add(v);
+    this.end.add(v);
+    return this;
+  }
+  /**
+   * Returns `true` if the given bounding box intersects with this capsule.
+   *
+   * @param {Box3} box - The bounding box to test.
+   * @return {boolean} Whether the given bounding box intersects with this capsule.
+   */
+  intersectsBox(box) {
+    return checkAABBAxis(
+      this.start.x,
+      this.start.y,
+      this.end.x,
+      this.end.y,
+      box.min.x,
+      box.max.x,
+      box.min.y,
+      box.max.y,
+      this.radius
+    ) && checkAABBAxis(
+      this.start.x,
+      this.start.z,
+      this.end.x,
+      this.end.z,
+      box.min.x,
+      box.max.x,
+      box.min.z,
+      box.max.z,
+      this.radius
+    ) && checkAABBAxis(
+      this.start.y,
+      this.start.z,
+      this.end.y,
+      this.end.z,
+      box.min.y,
+      box.max.y,
+      box.min.z,
+      box.max.z,
+      this.radius
+    );
+  }
+}
+function checkAABBAxis(p1x, p1y, p2x, p2y, minx, maxx, miny, maxy, radius) {
+  return (minx - p1x < radius || minx - p2x < radius) && (p1x - maxx < radius || p2x - maxx < radius) && (miny - p1y < radius || miny - p2y < radius) && (p1y - maxy < radius || p2y - maxy < radius);
+}
 const UP$1 = new Vector3(0, 1, 0);
 class PlayerController {
   /**
    * @param {import('../input/InputMap').InputMap} input
    * @param {import('../env/EnvironmentCollider.js').EnvironmentCollider} env
-   * @param {PlayerOptions} [opts]
+   * @param {Object} [opts]
+   * @param {number} [opts.height]
+   * @param {number} [opts.radius]
+   * @param {THREE.Camera} [opts.camera]
+   * @param {function(number, number)|null} [opts.terrainHeightSampler]
+   * @param {number} [opts.terrainSnapMaxDistance]
+   * @param {number} [opts.terrainSnapThreshold]
    */
   constructor(input, env, opts = {}) {
     opts = opts ?? {};
@@ -67595,7 +66277,7 @@ function createSceneContext({
     near: fogState.near,
     far: fogState.far
   });
-  const disposeMaterial2 = (material) => {
+  const disposeMaterial = (material) => {
     if (!material) return;
     const materials = Array.isArray(material) ? material : [material];
     for (const mat of materials) {
@@ -67617,7 +66299,7 @@ function createSceneContext({
         if (child.geometry && typeof child.geometry.dispose === "function") {
           child.geometry.dispose();
         }
-        disposeMaterial2(child.material);
+        disposeMaterial(child.material);
       }
     });
   };
@@ -67929,117 +66611,14 @@ class VillagerSystem {
       this.tempQuaternion.setFromUnitVectors(this.forward, this.direction);
       this.rotations[index].copy(this.tempQuaternion);
     }
-    const groundY2 = this.sampleHeight(position.x, position.z, position.y - this.halfHeight);
+    const groundY = this.sampleHeight(position.x, position.z, position.y - this.halfHeight);
     const bobOffset = state === STATE_WALKING ? Math.sin(Date.now() * 0.01 + index) * 0.1 : 0;
-    position.y = groundY2 + this.halfHeight + bobOffset;
+    position.y = groundY + this.halfHeight + bobOffset;
     if (distance < 1) {
       this.states[index] = STATE_IDLE;
       this.timers[index] = 2 + Math.random() * 3;
     }
   }
-}
-const DEFAULT_COUNT = 1e3;
-const DEFAULT_BOUNDS = 48;
-const DEFAULT_SIZE = 0.2;
-const DRIFT_SPEED = 0.15;
-function createParticleTexture(size = 64) {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  const radius = size / 2;
-  const gradient = ctx.createRadialGradient(radius, radius, radius * 0.15, radius, radius, radius);
-  gradient.addColorStop(0, "rgba(255, 255, 255, 0.8)");
-  gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.35)");
-  gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, size, size);
-  const texture = new CanvasTexture(canvas);
-  texture.needsUpdate = true;
-  return texture;
-}
-function createAtmosphericParticles(scene2, options = {}) {
-  if (!scene2) return null;
-  const count = Number.isFinite(options.count) ? options.count : DEFAULT_COUNT;
-  const bounds = Number.isFinite(options.bounds) ? options.bounds : DEFAULT_BOUNDS;
-  const size = Number.isFinite(options.size) ? options.size : DEFAULT_SIZE;
-  const getCenter = typeof options.getCenter === "function" ? options.getCenter : null;
-  const geometry = new BufferGeometry();
-  const positions = new Float32Array(count * 3);
-  const drift = new Float32Array(count * 3);
-  const offsets = new Float32Array(count);
-  geometry.setAttribute("position", new BufferAttribute(positions, 3));
-  geometry.attributes.position.usage = DynamicDrawUsage;
-  const material = new PointsMaterial({
-    size,
-    map: createParticleTexture(),
-    transparent: true,
-    depthWrite: false,
-    opacity: 0.65,
-    color: 16777215,
-    blending: AdditiveBlending,
-    sizeAttenuation: true
-  });
-  const center = new Vector3();
-  const initialCenter = new Vector3();
-  if (getCenter) {
-    const value = getCenter();
-    if (value) initialCenter.copy(value);
-  }
-  for (let i = 0; i < count; i++) {
-    seedParticle(i, initialCenter);
-  }
-  const points = new Points(geometry, material);
-  points.frustumCulled = false;
-  scene2.add(points);
-  let time = 0;
-  function seedParticle(index, targetCenter) {
-    const i3 = index * 3;
-    positions[i3] = targetCenter.x + MathUtils.randFloatSpread(bounds * 2);
-    positions[i3 + 1] = targetCenter.y + MathUtils.randFloatSpread(bounds * 0.6);
-    positions[i3 + 2] = targetCenter.z + MathUtils.randFloatSpread(bounds * 2);
-    drift[i3] = MathUtils.randFloatSpread(0.12);
-    drift[i3 + 1] = MathUtils.randFloatSpread(0.06);
-    drift[i3 + 2] = MathUtils.randFloatSpread(0.12);
-    offsets[index] = Math.random() * Math.PI * 2;
-  }
-  function wrapAxis(value, min, max2) {
-    if (value > max2) return value - (max2 - min);
-    if (value < min) return value + (max2 - min);
-    return value;
-  }
-  function update2(deltaTime = 0, elapsedTime = null) {
-    if (Number.isFinite(elapsedTime)) {
-      time = elapsedTime;
-    } else {
-      time += deltaTime;
-    }
-    if (getCenter) {
-      const c = getCenter();
-      if (c) center.copy(c);
-    }
-    const minX = center.x - bounds;
-    const maxX = center.x + bounds;
-    const minY = center.y - bounds * 0.5;
-    const maxY = center.y + bounds * 0.5;
-    const minZ = center.z - bounds;
-    const maxZ = center.z + bounds;
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
-      const wave = Math.sin(time * DRIFT_SPEED + offsets[i]) * 0.05;
-      positions[i3] += drift[i3] * deltaTime + wave * deltaTime;
-      positions[i3 + 1] += drift[i3 + 1] * deltaTime + wave * 0.4 * deltaTime;
-      positions[i3 + 2] += drift[i3 + 2] * deltaTime + wave * deltaTime;
-      positions[i3] = wrapAxis(positions[i3], minX, maxX);
-      positions[i3 + 1] = wrapAxis(positions[i3 + 1], minY, maxY);
-      positions[i3 + 2] = wrapAxis(positions[i3 + 2], minZ, maxZ);
-    }
-    geometry.attributes.position.needsUpdate = true;
-  }
-  return {
-    object: points,
-    update: update2
-  };
 }
 const _box = new Box3();
 const _vec3 = new Vector3();
@@ -69670,6 +68249,201 @@ function updateSkyForTimeOfDay(scene2, phase01) {
   applySkySettings(sky, preset);
   updateSkySunPosition(scene2, phase);
 }
+const LIGHTING_PRESETS$1 = {
+  "Bright Noon": {
+    renderer: {
+      toneMappingExposure: 0.45
+      // Heavily reduced to fight sky blowout
+    },
+    starsVisible: 0,
+    moonElevation: -10,
+    moonLightIntensity: 0,
+    soundscapeMode: "day",
+    sun: {
+      color: "#ffffff",
+      // Neutral white light for clean midday look
+      intensity: 2.3,
+      azimuth: 180,
+      elevation: 75
+      // High sun angle for midday
+    },
+    ambient: {
+      color: "#dbe9ff",
+      // Light blue ambient to match clear sky
+      groundColor: "#cfdcec",
+      intensity: 0.1
+    },
+    fog: {
+      enabled: true,
+      color: "#96b9d8",
+      // darker blue fog to fight white sky
+      near: 2e3,
+      far: 7200,
+      density: 33e-6
+    },
+    skybox: {
+      exposureMultiplier: 0.45,
+      saturationMultiplier: 0.98,
+      skyKey: "high_noon"
+    },
+    grade: {
+      contrast: 0.08,
+      saturation: 0.05,
+      shadowTint: "#e8edf5",
+      midTint: "#f2f6fb",
+      highlightTint: "#ffffff"
+    },
+    env: {
+      envMapIntensity: 0.15
+      // Softer reflections to avoid washout
+    },
+    moon: {
+      visible: false,
+      intensity: 0,
+      elevation: -25
+    }
+  },
+  "Golden Hour": {
+    renderer: {
+      toneMappingExposure: 0.95
+    },
+    starsVisible: 0.08,
+    moonElevation: 10,
+    moonLightIntensity: 0.15,
+    soundscapeMode: "day",
+    sun: {
+      color: "#ffb36b",
+      intensity: 0.8,
+      azimuth: 260,
+      // Warm light from the west for evening feel
+      elevation: 15
+      // Low angle for long shadows
+    },
+    ambient: {
+      color: "#f0c193",
+      groundColor: "#c07a43",
+      intensity: 0.6
+      // Softer fill to ease shadow contrast
+    },
+    fog: {
+      enabled: true,
+      color: "#f2caa2",
+      near: 200,
+      far: 3500
+    },
+    skybox: {
+      exposureMultiplier: 0.95,
+      skyKey: "golden_hour"
+    },
+    grade: {
+      contrast: 0.12,
+      saturation: 0.04,
+      shadowTint: "#3a2b1f",
+      midTint: "#ffe2c4",
+      highlightTint: "#ffe9d6"
+    },
+    env: {
+      envMapIntensity: 0.7
+      // HDRI/sky reflections softened for evening
+    },
+    moon: {
+      visible: false,
+      intensity: 0,
+      elevation: -20
+    }
+  },
+  "Blue Hour": {
+    renderer: {
+      toneMappingExposure: 1.05
+    },
+    starsVisible: 0.55,
+    moonElevation: 8,
+    moonLightIntensity: 0.32,
+    soundscapeMode: "night",
+    sun: {
+      color: "#6f7fa5",
+      intensity: 0.2,
+      azimuth: 195,
+      elevation: -2
+    },
+    ambient: {
+      color: "#3f5473",
+      groundColor: "#273448",
+      intensity: 0.5
+    },
+    fog: {
+      enabled: true,
+      color: "#2f3f5d",
+      near: 250,
+      far: 2600
+    },
+    skybox: {
+      exposureMultiplier: 0.8,
+      skyKey: "blue_hour"
+    },
+    grade: {
+      contrast: 0.1,
+      saturation: -0.06,
+      shadowTint: "#223344",
+      midTint: "#3b5278",
+      highlightTint: "#9bb5e1"
+    },
+    env: {
+      envMapIntensity: 0.45
+      // Gentle reflections to match twilight sky
+    },
+    moon: {
+      visible: true,
+      intensity: 0.42,
+      elevation: 18
+    }
+  },
+  "Night": {
+    renderer: {
+      toneMappingExposure: 1
+    },
+    starsVisible: 1,
+    moonElevation: 20,
+    moonLightIntensity: 0.18,
+    soundscapeMode: "night",
+    sun: {
+      color: "#6f86a5",
+      intensity: 0.05,
+      azimuth: 120,
+      elevation: -45
+    },
+    ambient: {
+      color: "#0b1d38",
+      groundColor: "#0b1d2d",
+      intensity: 0.25
+    },
+    fog: {
+      enabled: true,
+      color: "#08162c",
+      near: 400,
+      far: 3200
+    },
+    skybox: {
+      exposureMultiplier: 0.6,
+      skyKey: "night_sky"
+    },
+    grade: {
+      contrast: 0.1,
+      saturation: -0.08,
+      shadowTint: "#223344",
+      midTint: "#10233d",
+      highlightTint: "#c6d7ff"
+    },
+    env: {
+      envMapIntensity: 0.2
+    },
+    moon: {
+      visible: true,
+      intensity: 0.2,
+      elevation: 40
+    }
+  }
+};
 const DEFAULT_LIGHTING_CONFIG = {
   cycle: {
     minutesPerDay: 20
@@ -74677,6 +73451,196 @@ class InputMap {
     this.keys.clear();
   }
 }
+const DEFAULT_SEARCH_RADIUS = 80;
+const DEFAULT_INNER_RADIUS = 10;
+const DEFAULT_RADIAL_STEP = 4;
+const DEFAULT_ARC_LENGTH = 6;
+const DEFAULT_SLOPE_SAMPLE = 2;
+const DEFAULT_MAX_SLOPE = 0.55;
+const _workVec = new Vector3();
+const _fallbackVec = new Vector3();
+const _centerVec = new Vector3();
+const _capsule = new Capsule();
+function getDefaultRespawnPoint() {
+  return AGORA_CENTER_3D.clone();
+}
+const toVector3 = (value, target = new Vector3()) => {
+  if (value instanceof Vector3) {
+    return target.copy(value);
+  }
+  if (value && typeof value === "object") {
+    const { x = 0, y = 0, z = 0 } = value;
+    return target.set(Number(x) || 0, Number(y) || 0, Number(z) || 0);
+  }
+  return target.set(0, 0, 0);
+};
+const sampleHeight = (terrain, x, z) => {
+  const sampler = terrain?.userData?.getHeightAt;
+  if (typeof sampler !== "function") return null;
+  const height = sampler(x, z);
+  return Number.isFinite(height) ? height : null;
+};
+const slopeIsAcceptable = (terrain, x, z, baseHeight, spacing, maxSlope) => {
+  if (!(terrain && Number.isFinite(baseHeight))) return false;
+  const dist = Math.max(spacing, 0.5);
+  const east = sampleHeight(terrain, x + dist, z);
+  const west = sampleHeight(terrain, x - dist, z);
+  const north = sampleHeight(terrain, x, z + dist);
+  const south = sampleHeight(terrain, x, z - dist);
+  if (east === null || west === null || north === null || south === null) {
+    return false;
+  }
+  const slopeX = Math.max(
+    Math.abs(east - baseHeight),
+    Math.abs(baseHeight - west)
+  );
+  const slopeZ = Math.max(
+    Math.abs(north - baseHeight),
+    Math.abs(baseHeight - south)
+  );
+  const slope = Math.hypot(slopeX, slopeZ) / dist;
+  return slope <= maxSlope;
+};
+const evaluateCandidate = (envCollider, terrain, x, z, {
+  halfHeight,
+  baseClearance,
+  seaLevel,
+  minAboveSea,
+  horizontalBuffer,
+  slopeSpacing,
+  maxSlope
+}) => {
+  const groundHeight = sampleHeight(terrain, x, z);
+  if (groundHeight === null) return null;
+  if (Number.isFinite(seaLevel) && groundHeight < seaLevel + (Number.isFinite(minAboveSea) ? minAboveSea : 0)) {
+    return null;
+  }
+  if (!slopeIsAcceptable(terrain, x, z, groundHeight, slopeSpacing, maxSlope)) {
+    return null;
+  }
+  const expandedRadius = Math.max(0, horizontalBuffer);
+  const spawnY = groundHeight + halfHeight + baseClearance;
+  const startY = spawnY - halfHeight + expandedRadius;
+  const endY = spawnY + halfHeight - expandedRadius;
+  if (endY <= startY) return null;
+  _capsule.radius = expandedRadius;
+  _capsule.start.set(x, startY, z);
+  _capsule.end.set(x, endY, z);
+  if (envCollider?.capsuleIntersect?.(_capsule)) {
+    return null;
+  }
+  return _workVec.set(x, spawnY, z);
+};
+function findSafePlayerSpawn(options = {}) {
+  const {
+    envCollider,
+    terrain,
+    searchCenter,
+    fallback,
+    playerHeight = 1.8,
+    playerRadius = 0.35,
+    verticalClearance = 0.15,
+    horizontalClearance = 0.35,
+    searchRadius = DEFAULT_SEARCH_RADIUS,
+    innerRadius = DEFAULT_INNER_RADIUS,
+    radialStep = DEFAULT_RADIAL_STEP,
+    arcLength = DEFAULT_ARC_LENGTH,
+    slopeSampleDistance = DEFAULT_SLOPE_SAMPLE,
+    maxSlope = DEFAULT_MAX_SLOPE,
+    seaLevel = void 0,
+    minAboveSea = 0.25
+  } = options;
+  const fallbackPosition = toVector3(
+    fallback ?? { x: 0, y: 0, z: 10 },
+    _fallbackVec
+  );
+  const resolvedCenter = toVector3(
+    searchCenter ?? fallbackPosition,
+    _centerVec
+  );
+  const halfHeight = Math.max(playerHeight * 0.5, playerRadius + 0.1);
+  const maxExtraRadius = Math.max(0, halfHeight - playerRadius - 0.05);
+  const expandedBuffer = Math.min(Math.max(horizontalClearance, 0), maxExtraRadius);
+  const baseClearance = Math.max(verticalClearance, 0.1) + 0.02;
+  const config = {
+    halfHeight,
+    baseClearance,
+    seaLevel,
+    minAboveSea,
+    horizontalBuffer: playerRadius + expandedBuffer,
+    slopeSpacing: Math.max(slopeSampleDistance, 0.5),
+    maxSlope: Math.max(maxSlope, 0)
+  };
+  const sampler = terrain?.userData?.getHeightAt;
+  if (typeof sampler !== "function") {
+    return fallbackPosition.clone();
+  }
+  const maybeReturn = (candidate2) => {
+    if (!candidate2) return null;
+    return candidate2.clone();
+  };
+  let candidate = evaluateCandidate(
+    envCollider,
+    terrain,
+    fallbackPosition.x,
+    fallbackPosition.z,
+    config
+  );
+  if (candidate) return maybeReturn(candidate);
+  candidate = evaluateCandidate(
+    envCollider,
+    terrain,
+    resolvedCenter.x,
+    resolvedCenter.z,
+    config
+  );
+  if (candidate) return maybeReturn(candidate);
+  const preferredOffsets = [
+    [12, 0],
+    [-12, 0],
+    [0, 12],
+    [0, -12],
+    [18, 8],
+    [-18, -8]
+  ];
+  for (const [dx, dz] of preferredOffsets) {
+    candidate = evaluateCandidate(
+      envCollider,
+      terrain,
+      resolvedCenter.x + dx,
+      resolvedCenter.z + dz,
+      config
+    );
+    if (candidate) return maybeReturn(candidate);
+  }
+  const effectiveInner = Math.max(innerRadius, playerRadius + 2);
+  const maxRadius = Math.max(effectiveInner, searchRadius);
+  const radialStepSize = Math.max(radialStep, 2);
+  const arc = Math.max(arcLength, 4);
+  for (let radius = effectiveInner; radius <= maxRadius; radius += radialStepSize) {
+    const circumference = Math.max(arc, Math.PI * 2 * radius);
+    const steps = Math.max(8, Math.round(circumference / arc));
+    for (let step = 0; step < steps; step++) {
+      const angle = step / steps * Math.PI * 2;
+      const x = resolvedCenter.x + Math.cos(angle) * radius;
+      const z = resolvedCenter.z + Math.sin(angle) * radius;
+      candidate = evaluateCandidate(envCollider, terrain, x, z, config);
+      if (candidate) return maybeReturn(candidate);
+    }
+  }
+  const fallbackHeight = sampleHeight(terrain, fallbackPosition.x, fallbackPosition.z);
+  if (Number.isFinite(fallbackHeight)) {
+    const spawnY = fallbackHeight + config.halfHeight + Math.max(verticalClearance, 0.1);
+    return new Vector3(
+      fallbackPosition.x,
+      spawnY,
+      fallbackPosition.z
+    );
+  }
+  const finalFallback = fallbackPosition.clone();
+  finalFallback.y += config.halfHeight + config.baseClearance;
+  return finalFallback;
+}
 const USE_THIRD_PERSON = true;
 const ENABLE_HERO_GLB = true;
 class PlayerSystem {
@@ -74905,6 +73869,30 @@ function createFarOceanPlane(scene2, seaLevel, terrainSize) {
   return plane;
 }
 class Application {
+  baseUrl;
+  districtRuleCandidates;
+  queryParams;
+  forceGlb;
+  forceProc;
+  assetLoader;
+  gameLoop;
+  sceneContext;
+  renderer;
+  devHud;
+  ocean;
+  pendingOceanStatus;
+  coastalSkirt;
+  farOceanPlane;
+  shoreTermination;
+  skyboxTexture;
+  npcUpdaters;
+  scene;
+  terrain;
+  horizon;
+  worldFloorCap;
+  killPlane;
+  lightingSystem;
+  playerSystem;
   constructor({
     baseUrl: baseUrl2 = DEFAULT_BASE_URL,
     districtRuleCandidates = DEFAULT_DISTRICT_RULE_URL_CANDIDATES,
@@ -74935,6 +73923,13 @@ class Application {
     this.shoreTermination = null;
     this.skyboxTexture = null;
     this.npcUpdaters = [];
+    this.scene = null;
+    this.terrain = null;
+    this.horizon = null;
+    this.worldFloorCap = null;
+    this.killPlane = null;
+    this.lightingSystem = null;
+    this.playerSystem = null;
   }
   async run() {
     const BASE_URL2 = this.baseUrl;
@@ -75097,7 +74092,7 @@ class Application {
     const soundscape = new Soundscape(
       scene2,
       camera2,
-      { getNightFactor: () => lightingSystem.lights.nightFactor },
+      { getNightFactor: () => lightingSystem.lights?.nightFactor ?? 0 },
       {
         harbor: new Vector3(120, 0, 80),
         agora: AGORA_CENTER_3D,
@@ -75112,7 +74107,7 @@ class Application {
     updateLoadingStatus("Sculpting the Attic landscape...");
     const terrain = createTerrain(scene2);
     this.terrain = terrain;
-    const terrainSize = terrain?.geometry?.userData?.size;
+    const terrainSize = terrain?.geometry?.userData?.["size"];
     const seaLevel = getSeaLevelY();
     const oceanRadius = Math.max(
       Number.isFinite(terrainSize) ? terrainSize * 2.2 : 0,
@@ -75172,10 +74167,10 @@ class Application {
     }
     ocean = this.ocean;
     attachHeightSampler(terrain);
-    scene2.userData.terrain = terrain;
-    scene2.userData.getHeightAt = terrain?.userData?.getHeightAt;
-    if (typeof terrain?.userData?.getHeightAt === "function") {
-      scene2.userData.terrainHeightSampler = terrain.userData.getHeightAt;
+    scene2.userData["terrain"] = terrain;
+    scene2.userData["getHeightAt"] = terrain?.userData?.["getHeightAt"];
+    if (typeof terrain?.userData?.["getHeightAt"] === "function") {
+      scene2.userData["terrainHeightSampler"] = terrain.userData["getHeightAt"];
     }
     advanceLoadingStage("Terrain ready. Mapping the hills...");
     const shouldAddOccluder = (() => {
@@ -75366,25 +74361,25 @@ class Application {
     if (roadCurves && roadCurves.length > 0) {
       villagerSystem = new VillagerSystem(scene2, terrain);
       scene2.userData = scene2.userData || {};
-      scene2.userData.villagerSystem = villagerSystem;
+      scene2.userData["villagerSystem"] = villagerSystem;
     }
     const hillCity = await createHillCity(worldRoot, terrain, mainRoad, {
       seed: 42,
       buildingCount: 140,
-      foundationPadMaterial: harborCity?.userData?.foundationPadMaterial ?? null
+      foundationPadMaterial: harborCity?.userData?.["foundationPadMaterial"] ?? null
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
     applyGravelToRoads({ scene: scene2, baseUrl: BASE_URL2, repeat: [6, 6] }).catch(() => {
     });
     updateTerrainCoverageMask(terrain, {
-      buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
+      buildingPlacements: harborCity?.userData?.["buildingPlacements"] ?? [],
       roadCurves: roadCurves ?? [],
       mainRoadCurve: mainRoad ?? null,
       mainRoadWidth: MAIN_ROAD_WIDTH,
       roadWidth: 3.2
     });
     scatterGroundProps(worldRoot, terrain, {
-      buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
+      buildingPlacements: harborCity?.userData?.["buildingPlacements"] ?? [],
       roadCurves: roadCurves ?? [],
       mainRoadCurve: mainRoad ?? null,
       roadPadding: MAIN_ROAD_WIDTH * 0.7,
@@ -75446,7 +74441,7 @@ class Application {
     const questManager = new QuestManager();
     const questHud2 = new QuestHud(questManager);
     const interactionHud2 = new InteractionHud();
-    const interactionSystem = new InteractionSystem(playerSystem.player.input, camera2, scene2, interactionHud2);
+    const interactionSystem = new InteractionSystem(playerSystem.player?.input, camera2, scene2, interactionHud2);
     let interactor = createInteractor(renderer2, camera2, scene2);
     applyTextureBudgetToObject(scene2, { safeMode: true });
     const loop = this.gameLoop;
@@ -75554,7 +74549,7 @@ class Application {
     };
     const onPin = (p) => {
       const pin = createPin(worldRoot, p);
-      const y = terrain?.userData?.getHeightAt?.(p.x, p.z);
+      const y = terrain?.userData?.["getHeightAt"]?.(p.x, p.z);
       if (Number.isFinite(y)) pin.position.y = y;
     };
     const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: true, devDefault: true };
@@ -75927,4 +74922,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CaMGWDqi.js.map
+//# sourceMappingURL=index-BNsf0oSv.js.map
