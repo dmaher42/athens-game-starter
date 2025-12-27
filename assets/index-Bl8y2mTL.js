@@ -42075,88 +42075,27 @@ function getMaterialAmbientOcclusion(material) {
     edgeOuter: material.userData.aoEdgeOuter
   };
 }
-const __vite_import_meta_env__$3 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-const REPO_SEGMENT$2 = "athens-game-starter";
-const REPO_BASE = `/${REPO_SEGMENT$2}/`;
-const DOUBLE_SEGMENT = `${REPO_SEGMENT$2}/${REPO_SEGMENT$2}`;
-const REPO_BASE_PATH = REPO_BASE;
-function normalizeAbsoluteRepoBase(path) {
-  if (!path || !/^(?:[a-z]+:)?\/\//i.test(path)) {
-    return path;
-  }
-  try {
-    const parsed = new URL(path);
-    parsed.pathname = parsed.pathname.replace(
-      new RegExp(`/${REPO_SEGMENT$2}/${REPO_SEGMENT$2}(?=/|$)`, "g"),
-      `/${REPO_SEGMENT$2}`
-    );
-    return parsed.toString();
-  } catch {
-    return path;
-  }
-}
-function normalizeBase(path) {
-  if (!path) return REPO_BASE;
-  if (/^(?:[a-z]+:)?\/\//i.test(path)) {
-    return path.endsWith("/") ? path : `${path}/`;
-  }
-  let normalized = path;
-  if (!normalized.startsWith("/")) {
-    normalized = `/${normalized}`;
-  }
-  return normalized.endsWith("/") ? normalized : `${normalized}/`;
-}
-function isGithubPagesHost() {
-  if (typeof window === "undefined" || !window.location?.hostname) return false;
-  return /github\.io$/i.test(window.location.hostname);
-}
-function hasDoubleRepo(base) {
-  return typeof base === "string" && base.includes(DOUBLE_SEGMENT);
-}
+const __vite_import_meta_env__$5 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const REPO_SEGMENT$1 = "athens-game-starter";
 function resolveBaseUrl$5() {
-  const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__$3 && true && "/athens-game-starter/" || null;
-  const globalBase = typeof window !== "undefined" && typeof window.__BASE_URL__ === "string" ? window.__BASE_URL__ : null;
-  let base = globalBase || envBase || REPO_BASE;
-  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
-  if (isAbsoluteBase) {
-    base = normalizeAbsoluteRepoBase(base);
-  } else if (hasDoubleRepo(base)) {
-    base = REPO_BASE;
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$5 && true) {
+    return "/athens-game-starter/";
   }
-  const onGithubPages = isGithubPagesHost();
-  if (onGithubPages) {
-    base = REPO_BASE;
-  }
-  return normalizeBase(base);
+  return "/";
 }
 function normalizeBaseUrl$1(base) {
-  let normalized = base || REPO_BASE;
-  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(normalized);
-  if (isAbsoluteBase) {
-    normalized = normalizeAbsoluteRepoBase(normalized);
-  } else if (hasDoubleRepo(normalized)) {
-    normalized = REPO_BASE;
-  }
-  return normalizeBase(normalized);
+  const b = base || resolveBaseUrl$5();
+  return b.endsWith("/") ? b : `${b}/`;
 }
 function joinPath(base, rel) {
-  if (!base) {
-    base = REPO_BASE;
-  }
-  if (!rel) {
-    return base;
-  }
+  const effectiveBase = base || resolveBaseUrl$5();
+  if (!rel) return effectiveBase;
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) {
     return rel;
   }
-  if (typeof base === "string" && !base.endsWith("/")) {
-    base = `${base}/`;
-  }
-  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
-  const dummyOrigin = "http://dummy.com";
-  const baseUrl2 = isAbsoluteBase ? base : new URL(base, dummyOrigin).href;
-  const resolvedUrl = new URL(rel, baseUrl2);
-  return isAbsoluteBase ? resolvedUrl.href : resolvedUrl.pathname;
+  const baseSlash = effectiveBase.endsWith("/") ? effectiveBase : `${effectiveBase}/`;
+  const relClean = rel.replace(/^\/+/, "");
+  return `${baseSlash}${relClean}`;
 }
 function createNoiseBuffer(context, { duration = 1, amplitude = 0.12 } = {}) {
   const sampleRate = context.sampleRate || 44100;
@@ -43288,9 +43227,9 @@ subscribeSeaLevelChange((seaLevelY) => {
   ACROPOLIS_PEAK_3D.y = newGroundY;
   CITY_CHUNK_CENTER.y = newGroundY;
 });
-const __vite_import_meta_env__$2 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 function resolveBaseUrl$4() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$2 && true ? "/athens-game-starter/" : "/";
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
   return base.endsWith("/") ? base : `${base}/`;
 }
 function joinBase$1(base, relativePath) {
@@ -43323,13 +43262,16 @@ const MATERIALS = {
 const SAND_MAX_ELEV = 3;
 const GRASS_MIN_ELEV = 6;
 const SLOPE_ROCK_MIN = 0.6;
-const __vite_import_meta_env__$1 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$3 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 function resolveBaseUrl$3() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true ? "/athens-game-starter/" : "/";
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$3 && true ? "/athens-game-starter/" : "/";
   return base.endsWith("/") ? base : `${base}/`;
 }
 const BASE_URL = resolveBaseUrl$3();
 const resolveTexturePath = (relativePath) => {
+  if (relativePath.startsWith(BASE_URL)) {
+    return relativePath;
+  }
   const safePath = relativePath.replace(/^\/+/, "");
   return `${BASE_URL}${safePath}`;
 };
@@ -47675,7 +47617,7 @@ if (void 0) {
   });
 }
 const HTML_CONTENT_TYPE = /text\/html/i;
-const REPO_SEGMENT$1 = "athens-game-starter";
+const REPO_SEGMENT = "athens-game-starter";
 const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;
 const GLB_EXTENSION = /\.glb(?:$|[?#])/i;
 const GLB_MODELS_PATH = /models\/(?:landmarks|buildings)\/.+\.glb(?:$|[?#])/i;
@@ -47694,7 +47636,7 @@ function normalizeRepoRelativeCandidate(value) {
   const trimmed = value.trim();
   if (!trimmed) return "";
   const withoutLeading = trimmed.replace(/^\/+/, "");
-  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT$1}/)+`, "i");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT}/)+`, "i");
   return withoutLeading.replace(repoPrefix, "");
 }
 function normalizeRepoPrefixedPath(value) {
@@ -47703,12 +47645,12 @@ function normalizeRepoPrefixedPath(value) {
   if (!trimmed) return "";
   if (!trimmed.startsWith("/")) return trimmed;
   const withoutLeading = trimmed.replace(/^\/+/, "");
-  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT$1}/)+`, "i");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT}/)+`, "i");
   if (!repoPrefix.test(withoutLeading)) {
     return trimmed;
   }
   const stripped = withoutLeading.replace(repoPrefix, "");
-  return `/${REPO_SEGMENT$1}/${stripped}`;
+  return `/${REPO_SEGMENT}/${stripped}`;
 }
 function normalizeAbsoluteRepoUrl(value) {
   if (typeof value !== "string") return value;
@@ -47716,8 +47658,8 @@ function normalizeAbsoluteRepoUrl(value) {
   try {
     const parsed = new URL(value);
     parsed.pathname = parsed.pathname.replace(
-      new RegExp(`/${REPO_SEGMENT$1}/${REPO_SEGMENT$1}(?=/|$)`, "g"),
-      `/${REPO_SEGMENT$1}`
+      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+      `/${REPO_SEGMENT}`
     );
     return parsed.toString();
   } catch {
@@ -50161,6 +50103,7 @@ var MeshoptDecoder = (function() {
     }
   };
 })();
+const __vite_import_meta_env__$2 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const DEFAULT_BASIS_TRANSCODER_PATH = "https://unpkg.com/three@0.180.0/examples/jsm/libs/basis/";
 const LOCAL_TRANSCODER_SUBPATH = "basis/";
 const ABSOLUTE_PROTOCOL_REGEX$1 = /^[a-z]+:\/\//i;
@@ -50171,34 +50114,11 @@ function ensureTrailingSlash$1(value) {
   }
   return value.endsWith("/") ? value : `${value}/`;
 }
-function resolveDocumentBasePath$1() {
-  if (typeof document === "undefined" || !document.baseURI) {
-    return "/athens-game-starter/";
-  }
-  try {
-    const url = new URL(document.baseURI);
-    let { pathname } = url;
-    if (!pathname) {
-      return "/athens-game-starter/";
-    }
-    if (!pathname.endsWith("/")) {
-      const lastSlash = pathname.lastIndexOf("/");
-      pathname = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
-    }
-    return pathname || "/athens-game-starter/";
-  } catch (error) {
-    console.warn("Unable to parse document.baseURI for BASE_URL fallback", error);
-    return "/athens-game-starter/";
-  }
-}
 function resolveBaseUrl$2() {
-  const meta = typeof import.meta !== "undefined" ? import.meta : null;
-  const env = meta && meta.env ? meta.env : null;
-  const baseValue = env && typeof env.BASE_URL === "string" ? env.BASE_URL : null;
-  if (baseValue && baseValue.length > 0) {
-    return ensureTrailingSlash$1(baseValue);
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$2 && true) {
+    return ensureTrailingSlash$1("/athens-game-starter/");
   }
-  return ensureTrailingSlash$1(resolveDocumentBasePath$1());
+  return "/";
 }
 function resolveProtocol$1() {
   if (typeof window !== "undefined" && window.location?.protocol) {
@@ -50255,7 +50175,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BKKA-o_Y.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B2uwTw_w.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50649,6 +50569,7 @@ function DRACOWorker() {
     }
   }
 }
+const __vite_import_meta_env__$1 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const DEFAULT_DRACO_DECODER_PATH = "https://www.gstatic.com/draco/versioned/decoders/1.5.6/";
 const LOCAL_DECODER_SUBPATH = "draco/";
 const ABSOLUTE_PROTOCOL_REGEX = /^[a-z]+:\/\//i;
@@ -50659,34 +50580,11 @@ function ensureTrailingSlash(value) {
   }
   return value.endsWith("/") ? value : `${value}/`;
 }
-function resolveDocumentBasePath() {
-  if (typeof document === "undefined" || !document.baseURI) {
-    return "/athens-game-starter/";
-  }
-  try {
-    const url = new URL(document.baseURI);
-    let { pathname } = url;
-    if (!pathname) {
-      return "/athens-game-starter/";
-    }
-    if (!pathname.endsWith("/")) {
-      const lastSlash = pathname.lastIndexOf("/");
-      pathname = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
-    }
-    return pathname || "/athens-game-starter/";
-  } catch (error) {
-    console.warn("Unable to parse document.baseURI for BASE_URL fallback", error);
-    return "/athens-game-starter/";
-  }
-}
 function resolveBaseUrl$1() {
-  const meta = typeof import.meta !== "undefined" ? import.meta : null;
-  const env = meta && meta.env ? meta.env : null;
-  const baseValue = env && typeof env.BASE_URL === "string" ? env.BASE_URL : null;
-  if (baseValue && baseValue.length > 0) {
-    return ensureTrailingSlash(baseValue);
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true) {
+    return ensureTrailingSlash("/athens-game-starter/");
   }
-  return ensureTrailingSlash(resolveDocumentBasePath());
+  return "/";
 }
 function resolveProtocol() {
   if (typeof window !== "undefined" && window.location?.protocol) {
@@ -50766,7 +50664,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-UheFzdOm.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DPw-m8vM.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51559,7 +51457,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BKKA-o_Y.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B2uwTw_w.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -53552,33 +53450,9 @@ function createAthensLayoutConfig(environment = getRuntimeEnvironment(), overrid
   );
 }
 const baseUrl$1 = (path) => joinPath(resolveBaseUrl$5(), path);
-const REPO_SEGMENT = REPO_BASE_PATH.replace(/\//g, "");
-const DOUBLE_REPO_PREFIX = `${REPO_SEGMENT}/${REPO_SEGMENT}/`;
 function normalizeDistrictRuleCandidate(value) {
   if (typeof value !== "string") return "";
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
-    try {
-      const parsed = new URL(trimmed);
-      parsed.pathname = parsed.pathname.replace(
-        new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
-        `/${REPO_SEGMENT}`
-      );
-      return parsed.toString();
-    } catch {
-      return trimmed;
-    }
-  }
-  let normalized = trimmed.replace(/^\.\//, "");
-  normalized = normalized.replace(
-    new RegExp(`^/?${DOUBLE_REPO_PREFIX}`, "i"),
-    REPO_BASE_PATH
-  );
-  if (REPO_SEGMENT && normalized.startsWith(`${REPO_SEGMENT}/`)) {
-    normalized = `/${normalized}`;
-  }
-  return normalized;
+  return value.trim().replace(/^\.\//, "");
 }
 function buildDistrictRuleUrlCandidates(resolvedBase) {
   const urls = /* @__PURE__ */ new Set();
@@ -53591,21 +53465,8 @@ function buildDistrictRuleUrlCandidates(resolvedBase) {
     if (!base) return;
     push(joinPath(base, rel));
   };
-  push(baseUrl$1("config/districts.json"));
   pushJoined(resolvedBase, "config/districts.json");
-  if (REPO_BASE_PATH && (!resolvedBase || !resolvedBase.includes(REPO_BASE_PATH))) {
-    pushJoined(REPO_BASE_PATH, "config/districts.json");
-  }
-  if (typeof window !== "undefined" && window.location) {
-    const { pathname } = window.location;
-    if (REPO_BASE_PATH && pathname && pathname.includes(REPO_BASE_PATH)) {
-      const idx = pathname.indexOf(REPO_BASE_PATH);
-      const repoBase = pathname.slice(0, idx + REPO_BASE_PATH.length);
-      pushJoined(repoBase, "config/districts.json");
-    }
-  } else {
-    push(joinPath(REPO_BASE_PATH, "config/districts.json"));
-  }
+  push("config/districts.json");
   return Array.from(urls);
 }
 async function loadDistrictRules(baseUrlStr = "") {
@@ -63755,8 +63616,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T12:28:45.012Z" : "",
-      sha: true ? "f898213c54b82864810c88effc74af4316f7ff71" : ""
+      time: true ? "2025-12-27T19:11:24.691Z" : "",
+      sha: true ? "1128b17a93354c911f45ea76748176fc81754a24" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -75014,4 +74875,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BP0NKcyo.js.map
+//# sourceMappingURL=index-Bl8y2mTL.js.map
