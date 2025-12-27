@@ -3,7 +3,6 @@ import * as THREE from "three";
 import {
   joinPath,
   resolveBaseUrl,
-  REPO_BASE_PATH,
 } from "../utils/baseUrl.js";
 import { IS_DEV } from "../utils/env.js";
 import {
@@ -14,6 +13,7 @@ import {
 } from "../config/AssetConfig.js";
 
 const HTML_CONTENT_TYPE = /text\/html/i;
+// Kept for backward compat in regex if needed, but not imported
 const REPO_SEGMENT = "athens-game-starter";
 
 const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;

@@ -14,38 +14,15 @@ function ensureTrailingSlash(value) {
   return value.endsWith("/") ? value : `${value}/`;
 }
 
-function resolveDocumentBasePath() {
-  if (typeof document === "undefined" || !document.baseURI) {
-    return "/athens-game-starter/";
-  }
-
-  try {
-    const url = new URL(document.baseURI);
-    let { pathname } = url;
-    if (!pathname) {
-      return "/athens-game-starter/";
-    }
-    if (!pathname.endsWith("/")) {
-      const lastSlash = pathname.lastIndexOf("/");
-      pathname = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
-    }
-    return pathname || "/athens-game-starter/";
-  } catch (error) {
-    console.warn("Unable to parse document.baseURI for BASE_URL fallback", error);
-    return "/athens-game-starter/";
-  }
-}
-
 function resolveBaseUrl() {
-  const meta = typeof import.meta !== "undefined" ? import.meta : null;
-  const env = meta && meta.env ? meta.env : null;
-  const baseValue = env && typeof env.BASE_URL === "string" ? env.BASE_URL : null;
-
-  if (baseValue && baseValue.length > 0) {
-    return ensureTrailingSlash(baseValue);
+  if (
+    typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    typeof import.meta.env.BASE_URL === "string"
+  ) {
+    return ensureTrailingSlash(import.meta.env.BASE_URL);
   }
-
-  return ensureTrailingSlash(resolveDocumentBasePath());
+  return "/";
 }
 
 function resolveProtocol() {
