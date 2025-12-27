@@ -5,14 +5,26 @@
 export const REPO_SEGMENT = "athens-game-starter";
 
 export function resolveBaseUrl() {
+  let base = "/";
   if (
     typeof import.meta !== "undefined" &&
     import.meta.env &&
     typeof import.meta.env.BASE_URL === "string"
   ) {
-    return import.meta.env.BASE_URL;
+    base = import.meta.env.BASE_URL;
   }
-  return "/";
+
+  // If it's a full URL (http/https), return as is
+  if (/^(?:[a-z]+:)?\/\//i.test(base)) {
+    return base;
+  }
+
+  // Ensure it starts with a slash
+  if (!base.startsWith("/")) {
+    base = `/${base}`;
+  }
+
+  return base;
 }
 
 export function normalizeBaseUrl(base) {
