@@ -107,12 +107,12 @@ export const GROUND_TEXTURE_CONFIG = {
 
     // Stone for steep slopes (optional, can disable if not needed)
     stone: {
-      url: sandTextureUrl(),  // Use sand for now to keep everything sandy
-      tint: [0.85, 0.82, 0.75],
-      repeat: [28, 24],
+      url: textureUrl('dirt-albedo.jpg'),
+      tint: [0.6, 0.6, 0.6],
+      repeat: [14, 12],
     },
-    slopeThreshold: 0.9,  // Very steep before showing stone
-    slopeBlend: 0.15,
+    slopeThreshold: 0.4,
+    slopeBlend: 0.2,
   },
 
   /**

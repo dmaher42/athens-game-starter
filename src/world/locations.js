@@ -23,11 +23,13 @@ export const CITY_CENTER_ORIGIN = new THREE.Vector3(0, getCityGroundY(), 0);
 // Harbor ground height above sea level
 export const HARBOR_GROUND_HEIGHT = 2;
 
-// Harbor relocated to East (+X)
+// --- HARBOR POSITION ---
+// SINGLE SOURCE OF TRUTH for the harbor's world position.
+// All other systems (terrain, placement, etc.) should derive from this.
 export const HARBOR_CENTER_3D = new THREE.Vector3(
-  120,
+  -50,
   resolveSeaLevelY() + HARBOR_GROUND_HEIGHT,
-  80,
+  -100,
 );
 
 // All districts now sit on the same flat plane

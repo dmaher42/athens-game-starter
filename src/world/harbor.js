@@ -68,31 +68,6 @@ function createReflectiveWaterMaterial() {
   });
 }
 
-function createHarborWaterPlane(seaLevel) {
-  // Massive water expanse extending eastward
-  const width = 800;
-  // Extended depth to create proper north-south shoreline (was 120, now 400)
-  const depth = 400;
-  const geometry = new THREE.PlaneGeometry(width, depth, 32, 32);
-  const material = createReflectiveWaterMaterial();
-
-  const water = new THREE.Mesh(geometry, material);
-  water.rotation.x = -Math.PI / 2;
-  // Position relative to harbor group origin (0,0,0) since group is repositioned
-  // Harbor group positioned at HARBOR_CENTER_3D (120, harborGroundY, 80) in world space
-  // Shift water eastward (+400 X) so it only appears in front/east, not behind/west
-  // Local Y position ensures water sits at seaLevel in world coordinates:
-  // World Y = harborGroundY + (seaLevel - HARBOR_GROUND_HEIGHT) = seaLevel
-  water.position.set(400, seaLevel - HARBOR_GROUND_HEIGHT, 0);
-  water.name = "HarborLowPolyWater";
-  water.userData.isWater = true;
-  water.userData.seaLevel = seaLevel;
-  water.receiveShadow = false;
-  // Transparent harbor water renders before opaque pad via renderOrder
-  water.renderOrder = RENDER_LAYERS.WATER;
-  return water;
-}
-
 function createHarborPad(harborGroundY) {
   // Small harbor island pad - 60x60 brown square
   const width = 60;
@@ -686,9 +661,6 @@ export function createHarbor(scene, options = {}) {
   const harborPad = createHarborPad(harborGroundY);
   harbor.add(harborPad);
 
-  const waterPlane = createHarborWaterPlane(seaLevel);
-  harbor.add(waterPlane);
-
   // Use grid-aligned dock slots if available, otherwise fallback to default positions
   const piersGroup = new THREE.Group();
   piersGroup.name = "HarborPiers";
@@ -837,10 +809,7 @@ export function createHarbor(scene, options = {}) {
   harbor.add(connector);
 
   // Position harbor group in world space
-  // The harbor center should be at HARBOR_CENTER_3D (120, seaLevel, 80)
-  // But we offset by (-50, 0, -100) to move it west and north
-  // Final position: (120-50=70, harborGroundY, 80-100=-20)
-  harbor.position.set(120, harborGroundY, 80);
+  harbor.position.copy(HARBOR_CENTER_3D);
 
   if (scene) {
     scene.add(harbor);

@@ -431,7 +431,7 @@ export class Application {
       });
     }
     if (!this.ocean) {
-      this.ocean = await createOcean(this.scene, {
+      this.ocean = await createOcean(this.scene, terrain, {
         seaLevel,
         radius: oceanRadius,
         horizonOffset: 0,
