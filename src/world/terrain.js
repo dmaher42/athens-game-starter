@@ -491,6 +491,7 @@ export function createTerrain(scene) {
   positionAttribute.needsUpdate = true;
   colorAttribute.needsUpdate = true;
   geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
 
   geometry.userData.baseHeights = baseHeights;
   geometry.userData.segmentCount = segments;
