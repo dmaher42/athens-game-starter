@@ -29,18 +29,15 @@ export function textureUrl(relativePath) {
   return resolveTexturePath(relativePath);
 }
 
-const SAND_ALBEDO_URL =
-  typeof MATERIALS.sand.albedo === "string"
-    ? MATERIALS.sand.albedo
-    : resolveTexturePath("textures/sand/albedo.jpg");
-const GRASS_ALBEDO_URL =
-  typeof MATERIALS.grass.albedo === "string"
-    ? MATERIALS.grass.albedo
-    : resolveTexturePath("textures/grass/albedo.jpg");
-const DIRT_ALBEDO_URL =
-  typeof MATERIALS.dirt.albedo === "string"
-    ? MATERIALS.dirt.albedo
-    : resolveTexturePath("textures/ground/dirt-albedo.jpg");
+const SAND_ALBEDO_URL = resolveTexturePath(
+  MATERIALS?.sand?.albedo ?? "textures/sand/albedo.jpg"
+);
+const GRASS_ALBEDO_URL = resolveTexturePath(
+  MATERIALS?.grass?.albedo ?? "textures/grass/albedo.jpg"
+);
+const DIRT_ALBEDO_URL = resolveTexturePath(
+  MATERIALS?.dirt?.albedo ?? "textures/ground/dirt-albedo.jpg"
+);
 
 // PRESERVED EXPORT: Required by src/world/groundTextures.js
 export const NEUTRAL_GROUND_FALLBACK_TINT = {
