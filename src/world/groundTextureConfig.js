@@ -24,6 +24,9 @@ const resolveTexturePath = (relativePath) => {
   return `${BASE_URL}${safePath}`;
 };
 
+// Alias for backward compatibility or external snippets
+const textureUrl = resolveTexturePath;
+
 const SAND_ALBEDO_URL =
   typeof MATERIALS.sand.albedo === "string"
     ? MATERIALS.sand.albedo
