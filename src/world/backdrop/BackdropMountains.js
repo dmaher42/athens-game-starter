@@ -17,10 +17,10 @@ export class BackdropMountains {
   }
 
   create() {
-    // Disable procedural peak mesh generation; rely on HDRI/skybox for distant mountains.
-    // this.createMountains();
-    // Also disable mainland extension ring to avoid overlapping brown ground near harbor.
-    // this.createMainlandExtension();
+    // Enable procedural peak mesh generation to provide distant landmarks on the mainland side.
+    this.createMountains();
+    // Enable mainland extension ring to ensure the world is not an island.
+    this.createMainlandExtension();
   }
 
   createMountains() {
@@ -93,8 +93,9 @@ export class BackdropMountains {
 
   createMainlandExtension() {
       // Create a full ring to act as skirt, but modulate height based on sector.
-      const innerRadius = 180;
-      const outerRadius = 2400;
+      // Inner radius matches roughly half the terrain size (1200) with overlap.
+      const innerRadius = 1100;
+      const outerRadius = 4500;
       // Full circle to ensure no gaps at sector boundaries
       const geometry = new THREE.RingGeometry(innerRadius, outerRadius, 64, 8);
 
