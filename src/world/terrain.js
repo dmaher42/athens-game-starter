@@ -618,7 +618,9 @@ export function updateTerrain() {}
  * Lower terrain slightly where shallow water should be exposed and optionally blend shoreline sand color.
  * Criteria: where the vertex height >= seaLevel and the location is effectively water (distanceToCoast === 0)
  * @param {THREE.Mesh} terrain
- * @param {object} options { lowerBy: number, blendShore: boolean }
+ * @param {Object} [options]
+ * @param {number} [options.lowerBy]
+ * @param {boolean} [options.blendShore]
  */
 export function adjustShallowWater(terrain, options = {}) {
   if (!terrain || !terrain.geometry) return;

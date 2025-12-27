@@ -120,8 +120,12 @@ export class Soundscape {
   /**
    * @param {THREE.Scene} scene
    * @param {THREE.Camera} camera
-   * @param {{ getNightFactor: ()=>number }} lightingRef  returns 0..1 (0=day,1=night)
-   * @param {{ harbor: THREE.Vector3, agora: THREE.Vector3, acropolis: THREE.Vector3 }} anchors
+   * @param {Object} lightingRef returns 0..1 (0=day,1=night)
+   * @param {function()} lightingRef.getNightFactor
+   * @param {Object} anchors
+   * @param {THREE.Vector3} anchors.harbor
+   * @param {THREE.Vector3} anchors.agora
+   * @param {THREE.Vector3} anchors.acropolis
    */
   constructor(scene, camera, lightingRef, anchors) {
     this.scene = scene;

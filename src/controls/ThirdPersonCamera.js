@@ -63,30 +63,28 @@ export class ThirdPersonCamera {
   /**
    * @param {THREE.Camera} camera
    * @param {THREE.Object3D | null} targetObject
-   * @param {{
-   *   offset?: THREE.Vector3,
-   *   targetOffset?: THREE.Vector3,
-   *   minPitch?: number,
-   *   maxPitch?: number,
-   *   collisionOffset?: number,
-   *   followLerp?: number,
-   *   rotationLerp?: number,
-  *   yawSensitivity?: number,
-  *   pitchSensitivity?: number,
-  *   solids?: THREE.Object3D[],
-  *   enabled?: boolean,
-  *   keyOrbit?: {
-  *     enabled?: boolean,
-  *     yawSpeed?: number,
-  *     pitchSpeed?: number,
-  *     minPitch?: number,
-  *     maxPitch?: number,
-  *     minDist?: number,
-  *     maxDist?: number,
-  *     zoomSpeed?: number,
-  *   },
-  * }} [options]
-  */
+   * @param {Object} [options]
+   * @param {THREE.Vector3} [options.offset]
+   * @param {THREE.Vector3} [options.targetOffset]
+   * @param {number} [options.minPitch]
+   * @param {number} [options.maxPitch]
+   * @param {number} [options.collisionOffset]
+   * @param {number} [options.followLerp]
+   * @param {number} [options.rotationLerp]
+   * @param {number} [options.yawSensitivity]
+   * @param {number} [options.pitchSensitivity]
+   * @param {THREE.Object3D[]} [options.solids]
+   * @param {boolean} [options.enabled]
+   * @param {Object} [options.keyOrbit]
+   * @param {boolean} [options.keyOrbit.enabled]
+   * @param {number} [options.keyOrbit.yawSpeed]
+   * @param {number} [options.keyOrbit.pitchSpeed]
+   * @param {number} [options.keyOrbit.minPitch]
+   * @param {number} [options.keyOrbit.maxPitch]
+   * @param {number} [options.keyOrbit.minDist]
+   * @param {number} [options.keyOrbit.maxDist]
+   * @param {number} [options.keyOrbit.zoomSpeed]
+   */
   constructor(camera, targetObject, options = {}) {
     this.camera = camera;
     this.targetObject = targetObject ?? null;
@@ -403,7 +401,8 @@ export class ThirdPersonCamera {
   /**
    * @param {number} yaw
    * @param {number} pitch
-   * @param {{ snap?: boolean }} [opts]
+   * @param {Object} [opts]
+   * @param {boolean} [opts.snap]
    */
   setAngles(yaw, pitch, opts = {}) {
     if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) return;

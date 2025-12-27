@@ -4,8 +4,6 @@ import { applyForegroundFogPolicy } from '../utils/materialUtils.js';
 
 const ENABLE_GLB_MODE = true;
 
-/** @typedef {'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump'} AnimName */
-
 export class Character extends THREE.Object3D {
   constructor() {
     super();
@@ -112,7 +110,7 @@ export class Character extends THREE.Object3D {
   }
 
   /**
-   * @param {AnimName} name
+   * @param {string} name
    * @param {number} [fade=0.2]
    */
   play(name, fade = 0.2) {

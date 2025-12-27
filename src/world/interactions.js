@@ -44,16 +44,7 @@ export function queueSceneInteractable(scene, object, options = {}) {
  * @param {THREE.WebGLRenderer} renderer - The renderer so we can read the canvas size.
  * @param {THREE.Camera} camera - The active camera that defines the view.
  * @param {THREE.Scene} scene - The scene graph containing objects to test against.
- * @returns {{
- *   raycaster: THREE.Raycaster,
- *   mouse: THREE.Vector2,
- *   pickObject: (screenX: number, screenY: number) => THREE.Intersection | null,
- *   pickCenter: () => THREE.Intersection | null,
- *   updateHover: (deltaSeconds?: number) => THREE.Object3D | null,
- *   clearHover: () => void,
- *   getCurrentHover: () => THREE.Object3D | null,
- *   useObject: () => void,
- * }}
+ * @returns {Object} interactor helper
  */
 export function createInteractor(renderer, camera, scene) {
   const raycaster = new THREE.Raycaster();

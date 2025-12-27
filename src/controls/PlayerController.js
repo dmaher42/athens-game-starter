@@ -3,22 +3,17 @@ import { Capsule } from 'three/examples/jsm/math/Capsule.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 
-/**
- * @typedef {{
- *   height?: number,
- *   radius?: number,
- *   camera?: THREE.Camera,
- *   terrainHeightSampler?: ((x: number, z: number) => number) | null,
- *   terrainSnapMaxDistance?: number,
- *   terrainSnapThreshold?: number,
- * }} PlayerOptions
- */
-
 export class PlayerController {
   /**
    * @param {import('../input/InputMap').InputMap} input
    * @param {import('../env/EnvironmentCollider.js').EnvironmentCollider} env
-   * @param {PlayerOptions} [opts]
+   * @param {Object} [opts]
+   * @param {number} [opts.height]
+   * @param {number} [opts.radius]
+   * @param {THREE.Camera} [opts.camera]
+   * @param {function(number, number)|null} [opts.terrainHeightSampler]
+   * @param {number} [opts.terrainSnapMaxDistance]
+   * @param {number} [opts.terrainSnapThreshold]
    */
   constructor(input, env, opts = {}) {
     opts = opts ?? {};
