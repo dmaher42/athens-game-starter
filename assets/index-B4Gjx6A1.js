@@ -43250,6 +43250,38 @@ subscribeSeaLevelChange((seaLevelY) => {
   ACROPOLIS_PEAK_3D.y = newGroundY;
   CITY_CHUNK_CENTER.y = newGroundY;
 });
+const __vite_import_meta_env__ = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+function resolveBaseUrl$2() {
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true ? "/" : "/";
+  return base.endsWith("/") ? base : `${base}/`;
+}
+function joinBase(base, relativePath) {
+  const safeBase = base.endsWith("/") ? base : `${base}/`;
+  const safePath = relativePath.replace(/^\/+/, "");
+  return `${safeBase}${safePath}`;
+}
+const BASE_URL = resolveBaseUrl$2();
+const MATERIALS = {
+  sand: {
+    albedo: joinBase(BASE_URL, "textures/sand/albedo.jpg"),
+    normal: joinBase(BASE_URL, "textures/sand/normal_gl.jpg"),
+    arm: joinBase(BASE_URL, "textures/sand/arm.jpg")
+  },
+  grass: {
+    albedo: joinBase(BASE_URL, "textures/grass/albedo.jpg"),
+    normal: joinBase(BASE_URL, "textures/grass/normal_dx.jpg"),
+    roughness: joinBase(BASE_URL, "textures/grass/roughness.jpg"),
+    metallic: joinBase(BASE_URL, "textures/grass/metallic.jpg"),
+    ao: joinBase(BASE_URL, "textures/grass/ao.jpg"),
+    height: joinBase(BASE_URL, "textures/grass/height.jpg")
+  },
+  stoneFallback: {
+    albedo: joinBase(BASE_URL, "textures/marble_base.jpg")
+  }
+};
+const SAND_MAX_ELEV = 3;
+const GRASS_MIN_ELEV = 6;
+const SLOPE_ROCK_MIN = 0.6;
 const NEUTRAL_GROUND_FALLBACK_TINT = {
   baseColor: [150, 152, 160],
   shadowColor: [112, 118, 128],
@@ -43258,24 +43290,13 @@ const NEUTRAL_GROUND_FALLBACK_TINT = {
   highlightStrength: 0.24,
   contrast: 0.95
 };
-function textureUrl(file) {
-  const baseUrl2 = resolveBaseUrl$3();
-  return joinPath(baseUrl2, `textures/ground/${file}`);
-}
-function sandTextureUrl() {
-  const baseUrl2 = resolveBaseUrl$3();
-  return joinPath(
-    baseUrl2,
-    "textures/sand/albedo.jpg"
-  );
-}
 const GROUND_TEXTURE_CONFIG = {
   /**
    * Base layer (what you see everywhere, then blended with dirt/grass regions)
    */
   base: {
-    // Swap the entire ground to our gravelly sand atlas.
-    url: sandTextureUrl(),
+    // Swap the entire ground to our sand atlas.
+    url: MATERIALS.sand.albedo,
     colorSpace: "srgb",
     repeat: [28, 24],
     rotation: 0.03,
@@ -43289,27 +43310,15 @@ const GROUND_TEXTURE_CONFIG = {
    */
   blend: {
     enabled: true,
-    // Use procedural grass for inland areas
+    // Use grass texture for inland areas
     grass: {
-      procedural: "fresh-grass-lowlands",
-      size: 512,
-      seed: 1243,
-      baseColor: [95, 115, 82],
-      shadowColor: [62, 78, 52],
-      highlightColor: [128, 145, 108],
-      bladeFrequency: 0.72,
-      bladeTaper: 0.68,
-      highlightStrength: 0.28,
-      shadowStrength: 0.35,
-      noiseScale: 0.42,
-      patchiness: 0.38,
-      saturation: 0.68,
-      contrast: 1.08,
+      url: MATERIALS.grass.albedo,
+      colorSpace: "srgb",
       repeat: [28, 24]
     },
     // Use sand as "dirt" texture so beach effect shows sand
     dirt: {
-      url: sandTextureUrl(),
+      url: MATERIALS.sand.albedo,
       colorSpace: "srgb",
       repeat: [28, 24]
     },
@@ -43322,13 +43331,11 @@ const GROUND_TEXTURE_CONFIG = {
     // No mask, rely on beach height
     // Stone for steep slopes (optional, can disable if not needed)
     stone: {
-      url: sandTextureUrl(),
-      // Use sand for now to keep everything sandy
+      url: MATERIALS.stoneFallback.albedo,
       tint: [0.85, 0.82, 0.75],
       repeat: [28, 24]
     },
-    slopeThreshold: 0.9,
-    // Very steep before showing stone
+    slopeThreshold: SLOPE_ROCK_MIN,
     slopeBlend: 0.15
   },
   /**
@@ -43346,10 +43353,8 @@ const GROUND_TEXTURE_CONFIG = {
    * fade: Transition range for smooth blending from sand to grass
    */
   beach: {
-    height: 4,
-    // Sand visible from sea level (0) to ~4 units (covers harbor at Y=2)
-    fade: 3
-    // Gradual 3-unit transition to inland grass
+    height: SAND_MAX_ELEV,
+    fade: Math.max(0.1, GRASS_MIN_ELEV - SAND_MAX_ELEV)
   },
   /**
    * Detail layers (e.g. gravel, rock, variations)
@@ -45194,8 +45199,8 @@ function createTerrain(scene2) {
       const height = getElevation$1(x, z, seaLevel, coastData, noiseOffset);
       positionAttribute.setZ(i, height);
       baseHeights[i] = height;
-      const beachHeight = 2.5;
-      const beachFade = 2;
+      const beachHeight = SAND_MAX_ELEV;
+      const beachFade = Math.max(0.1, GRASS_MIN_ELEV - SAND_MAX_ELEV);
       const beachLimit = seaLevel + beachHeight;
       let beachFactor = 0;
       if (height < beachLimit) {
@@ -49726,35 +49731,6 @@ function toCreasedNormals(geometry, creaseAngle = Math.PI / 3) {
   resultGeometry.setAttribute("normal", normAttr);
   return resultGeometry;
 }
-const __vite_import_meta_env__ = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-function resolveBaseUrl$2() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true ? "/" : "/";
-  return base.endsWith("/") ? base : `${base}/`;
-}
-function joinBase(base, relativePath) {
-  const safeBase = base.endsWith("/") ? base : `${base}/`;
-  const safePath = relativePath.replace(/^\/+/, "");
-  return `${safeBase}${safePath}`;
-}
-const BASE_URL = resolveBaseUrl$2();
-const MATERIALS = {
-  sand: {
-    albedo: joinBase(BASE_URL, "textures/sand/albedo.jpg"),
-    normal: joinBase(BASE_URL, "textures/sand/normal_gl.jpg"),
-    arm: joinBase(BASE_URL, "textures/sand/arm.jpg")
-  },
-  grass: {
-    albedo: joinBase(BASE_URL, "textures/grass/albedo.jpg"),
-    normal: joinBase(BASE_URL, "textures/grass/normal_dx.jpg"),
-    roughness: joinBase(BASE_URL, "textures/grass/roughness.jpg"),
-    metallic: joinBase(BASE_URL, "textures/grass/metallic.jpg"),
-    ao: joinBase(BASE_URL, "textures/grass/ao.jpg"),
-    height: joinBase(BASE_URL, "textures/grass/height.jpg")
-  },
-  stoneFallback: {
-    albedo: joinBase(BASE_URL, "textures/marble_base.jpg")
-  }
-};
 const warnedKeys = /* @__PURE__ */ new Set();
 function warnOnce$1(key, message) {
   if (warnedKeys.has(key)) return;
@@ -50335,7 +50311,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CrXfueku.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CYoIlnP7.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50846,7 +50822,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BFROsTWM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BYEJ2C-4.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51638,7 +51614,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CrXfueku.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CYoIlnP7.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -65195,8 +65171,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T02:20:03.419Z" : "",
-      sha: true ? "3a17157a18a32fbfc192c2da3a64f4a40f8f2e83" : ""
+      time: true ? "2025-12-27T02:28:50.057Z" : "",
+      sha: true ? "c6c5e341a635d37035473730167088e9bbc7aa7c" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -75933,4 +75909,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BAes9-iO.js.map
+//# sourceMappingURL=index-B4Gjx6A1.js.map
