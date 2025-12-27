@@ -52,8 +52,8 @@ import { EnvironmentCollider } from "../env/EnvironmentCollider.js";
 import { BuildingManager } from "../buildings/BuildingManager.js";
 import { UIManager } from "./UIManager.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
-import { QuestHud } from "../ui/questHud.ts";
-import { InteractionHud } from "../ui/interactionHud.ts";
+import { QuestHud } from "../ui/questHud.js";
+import { InteractionHud } from "../ui/interactionHud.js";
 import {
   showLoadingScreen,
   updateLoadingStatus,
@@ -124,7 +124,15 @@ const DEFAULT_FORCE_PROC =
     ? engineConfig.featureFlags.forceProcedural
     : !DEFAULT_FORCE_GLB || !ENABLE_GLB_MODE;
 
-function createFarOceanPlane(scene, seaLevel, terrainSize) {
+export interface ApplicationBootOptions {
+  baseUrl?: string;
+  districtRuleCandidates?: string[];
+  queryParams?: URLSearchParams;
+  forceGlb?: boolean;
+  forceProc?: boolean;
+}
+
+function createFarOceanPlane(scene: any, seaLevel: number, terrainSize: number) {
   const radius = Math.max(terrainSize * 2.4, 3200);
   const geometry = new THREE.CircleGeometry(radius, 64);
   geometry.rotateX(-Math.PI / 2);
@@ -148,13 +156,38 @@ function createFarOceanPlane(scene, seaLevel, terrainSize) {
 }
 
 export class Application {
+  baseUrl: string;
+  districtRuleCandidates: string[];
+  queryParams: URLSearchParams | undefined;
+  forceGlb: boolean;
+  forceProc: boolean;
+  assetLoader: any;
+  gameLoop: any;
+  sceneContext: any;
+  renderer: any;
+  devHud: any;
+  ocean: any;
+  pendingOceanStatus: any;
+  coastalSkirt: any;
+  farOceanPlane: any;
+  shoreTermination: any;
+  skyboxTexture: any;
+  npcUpdaters: any[];
+  scene: any;
+  terrain: any;
+  horizon: any;
+  worldFloorCap: any;
+  killPlane: any;
+  lightingSystem: any;
+  playerSystem: any;
+
   constructor({
     baseUrl = DEFAULT_BASE_URL,
     districtRuleCandidates = DEFAULT_DISTRICT_RULE_URL_CANDIDATES,
     queryParams = engineConfig.queryParams,
     forceGlb = DEFAULT_FORCE_GLB,
     forceProc,
-  } = {}) {
+  }: ApplicationBootOptions = {}) {
     this.baseUrl = baseUrl ?? DEFAULT_BASE_URL;
     this.districtRuleCandidates =
       districtRuleCandidates ?? DEFAULT_DISTRICT_RULE_URL_CANDIDATES;
@@ -170,7 +203,7 @@ export class Application {
     this.assetLoader = new AssetLoader({
       baseUrl: this.baseUrl,
       forceProcedural: this.forceProc,
-      districtRuleCandidates: this.districtRuleCandidates,
+      districtRuleCandidates: this.districtRuleCandidates as any,
       enableGlbMode: ENABLE_GLB_MODE,
     });
     this.gameLoop = new GameLoop();
@@ -184,6 +217,13 @@ export class Application {
     this.shoreTermination = null;
     this.skyboxTexture = null;
     this.npcUpdaters = [];
+    this.scene = null;
+    this.terrain = null;
+    this.horizon = null;
+    this.worldFloorCap = null;
+    this.killPlane = null;
+    this.lightingSystem = null;
+    this.playerSystem = null;
   }
 
   async run() {
@@ -207,7 +247,7 @@ export class Application {
     });
     const totalLoadingStages = 4;
     let loadingStage = 0;
-    const advanceLoadingStage = (message) => {
+    const advanceLoadingStage = (message: string) => {
       loadingStage = Math.min(loadingStage + 1, totalLoadingStages);
       updateLoadingStatus(message);
       updateLoadingProgress(loadingStage, totalLoadingStages);
@@ -215,13 +255,13 @@ export class Application {
 
     updateLoadingProgress(0, totalLoadingStages);
     updateLoadingStatus("Preparing renderer and interface...");
-    const quickCheckResult = await assetLoader.runAssetQuickChecks().catch((err) => {
+    const quickCheckResult = await assetLoader.runAssetQuickChecks().catch((err: any) => {
       console.warn("Asset QuickChecks failed", err);
       return null;
     });
     if (quickCheckResult?.hasMissingCritical || quickCheckResult?.hasRepeatedFailures) {
       const missingCriticalLabels = quickCheckResult.missingCriticalChecks.map(
-        (entry) => entry.label,
+        (entry: any) => entry.label,
       );
       const uniqueMissing = Array.from(new Set(missingCriticalLabels));
       const criticalSummary =
@@ -264,9 +304,9 @@ export class Application {
     attachCrosshair();
     advanceLoadingStage("Listening for the bustle of ancient Athens...");
 
-    let devHud = (this.devHud = null);
-    let ocean = (this.ocean = null);
-    let pendingOceanStatus = (this.pendingOceanStatus = null);
+    let devHud: any = (this.devHud = null);
+    let ocean: any = (this.ocean = null);
+    let pendingOceanStatus: any = (this.pendingOceanStatus = null);
     const FORCE_PROCEDURAL_LANDMARKS = FORCE_PROC;
     let proceduralLandmarkCount = 0;
     let proceduralStatusMessage = FORCE_PROC
@@ -291,7 +331,7 @@ export class Application {
         if (!levelIsFinite || !boundsAreValid) {
           return;
         }
-        const formatBound = (value) => Number(value).toFixed(1);
+        const formatBound = (value: number) => Number(value).toFixed(1);
         const message = [
           `Sea level: ${Number(seaLevel).toFixed(2)}`,
           `Ocean bounds: W ${formatBound(bounds.west)} / E ${formatBound(
@@ -331,7 +371,7 @@ export class Application {
     let lastDisplayedTime = "";
 
     let fogEnabled = true;
-    const onFogChange = (enabled) => {
+    const onFogChange = (enabled: boolean) => {
       fogEnabled = enabled;
       const oceanMaterial = this.ocean?.mesh?.material;
       const fogUniform =
@@ -356,7 +396,7 @@ export class Application {
       baseUrl: BASE_URL,
       worldRootName: WORLD_ROOT_NAME_LEGACY,
       onFogChange,
-    });
+    } as any);
     this.sceneContext = sceneContext;
     const {
       scene,
@@ -386,7 +426,7 @@ export class Application {
     const soundscape = new Soundscape(
       scene,
       camera,
-      { getNightFactor: () => lightingSystem.lights.nightFactor },
+      { getNightFactor: () => lightingSystem.lights?.nightFactor ?? 0 },
       {
         harbor: new THREE.Vector3(120, 0, 80),
         agora: AGORA_CENTER_3D,
@@ -394,19 +434,19 @@ export class Application {
       },
     );
     let audioManifestMissing = false;
-    soundscape
+    (soundscape as any)
       .loadManifest("audio/manifest.json")
       .catch(() => {
         audioManifestMissing = true;
       })
-      .then(() => soundscape.initFromManifest("audio/manifest.json"))
+      .then(() => (soundscape as any).initFromManifest("audio/manifest.json"))
       .then(() => soundscape.ensureUserGestureResume())
       .catch(() => {});
     updateLoadingStatus("Sculpting the Attic landscape...");
 
     const terrain = createTerrain(scene);
     this.terrain = terrain;
-    const terrainSize = terrain?.geometry?.userData?.size;
+    const terrainSize = terrain?.geometry?.userData?.['size'];
 
     const seaLevel = getSeaLevelY();
     const oceanRadius = Math.max(
@@ -431,7 +471,7 @@ export class Application {
       });
     }
     if (!this.ocean) {
-      this.ocean = await createOcean(this.scene, terrain, {
+      this.ocean = await (createOcean as any)(this.scene, terrain, {
         seaLevel,
         radius: oceanRadius,
         horizonOffset: 0,
@@ -468,10 +508,10 @@ export class Application {
     }
     ocean = this.ocean;
     attachHeightSampler(terrain);
-    scene.userData.terrain = terrain;
-    scene.userData.getHeightAt = terrain?.userData?.getHeightAt;
-    if (typeof terrain?.userData?.getHeightAt === "function") {
-      scene.userData.terrainHeightSampler = terrain.userData.getHeightAt;
+    scene.userData['terrain'] = terrain;
+    scene.userData['getHeightAt'] = terrain?.userData?.['getHeightAt'];
+    if (typeof terrain?.userData?.['getHeightAt'] === "function") {
+      scene.userData['terrainHeightSampler'] = terrain.userData['getHeightAt'];
     }
     advanceLoadingStage("Terrain ready. Mapping the hills...");
     const shouldAddOccluder = (() => {
@@ -500,7 +540,7 @@ export class Application {
     }
 
     const currentSeaLevel = seaLevel;
-    const harborSampler = null;
+    const harborSampler: any = null;
     let sampledSeaLevel = currentSeaLevel;
     let harborSampleCount = 0;
     let harbor = null;
@@ -602,9 +642,9 @@ export class Application {
       await playerSystem.initialize();
       this.playerSystem = playerSystem;
 
-      let grassRoot = null;
-      let villagerSystem = null;
-      let atmosphericParticles = null;
+      let grassRoot: any = null;
+      let villagerSystem: any = null;
+      let atmosphericParticles: any = null;
 
       const roadsVisible =
         engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
@@ -621,7 +661,7 @@ export class Application {
         grassRoot = mountGrass(scene);
       }
 
-      let landmarkLoadPromise = Promise.resolve();
+      let landmarkLoadPromise: Promise<any> = Promise.resolve();
       if (ENABLE_GLB_MODE && !FORCE_PROC) {
         const landmarkTasks = [
           (async () => {
@@ -686,23 +726,23 @@ export class Application {
       );
 
       if (roadCurves && roadCurves.length > 0) {
-        villagerSystem = new VillagerSystem(scene, terrain);
+        villagerSystem = new (VillagerSystem as any)(scene, terrain);
         scene.userData = scene.userData || {};
-        scene.userData.villagerSystem = villagerSystem;
+        scene.userData['villagerSystem'] = villagerSystem;
       }
 
       const hillCity = await createHillCity(worldRoot, terrain, mainRoad, {
         seed: 42,
         buildingCount: 140,
         foundationPadMaterial:
-          harborCity?.userData?.foundationPadMaterial ?? null,
+          harborCity?.userData?.['foundationPadMaterial'] ?? null,
       });
       updateLoadingStatus("Raising temples, homes, and harbors...");
 
       applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch(() => {});
 
       updateTerrainCoverageMask(terrain, {
-        buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
+        buildingPlacements: harborCity?.userData?.['buildingPlacements'] ?? [],
         roadCurves: roadCurves ?? [],
         mainRoadCurve: mainRoad ?? null,
         mainRoadWidth: MAIN_ROAD_WIDTH,
@@ -710,7 +750,7 @@ export class Application {
       });
 
       scatterGroundProps(worldRoot, terrain, {
-        buildingPlacements: harborCity?.userData?.buildingPlacements ?? [],
+        buildingPlacements: harborCity?.userData?.['buildingPlacements'] ?? [],
         roadCurves: roadCurves ?? [],
         mainRoadCurve: mainRoad ?? null,
         roadPadding: MAIN_ROAD_WIDTH * 0.7,
@@ -765,7 +805,7 @@ export class Application {
 
       const collectibles = new CollectiblesManager(worldRoot);
 
-      collectibles.onScoreChange = (score, total) => {
+      collectibles.onScoreChange = (score: number, total: number) => {
         scoreContainer.innerText = `Scrolls Found: ${score} / ${total}`;
         if (score === total) {
           scoreContainer.innerText = "ALL WISDOM COLLECTED!";
@@ -785,9 +825,9 @@ export class Application {
       const questManager = new QuestManager();
       const questHud = new QuestHud(questManager);
       const interactionHud = new InteractionHud();
-      const interactionSystem = new InteractionSystem(playerSystem.player.input, camera, scene, interactionHud);
+      const interactionSystem = new InteractionSystem(playerSystem.player?.input as any, camera, scene, interactionHud);
 
-      let interactor = createInteractor(renderer, camera, scene);
+      let interactor: any = createInteractor(renderer, camera, scene);
 
       applyTextureBudgetToObject(scene, { safeMode: true });
 
@@ -804,7 +844,7 @@ export class Application {
       }
       if (ENABLE_GLB_MODE) {
         spawnGLBNPCs(worldRoot, mainRoad, { terrain })
-          .then((glbNpcs) => {
+          .then((glbNpcs: any) => {
             if (!glbNpcs) return;
             if (Array.isArray(glbNpcs.updaters)) {
               this.npcUpdaters.push(...glbNpcs.updaters);
@@ -813,7 +853,7 @@ export class Application {
           .catch(() => {});
       }
 
-      const onFrame = (deltaTime, elapsed) => {
+      const onFrame = (deltaTime: number, elapsed: number) => {
         if (!scene.background || scene.background === null) {
           scene.background = new THREE.Color("#dbe9ff");
         }
@@ -821,13 +861,13 @@ export class Application {
         lightingSystem.update(deltaTime, elapsed, { harbor, harborCity, hillCity, roadGroup, ocean, grassRoot });
         playerSystem.update(deltaTime);
 
-        updateTerrain(terrain, elapsed);
+        (updateTerrain as any)(terrain, elapsed);
 
         if (grassRoot) {
             updateGrass(deltaTime, playerSystem.player?.position ?? null);
         }
 
-        soundscape.update(playerSystem.player?.position);
+        (soundscape as any).update(playerSystem.player?.position);
 
         if (collectibles && playerSystem.player?.object) {
           collectibles.update(deltaTime, playerSystem.player.object.position);
@@ -913,9 +953,9 @@ export class Application {
         }
       };
 
-      const onPin = (p) => {
+      const onPin = (p: any) => {
         const pin = createPin(worldRoot, p);
-        const y = terrain?.userData?.getHeightAt?.(p.x, p.z);
+        const y = terrain?.userData?.['getHeightAt']?.(p.x, p.z);
         if (Number.isFinite(y)) pin.position.y = y;
       };
 
@@ -932,10 +972,10 @@ export class Application {
           getPosition,
           getDirection,
           lightingCallbacks: {
-            onSetLightingPreset: (name) => lightingSystem.applyLookProfile(name, { source: "user" }),
-            lightingPresets: lightingSystem.LIGHTING_PRESETS,
+            onSetLightingPreset: (name: string) => lightingSystem.applyLookProfile(name, { source: "user" }),
+            lightingPresets: (lightingSystem as any).LIGHTING_PRESETS,
             getActivePresetName: () => lightingSystem.lastAppliedLightingPreset,
-            setActivePreset: (name) => lightingSystem.applyLookProfile(name, { source: "user" }),
+            setActivePreset: (name: string) => lightingSystem.applyLookProfile(name, { source: "user" }),
           },
           fogCallbacks: {
             getFogEnabled: () => fogEnabled,
@@ -944,7 +984,7 @@ export class Application {
           sunAlignment: {
             getAzimuthDeg: () => lightingSystem.sunAlignmentState.azimuthDeg,
             getElevationDeg: () => lightingSystem.sunAlignmentState.elevationDeg,
-            onChange: (updates) => lightingSystem.setSunAlignment(updates),
+            onChange: (updates: any) => lightingSystem.setSunAlignment(updates),
           },
           onPin,
         });
@@ -971,7 +1011,7 @@ export class Application {
         );
       }
 
-      renderer.domElement.addEventListener("pointerdown", (event) => {
+      renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
         if (event.button === 0) {
           interactor.useObject();
         }
@@ -983,7 +1023,7 @@ export class Application {
         } else if (event.code === "KeyG" && !event.repeat) {
           toggleFog();
         } else if (event.code === "KeyT" && !event.repeat) {
-            lightingSystem.cycleLightingPreset();
+            (lightingSystem as any).cycleLightingPreset();
         } else if (event.code === "F8" && !event.repeat) {
           const position = playerSystem.player?.object?.position;
           const x = position?.x;
@@ -1004,7 +1044,7 @@ export class Application {
     }
 
   waitForAdvance(target = document.body) {
-    return new Promise((resolve) => {
+    return new Promise<void>((resolve) => {
       let settled = false;
 
       const cleanup = () => {
@@ -1021,7 +1061,7 @@ export class Application {
 
       const onPointerDown = () => settle();
 
-      const onKeyDown = (event) => {
+      const onKeyDown = (event: KeyboardEvent) => {
         if (event.code !== "Space") return;
         event.preventDefault();
         settle();
@@ -1035,7 +1075,7 @@ export class Application {
   cleanUp() {
     if (this.sceneContext) {
       disposeSkybox(this.sceneContext.scene);
-      this.sceneContext.scene.traverse((object) => {
+      this.sceneContext.scene.traverse((object: any) => {
         if (!object.isMesh) return;
 
         if (object.geometry) {
@@ -1044,7 +1084,7 @@ export class Application {
 
         if (object.material) {
           const materials = Array.isArray(object.material) ? object.material : [object.material];
-          materials.forEach((mat) => {
+          materials.forEach((mat: any) => {
             for (const key of Object.keys(mat)) {
               if (mat[key] && mat[key].isTexture) {
                 mat[key].dispose();

@@ -32,6 +32,7 @@
     "src/state/**/*.ts",
     "src/input/**/*.ts",
     "src/ui/**/*.ts",
+    "src/core/**/*.ts",
     // Existing TypeScript entry points that must remain checked regardless of
     // the staged migration scope.
     "src/main.ts",

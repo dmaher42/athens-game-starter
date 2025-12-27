@@ -16,6 +16,19 @@ export interface EngineConfig {
   queryParams?: URLSearchParams;
   featureFlags?: EngineFeatureFlags | null;
   build?: EngineBuildInfo;
+  performance?: {
+    enableGrass?: boolean;
+    roadsVisible?: boolean;
+  };
+  debug?: {
+    overlays?: {
+      devHud?: any;
+      cameraSettings?: any;
+    };
+  };
 }
 
 export const engineConfig: EngineConfig;
+
+export function resolveFeatureToggle(descriptor?: any): boolean;
+export function parseBooleanQuery(key: string, fallback?: boolean): boolean;
