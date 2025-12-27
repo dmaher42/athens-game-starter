@@ -49751,13 +49751,15 @@ async function loadAny(loader2, stem, { isSRGB = false } = {}) {
   const trimmedStem = stem.trim();
   if (!trimmedStem) return null;
   const flatMarble = trimmedStem.replace("marble/basecolor", "marble_base").replace("marble/albedo", "marble_base").replace("marble/normal", "marble_normal-dx").replace("marble/roughness", "marble_rough").replace("marble/ao", "marble_ao");
+  const albedoVariant = trimmedStem.replace("basecolor", "albedo").replace("gravel/", "gravel_path-");
+  const useAlbedoVariant = albedoVariant !== trimmedStem && !(flatMarble !== trimmedStem && albedoVariant.includes("textures/marble/"));
   const variants = Array.from(
     new Set(
       [
-        // Prioritize flat marble paths (e.g. textures/marble_base) to avoid 404s on directory paths
-        ...flatMarble !== trimmedStem ? [flatMarble] : [],
-        trimmedStem,
-        trimmedStem.replace("basecolor", "albedo").replace("gravel/", "gravel_path-"),
+        // Prioritize flat marble paths (e.g. textures/marble_base) and skip directory stems
+        // to prevent avoidable 404s on nonexistent marble/* files.
+        ...flatMarble !== trimmedStem ? [flatMarble] : [trimmedStem],
+        useAlbedoVariant ? albedoVariant : null,
         // Fallback for missing gravel textures: reuse marble_base
         trimmedStem.includes("textures/gravel") ? "textures/marble_base" : null
       ].filter(Boolean)
@@ -50341,7 +50343,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CxcNML8O.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CvBvD2Vv.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50852,7 +50854,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-YERWXf8n.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DDEW-Snv.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51644,7 +51646,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CxcNML8O.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CvBvD2Vv.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -65201,8 +65203,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T01:28:02.244Z" : "",
-      sha: true ? "b7cdfb174afc05adbaa73f1ac78c34f7775dc2c2" : ""
+      time: true ? "2025-12-27T01:39:13.824Z" : "",
+      sha: true ? "20bcb8ef8c431afe17fdca0810ec8ae8547b6ba3" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -75939,4 +75941,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BLPLJDv3.js.map
+//# sourceMappingURL=index-1E6B3wNb.js.map
