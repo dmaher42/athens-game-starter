@@ -72,6 +72,8 @@ function loadTextureWithFallback(url, options, fallbackFactory) {
         fallbackTexture.format = loadedTexture.format;
         fallbackTexture.type = loadedTexture.type;
         fallbackTexture.colorSpace = loadedTexture.colorSpace;
+        // Fix: Turn off isDataTexture since it's now an image-backed texture
+        fallbackTexture.isDataTexture = false;
         fallbackTexture.needsUpdate = true;
       },
       undefined,
