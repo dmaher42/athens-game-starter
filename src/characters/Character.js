@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { createGLTFLoader, loadGLBWithFallbacks } from '../utils/glbSafeLoader.js';
 import { applyForegroundFogPolicy } from '../utils/materialUtils.js';
 
-const ENABLE_GLB_MODE = false;
+const ENABLE_GLB_MODE = true;
 
 /** @typedef {'Idle' | 'Walk' | 'Run' | 'Swagger' | 'Jump'} AnimName */
 

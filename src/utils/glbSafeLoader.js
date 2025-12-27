@@ -5,7 +5,7 @@ import { createDracoLoader } from "./draco.js";
 import { applyTextureBudgetToObject } from "./textureBudget.js";
 import { joinPath, resolveBaseUrl } from "./baseUrl.js";
 
-const ENABLE_GLB_MODE = false;
+const ENABLE_GLB_MODE = true;
 
 function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";

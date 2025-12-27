@@ -109,7 +109,7 @@ const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
 
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 
-const ENABLE_GLB_MODE = false;
+const ENABLE_GLB_MODE = true;
 
 if (!ENABLE_GLB_MODE) {
   console.log("[glb] GLB mode disabled");
