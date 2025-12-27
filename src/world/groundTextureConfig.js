@@ -24,8 +24,6 @@ const resolveTexturePath = (relativePath) => {
   return `${BASE_URL}${safePath}`;
 };
 
-// Alias for backward compatibility or external snippets
-export const textureUrl = (relativePath) => resolveTexturePath(relativePath);
 
 const SAND_ALBEDO_URL = resolveTexturePath(
   MATERIALS?.sand?.albedo ?? "textures/sand/albedo.jpg"
