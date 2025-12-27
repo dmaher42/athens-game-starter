@@ -100,6 +100,10 @@ export function joinPath(base, rel) {
     return rel;
   }
 
+  if (typeof base === "string" && !base.endsWith("/")) {
+    base = `${base}/`;
+  }
+
   const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
   // To handle base paths that are not full URLs (like /athens-game-starter/),
   // we need a dummy base for the URL constructor.
