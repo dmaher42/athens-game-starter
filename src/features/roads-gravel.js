@@ -1,6 +1,7 @@
 // ---- src/features/roads-gravel.js ----
 import * as THREE from "three";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 
 /**
  * Applies gravel material to road meshes only.
@@ -27,7 +28,9 @@ export async function applyGravelToRoads({ scene, baseUrl, repeat = [24, 24] } =
           base.repeat.set(repeat[0], repeat[1]);
           base.colorSpace = THREE.SRGBColorSpace;
 
-          normal = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
+          const normalUrl = joinPath(resolvedBase, "textures/marble_normal-dx.jpg");
+          normal = await tl.loadAsync(normalUrl);
+          applyNormalMapConvention(normal, normalUrl);
           normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
           normal.repeat.set(repeat[0], repeat[1]);
       } catch (err) {

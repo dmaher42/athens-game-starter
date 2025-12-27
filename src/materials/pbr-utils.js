@@ -9,6 +9,7 @@ import {
   RepeatWrapping,
 } from "three";
 import { MATERIALS } from "./materialRegistry.js";
+import { applyNormalMapConvention } from "./normalMapUtils.js";
 
 const warnedKeys = new Set();
 
@@ -22,6 +23,7 @@ async function loadTexture(loader, url, { isSRGB = false, warnKey } = {}) {
   if (typeof url !== "string" || url.length === 0) return null;
   try {
     const tex = await loader.loadAsync(url);
+    applyNormalMapConvention(tex, url);
     if (tex && isSRGB) {
       tex.colorSpace = SRGBColorSpace;
     }
