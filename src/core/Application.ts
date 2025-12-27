@@ -203,7 +203,7 @@ export class Application {
     this.assetLoader = new AssetLoader({
       baseUrl: this.baseUrl,
       forceProcedural: this.forceProc,
-      districtRuleCandidates: this.districtRuleCandidates,
+      districtRuleCandidates: this.districtRuleCandidates as any,
       enableGlbMode: ENABLE_GLB_MODE,
     });
     this.gameLoop = new GameLoop();
@@ -304,9 +304,9 @@ export class Application {
     attachCrosshair();
     advanceLoadingStage("Listening for the bustle of ancient Athens...");
 
-    let devHud = (this.devHud = null);
-    let ocean = (this.ocean = null);
-    let pendingOceanStatus = (this.pendingOceanStatus = null);
+    let devHud: any = (this.devHud = null);
+    let ocean: any = (this.ocean = null);
+    let pendingOceanStatus: any = (this.pendingOceanStatus = null);
     const FORCE_PROCEDURAL_LANDMARKS = FORCE_PROC;
     let proceduralLandmarkCount = 0;
     let proceduralStatusMessage = FORCE_PROC
@@ -396,7 +396,7 @@ export class Application {
       baseUrl: BASE_URL,
       worldRootName: WORLD_ROOT_NAME_LEGACY,
       onFogChange,
-    });
+    } as any);
     this.sceneContext = sceneContext;
     const {
       scene,
@@ -426,7 +426,7 @@ export class Application {
     const soundscape = new Soundscape(
       scene,
       camera,
-      { getNightFactor: () => lightingSystem.lights.nightFactor },
+      { getNightFactor: () => lightingSystem.lights?.nightFactor ?? 0 },
       {
         harbor: new THREE.Vector3(120, 0, 80),
         agora: AGORA_CENTER_3D,
@@ -434,12 +434,12 @@ export class Application {
       },
     );
     let audioManifestMissing = false;
-    soundscape
+    (soundscape as any)
       .loadManifest("audio/manifest.json")
       .catch(() => {
         audioManifestMissing = true;
       })
-      .then(() => soundscape.initFromManifest("audio/manifest.json"))
+      .then(() => (soundscape as any).initFromManifest("audio/manifest.json"))
       .then(() => soundscape.ensureUserGestureResume())
       .catch(() => {});
     updateLoadingStatus("Sculpting the Attic landscape...");
@@ -471,7 +471,7 @@ export class Application {
       });
     }
     if (!this.ocean) {
-      this.ocean = await createOcean(this.scene, terrain, {
+      this.ocean = await (createOcean as any)(this.scene, terrain, {
         seaLevel,
         radius: oceanRadius,
         horizonOffset: 0,
@@ -540,7 +540,7 @@ export class Application {
     }
 
     const currentSeaLevel = seaLevel;
-    const harborSampler = null;
+    const harborSampler: any = null;
     let sampledSeaLevel = currentSeaLevel;
     let harborSampleCount = 0;
     let harbor = null;
@@ -642,9 +642,9 @@ export class Application {
       await playerSystem.initialize();
       this.playerSystem = playerSystem;
 
-      let grassRoot = null;
-      let villagerSystem = null;
-      let atmosphericParticles = null;
+      let grassRoot: any = null;
+      let villagerSystem: any = null;
+      let atmosphericParticles: any = null;
 
       const roadsVisible =
         engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
@@ -661,7 +661,7 @@ export class Application {
         grassRoot = mountGrass(scene);
       }
 
-      let landmarkLoadPromise = Promise.resolve();
+      let landmarkLoadPromise: Promise<any> = Promise.resolve();
       if (ENABLE_GLB_MODE && !FORCE_PROC) {
         const landmarkTasks = [
           (async () => {
@@ -726,7 +726,7 @@ export class Application {
       );
 
       if (roadCurves && roadCurves.length > 0) {
-        villagerSystem = new VillagerSystem(scene, terrain);
+        villagerSystem = new (VillagerSystem as any)(scene, terrain);
         scene.userData = scene.userData || {};
         scene.userData['villagerSystem'] = villagerSystem;
       }
@@ -825,9 +825,9 @@ export class Application {
       const questManager = new QuestManager();
       const questHud = new QuestHud(questManager);
       const interactionHud = new InteractionHud();
-      const interactionSystem = new InteractionSystem(playerSystem.player.input, camera, scene, interactionHud);
+      const interactionSystem = new InteractionSystem(playerSystem.player?.input as any, camera, scene, interactionHud);
 
-      let interactor = createInteractor(renderer, camera, scene);
+      let interactor: any = createInteractor(renderer, camera, scene);
 
       applyTextureBudgetToObject(scene, { safeMode: true });
 
@@ -861,13 +861,13 @@ export class Application {
         lightingSystem.update(deltaTime, elapsed, { harbor, harborCity, hillCity, roadGroup, ocean, grassRoot });
         playerSystem.update(deltaTime);
 
-        updateTerrain(terrain, elapsed);
+        (updateTerrain as any)(terrain, elapsed);
 
         if (grassRoot) {
             updateGrass(deltaTime, playerSystem.player?.position ?? null);
         }
 
-        soundscape.update(playerSystem.player?.position);
+        (soundscape as any).update(playerSystem.player?.position);
 
         if (collectibles && playerSystem.player?.object) {
           collectibles.update(deltaTime, playerSystem.player.object.position);
@@ -973,7 +973,7 @@ export class Application {
           getDirection,
           lightingCallbacks: {
             onSetLightingPreset: (name: string) => lightingSystem.applyLookProfile(name, { source: "user" }),
-            lightingPresets: lightingSystem.LIGHTING_PRESETS,
+            lightingPresets: (lightingSystem as any).LIGHTING_PRESETS,
             getActivePresetName: () => lightingSystem.lastAppliedLightingPreset,
             setActivePreset: (name: string) => lightingSystem.applyLookProfile(name, { source: "user" }),
           },
@@ -1023,7 +1023,7 @@ export class Application {
         } else if (event.code === "KeyG" && !event.repeat) {
           toggleFog();
         } else if (event.code === "KeyT" && !event.repeat) {
-            lightingSystem.cycleLightingPreset();
+            (lightingSystem as any).cycleLightingPreset();
         } else if (event.code === "F8" && !event.repeat) {
           const position = playerSystem.player?.object?.position;
           const x = position?.x;

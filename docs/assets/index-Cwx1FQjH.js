@@ -50172,7 +50172,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-xJDI2jyT.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Da946Xv5.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50683,7 +50683,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-AmLmGKKE.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CgjMxV1Z.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51476,7 +51476,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-xJDI2jyT.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Da946Xv5.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63668,7 +63668,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T03:13:59.674Z" : "",
+      time: true ? "2025-12-27T03:19:58.118Z" : "",
       sha: true ? "746203a144ddecc5325da090762068c8c1dcf73c" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -74092,7 +74092,7 @@ class Application {
     const soundscape = new Soundscape(
       scene2,
       camera2,
-      { getNightFactor: () => lightingSystem.lights.nightFactor },
+      { getNightFactor: () => lightingSystem.lights?.nightFactor ?? 0 },
       {
         harbor: new Vector3(120, 0, 80),
         agora: AGORA_CENTER_3D,
@@ -74441,7 +74441,7 @@ class Application {
     const questManager = new QuestManager();
     const questHud2 = new QuestHud(questManager);
     const interactionHud2 = new InteractionHud();
-    const interactionSystem = new InteractionSystem(playerSystem.player.input, camera2, scene2, interactionHud2);
+    const interactionSystem = new InteractionSystem(playerSystem.player?.input, camera2, scene2, interactionHud2);
     let interactor = createInteractor(renderer2, camera2, scene2);
     applyTextureBudgetToObject(scene2, { safeMode: true });
     const loop = this.gameLoop;
@@ -74922,4 +74922,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-B4651DIP.js.map
+//# sourceMappingURL=index-Cwx1FQjH.js.map
