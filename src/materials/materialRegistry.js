@@ -35,4 +35,7 @@ export const MATERIALS = {
   stoneFallback: {
     albedo: joinBase(BASE_URL, "textures/marble_base.jpg"),
   },
+  dirt: {
+    albedo: joinBase(BASE_URL, "textures/ground/dirt-albedo.jpg"),
+  },
 };
