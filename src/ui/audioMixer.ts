@@ -28,6 +28,24 @@ export function mountAudioMixer(
     return null;
   }
 
+  const hasGainNode = (node: unknown): node is { gain: { value: number } } =>
+    !!node &&
+    typeof node === "object" &&
+    "gain" in node &&
+    typeof (node as { gain?: unknown }).gain === "object" &&
+    (node as { gain?: { value?: unknown } }).gain?.value !== undefined;
+
+  if (
+    !hasGainNode(soundscape.masterGain) ||
+    !soundscape.bus ||
+    !hasGainNode(soundscape.bus.ambience) ||
+    !hasGainNode(soundscape.bus.voices) ||
+    !hasGainNode(soundscape.bus.effects)
+  ) {
+    console.warn("[AudioMixer] Missing required soundscape nodes; mixer disabled.");
+    return null;
+  }
+
   const key = typeof opts.key === "string" && opts.key.trim().length > 0 ? opts.key : DEFAULT_HOTKEY;
 
   const wrap = document.createElement("div");
