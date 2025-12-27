@@ -43264,26 +43264,26 @@ function joinBase$1(base, relativePath) {
   const safePath = relativePath.replace(/^\/+/, "");
   return `${safeBase}${safePath}`;
 }
-const BASE_URL = resolveBaseUrl$4();
+const BASE_URL$1 = resolveBaseUrl$4();
 const MATERIALS = {
   sand: {
-    albedo: joinBase$1(BASE_URL, "textures/sand/albedo.jpg"),
-    normal: joinBase$1(BASE_URL, "textures/sand/normal_gl.jpg"),
-    arm: joinBase$1(BASE_URL, "textures/sand/arm.jpg")
+    albedo: joinBase$1(BASE_URL$1, "textures/sand/albedo.jpg"),
+    normal: joinBase$1(BASE_URL$1, "textures/sand/normal_gl.jpg"),
+    arm: joinBase$1(BASE_URL$1, "textures/sand/arm.jpg")
   },
   grass: {
-    albedo: joinBase$1(BASE_URL, "textures/grass/albedo.jpg"),
-    normal: joinBase$1(BASE_URL, "textures/grass/normal_dx.jpg"),
-    roughness: joinBase$1(BASE_URL, "textures/grass/roughness.jpg"),
-    metallic: joinBase$1(BASE_URL, "textures/grass/metallic.jpg"),
-    ao: joinBase$1(BASE_URL, "textures/grass/ao.jpg"),
-    height: joinBase$1(BASE_URL, "textures/grass/height.jpg")
+    albedo: joinBase$1(BASE_URL$1, "textures/grass/albedo.jpg"),
+    normal: joinBase$1(BASE_URL$1, "textures/grass/normal_dx.jpg"),
+    roughness: joinBase$1(BASE_URL$1, "textures/grass/roughness.jpg"),
+    metallic: joinBase$1(BASE_URL$1, "textures/grass/metallic.jpg"),
+    ao: joinBase$1(BASE_URL$1, "textures/grass/ao.jpg"),
+    height: joinBase$1(BASE_URL$1, "textures/grass/height.jpg")
   },
   stoneFallback: {
-    albedo: joinBase$1(BASE_URL, "textures/marble_base.jpg")
+    albedo: joinBase$1(BASE_URL$1, "textures/marble_base.jpg")
   },
   dirt: {
-    albedo: joinBase$1(BASE_URL, "textures/ground/dirt-albedo.jpg")
+    albedo: joinBase$1(BASE_URL$1, "textures/ground/dirt-albedo.jpg")
   }
 };
 const SAND_MAX_ELEV = 3;
@@ -43294,14 +43294,14 @@ function resolveBaseUrl$3() {
   const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true ? "/athens-game-starter/" : "/";
   return base.endsWith("/") ? base : `${base}/`;
 }
-function textureUrl(relativePath, fallback) {
-  if (typeof fallback === "string") {
-    return fallback;
-  }
-  const baseUrl2 = resolveBaseUrl$3();
+const BASE_URL = resolveBaseUrl$3();
+const resolveTexturePath = (relativePath) => {
   const safePath = relativePath.replace(/^\/+/, "");
-  return `${baseUrl2}${safePath}`;
-}
+  return `${BASE_URL}${safePath}`;
+};
+const SAND_ALBEDO_URL = typeof MATERIALS.sand.albedo === "string" ? MATERIALS.sand.albedo : resolveTexturePath("textures/sand/albedo.jpg");
+const GRASS_ALBEDO_URL = typeof MATERIALS.grass.albedo === "string" ? MATERIALS.grass.albedo : resolveTexturePath("textures/grass/albedo.jpg");
+const DIRT_ALBEDO_URL = typeof MATERIALS.dirt.albedo === "string" ? MATERIALS.dirt.albedo : resolveTexturePath("textures/ground/dirt-albedo.jpg");
 const NEUTRAL_GROUND_FALLBACK_TINT = {
   baseColor: [150, 152, 160],
   shadowColor: [112, 118, 128],
@@ -43316,7 +43316,7 @@ const GROUND_TEXTURE_CONFIG = {
    */
   base: {
     // Swap the entire ground to our sand atlas.
-    url: textureUrl("textures/sand/albedo.jpg", MATERIALS.sand.albedo),
+    url: SAND_ALBEDO_URL,
     colorSpace: "srgb",
     repeat: [28, 24],
     rotation: 0.03,
@@ -43332,13 +43332,13 @@ const GROUND_TEXTURE_CONFIG = {
     enabled: true,
     // Use grass texture for inland areas
     grass: {
-      url: textureUrl("textures/grass/albedo.jpg", MATERIALS.grass.albedo),
+      url: GRASS_ALBEDO_URL,
       colorSpace: "srgb",
       repeat: [28, 24]
     },
     // Use sand as "dirt" texture so beach effect shows sand
     dirt: {
-      url: textureUrl("textures/sand/albedo.jpg", MATERIALS.sand.albedo),
+      url: SAND_ALBEDO_URL,
       colorSpace: "srgb",
       repeat: [28, 24]
     },
@@ -43351,7 +43351,7 @@ const GROUND_TEXTURE_CONFIG = {
     // No mask, rely on beach height
     // Stone for steep slopes (optional, can disable if not needed)
     stone: {
-      url: textureUrl("textures/ground/dirt-albedo.jpg", MATERIALS.dirt.albedo),
+      url: DIRT_ALBEDO_URL,
       tint: [0.6, 0.6, 0.6],
       repeat: [14, 12]
     },
@@ -50189,7 +50189,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CPRtfEnx.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DDgcXfLx.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50700,7 +50700,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DxFAMGrN.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DaL5OZGC.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51493,7 +51493,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CPRtfEnx.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DDgcXfLx.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63685,8 +63685,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T09:49:22.644Z" : "",
-      sha: true ? "728a665969d6c4010c1f7bd7696eaa77e9632b64" : ""
+      time: true ? "2025-12-27T09:56:17.642Z" : "",
+      sha: true ? "2f52c50274d297c6d3fce97edd98145233a604de" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74939,4 +74939,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-Bz_3CDjr.js.map
+//# sourceMappingURL=index-ChtgIDmL.js.map
