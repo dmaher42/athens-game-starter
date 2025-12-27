@@ -5,7 +5,7 @@ import { createDracoLoader } from "./draco.js";
 import { applyTextureBudgetToObject } from "./textureBudget.js";
 import { joinPath, resolveBaseUrl } from "./baseUrl.js";
 
-const ENABLE_GLB_MODE = false;
+const ENABLE_GLB_MODE = true;
 
 function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
@@ -52,6 +52,25 @@ async function headOk(url) {
   if (!url) return false;
   try {
     const res = await fetch(url, { method: "HEAD" });
+    if (!res.ok) {
+      if (res.status === 405 || res.status === 501) {
+        return await probeWithGet(url);
+      }
+      return false;
+    }
+    const contentType = res.headers?.get?.("content-type") || "";
+    return !contentType.toLowerCase().includes("text/html");
+  } catch {
+    return await probeWithGet(url);
+  }
+}
+
+async function probeWithGet(url) {
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { Range: "bytes=0-0" },
+    });
     if (!res.ok) return false;
     const contentType = res.headers?.get?.("content-type") || "";
     return !contentType.toLowerCase().includes("text/html");

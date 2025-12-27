@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createGLTFLoader } from '../utils/glbSafeLoader.js';
 
-const ENABLE_GLB_MODE = false;
+const ENABLE_GLB_MODE = true;
 
 const BUILDINGS_ROOT_NAME = 'BuildingsRoot';
 
