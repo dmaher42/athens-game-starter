@@ -5,8 +5,26 @@ import { MATERIALS } from "../materials/materialRegistry.js";
 import {
   GRASS_MIN_ELEV,
   SAND_MAX_ELEV,
-  SLOPE_ROCK_MIN,
 } from "../config/terrainMaterials.js";
+
+function resolveBaseUrl() {
+  const base =
+    typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    typeof import.meta.env.BASE_URL === "string"
+      ? import.meta.env.BASE_URL
+      : "/";
+  return base.endsWith("/") ? base : `${base}/`;
+}
+
+function textureUrl(relativePath, fallback) {
+  if (typeof fallback === "string") {
+    return fallback;
+  }
+  const baseUrl = resolveBaseUrl();
+  const safePath = relativePath.replace(/^\/+/, "");
+  return `${baseUrl}${safePath}`;
+}
 
 // PRESERVED EXPORT: Required by src/world/groundTextures.js
 export const NEUTRAL_GROUND_FALLBACK_TINT = {
@@ -48,7 +66,7 @@ export const GROUND_TEXTURE_CONFIG = {
    */
   base: {
     // Swap the entire ground to our sand atlas.
-    url: MATERIALS.sand.albedo,
+    url: textureUrl("textures/sand/albedo.jpg", MATERIALS.sand.albedo),
     colorSpace: "srgb",
     repeat: [28, 24],
     rotation: 0.03,
@@ -66,14 +84,14 @@ export const GROUND_TEXTURE_CONFIG = {
     
     // Use grass texture for inland areas
     grass: {
-      url: MATERIALS.grass.albedo,
+      url: textureUrl("textures/grass/albedo.jpg", MATERIALS.grass.albedo),
       colorSpace: "srgb",
       repeat: [28, 24],
     },
 
     // Use sand as "dirt" texture so beach effect shows sand
     dirt: {
-      url: MATERIALS.sand.albedo,
+      url: textureUrl("textures/sand/albedo.jpg", MATERIALS.sand.albedo),
       colorSpace: "srgb",
       repeat: [28, 24],
     },
@@ -85,7 +103,7 @@ export const GROUND_TEXTURE_CONFIG = {
 
     // Stone for steep slopes (optional, can disable if not needed)
     stone: {
-      url: MATERIALS.dirt.albedo,
+      url: textureUrl("textures/ground/dirt-albedo.jpg", MATERIALS.dirt.albedo),
       tint: [0.6, 0.6, 0.6],
       repeat: [14, 12],
     },
