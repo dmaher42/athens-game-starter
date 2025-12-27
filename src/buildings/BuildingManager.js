@@ -71,16 +71,15 @@ export class BuildingManager {
 
   /**
    * @param {string} url
-   * @param {{
-   *   position?: THREE.Vector3,
-   *   scale?: number,
-   *   rotateY?: number,
-   *   collision?: boolean,
-   *   parent?: THREE.Object3D,
-   *   heightSampler?: (x: number, z: number) => number,
-   *   terrainSampler?: (x: number, z: number) => number,
-   *   terrain?: THREE.Object3D,
-   * }} [options]
+   * @param {Object} [options]
+   * @param {THREE.Vector3} [options.position]
+   * @param {number} [options.scale]
+   * @param {number} [options.rotateY]
+   * @param {boolean} [options.collision]
+   * @param {THREE.Object3D} [options.parent]
+   * @param {function(number, number)} [options.heightSampler]
+   * @param {function(number, number)} [options.terrainSampler]
+   * @param {THREE.Object3D} [options.terrain]
    */
   async loadBuilding(url, options) {
     if (!ENABLE_GLB_MODE) return null;

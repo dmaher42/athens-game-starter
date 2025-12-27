@@ -1,12 +1,5 @@
 import * as THREE from 'three';
 
-/**
- * @typedef {Object} InteractableConfig
- * @property {string} label - The label to display on the HUD (e.g. "Interact")
- * @property {number} distance - Max distance to interact (default 3.0)
- * @property {() => void} onInteract - Callback when interaction happens
- */
-
 export class InteractionSystem {
   /**
    * @param {import('../input/InputMap').InputMap} input

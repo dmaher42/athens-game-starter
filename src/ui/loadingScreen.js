@@ -1,9 +1,5 @@
 // @ts-check
 
-/**
- * @typedef {import("@app/types").LoadingScreenOptions} LoadingScreenOptions
- */
-
 const STYLE_ID = "athens-loading-style";
 const ROOT_ID = "athens-loading-screen";
 const FACT_INTERVAL_MS = 6000;
@@ -217,7 +213,7 @@ function startFactRotation() {
 }
 
 /**
- * @param {LoadingScreenOptions["facts"]} customFacts
+ * @param {string[]} customFacts
  */
 function ensureFactList(customFacts) {
   if (Array.isArray(customFacts) && customFacts.length) {
@@ -241,7 +237,9 @@ function ensureFactList(customFacts) {
 }
 
 /**
- * @param {LoadingScreenOptions} [options]
+ * @param {Object} [options]
+ * @param {string[]} [options.facts]
+ * @param {string} [options.initialStatus]
  */
 export function showLoadingScreen({ facts: customFacts, initialStatus } = {}) {
   if (typeof document === "undefined") {

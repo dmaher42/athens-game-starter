@@ -59,7 +59,8 @@ export class EnvironmentCollider {
 
   /**
    * @param {THREE.Object3D} root
-   * @param {{ debug?: boolean }} [opts]
+   * @param {Object} [opts]
+   * @param {boolean} [opts.debug]
    */
   fromStaticScene(root, opts = {}) {
     const source =
@@ -181,7 +182,7 @@ export class EnvironmentCollider {
 
   /**
    * @param {import('three/examples/jsm/math/Capsule.js').Capsule} capsule
-   * @returns {{ normal: THREE.Vector3, depth: number } | null}
+   * @returns {Object|null} hit result with normal and depth properties
    */
   capsuleIntersect(capsule) {
     const geometry = this.mesh.geometry;
