@@ -1,5 +1,6 @@
 // src/materials/pbr-utils.js
 // Minimal, dependency-free helpers for PBR textures (safe if assets are missing).
+// Uses explicit registry URLs to avoid HEAD/extension probing and reduce 404 spam.
 
 import {
   TextureLoader,
@@ -7,121 +8,52 @@ import {
   MeshStandardMaterial,
   RepeatWrapping,
 } from "three";
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import { MATERIALS } from "./materialRegistry.js";
+import { applyNormalMapConvention } from "./normalMapUtils.js";
 
-function sanitizeRelativePath(value) {
-  if (typeof value !== "string") return "";
-  return value
-    .trim()
-    .replace(/^public\//i, "")
-    .replace(/^docs\//i, "")
-    .replace(/^\/+/, "")
-    .replace(/^athens-game-starter\//i, "")
-    .replace(/^\.\//,"")
-    .replace(/^\/+/, "");
+const warnedKeys = new Set();
+
+function warnOnce(key, message) {
+  if (warnedKeys.has(key)) return;
+  warnedKeys.add(key);
+  console.warn(message);
 }
 
-const headCache = new Map();
-
-/** HEAD-check a URL (returns true/false; never throws) */
-export async function urlExists(url) {
-  if (typeof url !== "string" || url.length === 0) return false;
-  if (headCache.has(url)) {
-    return headCache.get(url);
-  }
+async function loadTexture(loader, url, { isSRGB = false, warnKey } = {}) {
+  if (typeof url !== "string" || url.length === 0) return null;
   try {
-    const res = await fetch(url, { method: "HEAD" });
-    const ok = res.ok && !(res.headers.get("content-type") || "").includes("text/html");
-    headCache.set(url, ok);
-    return ok;
-  } catch {
-    headCache.set(url, false);
-    return false;
-  }
-}
-
-/** Load a texture if present; returns null if 404/missing */
-async function loadAny(loader, stem, { isSRGB = false } = {}) {
-  if (typeof stem !== "string" || stem.length === 0) return null;
-  const trimmedStem = stem.trim();
-  if (!trimmedStem) return null;
-  const flatMarble = trimmedStem
-    .replace("marble/basecolor", "marble_base")
-    .replace("marble/albedo", "marble_base")
-    .replace("marble/normal", "marble_normal-dx")
-    .replace("marble/roughness", "marble_rough")
-    .replace("marble/ao", "marble_ao");
-
-  const albedoVariant = trimmedStem
-    .replace("basecolor", "albedo")
-    .replace("gravel/", "gravel_path-");
-  const useAlbedoVariant =
-    albedoVariant !== trimmedStem &&
-    !(flatMarble !== trimmedStem && albedoVariant.includes("textures/marble/"));
-
-  const variants = Array.from(
-    new Set(
-      [
-        // Prioritize flat marble paths (e.g. textures/marble_base) and skip directory stems
-        // to prevent avoidable 404s on nonexistent marble/* files.
-        ...(flatMarble !== trimmedStem ? [flatMarble] : [trimmedStem]),
-        useAlbedoVariant ? albedoVariant : null,
-        // Fallback for missing gravel textures: reuse marble_base
-        trimmedStem.includes("textures/gravel")
-          ? "textures/marble_base"
-          : null,
-      ].filter(Boolean)
-    )
-  );
-  // Prefer formats we actually ship (currently JPEG), but still allow WebP/PNG fallbacks.
-  const exts = ["jpg", "webp", "png"];
-  const baseUrl = resolveBaseUrl();
-  for (const variant of variants) {
-    const variantStem = typeof variant === "string" ? variant.trim() : "";
-    if (!variantStem) continue;
-    const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(variantStem) || variantStem.startsWith("data:");
-    for (const ext of exts) {
-      const candidateStem = `${variantStem}.${ext}`;
-      if (!isAbsolute) {
-        const relativeCandidate = sanitizeRelativePath(candidateStem);
-        if (!relativeCandidate) {
-          continue;
-        }
-        const url = joinPath(baseUrl, relativeCandidate);
-        if (!(await urlExists(url))) continue;
-        const tex = await loader.loadAsync(url);
-        if (tex && isSRGB) {
-          tex.colorSpace = SRGBColorSpace;
-        }
-        if (tex) {
-          return tex;
-        }
-        continue;
-      }
-      const url = candidateStem;
-      if (!(await urlExists(url))) continue;
-      const tex = await loader.loadAsync(url);
-      if (tex && isSRGB) {
-        tex.colorSpace = SRGBColorSpace;
-      }
-      if (tex) {
-        return tex;
-      }
+    const tex = await loader.loadAsync(url);
+    applyNormalMapConvention(tex, url);
+    if (tex && isSRGB) {
+      tex.colorSpace = SRGBColorSpace;
     }
+    return tex;
+  } catch (error) {
+    if (warnKey) {
+      warnOnce(warnKey, `[pbr-utils] Texture load failed for ${warnKey}: ${url}`);
+    }
+    return null;
   }
-  return null;
 }
 
 /** Build a MeshStandardMaterial from available maps (base color required) */
-export async function makeMarblePBR(basePath) {
+export async function makeMarblePBR() {
   const tl = new TextureLoader();
-
-  const baseColor = await loadAny(tl, joinPath(basePath, "basecolor"), { isSRGB: true });
+  const baseColor = await loadTexture(tl, MATERIALS.stoneFallback?.albedo, {
+    isSRGB: true,
+    warnKey: "stoneFallback.albedo",
+  });
   if (!baseColor) return null; // nothing to do
 
-  const normal = await loadAny(tl, joinPath(basePath, "normal"));
-  const roughness = await loadAny(tl, joinPath(basePath, "roughness"));
-  const ao = await loadAny(tl, joinPath(basePath, "ao"));
+  const normal = await loadTexture(tl, MATERIALS.stoneFallback?.normal, {
+    warnKey: "stoneFallback.normal",
+  });
+  const roughness = await loadTexture(tl, MATERIALS.stoneFallback?.roughness, {
+    warnKey: "stoneFallback.roughness",
+  });
+  const ao = await loadTexture(tl, MATERIALS.stoneFallback?.ao, {
+    warnKey: "stoneFallback.ao",
+  });
 
   return new MeshStandardMaterial({
     map: baseColor,
@@ -134,15 +66,24 @@ export async function makeMarblePBR(basePath) {
 }
 
 /** Tiled PBR builder with repeat + polygonOffset-friendly params */
-export async function makeTiledPBR(basePath, repeat = [6, 6]) {
+export async function makeTiledPBR(_basePath, repeat = [6, 6]) {
   const tl = new TextureLoader();
 
-  const base = await loadAny(tl, joinPath(basePath, "basecolor"), { isSRGB: true });
+  const base = await loadTexture(tl, MATERIALS.stoneFallback?.albedo, {
+    isSRGB: true,
+    warnKey: "stoneFallback.albedo",
+  });
   if (!base) return null;
 
-  const normal = await loadAny(tl, joinPath(basePath, "normal"));
-  const roughness = await loadAny(tl, joinPath(basePath, "roughness"));
-  const ao = await loadAny(tl, joinPath(basePath, "ao"));
+  const normal = await loadTexture(tl, MATERIALS.stoneFallback?.normal, {
+    warnKey: "stoneFallback.normal",
+  });
+  const roughness = await loadTexture(tl, MATERIALS.stoneFallback?.roughness, {
+    warnKey: "stoneFallback.roughness",
+  });
+  const ao = await loadTexture(tl, MATERIALS.stoneFallback?.ao, {
+    warnKey: "stoneFallback.ao",
+  });
 
   // Set tiling on any map we loaded
   const maps = [base, normal, roughness, ao].filter(Boolean);

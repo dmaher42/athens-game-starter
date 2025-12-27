@@ -6,6 +6,7 @@ import {
   ACROPOLIS_RADIUS,
 } from "./locations.js";
 import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
+import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 
 const textureLoader = new THREE.TextureLoader();
 let marbleTextures = null;
@@ -21,9 +22,10 @@ function loadMarbleTextures() {
   diffuse.wrapS = diffuse.wrapT = THREE.RepeatWrapping;
   diffuse.colorSpace = THREE.SRGBColorSpace;
   
-  const normal = textureLoader.load(
-    joinPath(baseUrl, "textures/marble_normal-dx.jpg"),
-  );
+  const normalUrl = joinPath(baseUrl, "textures/marble_normal-dx.jpg");
+  const normal = textureLoader.load(normalUrl, (texture) => {
+    applyNormalMapConvention(texture, normalUrl);
+  });
   normal.wrapS = normal.wrapT = THREE.RepeatWrapping;
   normal.colorSpace = THREE.NoColorSpace;
   
