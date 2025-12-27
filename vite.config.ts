@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
-  base: "/athens-game-starter/",
+  base: "/",
   resolve: {
     alias: {
       "@app/types": fileURLToPath(new URL("./src/types", import.meta.url)),
