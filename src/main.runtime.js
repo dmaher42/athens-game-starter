@@ -2,6 +2,7 @@ import "./materials/enhanceStandardMaterial.js";
 
 import { Application } from "./core/Application.js";
 import { engineConfig } from "./config/EngineConfig.js";
+import { runTextureAssetCheck } from "./debug/assetChecks.js";
 import { showLoadingError } from "./ui/loadingScreen.js";
 import { IS_DEV } from "./utils/env.js";
 
@@ -90,6 +91,11 @@ export const defaultBootHandlers = {
 export function bootApplication(handlers = defaultBootHandlers) {
   const onSuccess = handlers?.onSuccess ?? defaultBootHandlers.onSuccess;
   const onError = handlers?.onError ?? defaultBootHandlers.onError;
+
+  const debugAssets =
+    IS_DEV ||
+    applicationBootConfig.queryParams?.get("debugAssets") === "1";
+  void runTextureAssetCheck({ debugAssets });
 
   return runApplication()
     .then((result) => {

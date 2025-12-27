@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
+import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { createProceduralMarbleTextures } from "../core/AssetLoader.js";
 
 function createSolidDataTexture(
@@ -74,6 +75,7 @@ async function loadTextureCandidate({ baseUrl, candidate, colorSpace }) {
   if (!url) return null;
   try {
     const texture = await marbleTextureLoader.loadAsync(url);
+    applyNormalMapConvention(texture, url);
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.anisotropy = 8;
     texture.colorSpace = colorSpace;
