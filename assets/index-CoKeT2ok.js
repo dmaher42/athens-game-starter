@@ -50203,7 +50203,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-v5WgprpF.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D5G8pCKe.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50692,7 +50692,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BnD5BN4K.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C-pJF-nO.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51485,7 +51485,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-v5WgprpF.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D5G8pCKe.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -62084,6 +62084,11 @@ function mountAudioMixer(soundscape, opts = {}) {
   if (!soundscape || typeof document === "undefined") {
     return null;
   }
+  const hasGainNode = (node) => !!node && typeof node === "object" && "gain" in node && typeof node.gain === "object" && node.gain?.value !== void 0;
+  if (!hasGainNode(soundscape.masterGain) || !soundscape.bus || !hasGainNode(soundscape.bus.ambience) || !hasGainNode(soundscape.bus.voices) || !hasGainNode(soundscape.bus.effects)) {
+    console.warn("[AudioMixer] Missing required soundscape nodes; mixer disabled.");
+    return null;
+  }
   const key = typeof opts.key === "string" && opts.key.trim().length > 0 ? opts.key : DEFAULT_HOTKEY;
   const wrap = document.createElement("div");
   Object.assign(wrap.style, {
@@ -63644,8 +63649,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T22:29:48.035Z" : "",
-      sha: true ? "4d2ddff1a8f0e6d93096c251622f92ca2a37705d" : ""
+      time: true ? "2025-12-27T22:46:06.019Z" : "",
+      sha: true ? "041fff94e5ec8daed521e9dc88cc0ac13a8d345d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74903,4 +74908,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DeOs2_9s.js.map
+//# sourceMappingURL=index-CoKeT2ok.js.map
