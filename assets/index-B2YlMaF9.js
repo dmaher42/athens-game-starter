@@ -42279,6 +42279,54 @@ class Soundscape {
     this.camera = camera2;
     this.lightingRef = lightingRef;
     this.anchors = anchors;
+    this.listener = null;
+    this.loader = null;
+    this.masterGain = null;
+    this.bus = null;
+    this._audioInitialized = false;
+    this._zoneTrackConfigs = /* @__PURE__ */ new Map();
+    this.buffers = /* @__PURE__ */ new Map();
+    this.emitters = [];
+    this.oneShotTimers = [];
+    this.pendingSources = /* @__PURE__ */ new Set();
+    this.ready = false;
+    this.manifestLoaded = false;
+    this._manifest = null;
+    this.zoneAmbience = null;
+    const BASE = resolveBaseUrl$5();
+    this._registerZoneTrack("harbor", {
+      label: "Ocean Waves",
+      url: joinPath(BASE, "audio/ocean_waves.mp3"),
+      noiseOptions: { duration: 2, amplitude: 0.08 },
+      filter: { type: "lowpass", frequency: 600 }
+    });
+    this._registerZoneTrack("city", {
+      label: "Crowd Murmur",
+      url: joinPath(BASE, "audio/ambient_sea.ogg"),
+      noiseOptions: { duration: 2, amplitude: 0.06 },
+      filter: { type: "bandpass", frequency: 450 }
+    });
+    this._registerZoneTrack("wind", {
+      label: "Wind",
+      url: "",
+      noiseOptions: { duration: 2, amplitude: 0.05 },
+      filter: { type: "highpass", frequency: 300 }
+    });
+    this.zones = {
+      harbor: { pos: anchors.harbor, radius: 50 },
+      agora: { pos: anchors.agora, radius: 40 },
+      acropolis: { pos: anchors.acropolis, radius: 40 }
+    };
+    this.mode = null;
+  }
+  _registerZoneTrack(key, config) {
+    this._zoneTrackConfigs.set(key, config || {});
+    if (this.zoneAmbience) {
+      this.zoneAmbience.registerTrack(key, config || {});
+    }
+  }
+  _initAudioGraph() {
+    if (this._audioInitialized) return;
     this.listener = new AudioListener();
     this.camera.add(this.listener);
     this.loader = new AudioLoader();
@@ -42297,46 +42345,19 @@ class Soundscape {
     this.bus.ambience.connect(this.masterGain);
     this.bus.voices.connect(this.masterGain);
     this.bus.effects.connect(this.masterGain);
-    this.buffers = /* @__PURE__ */ new Map();
-    this.emitters = [];
-    this.oneShotTimers = [];
-    this.pendingSources = /* @__PURE__ */ new Set();
-    this.ready = false;
-    this.manifestLoaded = false;
-    this._manifest = null;
     this.zoneAmbience = new ZoneAmbienceManager(
       this.listener,
       (name, url) => this.loadBuffer(name, url),
       this.bus.ambience
     );
-    const BASE = resolveBaseUrl$5();
-    this.zoneAmbience.registerTrack("harbor", {
-      label: "Ocean Waves",
-      url: joinPath(BASE, "audio/ocean_waves.mp3"),
-      noiseOptions: { duration: 2, amplitude: 0.08 },
-      filter: { type: "lowpass", frequency: 600 }
-    });
-    this.zoneAmbience.registerTrack("city", {
-      label: "Crowd Murmur",
-      url: joinPath(BASE, "audio/ambient_sea.ogg"),
-      noiseOptions: { duration: 2, amplitude: 0.06 },
-      filter: { type: "bandpass", frequency: 450 }
-    });
-    this.zoneAmbience.registerTrack("wind", {
-      label: "Wind",
-      url: joinPath(BASE, "audio/wind.mp3"),
-      noiseOptions: { duration: 2, amplitude: 0.05 },
-      filter: { type: "highpass", frequency: 300 }
-    });
-    this.zones = {
-      harbor: { pos: anchors.harbor, radius: 50 },
-      agora: { pos: anchors.agora, radius: 40 },
-      acropolis: { pos: anchors.acropolis, radius: 40 }
-    };
-    this.mode = null;
+    for (const [key, config] of this._zoneTrackConfigs.entries()) {
+      this.zoneAmbience.registerTrack(key, config);
+    }
+    this._audioInitialized = true;
   }
   _safePlay(source) {
     if (!source) return;
+    if (!this.listener) return;
     if (this.listener.context.state === "running") {
       source.play();
     } else {
@@ -42349,6 +42370,7 @@ class Soundscape {
   }
   async loadBuffer(name, url) {
     if (!url) return null;
+    if (!this.loader) return null;
     if (name === "agora" || url.includes("ambience_agora.mp3")) {
       return null;
     }
@@ -42366,7 +42388,7 @@ class Soundscape {
     }
   }
   _makePositional(buffer, position, group = "ambience", { loop = true, volume = 0.6, refDistance = 12, maxDistance = 80, rolloff = 1 } = {}) {
-    if (!buffer) return null;
+    if (!buffer || !this.listener) return null;
     const src = new PositionalAudio(this.listener);
     src.setBuffer(buffer);
     src.setLoop(loop);
@@ -42395,7 +42417,7 @@ class Soundscape {
     return src;
   }
   _makeGlobal(buffer, group = "ambience", { loop = true, volume = 0.3 } = {}) {
-    if (!buffer) return null;
+    if (!buffer || !this.listener) return null;
     const src = new Audio(this.listener);
     src.setBuffer(buffer);
     src.setLoop(loop);
@@ -42603,7 +42625,7 @@ class Soundscape {
    * @param {THREE.Vector3} playerPos  (optional, for future distance-based mixing)
    */
   update(playerPos) {
-    if (!this.ready) return;
+    if (!this.ready || !this.bus) return;
     const nightPreference = this.mode === "night" ? 1 : this.mode === "day" ? 0 : null;
     const night = nightPreference ?? (this.lightingRef?.getNightFactor?.() ?? 0);
     const lerp2 = (a, b, t) => a + (b - a) * t;
@@ -42635,12 +42657,22 @@ class Soundscape {
     this.zoneAmbience.updateFades();
   }
   async ensureUserGestureResume() {
-    const ctx = this.listener.context;
-    if (ctx.state === "running") return;
     const resume = async () => {
-      try {
-        await ctx.resume();
-      } catch {
+      if (!this._audioInitialized) {
+        this._initAudioGraph();
+      }
+      const ctx = this.listener?.context;
+      if (ctx && ctx.state !== "running") {
+        try {
+          await ctx.resume();
+        } catch {
+        }
+      }
+      if (!this.ready) {
+        try {
+          await this.initFromManifest();
+        } catch {
+        }
       }
       for (const src of this.pendingSources) {
         try {
@@ -42651,9 +42683,11 @@ class Soundscape {
       this.pendingSources.clear();
       window.removeEventListener("pointerdown", resume);
       window.removeEventListener("keydown", resume);
+      window.removeEventListener("touchstart", resume);
     };
-    window.addEventListener("pointerdown", resume);
-    window.addEventListener("keydown", resume);
+    window.addEventListener("pointerdown", resume, { once: true });
+    window.addEventListener("keydown", resume, { once: true });
+    window.addEventListener("touchstart", resume, { once: true });
   }
   dispose() {
     this.emitters.forEach(({ obj, src }) => {
@@ -43778,14 +43812,37 @@ function configureTexture(texture, options = {}) {
     } catch (e) {
     }
   }
-  texture.needsUpdate = true;
+  const hasPixelData = Boolean(
+    texture.isDataTexture || texture.isCanvasTexture || texture.isCompressedTexture || texture.image
+  );
+  if (hasPixelData) {
+    texture.needsUpdate = true;
+  }
 }
 function loadTexture$1(url, options, onError) {
   try {
-    const texture = textureLoader$2.load(
+    const fallbackData = new Uint8Array([255, 255, 255, 255]);
+    const placeholder = new DataTexture(
+      fallbackData,
+      1,
+      1,
+      RGBAFormat
+    );
+    if (options?.colorSpace === "srgb") {
+      placeholder.colorSpace = SRGBColorSpace;
+    } else if (options?.colorSpace === "linear") {
+      placeholder.colorSpace = LinearSRGBColorSpace;
+    }
+    configureTexture(placeholder, options);
+    textureLoader$2.load(
       url,
-      () => {
-        configureTexture(texture, options);
+      (loadedTexture) => {
+        if (!loadedTexture?.image) return;
+        placeholder.image = loadedTexture.image;
+        placeholder.format = loadedTexture.format;
+        placeholder.type = loadedTexture.type;
+        placeholder.colorSpace = loadedTexture.colorSpace;
+        configureTexture(placeholder, options);
       },
       void 0,
       (event) => {
@@ -43793,7 +43850,7 @@ function loadTexture$1(url, options, onError) {
         if (onError) onError(event);
       }
     );
-    return texture;
+    return placeholder;
   } catch (error) {
     console.warn(`Failed to load ground texture: ${url}`, error);
     if (onError) onError(error);
@@ -46246,7 +46303,12 @@ function configureWaterNormalsTexture(texture) {
   if ("colorSpace" in texture && LinearSRGBColorSpace !== void 0) {
     texture.colorSpace = LinearSRGBColorSpace;
   }
-  texture.needsUpdate = true;
+  const hasPixelData = Boolean(
+    texture.isDataTexture || texture.isCanvasTexture || texture.isCompressedTexture || texture.image
+  );
+  if (hasPixelData) {
+    texture.needsUpdate = true;
+  }
 }
 function loadWaterNormalsTexture(url) {
   return new Promise((resolve, reject) => {
@@ -46268,7 +46330,6 @@ function loadWaterNormalsTexture(url) {
           reject(error);
         }
       );
-      configureWaterNormalsTexture(texture);
     } catch (error) {
       reject(error);
     }
@@ -50195,7 +50256,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-XZfBys.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BtzFojwP.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50706,7 +50767,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BevPKL4e.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DvsVObzH.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51499,7 +51560,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-XZfBys.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BtzFojwP.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63695,8 +63756,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T11:51:59.788Z" : "",
-      sha: true ? "17dee5e9bd1d4be34f8207b780a779367cc17846" : ""
+      time: true ? "2025-12-27T12:06:40.234Z" : "",
+      sha: true ? "02ece990a1afad0b234e7002089c6736bd7e0bdd" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74127,9 +74188,14 @@ class Application {
       }
     );
     let audioManifestMissing = false;
-    soundscape.loadManifest("audio/manifest.json").catch(() => {
+    soundscape.loadManifest("audio/manifest.json").then((manifest) => {
+      if (!manifest) {
+        audioManifestMissing = true;
+      }
+    }).catch(() => {
       audioManifestMissing = true;
-    }).then(() => soundscape.initFromManifest("audio/manifest.json")).then(() => soundscape.ensureUserGestureResume()).catch(() => {
+    }).finally(() => {
+      soundscape.ensureUserGestureResume();
     });
     updateLoadingStatus("Sculpting the Attic landscape...");
     const terrain = createTerrain(scene2);
@@ -74949,4 +75015,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DsnW1dou.js.map
+//# sourceMappingURL=index-B2YlMaF9.js.map
