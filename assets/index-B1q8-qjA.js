@@ -46521,6 +46521,12 @@ async function createOcean(scene2, terrain, options = {}) {
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */
       `
+      // Clipping Logic for Mainland: Remove water from the West (inland) side
+      // Harbor water ends at x = -120. We clip further west to be safe.
+      if (vWorldPosition.x < -180.0) {
+        discard;
+      }
+
       vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
@@ -48633,6 +48639,8 @@ class BackdropMountains {
     this.scene.add(this.group);
   }
   create() {
+    this.createMountains();
+    this.createMainlandExtension();
   }
   createMountains() {
     const count = 120;
@@ -48685,8 +48693,8 @@ class BackdropMountains {
     }
   }
   createMainlandExtension() {
-    const innerRadius = 180;
-    const outerRadius = 2400;
+    const innerRadius = 1100;
+    const outerRadius = 4500;
     const geometry = new RingGeometry(innerRadius, outerRadius, 64, 8);
     const pos = geometry.attributes.position;
     for (let i = 0; i < pos.count; i++) {
@@ -50175,7 +50183,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B2uwTw_w.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B1sfwLxj.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50664,7 +50672,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DPw-m8vM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dkgk-d6I.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51457,7 +51465,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B2uwTw_w.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B1sfwLxj.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63616,8 +63624,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T19:11:24.691Z" : "",
-      sha: true ? "1128b17a93354c911f45ea76748176fc81754a24" : ""
+      time: true ? "2025-12-27T19:26:21.651Z" : "",
+      sha: true ? "3234b2bed44d01610ca5d8206ce92204b81e2e93" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74875,4 +74883,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-Bl8y2mTL.js.map
+//# sourceMappingURL=index-B1q8-qjA.js.map
