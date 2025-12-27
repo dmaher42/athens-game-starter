@@ -43214,8 +43214,8 @@ const HARBOR_WATER_BOUNDS = {
   south: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH
 };
 const HARBOR_WATER_NORMAL_CANDIDATES = [
-  "textures/ground/water_normals.png",
-  "textures/ground/water_normals.jpg",
+  "textures/water/normals.png",
+  "textures/water/normals.jpg",
   "textures/ground/waternormals.jpg",
   "textures/ground/shader.png",
   "textures/ground/step_sea.gif"
@@ -43266,7 +43266,7 @@ function sandTextureUrl() {
   const baseUrl2 = resolveBaseUrl$2();
   return joinPath(
     baseUrl2,
-    "textures/gravelly_sand/gravelly_sand_diff_1k.jpg"
+    "textures/sand/albedo.jpg"
   );
 }
 const GROUND_TEXTURE_CONFIG = {
@@ -45251,12 +45251,12 @@ function createTerrain(scene2) {
     anisotropy: 8
   };
   const sandNormal = loadTextureWithFallback(
-    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
+    joinPath(baseUrl2, "textures/sand/normal_gl.jpg"),
     textureOptions,
     () => createFallbackDataTexture([128, 128, 255], textureOptions)
   );
   const sandARM = loadTextureWithFallback(
-    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
+    joinPath(baseUrl2, "textures/sand/arm.jpg"),
     textureOptions,
     () => createFallbackDataTexture([255, 255, 0], textureOptions)
   );
@@ -46812,7 +46812,7 @@ function enableShadows(mesh) {
 }
 function createReflectiveWaterMaterial() {
   const normalMap = waterTextureLoader.load(
-    "textures/ground/water_normals.png",
+    "textures/water/normals.png",
     (tex) => {
       tex.wrapS = tex.wrapT = RepeatWrapping;
       tex.repeat.set(6, 6);
@@ -46866,19 +46866,19 @@ function createHarborPad(harborGroundY) {
   const textureLoader2 = new TextureLoader();
   const baseUrl2 = resolveBaseUrl$2();
   const sandDiffuse = textureLoader2.load(
-    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_diff_1k.jpg")
+    joinPath(baseUrl2, "textures/sand/albedo.jpg")
   );
   sandDiffuse.wrapS = sandDiffuse.wrapT = RepeatWrapping;
   sandDiffuse.repeat.set(28, 24);
   sandDiffuse.colorSpace = SRGBColorSpace;
   const sandNormal = textureLoader2.load(
-    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg")
+    joinPath(baseUrl2, "textures/sand/normal_gl.jpg")
   );
   sandNormal.wrapS = sandNormal.wrapT = RepeatWrapping;
   sandNormal.repeat.set(28, 24);
   sandNormal.colorSpace = NoColorSpace;
   const sandARM = textureLoader2.load(
-    joinPath(baseUrl2, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg")
+    joinPath(baseUrl2, "textures/sand/arm.jpg")
   );
   sandARM.wrapS = sandARM.wrapT = RepeatWrapping;
   sandARM.repeat.set(28, 24);
@@ -47566,8 +47566,8 @@ const DEFAULT_ASSET_CONFIG = {
     { label: "Aristotle Tomb", candidateKey: "aristotle" },
     { label: "District Rules", path: "config/districts.json" },
     { label: "Ground Dirt Albedo", path: "textures/ground/dirt-albedo.jpg" },
-    { label: "Ground Grass Albedo", path: "textures/ground/grass-albedo.jpg" },
-    { label: "Water Normals", path: "textures/ground/water_normals.png" },
+    { label: "Ground Grass Albedo", path: "textures/grass/albedo.jpg" },
+    { label: "Water Normals", path: "textures/water/normals.png" },
     { label: "Akropol Landmark", path: "models/landmarks/akropol.glb" },
     { label: "Poseidon Temple Landmark", path: "models/landmarks/poseidon_temple.glb" }
   ],
@@ -47590,8 +47590,8 @@ const ENVIRONMENT_OVERRIDES$3 = {
       { label: "Aristotle Tomb", candidateKey: "aristotle" },
       { label: "District Rules", path: "config/districts.json" },
       { label: "Ground Dirt Albedo", path: "textures/ground/dirt-albedo.jpg" },
-      { label: "Ground Grass Albedo", path: "textures/ground/grass-albedo.jpg" },
-      { label: "Water Normals", path: "textures/ground/water_normals.png" },
+      { label: "Ground Grass Albedo", path: "textures/grass/albedo.jpg" },
+      { label: "Water Normals", path: "textures/water/normals.png" },
       { label: "Akropol Landmark", path: "models/landmarks/akropol.glb" },
       { label: "Poseidon Temple Landmark", path: "models/landmarks/poseidon_temple.glb" }
     ]
@@ -50343,7 +50343,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CvBvD2Vv.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DiLIVpsU.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50854,7 +50854,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DDEW-Snv.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DJjBDjn3.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51646,7 +51646,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CvBvD2Vv.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DiLIVpsU.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -65203,8 +65203,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T01:39:13.824Z" : "",
-      sha: true ? "20bcb8ef8c431afe17fdca0810ec8ae8547b6ba3" : ""
+      time: true ? "2025-12-27T02:09:19.298Z" : "",
+      sha: true ? "c5bf206a4f2bea85671572495c09c971a424cb7b" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -75941,4 +75941,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-1E6B3wNb.js.map
+//# sourceMappingURL=index-BvDA7riq.js.map
