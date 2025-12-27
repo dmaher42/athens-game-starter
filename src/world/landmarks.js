@@ -18,7 +18,7 @@ import { queueSceneInteractable } from "./interactions.js";
 import { buildTemple } from "../features/temples.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
-const ENABLE_GLB_MODE = false;
+const ENABLE_GLB_MODE = true;
 
 /**
  * Example usage:
