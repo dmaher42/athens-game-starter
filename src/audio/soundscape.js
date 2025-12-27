@@ -133,7 +133,7 @@ export class Soundscape {
     this.lightingRef = lightingRef;
     this.anchors = anchors;
 
-    // Audio graph (initialized after user gesture)
+    // Audio graph (initialized immediately in suspended state)
     this.listener = null;
     this.loader = null;
     this.masterGain = null;
@@ -178,6 +178,9 @@ export class Soundscape {
     };
 
     this.mode = null;
+
+    // Initialize graph immediately so UI can bind to it
+    this._initAudioGraph();
   }
 
   _registerZoneTrack(key, config) {
