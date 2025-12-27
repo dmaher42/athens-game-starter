@@ -48911,6 +48911,36 @@ function createMainHillRoad(scene2, terrain) {
 }
 function updateMainHillRoadLighting() {
 }
+function shouldFlipNormalGreen(url) {
+  if (typeof url !== "string") return false;
+  return url.includes("normal_dx") || url.includes("normal-dx");
+}
+function invertNormalMapGreen(texture) {
+  if (!texture || typeof document === "undefined") return texture;
+  const image = texture.image;
+  if (!image || !image.width || !image.height) return texture;
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return texture;
+  ctx.drawImage(image, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i + 1] = 255 - data[i + 1];
+  }
+  ctx.putImageData(imageData, 0, 0);
+  texture.image = canvas;
+  texture.needsUpdate = true;
+  return texture;
+}
+function applyNormalMapConvention(texture, url) {
+  if (shouldFlipNormalGreen(url)) {
+    return invertNormalMapGreen(texture);
+  }
+  return texture;
+}
 const textureLoader = new TextureLoader();
 let marbleTextures = null;
 function loadMarbleTextures() {
@@ -48921,9 +48951,10 @@ function loadMarbleTextures() {
   );
   diffuse.wrapS = diffuse.wrapT = RepeatWrapping;
   diffuse.colorSpace = SRGBColorSpace;
-  const normal = textureLoader.load(
-    joinPath(baseUrl2, "textures/marble_normal-dx.jpg")
-  );
+  const normalUrl = joinPath(baseUrl2, "textures/marble_normal-dx.jpg");
+  const normal = textureLoader.load(normalUrl, (texture) => {
+    applyNormalMapConvention(texture, normalUrl);
+  });
   normal.wrapS = normal.wrapT = RepeatWrapping;
   normal.colorSpace = NoColorSpace;
   const roughness = textureLoader.load(
@@ -49741,6 +49772,7 @@ async function loadTexture(loader2, url, { isSRGB = false, warnKey } = {}) {
   if (typeof url !== "string" || url.length === 0) return null;
   try {
     const tex = await loader2.loadAsync(url);
+    applyNormalMapConvention(tex, url);
     if (tex && isSRGB) {
       tex.colorSpace = SRGBColorSpace;
     }
@@ -50311,7 +50343,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CYoIlnP7.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DLo4-wZd.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50822,7 +50854,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BYEJ2C-4.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C-F2sAGA.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51013,6 +51045,7 @@ async function loadTextureCandidate({ baseUrl: baseUrl2, candidate, colorSpace }
   if (!url) return null;
   try {
     const texture = await marbleTextureLoader.loadAsync(url);
+    applyNormalMapConvention(texture, url);
     texture.wrapS = texture.wrapT = RepeatWrapping;
     texture.anisotropy = 8;
     texture.colorSpace = colorSpace;
@@ -51614,7 +51647,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CYoIlnP7.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DLo4-wZd.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -54288,7 +54321,9 @@ async function createCivicDistrict(scene2, options = {}) {
     baseMap.wrapS = baseMap.wrapT = RepeatWrapping;
     baseMap.repeat.set(4, 4);
     baseMap.colorSpace = SRGBColorSpace;
-    const normalMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
+    const normalUrl = joinPath(resolvedBase, "textures/marble_normal-dx.jpg");
+    const normalMap = await tl.loadAsync(normalUrl);
+    applyNormalMapConvention(normalMap, normalUrl);
     normalMap.wrapS = normalMap.wrapT = RepeatWrapping;
     normalMap.repeat.set(4, 4);
     plazaMat = new MeshStandardMaterial({
@@ -65171,8 +65206,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T02:28:50.057Z" : "",
-      sha: true ? "c6c5e341a635d37035473730167088e9bbc7aa7c" : ""
+      time: true ? "2025-12-27T02:36:30.987Z" : "",
+      sha: true ? "464e0fccb23b8c93426997f5b38a15796f150346" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -65553,7 +65588,9 @@ async function applyGravelToRoads({ scene: scene2, baseUrl: baseUrl2, repeat = [
         base.wrapS = base.wrapT = RepeatWrapping;
         base.repeat.set(repeat[0], repeat[1]);
         base.colorSpace = SRGBColorSpace;
-        normal = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
+        const normalUrl = joinPath(resolvedBase, "textures/marble_normal-dx.jpg");
+        normal = await tl.loadAsync(normalUrl);
+        applyNormalMapConvention(normal, normalUrl);
         normal.wrapS = normal.wrapT = RepeatWrapping;
         normal.repeat.set(repeat[0], repeat[1]);
       } catch (err2) {
@@ -75909,4 +75946,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-B4Gjx6A1.js.map
+//# sourceMappingURL=index-CIA4o57n.js.map
