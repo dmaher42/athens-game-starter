@@ -42075,7 +42075,7 @@ function getMaterialAmbientOcclusion(material) {
     edgeOuter: material.userData.aoEdgeOuter
   };
 }
-const __vite_import_meta_env__$1 = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$2 = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const REPO_SEGMENT$2 = "athens-game-starter";
 const REPO_BASE = `/${REPO_SEGMENT$2}/`;
 const DOUBLE_SEGMENT = `${REPO_SEGMENT$2}/${REPO_SEGMENT$2}`;
@@ -42113,8 +42113,8 @@ function isGithubPagesHost() {
 function hasDoubleRepo(base) {
   return typeof base === "string" && base.includes(DOUBLE_SEGMENT);
 }
-function resolveBaseUrl$3() {
-  const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true && "/" || null;
+function resolveBaseUrl$4() {
+  const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__$2 && true && "/" || null;
   const globalBase = typeof window !== "undefined" && typeof window.__BASE_URL__ === "string" ? window.__BASE_URL__ : null;
   let base = globalBase || envBase || REPO_BASE;
   const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
@@ -42305,7 +42305,7 @@ class Soundscape {
       (name, url) => this.loadBuffer(name, url),
       this.bus.ambience
     );
-    const BASE = resolveBaseUrl$3();
+    const BASE = resolveBaseUrl$4();
     this.zoneAmbience.registerTrack("harbor", {
       label: "Ocean Waves",
       url: joinPath(BASE, "audio/ocean_waves.mp3"),
@@ -42467,7 +42467,7 @@ class Soundscape {
     if (this.manifestLoaded) {
       return this._manifest;
     }
-    const BASE = resolveBaseUrl$3();
+    const BASE = resolveBaseUrl$4();
     const manifestUrl = joinPath(BASE, "audio/manifest.json");
     try {
       const response = await fetch(manifestUrl, {
@@ -42534,7 +42534,7 @@ class Soundscape {
     }
   }
   async initFromManifest() {
-    const BASE = resolveBaseUrl$3();
+    const BASE = resolveBaseUrl$4();
     const audioBase = joinPath(BASE, "audio");
     const manifest = await this.loadManifest();
     if (!manifest) {
@@ -43250,33 +43250,33 @@ subscribeSeaLevelChange((seaLevelY) => {
   ACROPOLIS_PEAK_3D.y = newGroundY;
   CITY_CHUNK_CENTER.y = newGroundY;
 });
-const __vite_import_meta_env__ = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-function resolveBaseUrl$2() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true ? "/" : "/";
+const __vite_import_meta_env__$1 = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+function resolveBaseUrl$3() {
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true ? "/" : "/";
   return base.endsWith("/") ? base : `${base}/`;
 }
-function joinBase(base, relativePath) {
+function joinBase$1(base, relativePath) {
   const safeBase = base.endsWith("/") ? base : `${base}/`;
   const safePath = relativePath.replace(/^\/+/, "");
   return `${safeBase}${safePath}`;
 }
-const BASE_URL = resolveBaseUrl$2();
+const BASE_URL = resolveBaseUrl$3();
 const MATERIALS = {
   sand: {
-    albedo: joinBase(BASE_URL, "textures/sand/albedo.jpg"),
-    normal: joinBase(BASE_URL, "textures/sand/normal_gl.jpg"),
-    arm: joinBase(BASE_URL, "textures/sand/arm.jpg")
+    albedo: joinBase$1(BASE_URL, "textures/sand/albedo.jpg"),
+    normal: joinBase$1(BASE_URL, "textures/sand/normal_gl.jpg"),
+    arm: joinBase$1(BASE_URL, "textures/sand/arm.jpg")
   },
   grass: {
-    albedo: joinBase(BASE_URL, "textures/grass/albedo.jpg"),
-    normal: joinBase(BASE_URL, "textures/grass/normal_dx.jpg"),
-    roughness: joinBase(BASE_URL, "textures/grass/roughness.jpg"),
-    metallic: joinBase(BASE_URL, "textures/grass/metallic.jpg"),
-    ao: joinBase(BASE_URL, "textures/grass/ao.jpg"),
-    height: joinBase(BASE_URL, "textures/grass/height.jpg")
+    albedo: joinBase$1(BASE_URL, "textures/grass/albedo.jpg"),
+    normal: joinBase$1(BASE_URL, "textures/grass/normal_dx.jpg"),
+    roughness: joinBase$1(BASE_URL, "textures/grass/roughness.jpg"),
+    metallic: joinBase$1(BASE_URL, "textures/grass/metallic.jpg"),
+    ao: joinBase$1(BASE_URL, "textures/grass/ao.jpg"),
+    height: joinBase$1(BASE_URL, "textures/grass/height.jpg")
   },
   stoneFallback: {
-    albedo: joinBase(BASE_URL, "textures/marble_base.jpg")
+    albedo: joinBase$1(BASE_URL, "textures/marble_base.jpg")
   }
 };
 const SAND_MAX_ELEV = 3;
@@ -45249,7 +45249,7 @@ function createTerrain(scene2) {
     );
     geometry.setAttribute("basePos", basePos);
   }
-  const baseUrl2 = resolveBaseUrl$3();
+  const baseUrl2 = resolveBaseUrl$4();
   const textureOptions = {
     repeat: [28, 24],
     colorSpace: NoColorSpace,
@@ -46188,7 +46188,7 @@ function sanitizeRelativePath$6(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
-function getDefaultWaterNormalCandidates(base = resolveBaseUrl$3()) {
+function getDefaultWaterNormalCandidates(base = resolveBaseUrl$4()) {
   return HARBOR_WATER_NORMAL_CANDIDATES.map((relative) => {
     const sanitized = sanitizeRelativePath$6(relative);
     if (!sanitized) {
@@ -46287,7 +46287,7 @@ async function resolveWaterNormalsTexture(options) {
       candidates.push(...options.urls);
     }
   }
-  const base = resolveBaseUrl$3();
+  const base = resolveBaseUrl$4();
   const defaultCandidates = getDefaultWaterNormalCandidates(base);
   candidates.push(...defaultCandidates.map((candidate) => {
     if (typeof candidate === "string") {
@@ -46869,7 +46869,7 @@ function createHarborPad(harborGroundY) {
     );
   }
   const textureLoader2 = new TextureLoader();
-  const baseUrl2 = resolveBaseUrl$3();
+  const baseUrl2 = resolveBaseUrl$4();
   const sandDiffuse = textureLoader2.load(
     joinPath(baseUrl2, "textures/sand/albedo.jpg")
   );
@@ -47756,7 +47756,7 @@ function normalizeBaseUrl(value) {
 }
 class AssetLoader {
   constructor({
-    baseUrl: baseUrl2 = resolveBaseUrl$3(),
+    baseUrl: baseUrl2 = resolveBaseUrl$4(),
     forceProcedural = false,
     districtRuleCandidates = [],
     enableGlbMode = true
@@ -47773,7 +47773,7 @@ class AssetLoader {
   } = {}) {
     const ENABLE_GLB_MODE2 = this.enableGlbMode;
     if (!ENABLE_GLB_MODE2) return;
-    const base = this.baseUrl ?? resolveBaseUrl$3();
+    const base = this.baseUrl ?? resolveBaseUrl$4();
     if (IS_DEV) console.log("[base:resolved]", base);
     const manifestProbes = getManifestProbes();
     const probes = [
@@ -47875,7 +47875,7 @@ class AssetLoader {
     throw new Error("No candidate asset reachable: " + candidates.join(", "));
   }
   async runAssetQuickChecks() {
-    const baseUrl2 = this.baseUrl ?? resolveBaseUrl$3();
+    const baseUrl2 = this.baseUrl ?? resolveBaseUrl$4();
     const districtCandidates = [];
     for (const candidate of this.districtRuleCandidates) {
       if (typeof candidate !== "string") continue;
@@ -48945,7 +48945,7 @@ const textureLoader = new TextureLoader();
 let marbleTextures = null;
 function loadMarbleTextures() {
   if (marbleTextures) return marbleTextures;
-  const baseUrl2 = resolveBaseUrl$3();
+  const baseUrl2 = resolveBaseUrl$4();
   const diffuse = textureLoader.load(
     joinPath(baseUrl2, "textures/marble_albedo.jpg")
   );
@@ -50279,7 +50279,7 @@ function resolveDocumentBasePath$1() {
     return "/athens-game-starter/";
   }
 }
-function resolveBaseUrl$1() {
+function resolveBaseUrl$2() {
   const meta = typeof import.meta !== "undefined" ? import.meta : null;
   const env = meta && meta.env ? meta.env : null;
   const baseValue = env && typeof env.BASE_URL === "string" ? env.BASE_URL : null;
@@ -50321,7 +50321,7 @@ function normaliseCandidate$1(candidate, baseUrl2) {
   }
 }
 function resolveKTX2TranscoderPath() {
-  const baseUrl2 = resolveBaseUrl$1();
+  const baseUrl2 = resolveBaseUrl$2();
   const candidates = [];
   const meta = typeof import.meta !== "undefined" ? import.meta : null;
   const env = meta && meta.env ? meta.env : null;
@@ -50343,7 +50343,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DLo4-wZd.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DKf98GqY.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50767,7 +50767,7 @@ function resolveDocumentBasePath() {
     return "/athens-game-starter/";
   }
 }
-function resolveBaseUrl() {
+function resolveBaseUrl$1() {
   const meta = typeof import.meta !== "undefined" ? import.meta : null;
   const env = meta && meta.env ? meta.env : null;
   const baseValue = env && typeof env.BASE_URL === "string" ? env.BASE_URL : null;
@@ -50809,7 +50809,7 @@ function normaliseCandidate(candidate, baseUrl2) {
   }
 }
 function resolveDracoDecoderPath() {
-  const baseUrl2 = resolveBaseUrl();
+  const baseUrl2 = resolveBaseUrl$1();
   const candidates = [];
   const meta = typeof import.meta !== "undefined" ? import.meta : null;
   const env = meta && meta.env ? meta.env : null;
@@ -50854,7 +50854,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C-F2sAGA.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CziodcTP.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -50925,7 +50925,7 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
   if (!ENABLE_GLB_MODE$4 && !options.allowSingleModel) {
     return null;
   }
-  const baseUrl2 = resolveBaseUrl$3();
+  const baseUrl2 = resolveBaseUrl$4();
   const seen2 = /* @__PURE__ */ new Set();
   for (const candidate of urls) {
     const raw = typeof candidate === "string" ? candidate.trim() : "";
@@ -51037,7 +51037,7 @@ function resolveTextureUrl(baseUrl2, candidate) {
   if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
     return trimmed;
   }
-  const root = typeof baseUrl2 === "string" && baseUrl2 ? baseUrl2 : resolveBaseUrl$3();
+  const root = typeof baseUrl2 === "string" && baseUrl2 ? baseUrl2 : resolveBaseUrl$4();
   return joinPath(root, trimmed.replace(/^\/+/, ""));
 }
 async function loadTextureCandidate({ baseUrl: baseUrl2, candidate, colorSpace }) {
@@ -51057,7 +51057,7 @@ async function loadTextureCandidate({ baseUrl: baseUrl2, candidate, colorSpace }
   }
 }
 async function makeMarbleMaterialSet({
-  baseUrl: baseUrl2 = resolveBaseUrl$3(),
+  baseUrl: baseUrl2 = resolveBaseUrl$4(),
   map = MARBLE_TEXTURE_DEFAULTS.map,
   normal = MARBLE_TEXTURE_DEFAULTS.normal,
   rough = MARBLE_TEXTURE_DEFAULTS.rough,
@@ -51647,7 +51647,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DLo4-wZd.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DKf98GqY.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -52052,7 +52052,7 @@ async function loadLandmark(scene2, url, options = {}) {
       urlSet.add(sanitizedUrl);
     } else {
       if (normalized) {
-        const baseUrl2 = resolveBaseUrl$3();
+        const baseUrl2 = resolveBaseUrl$4();
         urlSet.add(joinPath(baseUrl2, normalized));
         urlSet.add(normalized);
       }
@@ -53639,7 +53639,7 @@ function createAthensLayoutConfig(environment = getRuntimeEnvironment(), overrid
     )
   );
 }
-const baseUrl$1 = (path) => joinPath(resolveBaseUrl$3(), path);
+const baseUrl$1 = (path) => joinPath(resolveBaseUrl$4(), path);
 const REPO_SEGMENT = REPO_BASE_PATH.replace(/\//g, "");
 const DOUBLE_REPO_PREFIX = `${REPO_SEGMENT}/${REPO_SEGMENT}/`;
 function normalizeDistrictRuleCandidate(value) {
@@ -53697,7 +53697,7 @@ function buildDistrictRuleUrlCandidates(resolvedBase) {
   return Array.from(urls);
 }
 async function loadDistrictRules(baseUrlStr = "") {
-  const resolvedBase = typeof baseUrlStr === "string" && baseUrlStr.length > 0 ? baseUrlStr : resolveBaseUrl$3();
+  const resolvedBase = typeof baseUrlStr === "string" && baseUrlStr.length > 0 ? baseUrlStr : resolveBaseUrl$4();
   const tried = [];
   for (const url of buildDistrictRuleUrlCandidates(resolvedBase)) {
     tried.push(url);
@@ -54314,7 +54314,7 @@ async function createCivicDistrict(scene2, options = {}) {
   };
   const tl = new TextureLoader();
   const baseUrl2 = typeof scene2?.userData?.baseUrl === "string" ? scene2.userData.baseUrl : "";
-  const resolvedBase = baseUrl2 || resolveBaseUrl$3();
+  const resolvedBase = baseUrl2 || resolveBaseUrl$4();
   let plazaMat;
   try {
     const baseMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
@@ -63460,7 +63460,7 @@ async function spawnGLBNPCs(scene2, pathCurve, options = {}) {
   if (!scene2 || !pathCurve) {
     return { npcs: [], updaters: [] };
   }
-  const baseUrl2 = resolveBaseUrl$3();
+  const baseUrl2 = resolveBaseUrl$4();
   const manifestUrl = joinPath(baseUrl2, "models/npcs/manifest.json");
   let manifest = null;
   try {
@@ -64446,7 +64446,7 @@ class LandmarkManager {
     this.spawnPlaceholder = typeof spawnPlaceholder === "function" ? spawnPlaceholder : null;
     this.logger = logger || console;
     this.quietMissing = !!quietMissing;
-    this.baseUrl = resolveBaseUrl$3();
+    this.baseUrl = resolveBaseUrl$4();
     this.globalDefaults = {};
     this.results = [];
     this.forceProcedural = Boolean(forceProcedural);
@@ -65196,7 +65196,7 @@ function safeUrlSearchParams() {
   }
 }
 const DEFAULT_ENGINE_CONFIG = ({
-  baseUrl: baseUrl2 = resolveBaseUrl$3(),
+  baseUrl: baseUrl2 = resolveBaseUrl$4(),
   queryParams = safeUrlSearchParams()
 } = {}) => {
   const forceGlb = queryParams.has("glb") ? queryParams.get("glb") !== "0" : true;
@@ -65206,8 +65206,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T02:36:30.987Z" : "",
-      sha: true ? "464e0fccb23b8c93426997f5b38a15796f150346" : ""
+      time: true ? "2025-12-27T02:38:52.298Z" : "",
+      sha: true ? "6c03a62a37fed7d7146a3c6355dd3cf4883c3341" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -65548,7 +65548,7 @@ async function attachAristotleMarblePBR(options) {
       renderer2.toneMappingExposure = renderer2.toneMappingExposure ?? 1;
     }
   }
-  const resolvedBase = typeof baseUrl2 === "string" && baseUrl2.length > 0 ? baseUrl2 : resolveBaseUrl$3();
+  const resolvedBase = typeof baseUrl2 === "string" && baseUrl2.length > 0 ? baseUrl2 : resolveBaseUrl$4();
   const basePath = joinPath(resolvedBase, sanitizeRelativePath(textureSubdir));
   const material = await makeMarblePBR(basePath);
   if (!material) return;
@@ -65579,7 +65579,7 @@ async function applyGravelToRoads({ scene: scene2, baseUrl: baseUrl2, repeat = [
         resolve();
         return;
       }
-      const defaultBase = resolveBaseUrl$3();
+      const defaultBase = resolveBaseUrl$4();
       const resolvedBase = typeof baseUrl2 === "string" && baseUrl2.length > 0 ? baseUrl2 : defaultBase;
       const tl = new TextureLoader();
       let base, normal;
@@ -69850,7 +69850,7 @@ if (void 0) {
     lightingConfig = mod?.createLightingConfig ? mod.createLightingConfig(getRuntimeEnvironment()) : createLightingConfig(getRuntimeEnvironment());
   });
 }
-const baseUrl = resolveBaseUrl$3();
+const baseUrl = resolveBaseUrl$4();
 const skyboxLightingConfig = {
   // Load the custom Athens sunset skybox shipped in public/assets/skyboxes.
   skyboxUrl: joinPath(baseUrl, "assets/skyboxes/athens_sunset_360.png"),
@@ -74944,7 +74944,7 @@ class PlayerSystem {
     this.playerMovementEnabled = enabled;
   }
 }
-const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$3();
+const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$4();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES = engineConfig.districtRuleCandidates || [];
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 const ENABLE_GLB_MODE = true;
@@ -75755,6 +75755,54 @@ class Application {
     }
   }
 }
+const __vite_import_meta_env__ = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+function resolveBaseUrl() {
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true ? "/" : "/";
+  return base.endsWith("/") ? base : `${base}/`;
+}
+function joinBase(base, path) {
+  const safeBase = base.endsWith("/") ? base : `${base}/`;
+  return `${safeBase}${path.replace(/^\/+/, "")}`;
+}
+const TEXTURE_CHECKS = [
+  "textures/sand/albedo.jpg",
+  "textures/sand/arm.jpg",
+  "textures/sand/normal_gl.jpg",
+  "textures/grass/albedo.jpg",
+  "textures/grass/normal_dx.jpg",
+  "textures/water/normals.jpg",
+  "textures/water/normals.png"
+];
+async function runTextureAssetCheck({ debugAssets = false } = {}) {
+  if (!debugAssets || typeof window === "undefined") return;
+  const baseUrl2 = resolveBaseUrl();
+  const results = await Promise.all(
+    TEXTURE_CHECKS.map(async (relativePath) => {
+      const url = joinBase(baseUrl2, relativePath);
+      try {
+        const response = await fetch(url, { method: "GET", cache: "no-cache" });
+        return {
+          texture: relativePath,
+          ok: response.ok,
+          status: response.status
+        };
+      } catch {
+        return {
+          texture: relativePath,
+          ok: false,
+          status: "error"
+        };
+      }
+    })
+  );
+  const table = results.map((entry) => ({
+    texture: entry.texture,
+    status: entry.ok ? "PASS" : "FAIL",
+    http: entry.status
+  }));
+  console.info("[assets] texture availability check");
+  console.table(table);
+}
 function toUrlSearchParams(value) {
   if (value instanceof URLSearchParams) {
     return value;
@@ -75822,6 +75870,8 @@ const defaultBootHandlers = {
 function bootApplication$1(handlers = defaultBootHandlers) {
   const onSuccess = handlers?.onSuccess ?? defaultBootHandlers.onSuccess;
   const onError = handlers?.onError ?? defaultBootHandlers.onError;
+  const debugAssets = IS_DEV || applicationBootConfig$1.queryParams?.get("debugAssets") === "1";
+  void runTextureAssetCheck({ debugAssets });
   return runApplication$1().then((result) => {
     onSuccess(result);
     return result;
@@ -75946,4 +75996,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CIA4o57n.js.map
+//# sourceMappingURL=index-C0FYfo4B.js.map
