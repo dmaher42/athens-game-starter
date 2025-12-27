@@ -50343,7 +50343,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DKf98GqY.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-QgZK5UWv.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50854,7 +50854,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CziodcTP.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-AYHlNzZ1.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51647,7 +51647,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DKf98GqY.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-QgZK5UWv.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -65206,8 +65206,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T02:38:52.298Z" : "",
-      sha: true ? "6c03a62a37fed7d7146a3c6355dd3cf4883c3341" : ""
+      time: true ? "2025-12-27T02:43:44.119Z" : "",
+      sha: true ? "b4e2ecc4908e4cc064633ee6bf51b900892c0793" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -65572,39 +65572,51 @@ async function attachAristotleMarblePBR(options) {
   if (!target) return;
   applyMaterialToTree(target, material);
 }
-async function applyGravelToRoads({ scene: scene2, baseUrl: baseUrl2, repeat = [24, 24] } = {}) {
+async function applyGravelToRoads({ scene: scene2 } = {}) {
   return new Promise((resolve) => {
     requestAnimationFrame(async () => {
       if (!scene2) {
         resolve();
         return;
       }
-      const defaultBase = resolveBaseUrl$4();
-      const resolvedBase = typeof baseUrl2 === "string" && baseUrl2.length > 0 ? baseUrl2 : defaultBase;
       const tl = new TextureLoader();
-      let base, normal;
+      const seaLevel = getSeaLevelY();
+      const terrainSampler = scene2?.userData?.getHeightAt || scene2?.userData?.terrainHeightSampler || null;
+      let sandMap = null;
+      let grassMap = null;
+      let stoneMap = null;
       try {
-        base = await tl.loadAsync(joinPath(resolvedBase, "textures/ground/dirt-albedo.jpg"));
-        base.wrapS = base.wrapT = RepeatWrapping;
-        base.repeat.set(repeat[0], repeat[1]);
-        base.colorSpace = SRGBColorSpace;
-        const normalUrl = joinPath(resolvedBase, "textures/marble_normal-dx.jpg");
-        normal = await tl.loadAsync(normalUrl);
-        applyNormalMapConvention(normal, normalUrl);
-        normal.wrapS = normal.wrapT = RepeatWrapping;
-        normal.repeat.set(repeat[0], repeat[1]);
+        sandMap = await tl.loadAsync(MATERIALS.sand.albedo);
+        sandMap.wrapS = sandMap.wrapT = RepeatWrapping;
+        sandMap.repeat.set(6, 6);
+        sandMap.colorSpace = SRGBColorSpace;
+        grassMap = await tl.loadAsync(MATERIALS.grass.albedo);
+        grassMap.wrapS = grassMap.wrapT = RepeatWrapping;
+        grassMap.repeat.set(6, 6);
+        grassMap.colorSpace = SRGBColorSpace;
+        stoneMap = await tl.loadAsync(MATERIALS.stoneFallback.albedo);
+        stoneMap.wrapS = stoneMap.wrapT = RepeatWrapping;
+        stoneMap.repeat.set(8, 8);
+        stoneMap.colorSpace = SRGBColorSpace;
       } catch (err2) {
         console.warn("Texture loading failed in applyGravelToRoads", err2);
       }
-      const mat = new MeshStandardMaterial({
-        map: base,
-        normalMap: normal,
-        polygonOffset: true,
-        polygonOffsetFactor: -1,
-        polygonOffsetUnits: -1,
+      const sandMaterial = new MeshStandardMaterial({
+        map: sandMap || null,
+        color: sandMap ? 16777215 : 13482140,
+        roughness: 0.85
+      });
+      const grassMaterial = new MeshStandardMaterial({
+        map: grassMap || null,
+        color: grassMap ? 16777215 : 8031074,
         roughness: 0.9
       });
-      if (!mat) {
+      const stoneMaterial = new MeshStandardMaterial({
+        map: stoneMap || null,
+        color: stoneMap ? 16777215 : 14078408,
+        roughness: 0.75
+      });
+      if (!sandMaterial || !grassMaterial || !stoneMaterial) {
         resolve();
         return;
       }
@@ -65613,12 +65625,33 @@ async function applyGravelToRoads({ scene: scene2, baseUrl: baseUrl2, repeat = [
         const u = o.userData || {};
         return name.includes("road") || name.includes("street") || name.includes("path") || u.type === "road" || u.kind === "road" || u.category === "road";
       };
+      const isMainRoad = (o) => {
+        const name = (o.name || "").toLowerCase();
+        const u = o.userData || {};
+        return name.includes("main") || name.includes("plaza") || u.kind === "plaza" || u.category === "plaza";
+      };
+      const chooseMaterial = (o) => {
+        if (isMainRoad(o)) return stoneMaterial;
+        const pos = o.getWorldPosition(new Vector3());
+        const elevation = Number.isFinite(pos.y) ? pos.y : 0;
+        const slope = terrainSampler ? getSlope(terrainSampler, pos.x, pos.z) : 0;
+        if (slope >= SLOPE_ROCK_MIN) {
+          return stoneMaterial;
+        }
+        if (elevation <= seaLevel + SAND_MAX_ELEV) {
+          return sandMaterial;
+        }
+        if (elevation >= seaLevel + GRASS_MIN_ELEV) {
+          return grassMaterial;
+        }
+        return stoneMaterial;
+      };
       let count = 0;
       scene2.traverse((o) => {
         if (!o?.isMesh) return;
         if (!pickRoad(o)) return;
         if (o.material && o.material.userData?.__isGravel) return;
-        o.material = mat;
+        o.material = chooseMaterial(o);
         o.material.userData = { ...o.material.userData || {}, __isGravel: true };
         o.receiveShadow = true;
         count++;
@@ -75996,4 +76029,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-C0FYfo4B.js.map
+//# sourceMappingURL=index-DFIVOGL8.js.map
