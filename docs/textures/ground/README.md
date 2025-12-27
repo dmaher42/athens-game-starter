@@ -1,19 +1,20 @@
 # Ground texture drop folder
 
-Place your JPG (or PNG) files in this directory to have them picked up by the
-custom terrain texturing system. When you run `npm run build`, Vite copies the
-same folder to `docs/textures/ground/` so GitHub Pages (or any static host)
-serves the textures alongside the compiled site. Reference the filenames from
-`src/world/groundTextureConfig.js` – for example, the bundled grass material
-expects the following files:
+The ground texturing system now expects shared textures to live under
+`public/textures/` so they are available at runtime via
+`${BASE_URL}textures/...`. When you run `npm run build`, Vite copies them into
+`docs/textures/` for GitHub Pages (or any static host).
+
+The bundled grass material expects the following files under
+`public/textures/grass/`:
 
 ```
-grass-albedo.jpg
-grass-normal-dx.jpg
-grass-roughness.jpg
-grass-metallic.jpg
-grass-ao.jpg
-grass-height.jpg // used as a bump map
+albedo.jpg
+normal_dx.jpg
+roughness.jpg
+metallic.jpg
+ao.jpg
+height.jpg // used as a bump map
 ```
 
 Three.js treats color textures as sRGB, while data maps (roughness, metalness,
@@ -22,16 +23,16 @@ correct color space when you follow the naming above.
 
 ```js
 const textureUrl = (filename) =>
-  `${import.meta.env.BASE_URL}textures/ground/${filename}`;
+  `${import.meta.env.BASE_URL}textures/grass/${filename}`;
 
 export const GROUND_TEXTURE_CONFIG = {
   base: {
-    url: textureUrl("grass-albedo.jpg"),
-    normalUrl: textureUrl("grass-normal-dx.jpg"),
-    roughnessUrl: textureUrl("grass-roughness.jpg"),
-    metalnessUrl: textureUrl("grass-metallic.jpg"),
-    aoUrl: textureUrl("grass-ao.jpg"),
-    bumpUrl: textureUrl("grass-height.jpg"),
+    url: textureUrl("albedo.jpg"),
+    normalUrl: textureUrl("normal_dx.jpg"),
+    roughnessUrl: textureUrl("roughness.jpg"),
+    metalnessUrl: textureUrl("metallic.jpg"),
+    aoUrl: textureUrl("ao.jpg"),
+    bumpUrl: textureUrl("height.jpg"),
     repeat: [18, 18],
   },
   details: [
@@ -53,13 +54,14 @@ recompiles the material shader.
 
 ## Harbor water normal maps
 
-If you add a water normal map here (for example `water_normals.png` or
-`water_normals.jpg`), the harbor ocean helper will automatically try to load it
+If you add a water normal map under `public/textures/water/` (for example
+`normals.png` or `normals.jpg`), the harbor ocean helper will automatically try
+to load it
 before falling back to the built-in procedural normals. The lookup order is:
 
 1. Any URL you pass to `createOcean(scene, { waterNormals: { ... } })`.
-2. The files `water_normals.png`, `water_normals.jpg`, `shader.png`, or `step_sea.gif`
-   in this folder.
+2. The files `normals.png`, `normals.jpg`, `shader.png`, or `step_sea.gif`
+   in that folder.
 
 Run `npm run build` (or restart `npm run dev`) after dropping in new images so
-Vite copies them into `docs/textures/ground/` for deployment.
+Vite copies them into `docs/textures/` for deployment.
