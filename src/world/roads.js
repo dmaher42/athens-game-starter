@@ -24,21 +24,21 @@ function loadRoadTextures() {
   
   // Use gravelly sand for packed earth road appearance
   _roadDiffuse = _textureLoader.load(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_diff_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/albedo.jpg"),
   );
   _roadDiffuse.wrapS = _roadDiffuse.wrapT = THREE.RepeatWrapping;
   _roadDiffuse.repeat.set(4, 1); // Stretch along road length
   _roadDiffuse.colorSpace = THREE.SRGBColorSpace;
   
   _roadNormal = _textureLoader.load(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/normal_gl.jpg"),
   );
   _roadNormal.wrapS = _roadNormal.wrapT = THREE.RepeatWrapping;
   _roadNormal.repeat.set(4, 1);
   _roadNormal.colorSpace = THREE.NoColorSpace;
   
   _roadARM = _textureLoader.load(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/arm.jpg"),
   );
   _roadARM.wrapS = _roadARM.wrapT = THREE.RepeatWrapping;
   _roadARM.repeat.set(4, 1);
