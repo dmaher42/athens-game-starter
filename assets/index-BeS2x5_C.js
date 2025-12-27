@@ -50338,7 +50338,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-exCfIXhK.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BUBSia_k.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50842,14 +50842,14 @@ function createDracoLoader() {
   }
   return sharedDracoLoader;
 }
-const ENABLE_GLB_MODE$4 = false;
+const ENABLE_GLB_MODE$4 = true;
 function sanitizeRelativePath$4(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-rnBDSb4F.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-9HTcs_II.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51549,7 +51549,7 @@ function alignToGround(object, terrain, x, z, surfaceOffset = 0) {
   const offset = Number.isFinite(surfaceOffset) ? surfaceOffset : 0;
   object.position.y = height + offset;
 }
-const ENABLE_GLB_MODE$3 = false;
+const ENABLE_GLB_MODE$3 = true;
 function sanitizeRelativePath$3(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
@@ -51623,7 +51623,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-exCfIXhK.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BUBSia_k.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -60929,7 +60929,7 @@ class EnvironmentCollider {
     return target1.distanceTo(target2);
   }
 }
-const ENABLE_GLB_MODE$2 = false;
+const ENABLE_GLB_MODE$2 = true;
 const BUILDINGS_ROOT_NAME = "BuildingsRoot";
 async function headOk$1(url) {
   if (!url) return { ok: false, reason: "missing-url" };
@@ -63196,7 +63196,7 @@ const UIManager = {
     return questHud;
   }
 };
-const ENABLE_GLB_MODE$1 = false;
+const ENABLE_GLB_MODE$1 = true;
 class Character extends Object3D {
   constructor() {
     super();
@@ -65180,8 +65180,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T01:03:50.067Z" : "",
-      sha: true ? "a5b5532f0b19b7eb9f6c17faa9d52cd5a9902f6e" : ""
+      time: true ? "2025-12-27T01:19:52.658Z" : "",
+      sha: true ? "0ec2f3a4473ceba18a20f26d5fcc310af99a015d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74919,7 +74919,7 @@ class PlayerSystem {
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$2();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES = engineConfig.districtRuleCandidates || [];
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
-const ENABLE_GLB_MODE = false;
+const ENABLE_GLB_MODE = true;
 if (!ENABLE_GLB_MODE) {
   console.log("[glb] GLB mode disabled");
 }
@@ -75918,4 +75918,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DwAgcPmX.js.map
+//# sourceMappingURL=index-BeS2x5_C.js.map
