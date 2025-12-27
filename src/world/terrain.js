@@ -13,6 +13,10 @@ import { getDistanceToCoast, isInHarborZone } from './coastalZones.js';
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
 import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
+import {
+  GRASS_MIN_ELEV,
+  SAND_MAX_ELEV,
+} from "../config/terrainMaterials.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 import {
   SEA_SIDE,
@@ -415,8 +419,8 @@ export function createTerrain(scene) {
       baseHeights[i] = height;
 
       // Shoreline/Beach Band Logic
-      const beachHeight = 2.5;
-      const beachFade = 2.0;
+      const beachHeight = SAND_MAX_ELEV;
+      const beachFade = Math.max(0.1, GRASS_MIN_ELEV - SAND_MAX_ELEV);
       const beachLimit = seaLevel + beachHeight;
 
       let beachFactor = 0.0;

@@ -1,7 +1,12 @@
 // Configuration describing how terrain textures should be layered on top of the
-// existing vertex-colored ground. The JPG files referenced here should live in
-// the public/textures/ground directory.
-import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
+// existing vertex-colored ground. The JPG files referenced here live under
+// public/textures/ so they resolve to `${BASE_URL}textures/...` at runtime.
+import { MATERIALS } from "../materials/materialRegistry.js";
+import {
+  GRASS_MIN_ELEV,
+  SAND_MAX_ELEV,
+  SLOPE_ROCK_MIN,
+} from "../config/terrainMaterials.js";
 
 // PRESERVED EXPORT: Required by src/world/groundTextures.js
 export const NEUTRAL_GROUND_FALLBACK_TINT = {
@@ -27,21 +32,6 @@ export const NEUTRAL_GROUND_FALLBACK_TINT = {
  *   the keys here to match the loader.
  */
 
-function textureUrl(file) {
-  // Keep this helper identical to what the project expects.
-  // Reuse existing logic to include base URL and path to ground textures.
-  const baseUrl = resolveBaseUrl();
-  return joinPath(baseUrl, `textures/ground/${file}`);
-}
-
-function sandTextureUrl() {
-  const baseUrl = resolveBaseUrl();
-  return joinPath(
-    baseUrl,
-    "textures/sand/albedo.jpg",
-  );
-}
-
 /**
  * If your ground loader expects:
  *   - base: a single texture layer
@@ -57,8 +47,8 @@ export const GROUND_TEXTURE_CONFIG = {
    * Base layer (what you see everywhere, then blended with dirt/grass regions)
    */
   base: {
-    // Swap the entire ground to our gravelly sand atlas.
-    url: sandTextureUrl(),
+    // Swap the entire ground to our sand atlas.
+    url: MATERIALS.sand.albedo,
     colorSpace: "srgb",
     repeat: [28, 24],
     rotation: 0.03,
@@ -74,28 +64,16 @@ export const GROUND_TEXTURE_CONFIG = {
   blend: {
     enabled: true,
     
-    // Use procedural grass for inland areas
+    // Use grass texture for inland areas
     grass: {
-      procedural: "fresh-grass-lowlands",
-      size: 512,
-      seed: 1243,
-      baseColor: [95, 115, 82],
-      shadowColor: [62, 78, 52],
-      highlightColor: [128, 145, 108],
-      bladeFrequency: 0.72,
-      bladeTaper: 0.68,
-      highlightStrength: 0.28,
-      shadowStrength: 0.35,
-      noiseScale: 0.42,
-      patchiness: 0.38,
-      saturation: 0.68,
-      contrast: 1.08,
+      url: MATERIALS.grass.albedo,
+      colorSpace: "srgb",
       repeat: [28, 24],
     },
 
     // Use sand as "dirt" texture so beach effect shows sand
     dirt: {
-      url: sandTextureUrl(),
+      url: MATERIALS.sand.albedo,
       colorSpace: "srgb",
       repeat: [28, 24],
     },
@@ -107,11 +85,11 @@ export const GROUND_TEXTURE_CONFIG = {
 
     // Stone for steep slopes (optional, can disable if not needed)
     stone: {
-      url: sandTextureUrl(),  // Use sand for now to keep everything sandy
+      url: MATERIALS.stoneFallback.albedo,
       tint: [0.85, 0.82, 0.75],
       repeat: [28, 24],
     },
-    slopeThreshold: 0.9,  // Very steep before showing stone
+    slopeThreshold: SLOPE_ROCK_MIN,
     slopeBlend: 0.15,
   },
 
@@ -131,8 +109,8 @@ export const GROUND_TEXTURE_CONFIG = {
    * fade: Transition range for smooth blending from sand to grass
    */
   beach: {
-    height: 4.0,  // Sand visible from sea level (0) to ~4 units (covers harbor at Y=2)
-    fade: 3.0,     // Gradual 3-unit transition to inland grass
+    height: SAND_MAX_ELEV,
+    fade: Math.max(0.1, GRASS_MIN_ELEV - SAND_MAX_ELEV),
   },
 
   /**
