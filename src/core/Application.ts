@@ -436,12 +436,17 @@ export class Application {
     let audioManifestMissing = false;
     (soundscape as any)
       .loadManifest("audio/manifest.json")
+      .then((manifest: any) => {
+        if (!manifest) {
+          audioManifestMissing = true;
+        }
+      })
       .catch(() => {
         audioManifestMissing = true;
       })
-      .then(() => (soundscape as any).initFromManifest("audio/manifest.json"))
-      .then(() => soundscape.ensureUserGestureResume())
-      .catch(() => {});
+      .finally(() => {
+        soundscape.ensureUserGestureResume();
+      });
     updateLoadingStatus("Sculpting the Attic landscape...");
 
     const terrain = createTerrain(scene);
