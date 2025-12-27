@@ -165,7 +165,7 @@ export class Soundscape {
     });
     this._registerZoneTrack("wind", {
       label: "Wind",
-      url: "",
+      // url: joinPath(BASE, "audio/wind.mp3"), // Asset missing, use procedural fallback
       noiseOptions: { duration: 2, amplitude: 0.05 },
       filter: { type: "highpass", frequency: 300 },
     });
