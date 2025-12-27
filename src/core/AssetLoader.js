@@ -129,11 +129,27 @@ export class AssetLoader {
     }
 
     for (const relativePath of probes) {
-      const url = joinPath(base, relativePath);
+      let url;
+      if (
+        relativePath.startsWith(base) ||
+        /^(?:[a-z]+:)?\/\//i.test(relativePath)
+      ) {
+        url = relativePath;
+      } else {
+        url = joinPath(base, relativePath);
+      }
+
       try {
-        const method = relativePath.endsWith(".json") ? "GET" : "HEAD";
+        const method = url.endsWith(".json") ? "GET" : "HEAD";
         const response = await fetch(url, { method, cache: "no-cache" });
-        if (IS_DEV) console.log("[probe]", relativePath, response.status, response.ok, url);
+        if (IS_DEV)
+          console.log(
+            "[probe]",
+            relativePath,
+            response.status,
+            response.ok,
+            url,
+          );
       } catch (error) {
         if (IS_DEV) console.warn("[probe-failed]", relativePath, url, error);
       }
