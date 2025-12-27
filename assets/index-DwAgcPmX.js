@@ -42075,7 +42075,7 @@ function getMaterialAmbientOcclusion(material) {
     edgeOuter: material.userData.aoEdgeOuter
   };
 }
-const __vite_import_meta_env__ = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__ = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const REPO_SEGMENT$2 = "athens-game-starter";
 const REPO_BASE = `/${REPO_SEGMENT$2}/`;
 const DOUBLE_SEGMENT = `${REPO_SEGMENT$2}/${REPO_SEGMENT$2}`;
@@ -42114,7 +42114,7 @@ function hasDoubleRepo(base) {
   return typeof base === "string" && base.includes(DOUBLE_SEGMENT);
 }
 function resolveBaseUrl$2() {
-  const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true && "/athens-game-starter/" || null;
+  const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true && "/" || null;
   const globalBase = typeof window !== "undefined" && typeof window.__BASE_URL__ === "string" ? window.__BASE_URL__ : null;
   let base = globalBase || envBase || REPO_BASE;
   const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
@@ -49930,7 +49930,7 @@ function generateStoaGeometry(length, width, height) {
 }
 const scriptRel = "modulepreload";
 const assetsURL = function(dep) {
-  return "/athens-game-starter/" + dep;
+  return "/" + dep;
 };
 const seen = {};
 const __vitePreload = function preload(baseModule, deps, importerUrl) {
@@ -50338,7 +50338,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DMu3MkEb.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-exCfIXhK.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50849,7 +50849,7 @@ function sanitizeRelativePath$4(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CyXtHZ-g.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-rnBDSb4F.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51623,7 +51623,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DMu3MkEb.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-exCfIXhK.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -65180,8 +65180,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-26T23:30:52.930Z" : "",
-      sha: true ? "445768bb87ad14a0fc963cf23a160618b64dde65" : ""
+      time: true ? "2025-12-27T01:03:50.067Z" : "",
+      sha: true ? "a5b5532f0b19b7eb9f6c17faa9d52cd5a9902f6e" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -75918,4 +75918,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DRDjDzlD.js.map
+//# sourceMappingURL=index-DwAgcPmX.js.map
