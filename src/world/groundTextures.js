@@ -175,7 +175,11 @@ function configureTexture(texture, options = {}) {
     }
   }
 
-  texture.needsUpdate = true;
+  // Only set needsUpdate if the texture has data (DataTexture) or an image loaded
+  // This prevents "Texture marked for update but no image data found" errors
+  if (texture.isDataTexture || (texture.image && (texture.image.width > 0 || texture.image.data))) {
+    texture.needsUpdate = true;
+  }
 }
 
 function loadTexture(url, options, onError) {
