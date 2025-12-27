@@ -42308,7 +42308,7 @@ class Soundscape {
     });
     this._registerZoneTrack("wind", {
       label: "Wind",
-      url: "",
+      // url: joinPath(BASE, "audio/wind.mp3"), // Asset missing, use procedural fallback
       noiseOptions: { duration: 2, amplitude: 0.05 },
       filter: { type: "highpass", frequency: 300 }
     });
@@ -43812,10 +43812,7 @@ function configureTexture(texture, options = {}) {
     } catch (e) {
     }
   }
-  const hasPixelData = Boolean(
-    texture.isDataTexture || texture.isCanvasTexture || texture.isCompressedTexture || texture.image
-  );
-  if (hasPixelData) {
+  if (texture.isDataTexture || texture.image && (texture.image.width > 0 || texture.image.data)) {
     texture.needsUpdate = true;
   }
 }
@@ -50256,7 +50253,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BtzFojwP.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-QKGHlgby.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50767,7 +50764,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DvsVObzH.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cb1xsmxe.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51560,7 +51557,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BtzFojwP.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-QKGHlgby.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63756,8 +63753,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T12:06:40.234Z" : "",
-      sha: true ? "02ece990a1afad0b234e7002089c6736bd7e0bdd" : ""
+      time: true ? "2025-12-27T12:13:16.604Z" : "",
+      sha: true ? "415cf5afd6c1cbae4981b2bcd6c1e1ece1ca10c6" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -75015,4 +75012,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-B2YlMaF9.js.map
+//# sourceMappingURL=index-CiMA9Kwl.js.map
