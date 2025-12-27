@@ -17,14 +17,25 @@ function resolveBaseUrl() {
   return base.endsWith("/") ? base : `${base}/`;
 }
 
-function textureUrl(relativePath, fallback) {
-  if (typeof fallback === "string") {
-    return fallback;
-  }
-  const baseUrl = resolveBaseUrl();
+const BASE_URL = resolveBaseUrl();
+
+const resolveTexturePath = (relativePath) => {
   const safePath = relativePath.replace(/^\/+/, "");
-  return `${baseUrl}${safePath}`;
-}
+  return `${BASE_URL}${safePath}`;
+};
+
+const SAND_ALBEDO_URL =
+  typeof MATERIALS.sand.albedo === "string"
+    ? MATERIALS.sand.albedo
+    : resolveTexturePath("textures/sand/albedo.jpg");
+const GRASS_ALBEDO_URL =
+  typeof MATERIALS.grass.albedo === "string"
+    ? MATERIALS.grass.albedo
+    : resolveTexturePath("textures/grass/albedo.jpg");
+const DIRT_ALBEDO_URL =
+  typeof MATERIALS.dirt.albedo === "string"
+    ? MATERIALS.dirt.albedo
+    : resolveTexturePath("textures/ground/dirt-albedo.jpg");
 
 // PRESERVED EXPORT: Required by src/world/groundTextures.js
 export const NEUTRAL_GROUND_FALLBACK_TINT = {
@@ -66,7 +77,7 @@ export const GROUND_TEXTURE_CONFIG = {
    */
   base: {
     // Swap the entire ground to our sand atlas.
-    url: textureUrl("textures/sand/albedo.jpg", MATERIALS.sand.albedo),
+    url: SAND_ALBEDO_URL,
     colorSpace: "srgb",
     repeat: [28, 24],
     rotation: 0.03,
@@ -84,14 +95,14 @@ export const GROUND_TEXTURE_CONFIG = {
     
     // Use grass texture for inland areas
     grass: {
-      url: textureUrl("textures/grass/albedo.jpg", MATERIALS.grass.albedo),
+      url: GRASS_ALBEDO_URL,
       colorSpace: "srgb",
       repeat: [28, 24],
     },
 
     // Use sand as "dirt" texture so beach effect shows sand
     dirt: {
-      url: textureUrl("textures/sand/albedo.jpg", MATERIALS.sand.albedo),
+      url: SAND_ALBEDO_URL,
       colorSpace: "srgb",
       repeat: [28, 24],
     },
@@ -103,7 +114,7 @@ export const GROUND_TEXTURE_CONFIG = {
 
     // Stone for steep slopes (optional, can disable if not needed)
     stone: {
-      url: textureUrl("textures/ground/dirt-albedo.jpg", MATERIALS.dirt.albedo),
+      url: DIRT_ALBEDO_URL,
       tint: [0.6, 0.6, 0.6],
       repeat: [14, 12],
     },
