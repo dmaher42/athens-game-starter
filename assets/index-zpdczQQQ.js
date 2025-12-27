@@ -43299,6 +43299,7 @@ const resolveTexturePath = (relativePath) => {
   const safePath = relativePath.replace(/^\/+/, "");
   return `${BASE_URL}${safePath}`;
 };
+const textureUrl = resolveTexturePath;
 const SAND_ALBEDO_URL = typeof MATERIALS.sand.albedo === "string" ? MATERIALS.sand.albedo : resolveTexturePath("textures/sand/albedo.jpg");
 const GRASS_ALBEDO_URL = typeof MATERIALS.grass.albedo === "string" ? MATERIALS.grass.albedo : resolveTexturePath("textures/grass/albedo.jpg");
 const DIRT_ALBEDO_URL = typeof MATERIALS.dirt.albedo === "string" ? MATERIALS.dirt.albedo : resolveTexturePath("textures/ground/dirt-albedo.jpg");
@@ -50189,7 +50190,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DDgcXfLx.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D8K7ln6y.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50700,7 +50701,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DaL5OZGC.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cjvszskt.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51493,7 +51494,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DDgcXfLx.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D8K7ln6y.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63685,8 +63686,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T09:56:17.642Z" : "",
-      sha: true ? "2f52c50274d297c6d3fce97edd98145233a604de" : ""
+      time: true ? "2025-12-27T10:05:54.070Z" : "",
+      sha: true ? "be33f63046551c6228f0b597819a292a95074945" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74939,4 +74940,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-ChtgIDmL.js.map
+//# sourceMappingURL=index-zpdczQQQ.js.map
