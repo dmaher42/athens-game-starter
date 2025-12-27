@@ -489,13 +489,13 @@ export function createTerrain(scene) {
   };
 
   const sandNormal = loadTextureWithFallback(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/normal_gl.jpg"),
     textureOptions,
     () => createFallbackDataTexture([128, 128, 255], textureOptions),
   );
 
   const sandARM = loadTextureWithFallback(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/arm.jpg"),
     textureOptions,
     () => createFallbackDataTexture([255, 255, 0], textureOptions),
   );
