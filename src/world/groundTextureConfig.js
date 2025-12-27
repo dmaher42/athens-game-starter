@@ -38,7 +38,7 @@ function sandTextureUrl() {
   const baseUrl = resolveBaseUrl();
   return joinPath(
     baseUrl,
-    "textures/gravelly_sand/gravelly_sand_diff_1k.jpg",
+    "textures/sand/albedo.jpg",
   );
 }
 
