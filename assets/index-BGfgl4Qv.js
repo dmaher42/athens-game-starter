@@ -42075,7 +42075,7 @@ function getMaterialAmbientOcclusion(material) {
     edgeOuter: material.userData.aoEdgeOuter
   };
 }
-const __vite_import_meta_env__$2 = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$2 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const REPO_SEGMENT$2 = "athens-game-starter";
 const REPO_BASE = `/${REPO_SEGMENT$2}/`;
 const DOUBLE_SEGMENT = `${REPO_SEGMENT$2}/${REPO_SEGMENT$2}`;
@@ -42114,7 +42114,7 @@ function hasDoubleRepo(base) {
   return typeof base === "string" && base.includes(DOUBLE_SEGMENT);
 }
 function resolveBaseUrl$4() {
-  const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__$2 && true && "/" || null;
+  const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__$2 && true && "/athens-game-starter/" || null;
   const globalBase = typeof window !== "undefined" && typeof window.__BASE_URL__ === "string" ? window.__BASE_URL__ : null;
   let base = globalBase || envBase || REPO_BASE;
   const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
@@ -43254,9 +43254,9 @@ subscribeSeaLevelChange((seaLevelY) => {
   ACROPOLIS_PEAK_3D.y = newGroundY;
   CITY_CHUNK_CENTER.y = newGroundY;
 });
-const __vite_import_meta_env__$1 = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$1 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 function resolveBaseUrl$3() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true ? "/" : "/";
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true ? "/athens-game-starter/" : "/";
   return base.endsWith("/") ? base : `${base}/`;
 }
 function joinBase$1(base, relativePath) {
@@ -49764,7 +49764,7 @@ function generateStoaGeometry(length, width, height) {
 }
 const scriptRel = "modulepreload";
 const assetsURL = function(dep) {
-  return "/" + dep;
+  return "/athens-game-starter/" + dep;
 };
 const seen = {};
 const __vitePreload = function preload(baseModule, deps, importerUrl) {
@@ -50172,7 +50172,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C-NPSUt1.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-a9AU8rni.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50683,7 +50683,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DxpJWM42.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BZXYFg-5.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51476,7 +51476,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C-NPSUt1.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-a9AU8rni.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63668,8 +63668,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T03:27:15.990Z" : "",
-      sha: true ? "d4067bfcb49eb67801cab332fd72f87a686bc543" : ""
+      time: true ? "2025-12-27T09:27:09.713Z" : "",
+      sha: true ? "032b2f91da629508d471043262be37212ad15e47" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74681,9 +74681,9 @@ class Application {
     }
   }
 }
-const __vite_import_meta_env__ = { "BASE_URL": "/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__ = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 function resolveBaseUrl() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true ? "/" : "/";
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__ && true ? "/athens-game-starter/" : "/";
   return base.endsWith("/") ? base : `${base}/`;
 }
 function joinBase(base, path) {
@@ -74922,4 +74922,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BNsf0oSv.js.map
+//# sourceMappingURL=index-BGfgl4Qv.js.map
