@@ -77,8 +77,8 @@ export const HARBOR_WATER_BOUNDS = {
 };
 
 export const HARBOR_WATER_NORMAL_CANDIDATES = [
-  "textures/ground/water_normals.png",
-  "textures/ground/water_normals.jpg",
+  "textures/water/normals.png",
+  "textures/water/normals.jpg",
   "textures/ground/waternormals.jpg",
   "textures/ground/shader.png",
   "textures/ground/step_sea.gif",

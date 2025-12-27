@@ -45,7 +45,7 @@ function enableShadows(mesh) {
 function createReflectiveWaterMaterial() {
   // Use a physical material to pick up scene reflections and soft wave normals.
   const normalMap = waterTextureLoader.load(
-    "textures/ground/water_normals.png",
+    "textures/water/normals.png",
     (tex) => {
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
       tex.repeat.set(6, 6);
@@ -88,21 +88,21 @@ function createHarborPad(harborGroundY) {
   const baseUrl = resolveBaseUrl();
   
   const sandDiffuse = textureLoader.load(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_diff_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/albedo.jpg"),
   );
   sandDiffuse.wrapS = sandDiffuse.wrapT = THREE.RepeatWrapping;
   sandDiffuse.repeat.set(28, 24); // Match terrain repeat scale
   sandDiffuse.colorSpace = THREE.SRGBColorSpace;
   
   const sandNormal = textureLoader.load(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/normal_gl.jpg"),
   );
   sandNormal.wrapS = sandNormal.wrapT = THREE.RepeatWrapping;
   sandNormal.repeat.set(28, 24); // Match terrain repeat scale
   sandNormal.colorSpace = THREE.NoColorSpace;
   
   const sandARM = textureLoader.load(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/arm.jpg"),
   );
   sandARM.wrapS = sandARM.wrapT = THREE.RepeatWrapping;
   sandARM.repeat.set(28, 24); // Match terrain repeat scale

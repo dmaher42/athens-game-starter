@@ -13,6 +13,10 @@ import { getDistanceToCoast, isInHarborZone } from './coastalZones.js';
 import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
 import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
+import {
+  GRASS_MIN_ELEV,
+  SAND_MAX_ELEV,
+} from "../config/terrainMaterials.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 import {
   SEA_SIDE,
@@ -437,8 +441,8 @@ export function createTerrain(scene) {
       baseHeights[i] = height;
 
       // Shoreline/Beach Band Logic
-      const beachHeight = 2.5;
-      const beachFade = 2.0;
+      const beachHeight = SAND_MAX_ELEV;
+      const beachFade = Math.max(0.1, GRASS_MIN_ELEV - SAND_MAX_ELEV);
       const beachLimit = seaLevel + beachHeight;
 
       let beachFactor = 0.0;
@@ -511,13 +515,13 @@ export function createTerrain(scene) {
   };
 
   const sandNormal = loadTextureWithFallback(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_nor_gl_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/normal_gl.jpg"),
     textureOptions,
     () => createFallbackDataTexture([128, 128, 255], textureOptions),
   );
 
   const sandARM = loadTextureWithFallback(
-    joinPath(baseUrl, "textures/gravelly_sand/gravelly_sand_arm_1k.jpg"),
+    joinPath(baseUrl, "textures/sand/arm.jpg"),
     textureOptions,
     () => createFallbackDataTexture([255, 255, 0], textureOptions),
   );

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, CITY_CENTER_ORIGIN, getCityGroundY } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
+import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { IS_DEV } from '../utils/env.js';
 import { Prefabs, spawnBuilding } from './buildingSpawner.js';
 import { buildTemple } from '../features/temples.js';
@@ -543,7 +544,9 @@ export async function createCivicDistrict(scene, options = {}) {
       baseMap.repeat.set(4, 4);
       baseMap.colorSpace = THREE.SRGBColorSpace;
 
-      const normalMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_normal-dx.jpg"));
+      const normalUrl = joinPath(resolvedBase, "textures/marble_normal-dx.jpg");
+      const normalMap = await tl.loadAsync(normalUrl);
+      applyNormalMapConvention(normalMap, normalUrl);
       normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
       normalMap.repeat.set(4, 4);
 
