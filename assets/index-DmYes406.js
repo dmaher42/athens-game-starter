@@ -50198,7 +50198,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C9PIGDbF.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CSgvhzN-.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50709,7 +50709,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-PhMUEKRo.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DZ2b-4wx.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51502,7 +51502,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C9PIGDbF.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CSgvhzN-.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -62692,8 +62692,11 @@ function mount(rootEl2) {
   toggleButton.textContent = "⚙";
   toggleButton.className = "hud-camera-settings__toggle";
   const panel = document.createElement("div");
+  panel.id = "hud-camera-settings-panel";
   panel.className = "hud-camera-settings__panel";
   panel.style.display = "none";
+  panel.setAttribute("aria-hidden", "true");
+  toggleButton.setAttribute("aria-controls", panel.id);
   const controls = {};
   const slidersContainer = document.createElement("div");
   slidersContainer.className = "hud-camera-settings__slider-group";
@@ -62757,6 +62760,7 @@ function mount(rootEl2) {
       panel.style.display = "block";
       toggleButton.setAttribute("aria-expanded", "true");
     }
+    panel.setAttribute("aria-hidden", String(isVisible));
   };
   const onToggleClick = (event) => {
     event.preventDefault();
@@ -63694,8 +63698,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T10:47:04.354Z" : "",
-      sha: true ? "c6f361e5437a79456cc8d7d4950987990f2d16e5" : ""
+      time: true ? "2025-12-27T10:54:12.421Z" : "",
+      sha: true ? "73290790d482a4ed1fcab15822116f9ca203e201" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74948,4 +74952,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-KTp3wGKZ.js.map
+//# sourceMappingURL=index-DmYes406.js.map
