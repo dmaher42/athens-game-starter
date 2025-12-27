@@ -404,6 +404,12 @@ export async function createOcean(scene, terrain, options = {}) {
     shader.fragmentShader = shader.fragmentShader.replace(
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */ `
+      // Clipping Logic for Mainland: Remove water from the West (inland) side
+      // Harbor water ends at x = -120. We clip further west to be safe.
+      if (vWorldPosition.x < -180.0) {
+        discard;
+      }
+
       vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
