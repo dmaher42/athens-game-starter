@@ -294,7 +294,7 @@ function sampleTerrainCeiling(bounds, sampler) {
   return minHeight - TERRAIN_CLEARANCE_EPSILON;
 }
 
-export async function createOcean(scene, options = {}) {
+export async function createOcean(scene, terrain, options = {}) {
   // Water is statically imported at module top to avoid dynamic chunking
   
   // Remove prior water meshes
@@ -315,13 +315,11 @@ export async function createOcean(scene, options = {}) {
       ? getSeaLevelY()
       : SEA_LEVEL_Y;
 
-  // 2. CREATE CIRCULAR GEOMETRY ANCHORED TO THE SKYBOX HORIZON
-  // Update: We want a larger ocean to support the "Expand to East" look.
+  // 2. CREATE GEOMETRY
   // The user says "Bigger than the terrain footprint", "Open and expansive".
-  // DEFAULT_OCEAN_RADIUS is 4000. Terrain is 420.
-  // So 4000 is plenty large.
-  const radius = Math.max(options.radius ?? DEFAULT_OCEAN_RADIUS, 400);
-  const geometry = new THREE.CircleGeometry(radius, OCEAN_SEGMENTS);
+  // The terrain size is 2400. We will create a plane that is larger than that.
+  const oceanSize = 8000;
+  const geometry = new THREE.PlaneGeometry(oceanSize, oceanSize, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
 
   // 3. CONFIGURE WATER SHADER
   const water = new Water(geometry, {
@@ -337,13 +335,17 @@ export async function createOcean(scene, options = {}) {
 
   // Shader injection for shoreline interaction and distance fade
   water.material.onBeforeCompile = (shader) => {
-    // Shoreline Constants (matching terrain.js/locations.js)
-    shader.uniforms.uIslandCenter = {
-      value: new THREE.Vector2(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z),
-    };
-    shader.uniforms.uIslandRadius = { value: ISLAND_RADIUS };
-    shader.uniforms.uHarborCenter = { value: HARBOR_CENTER };
-    shader.uniforms.uHarborRadius = { value: HARBOR_WATER_RADIUS };
+    shader.uniforms.uSeaLevel = { value: seaLevel };
+    shader.uniforms.uTerrainSize = { value: new THREE.Vector2(terrain.geometry.parameters.width, terrain.geometry.parameters.height) };
+
+    const positionAttribute = terrain.geometry.attributes.position;
+    const heightData = new Float32Array(positionAttribute.count);
+    for (let i = 0; i < positionAttribute.count; i++) {
+        heightData[i] = positionAttribute.getZ(i);
+    }
+    const heightMap = new THREE.DataTexture(heightData, terrain.geometry.parameters.widthSegments + 1, terrain.geometry.parameters.heightSegments + 1, THREE.RedFormat, THREE.FloatType);
+    heightMap.needsUpdate = true;
+    shader.uniforms.uHeightMap = { value: heightMap };
 
     // Fade Constants
     shader.uniforms.uFadeStart = { value: 800.0 };
@@ -367,10 +369,9 @@ export async function createOcean(scene, options = {}) {
 
     // FRAGMENT SHADER INJECTION
     const fragmentHeader = /* glsl */ `
-      uniform vec2 uIslandCenter;
-      uniform float uIslandRadius;
-      uniform vec2 uHarborCenter;
-      uniform float uHarborRadius;
+      uniform sampler2D uHeightMap;
+      uniform float uSeaLevel;
+      uniform vec2 uTerrainSize;
       uniform float uFadeStart;
       uniform float uFadeEnd;
       varying vec3 vWorldPosition;
@@ -396,131 +397,26 @@ export async function createOcean(scene, options = {}) {
     shader.fragmentShader = shader.fragmentShader.replace(
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */ `
-      // Shoreline Interaction Logic
-      float distToIsland = length(vWorldPosition.xz - uIslandCenter);
-      float distToHarbor = length(vWorldPosition.xz - uHarborCenter);
+      vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
+      float terrainHeight = texture2D(uHeightMap, terrainUV).r;
+      float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // Determine proximity to shore
-      // Outer Coast: distance from Island Center > Island Radius
-      // Modified: We want NO shoreline foam/darkening in the East to simulate open sea.
-      // East is +X.
+      vec3 finalColor = color;
 
-      float dx = vWorldPosition.x - uIslandCenter.x;
-      float dz = vWorldPosition.z - uIslandCenter.y;
-      // If dx > 50 (East), assume open sea, no shore effects.
-      // Or rather, shore effects should be minimal.
+      // Shoreline foam
+      float foamFactor = smoothstep(0.0, 2.0, waterDepth) - smoothstep(2.0, 4.0, waterDepth);
+      foamFactor = clamp(foamFactor, 0.0, 1.0);
 
-      float distFromOuterCoast = max(0.0, distToIsland - uIslandRadius);
+      // Shallow water color
+      float shallowFactor = smoothstep(0.0, 10.0, waterDepth);
+      finalColor = mix(vec3(0.5, 0.8, 0.9), finalColor, shallowFactor);
 
-      // Harbor Coast: distance from Harbor Center < Harbor Radius (inside the cutout)
-      float shoreDist = distFromOuterCoast;
 
-      if (distToIsland < uIslandRadius) {
-        // Inside island bounds
-        if (distToHarbor < uHarborRadius) {
-           // Inside Harbor basin
-           shoreDist = uHarborRadius - distToHarbor;
-        } else {
-           // Under terrain or near edge
-           shoreDist = 0.0;
-        }
+      float n = oceanNoise(vWorldPosition.xz * 0.5);
+      if (foamFactor > 0.0 && n > 0.7) {
+        finalColor = mix(finalColor, vec3(1.0), foamFactor * 0.5);
       }
 
-      // Force open sea in East: if X is very large positive, we shouldn't see foam lines unless there's land.
-      // But shoreDist is calculated from IslandRadius.
-      // If distToIsland > IslandRadius, we are outside.
-      // We want to remove the "Coastline" circle effect in the East.
-      // Only show coast if X is negative (West)?
-
-      // Let's use the same 'westFactor' idea or simply verify if we are near the actual terrain mesh edge.
-      // Since we can't easily sample terrain here, we use the radius approximation.
-      // If we simply fade out the 'shoreFactor' based on angle?
-      // East angle = 0.
-      // float angle = atan(dz, dx);
-      // float eastMask = 0.5 * (1.0 - cos(angle)); // 0 at East, 1 at West.
-      // shoreDist = mix(1000.0, shoreDist, eastMask); // Push shore away in East?
-
-      // Actually, if we just let the water be, it will look like open water.
-      // The issue is if the water shader draws a 'foam line' at IslandRadius everywhere.
-      // Current logic: shoreFactor is based on distance from IslandRadius.
-      // If we are at X=500, distToIsland ~ 500 > 220 (radius).
-      // shoreDist = 280.
-      // shoreFactor = 1.0 - smoothstep(0.0, 40.0, 280) = 0.
-      // So no foam at distance. That is correct.
-      // Foam is only near the radius.
-
-      // So we only need to suppress foam at the radius in the East (since there is no land there now).
-      // Yes.
-
-      float angle = atan(dz, dx);
-      // Fixed: smoothstep order must be edge0 < edge1
-      float eastMask = 1.0 - smoothstep(-0.5, 0.5, cos(angle)); // 0 at East, 1 at West.
-
-      // Mask the shore distance logic. If East, pretend we are far from shore.
-      // But we still want the harbor (which is West-ish) to work.
-
-      // If we are in the East sector, we don't want the circular island coast.
-      // If we are West, we do.
-
-      // Let's just modulate shoreFactor.
-      float effectZone = 40.0;
-      float rawShoreFactor = 1.0 - smoothstep(0.0, effectZone, shoreDist);
-      float shoreFactor = rawShoreFactor * eastMask;
-
-      // However, Harbor is at (-120, 80).
-      // Harbor logic is separate?
-      // shoreDist handles both.
-
-      // If we are inside the harbor radius, we definitely want foam.
-      // Harbor is West. So eastMask should be high there.
-      // Harbor X is negative (-120). Angle is near PI. cos(angle) ~ -1. eastMask ~ 1.
-      // So Harbor is protected.
-
-      // What about North/South? Angle +/- PI/2. cos = 0. eastMask ~ 0.5.
-      // We might lose some foam at North/South tips.
-      // Let's adjust the mask to be tighter around East.
-      // We only want to remove it strictly in the East where we opened the ocean.
-      // say +/- 45 degrees around East (0).
-      // cos(angle) > 0.707.
-
-      float eastSuppress = smoothstep(0.5, 0.8, cos(angle)); // 0 to 1 as we get closer to pure East.
-      float directionalMask = 1.0 - eastSuppress;
-
-      shoreFactor = rawShoreFactor * directionalMask;
-
-      // Depth Cue: Darken water near shore
-      vec3 deepColor = color;
-      vec3 shallowColor = mix(color, vec3(0.0, 0.02, 0.05), 0.6); // Dark, murky near shore
-      float eastDistance = max(0.0, vWorldPosition.x - uIslandCenter.x);
-      float openSea = clamp(eastDistance / 1600.0, 0.0, 1.0);
-      vec3 horizonTone = mix(vec3(0.08, 0.13, 0.15), vec3(0.03, 0.07, 0.10), openSea);
-      vec3 finalColor = mix(mix(deepColor, shallowColor, shoreFactor), horizonTone, 0.35);
-      finalColor = mix(finalColor, finalColor * 0.85, openSea * 0.35);
-      finalColor = mix(finalColor, finalColor * 1.05, (1.0 - openSea) * 0.15);
-
-      // Foam Logic
-      if (shoreFactor > 0.0) {
-        // Noise based on world position
-        float n = oceanNoise(vWorldPosition.xz * 0.5);
-        float foamThreshold = 0.85 - (shoreFactor * 0.3); // More foam near shore
-
-        // Edge foam line
-        float foamLine = smoothstep(0.0, 3.0, shoreDist) * (1.0 - smoothstep(3.0, 6.0, shoreDist));
-
-        float foam = 0.0;
-        if (n > foamThreshold) foam = 0.35 * shoreFactor;
-
-        // Add subtle white foam
-        finalColor = mix(finalColor, vec3(0.86, 0.92, 0.98), foam + foamLine * 0.22);
-      }
-
-      float distanceDarken = smoothstep(uIslandRadius + 220.0, uIslandRadius + 1400.0, distToIsland);
-      vec3 horizonShade = mix(finalColor, finalColor * vec3(0.55, 0.62, 0.7), distanceDarken);
-
-      float nearShelf = 1.0 - clamp(distFromOuterCoast / 180.0, 0.0, 1.0);
-      vec3 shelfLift = mix(horizonShade, mix(horizonShade, vec3(0.82, 0.86, 0.88), 0.25), nearShelf);
-
-      finalColor = shelfLift * mix(0.92, 1.0, shoreFactor);
 
       gl_FragColor = vec4( finalColor, 1.0 );
       `
@@ -556,7 +452,7 @@ export async function createOcean(scene, options = {}) {
   water.name = "AegeanOcean";
   water.userData.isWater = true;
   water.userData.seaLevel = seaLevel;
-  water.userData.oceanRadius = radius;
+  water.userData.oceanSize = oceanSize;
   water.userData.horizonY = horizonY;
   // Transparent water renders before opaque terrain via renderOrder
   water.renderOrder = RENDER_LAYERS.WATER;
@@ -564,7 +460,7 @@ export async function createOcean(scene, options = {}) {
   // Custom wave scaling keeps detail even on the circular expanse
   if (waterNormals) {
     waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping;
-    const repeat = Math.max(radius / 90, 8);
+    const repeat = Math.max(oceanSize / 180, 8);
     waterNormals.repeat.set(repeat, repeat);
   }
 
@@ -572,7 +468,7 @@ export async function createOcean(scene, options = {}) {
 
   // Debug info
   if (import.meta.env?.DEV) {
-    console.info(`[ocean] Created Global Ocean at Y=${seaLevel} with radius ${radius}`);
+    console.info(`[ocean] Created Global Ocean at Y=${seaLevel} with size ${oceanSize}`);
   }
 
   return water;

@@ -98,6 +98,8 @@ export class PlayerSystem {
       this.player.cameraYaw = this.thirdPersonCamera.getYaw();
       this.player.cameraPitch = this.thirdPersonCamera.getPitch();
       this.thirdPersonCamera.update(deltaTime);
+      this.camera.position.copy(this.thirdPersonCamera.camera.position);
+      this.camera.quaternion.copy(this.thirdPersonCamera.camera.quaternion);
     }
 
     const playerRoot = this.player?.object;

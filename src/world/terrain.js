@@ -133,9 +133,7 @@ const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
 // HARBOR_GROUND_HEIGHT imported from locations.js at line 6
 const HARBOUR_RADIUS = 70;
 const HARBOUR_TARGET_DEPTH = 2;
-// Use RELOCATED harbor position (-50, -100) instead of original HARBOR_CENTER_3D (120, 80)
-// This matches the harbor.position.set(-50, harborGroundY, -100) in harbor.js
-const EAST_HARBOR_CENTER = new THREE.Vector2(-50, -100);
+const EAST_HARBOR_CENTER = new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z);
 
 // New Mainland/Coastal Constants
 const TERRAIN_SIZE = 2400; // Large terrain for mainland
@@ -311,9 +309,33 @@ function getElevation(
       h = h * 0.7 + (seaLevel + CITY_HEIGHT) * 0.3;
   }
 
+  // --- Coastal Feature Generation ---
+  const featureNoise = gradientNoise(x * 0.004, z * 0.004) * 0.5 + 0.5; // range 0-1
+  const cliffFactor = THREE.MathUtils.smoothstep(0.5, 0.6, featureNoise);
+
+  // Add extra height for cliffs before the coastal fade is applied
+  if (cliffFactor > 0) {
+      const cliffDetailNoise = gradientNoise(x * 0.1, z * 0.1);
+      const coastalZoneFactor = 1.0 - THREE.MathUtils.smoothstep(0.0, (COAST_WIDTH / TERRAIN_SIZE) * 2.0, coast.dSea);
+      h += cliffDetailNoise * 2.0 * cliffFactor * coastalZoneFactor; // Add some ruggedness
+      h += 10.0 * cliffFactor * coastalZoneFactor; // Add general height to the cliffs
+  }
+
+
   // Coast Fade
   if (coast.coastMask < 1) {
-    h = THREE.MathUtils.lerp(seaLevel, h, coast.coastMask);
+      // For cliffs, we want a steeper drop-off. We can achieve this by raising the coastMask to a power.
+      const beachMask = coast.coastMask;
+      const cliffMask = Math.pow(coast.coastMask, 8.0); // Creates a much sharper curve
+
+      const finalMask = THREE.MathUtils.lerp(beachMask, cliffMask, cliffFactor);
+
+      // In beach areas, clamp the max height to prevent large hills right next to the water
+      if (cliffFactor < 0.1) {
+          h = Math.min(h, seaLevel + CITY_HEIGHT);
+      }
+
+      h = THREE.MathUtils.lerp(seaLevel, h, finalMask);
   }
 
   return h;

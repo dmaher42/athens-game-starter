@@ -134,6 +134,9 @@ function createRoot() {
     return null;
   }
 
+  // Defensively remove any prior instances to prevent duplicates
+  document.querySelectorAll(`#${ROOT_ID}`).forEach((el) => el.remove());
+
   ensureStyles();
 
   const root = document.createElement("div");
