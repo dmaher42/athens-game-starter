@@ -20,6 +20,11 @@ function resolveBaseUrl() {
 const BASE_URL = resolveBaseUrl();
 
 const resolveTexturePath = (relativePath) => {
+  // If the path already starts with the base URL, return it as is.
+  // This prevents double-prefixing when consuming paths from MATERIALS which already have BASE_URL.
+  if (relativePath.startsWith(BASE_URL)) {
+    return relativePath;
+  }
   const safePath = relativePath.replace(/^\/+/, "");
   return `${BASE_URL}${safePath}`;
 };

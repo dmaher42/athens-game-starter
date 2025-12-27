@@ -1,44 +1,16 @@
 import {
   resolveBaseUrl,
   joinPath,
-  REPO_BASE_PATH,
 } from "../utils/baseUrl.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 
 // Helper requested by user to simplify path resolution
 const baseUrl = (path) => joinPath(resolveBaseUrl(), path);
 
-const REPO_SEGMENT = REPO_BASE_PATH.replace(/\//g, "");
-const DOUBLE_REPO_PREFIX = `${REPO_SEGMENT}/${REPO_SEGMENT}/`;
-
+// Simplified logic without REPO_BASE_PATH
 function normalizeDistrictRuleCandidate(value) {
   if (typeof value !== "string") return "";
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
-    try {
-      const parsed = new URL(trimmed);
-      parsed.pathname = parsed.pathname.replace(
-        new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
-        `/${REPO_SEGMENT}`,
-      );
-      return parsed.toString();
-    } catch {
-      return trimmed;
-    }
-  }
-
-  let normalized = trimmed.replace(/^\.\//, "");
-  normalized = normalized.replace(
-    new RegExp(`^/?${DOUBLE_REPO_PREFIX}`, "i"),
-    REPO_BASE_PATH,
-  );
-
-  if (REPO_SEGMENT && normalized.startsWith(`${REPO_SEGMENT}/`)) {
-    normalized = `/${normalized}`;
-  }
-
-  return normalized;
+  return value.trim().replace(/^\.\//, "");
 }
 
 export function buildDistrictRuleUrlCandidates(resolvedBase) {
@@ -53,26 +25,10 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
     push(joinPath(base, rel));
   };
 
-  // Priority #1: Ensure the repo base (resolvedBase) is used first
-  push(baseUrl("config/districts.json"));
+  // Priority #1: Ensure the repo base (resolvedBase) is used
   pushJoined(resolvedBase, "config/districts.json");
-
-  if (REPO_BASE_PATH && (!resolvedBase || !resolvedBase.includes(REPO_BASE_PATH))) {
-    pushJoined(REPO_BASE_PATH, "config/districts.json");
-  }
-
-  if (typeof window !== "undefined" && window.location) {
-    const { pathname } = window.location;
-
-    if (REPO_BASE_PATH && pathname && pathname.includes(REPO_BASE_PATH)) {
-      const idx = pathname.indexOf(REPO_BASE_PATH);
-      const repoBase = pathname.slice(0, idx + REPO_BASE_PATH.length);
-      pushJoined(repoBase, "config/districts.json");
-    }
-
-  } else {
-    push(joinPath(REPO_BASE_PATH, "config/districts.json"));
-  }
+  // Also try relative path if resolvedBase somehow failed
+  push("config/districts.json");
 
   return Array.from(urls);
 }

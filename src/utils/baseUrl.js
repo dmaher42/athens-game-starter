@@ -1,116 +1,41 @@
 // src/utils/baseUrl.js
 
-const REPO_SEGMENT = "athens-game-starter";
-const REPO_BASE = `/${REPO_SEGMENT}/`;
-const DOUBLE_SEGMENT = `${REPO_SEGMENT}/${REPO_SEGMENT}`;
-export const REPO_BASE_PATH = REPO_BASE;
-
-function normalizeAbsoluteRepoBase(path) {
-  if (!path || !/^(?:[a-z]+:)?\/\//i.test(path)) {
-    return path;
-  }
-  try {
-    const parsed = new URL(path);
-    parsed.pathname = parsed.pathname.replace(
-      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
-      `/${REPO_SEGMENT}`
-    );
-    return parsed.toString();
-  } catch {
-    return path;
-  }
-}
-
-function normalizeBase(path) {
-  if (!path) return REPO_BASE;
-  // If it's a full URL, just ensure trailing slash
-  if (/^(?:[a-z]+:)?\/\//i.test(path)) {
-    return path.endsWith("/") ? path : `${path}/`;
-  }
-
-  let normalized = path;
-  if (!normalized.startsWith("/")) {
-    normalized = `/${normalized}`;
-  }
-  return normalized.endsWith("/") ? normalized : `${normalized}/`;
-}
-
-function isGithubPagesHost() {
-  if (typeof window === "undefined" || !window.location?.hostname) return false;
-  return /github\.io$/i.test(window.location.hostname);
-}
-
-function hasDoubleRepo(base) {
-  return typeof base === "string" && base.includes(DOUBLE_SEGMENT);
-}
+// This constant is preserved for compatibility if other files import it,
+// but it is no longer used for base URL resolution logic.
+export const REPO_SEGMENT = "athens-game-starter";
 
 export function resolveBaseUrl() {
-  const envBase =
-    (typeof import.meta !== "undefined" &&
-      import.meta.env &&
-      typeof import.meta.env.BASE_URL === "string" &&
-      import.meta.env.BASE_URL) ||
-    null;
-  const globalBase =
-    typeof window !== "undefined" && typeof window.__BASE_URL__ === "string"
-      ? window.__BASE_URL__
-      : null;
-
-  let base = globalBase || envBase || REPO_BASE;
-  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
-
-  if (isAbsoluteBase) {
-    base = normalizeAbsoluteRepoBase(base);
-  } else if (hasDoubleRepo(base)) {
-    base = REPO_BASE;
+  if (
+    typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    typeof import.meta.env.BASE_URL === "string"
+  ) {
+    return import.meta.env.BASE_URL;
   }
-
-  const onGithubPages = isGithubPagesHost();
-  if (onGithubPages) {
-    // Always serve from the repo base when hosted on GitHub Pages.
-    base = REPO_BASE;
-  }
-
-  return normalizeBase(base);
+  return "/";
 }
 
 export function normalizeBaseUrl(base) {
-  let normalized = base || REPO_BASE;
-  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(normalized);
-
-  if (isAbsoluteBase) {
-    normalized = normalizeAbsoluteRepoBase(normalized);
-  } else if (hasDoubleRepo(normalized)) {
-    normalized = REPO_BASE;
-  }
-
-  return normalizeBase(normalized);
+  const b = base || resolveBaseUrl();
+  return b.endsWith("/") ? b : `${b}/`;
 }
 
 export function joinPath(base, rel) {
-  if (!base) {
-    base = REPO_BASE;
-  }
-  if (!rel) {
-    return base;
-  }
+  const effectiveBase = base || resolveBaseUrl();
+  if (!rel) return effectiveBase;
 
-  // If `rel` is an absolute URL, return it as-is.
+  // If rel is absolute URL, return it
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) {
     return rel;
   }
 
-  if (typeof base === "string" && !base.endsWith("/")) {
-    base = `${base}/`;
-  }
+  // Ensure base ends with slash
+  const baseSlash = effectiveBase.endsWith("/")
+    ? effectiveBase
+    : `${effectiveBase}/`;
 
-  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
-  // To handle base paths that are not full URLs (like /athens-game-starter/),
-  // we need a dummy base for the URL constructor.
-  const dummyOrigin = 'http://dummy.com';
+  // Remove leading slash from rel to avoid breaking out of base
+  const relClean = rel.replace(/^\/+/, "");
 
-  const baseUrl = isAbsoluteBase ? base : new URL(base, dummyOrigin).href;
-  const resolvedUrl = new URL(rel, baseUrl);
-
-  return isAbsoluteBase ? resolvedUrl.href : resolvedUrl.pathname;
+  return `${baseSlash}${relClean}`;
 }

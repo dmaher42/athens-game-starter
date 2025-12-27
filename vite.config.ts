@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
+  // GitHub Pages deployment base path
   base: "/athens-game-starter/",
   resolve: {
     alias: {

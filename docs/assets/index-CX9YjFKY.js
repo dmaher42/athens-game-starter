@@ -42075,88 +42075,27 @@ function getMaterialAmbientOcclusion(material) {
     edgeOuter: material.userData.aoEdgeOuter
   };
 }
-const __vite_import_meta_env__$3 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-const REPO_SEGMENT$2 = "athens-game-starter";
-const REPO_BASE = `/${REPO_SEGMENT$2}/`;
-const DOUBLE_SEGMENT = `${REPO_SEGMENT$2}/${REPO_SEGMENT$2}`;
-const REPO_BASE_PATH = REPO_BASE;
-function normalizeAbsoluteRepoBase(path) {
-  if (!path || !/^(?:[a-z]+:)?\/\//i.test(path)) {
-    return path;
-  }
-  try {
-    const parsed = new URL(path);
-    parsed.pathname = parsed.pathname.replace(
-      new RegExp(`/${REPO_SEGMENT$2}/${REPO_SEGMENT$2}(?=/|$)`, "g"),
-      `/${REPO_SEGMENT$2}`
-    );
-    return parsed.toString();
-  } catch {
-    return path;
-  }
-}
-function normalizeBase(path) {
-  if (!path) return REPO_BASE;
-  if (/^(?:[a-z]+:)?\/\//i.test(path)) {
-    return path.endsWith("/") ? path : `${path}/`;
-  }
-  let normalized = path;
-  if (!normalized.startsWith("/")) {
-    normalized = `/${normalized}`;
-  }
-  return normalized.endsWith("/") ? normalized : `${normalized}/`;
-}
-function isGithubPagesHost() {
-  if (typeof window === "undefined" || !window.location?.hostname) return false;
-  return /github\.io$/i.test(window.location.hostname);
-}
-function hasDoubleRepo(base) {
-  return typeof base === "string" && base.includes(DOUBLE_SEGMENT);
-}
+const __vite_import_meta_env__$5 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const REPO_SEGMENT$1 = "athens-game-starter";
 function resolveBaseUrl$5() {
-  const envBase = typeof import.meta !== "undefined" && __vite_import_meta_env__$3 && true && "/athens-game-starter/" || null;
-  const globalBase = typeof window !== "undefined" && typeof window.__BASE_URL__ === "string" ? window.__BASE_URL__ : null;
-  let base = globalBase || envBase || REPO_BASE;
-  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
-  if (isAbsoluteBase) {
-    base = normalizeAbsoluteRepoBase(base);
-  } else if (hasDoubleRepo(base)) {
-    base = REPO_BASE;
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$5 && true) {
+    return "/athens-game-starter/";
   }
-  const onGithubPages = isGithubPagesHost();
-  if (onGithubPages) {
-    base = REPO_BASE;
-  }
-  return normalizeBase(base);
+  return "/";
 }
 function normalizeBaseUrl$1(base) {
-  let normalized = base || REPO_BASE;
-  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(normalized);
-  if (isAbsoluteBase) {
-    normalized = normalizeAbsoluteRepoBase(normalized);
-  } else if (hasDoubleRepo(normalized)) {
-    normalized = REPO_BASE;
-  }
-  return normalizeBase(normalized);
+  const b = base || resolveBaseUrl$5();
+  return b.endsWith("/") ? b : `${b}/`;
 }
 function joinPath(base, rel) {
-  if (!base) {
-    base = REPO_BASE;
-  }
-  if (!rel) {
-    return base;
-  }
+  const effectiveBase = base || resolveBaseUrl$5();
+  if (!rel) return effectiveBase;
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) {
     return rel;
   }
-  if (typeof base === "string" && !base.endsWith("/")) {
-    base = `${base}/`;
-  }
-  const isAbsoluteBase = /^(?:[a-z]+:)?\/\//i.test(base);
-  const dummyOrigin = "http://dummy.com";
-  const baseUrl2 = isAbsoluteBase ? base : new URL(base, dummyOrigin).href;
-  const resolvedUrl = new URL(rel, baseUrl2);
-  return isAbsoluteBase ? resolvedUrl.href : resolvedUrl.pathname;
+  const baseSlash = effectiveBase.endsWith("/") ? effectiveBase : `${effectiveBase}/`;
+  const relClean = rel.replace(/^\/+/, "");
+  return `${baseSlash}${relClean}`;
 }
 function createNoiseBuffer(context, { duration = 1, amplitude = 0.12 } = {}) {
   const sampleRate = context.sampleRate || 44100;
@@ -42279,6 +42218,54 @@ class Soundscape {
     this.camera = camera2;
     this.lightingRef = lightingRef;
     this.anchors = anchors;
+    this.listener = null;
+    this.loader = null;
+    this.masterGain = null;
+    this.bus = null;
+    this._audioInitialized = false;
+    this._zoneTrackConfigs = /* @__PURE__ */ new Map();
+    this.buffers = /* @__PURE__ */ new Map();
+    this.emitters = [];
+    this.oneShotTimers = [];
+    this.pendingSources = /* @__PURE__ */ new Set();
+    this.ready = false;
+    this.manifestLoaded = false;
+    this._manifest = null;
+    this.zoneAmbience = null;
+    const BASE = resolveBaseUrl$5();
+    this._registerZoneTrack("harbor", {
+      label: "Ocean Waves",
+      url: joinPath(BASE, "audio/ocean_waves.mp3"),
+      noiseOptions: { duration: 2, amplitude: 0.08 },
+      filter: { type: "lowpass", frequency: 600 }
+    });
+    this._registerZoneTrack("city", {
+      label: "Crowd Murmur",
+      url: joinPath(BASE, "audio/ambient_sea.ogg"),
+      noiseOptions: { duration: 2, amplitude: 0.06 },
+      filter: { type: "bandpass", frequency: 450 }
+    });
+    this._registerZoneTrack("wind", {
+      label: "Wind",
+      // url: joinPath(BASE, "audio/wind.mp3"), // Asset missing, use procedural fallback
+      noiseOptions: { duration: 2, amplitude: 0.05 },
+      filter: { type: "highpass", frequency: 300 }
+    });
+    this.zones = {
+      harbor: { pos: anchors.harbor, radius: 50 },
+      agora: { pos: anchors.agora, radius: 40 },
+      acropolis: { pos: anchors.acropolis, radius: 40 }
+    };
+    this.mode = null;
+  }
+  _registerZoneTrack(key, config) {
+    this._zoneTrackConfigs.set(key, config || {});
+    if (this.zoneAmbience) {
+      this.zoneAmbience.registerTrack(key, config || {});
+    }
+  }
+  _initAudioGraph() {
+    if (this._audioInitialized) return;
     this.listener = new AudioListener();
     this.camera.add(this.listener);
     this.loader = new AudioLoader();
@@ -42297,46 +42284,19 @@ class Soundscape {
     this.bus.ambience.connect(this.masterGain);
     this.bus.voices.connect(this.masterGain);
     this.bus.effects.connect(this.masterGain);
-    this.buffers = /* @__PURE__ */ new Map();
-    this.emitters = [];
-    this.oneShotTimers = [];
-    this.pendingSources = /* @__PURE__ */ new Set();
-    this.ready = false;
-    this.manifestLoaded = false;
-    this._manifest = null;
     this.zoneAmbience = new ZoneAmbienceManager(
       this.listener,
       (name, url) => this.loadBuffer(name, url),
       this.bus.ambience
     );
-    const BASE = resolveBaseUrl$5();
-    this.zoneAmbience.registerTrack("harbor", {
-      label: "Ocean Waves",
-      url: joinPath(BASE, "audio/ocean_waves.mp3"),
-      noiseOptions: { duration: 2, amplitude: 0.08 },
-      filter: { type: "lowpass", frequency: 600 }
-    });
-    this.zoneAmbience.registerTrack("city", {
-      label: "Crowd Murmur",
-      url: joinPath(BASE, "audio/ambient_sea.ogg"),
-      noiseOptions: { duration: 2, amplitude: 0.06 },
-      filter: { type: "bandpass", frequency: 450 }
-    });
-    this.zoneAmbience.registerTrack("wind", {
-      label: "Wind",
-      url: joinPath(BASE, "audio/wind.mp3"),
-      noiseOptions: { duration: 2, amplitude: 0.05 },
-      filter: { type: "highpass", frequency: 300 }
-    });
-    this.zones = {
-      harbor: { pos: anchors.harbor, radius: 50 },
-      agora: { pos: anchors.agora, radius: 40 },
-      acropolis: { pos: anchors.acropolis, radius: 40 }
-    };
-    this.mode = null;
+    for (const [key, config] of this._zoneTrackConfigs.entries()) {
+      this.zoneAmbience.registerTrack(key, config);
+    }
+    this._audioInitialized = true;
   }
   _safePlay(source) {
     if (!source) return;
+    if (!this.listener) return;
     if (this.listener.context.state === "running") {
       source.play();
     } else {
@@ -42349,6 +42309,7 @@ class Soundscape {
   }
   async loadBuffer(name, url) {
     if (!url) return null;
+    if (!this.loader) return null;
     if (name === "agora" || url.includes("ambience_agora.mp3")) {
       return null;
     }
@@ -42366,7 +42327,7 @@ class Soundscape {
     }
   }
   _makePositional(buffer, position, group = "ambience", { loop = true, volume = 0.6, refDistance = 12, maxDistance = 80, rolloff = 1 } = {}) {
-    if (!buffer) return null;
+    if (!buffer || !this.listener) return null;
     const src = new PositionalAudio(this.listener);
     src.setBuffer(buffer);
     src.setLoop(loop);
@@ -42395,7 +42356,7 @@ class Soundscape {
     return src;
   }
   _makeGlobal(buffer, group = "ambience", { loop = true, volume = 0.3 } = {}) {
-    if (!buffer) return null;
+    if (!buffer || !this.listener) return null;
     const src = new Audio(this.listener);
     src.setBuffer(buffer);
     src.setLoop(loop);
@@ -42603,7 +42564,7 @@ class Soundscape {
    * @param {THREE.Vector3} playerPos  (optional, for future distance-based mixing)
    */
   update(playerPos) {
-    if (!this.ready) return;
+    if (!this.ready || !this.bus) return;
     const nightPreference = this.mode === "night" ? 1 : this.mode === "day" ? 0 : null;
     const night = nightPreference ?? (this.lightingRef?.getNightFactor?.() ?? 0);
     const lerp2 = (a, b, t) => a + (b - a) * t;
@@ -42635,12 +42596,22 @@ class Soundscape {
     this.zoneAmbience.updateFades();
   }
   async ensureUserGestureResume() {
-    const ctx = this.listener.context;
-    if (ctx.state === "running") return;
     const resume = async () => {
-      try {
-        await ctx.resume();
-      } catch {
+      if (!this._audioInitialized) {
+        this._initAudioGraph();
+      }
+      const ctx = this.listener?.context;
+      if (ctx && ctx.state !== "running") {
+        try {
+          await ctx.resume();
+        } catch {
+        }
+      }
+      if (!this.ready) {
+        try {
+          await this.initFromManifest();
+        } catch {
+        }
       }
       for (const src of this.pendingSources) {
         try {
@@ -42651,9 +42622,11 @@ class Soundscape {
       this.pendingSources.clear();
       window.removeEventListener("pointerdown", resume);
       window.removeEventListener("keydown", resume);
+      window.removeEventListener("touchstart", resume);
     };
-    window.addEventListener("pointerdown", resume);
-    window.addEventListener("keydown", resume);
+    window.addEventListener("pointerdown", resume, { once: true });
+    window.addEventListener("keydown", resume, { once: true });
+    window.addEventListener("touchstart", resume, { once: true });
   }
   dispose() {
     this.emitters.forEach(({ obj, src }) => {
@@ -43254,9 +43227,9 @@ subscribeSeaLevelChange((seaLevelY) => {
   ACROPOLIS_PEAK_3D.y = newGroundY;
   CITY_CHUNK_CENTER.y = newGroundY;
 });
-const __vite_import_meta_env__$2 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 function resolveBaseUrl$4() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$2 && true ? "/athens-game-starter/" : "/";
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
   return base.endsWith("/") ? base : `${base}/`;
 }
 function joinBase$1(base, relativePath) {
@@ -43289,13 +43262,16 @@ const MATERIALS = {
 const SAND_MAX_ELEV = 3;
 const GRASS_MIN_ELEV = 6;
 const SLOPE_ROCK_MIN = 0.6;
-const __vite_import_meta_env__$1 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$3 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 function resolveBaseUrl$3() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true ? "/athens-game-starter/" : "/";
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$3 && true ? "/athens-game-starter/" : "/";
   return base.endsWith("/") ? base : `${base}/`;
 }
 const BASE_URL = resolveBaseUrl$3();
 const resolveTexturePath = (relativePath) => {
+  if (relativePath.startsWith(BASE_URL)) {
+    return relativePath;
+  }
   const safePath = relativePath.replace(/^\/+/, "");
   return `${BASE_URL}${safePath}`;
 };
@@ -43778,14 +43754,34 @@ function configureTexture(texture, options = {}) {
     } catch (e) {
     }
   }
-  texture.needsUpdate = true;
+  if (texture.isDataTexture || texture.image && (texture.image.width > 0 || texture.image.data)) {
+    texture.needsUpdate = true;
+  }
 }
 function loadTexture$1(url, options, onError) {
   try {
-    const texture = textureLoader$2.load(
+    const fallbackData = new Uint8Array([255, 255, 255, 255]);
+    const placeholder = new DataTexture(
+      fallbackData,
+      1,
+      1,
+      RGBAFormat
+    );
+    if (options?.colorSpace === "srgb") {
+      placeholder.colorSpace = SRGBColorSpace;
+    } else if (options?.colorSpace === "linear") {
+      placeholder.colorSpace = LinearSRGBColorSpace;
+    }
+    configureTexture(placeholder, options);
+    textureLoader$2.load(
       url,
-      () => {
-        configureTexture(texture, options);
+      (loadedTexture) => {
+        if (!loadedTexture?.image) return;
+        placeholder.image = loadedTexture.image;
+        placeholder.format = loadedTexture.format;
+        placeholder.type = loadedTexture.type;
+        placeholder.colorSpace = loadedTexture.colorSpace;
+        configureTexture(placeholder, options);
       },
       void 0,
       (event) => {
@@ -43793,7 +43789,7 @@ function loadTexture$1(url, options, onError) {
         if (onError) onError(event);
       }
     );
-    return texture;
+    return placeholder;
   } catch (error) {
     console.warn(`Failed to load ground texture: ${url}`, error);
     if (onError) onError(error);
@@ -46246,7 +46242,12 @@ function configureWaterNormalsTexture(texture) {
   if ("colorSpace" in texture && LinearSRGBColorSpace !== void 0) {
     texture.colorSpace = LinearSRGBColorSpace;
   }
-  texture.needsUpdate = true;
+  const hasPixelData = Boolean(
+    texture.isDataTexture || texture.isCanvasTexture || texture.isCompressedTexture || texture.image
+  );
+  if (hasPixelData) {
+    texture.needsUpdate = true;
+  }
 }
 function loadWaterNormalsTexture(url) {
   return new Promise((resolve, reject) => {
@@ -46268,7 +46269,6 @@ function loadWaterNormalsTexture(url) {
           reject(error);
         }
       );
-      configureWaterNormalsTexture(texture);
     } catch (error) {
       reject(error);
     }
@@ -47615,7 +47615,7 @@ if (void 0) {
   });
 }
 const HTML_CONTENT_TYPE = /text\/html/i;
-const REPO_SEGMENT$1 = "athens-game-starter";
+const REPO_SEGMENT = "athens-game-starter";
 const TRUE_JSON_PROBE = /audio\/manifest\.json|config\/districts\.json|docs\/config\/districts\.json/i;
 const GLB_EXTENSION = /\.glb(?:$|[?#])/i;
 const GLB_MODELS_PATH = /models\/(?:landmarks|buildings)\/.+\.glb(?:$|[?#])/i;
@@ -47634,7 +47634,7 @@ function normalizeRepoRelativeCandidate(value) {
   const trimmed = value.trim();
   if (!trimmed) return "";
   const withoutLeading = trimmed.replace(/^\/+/, "");
-  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT$1}/)+`, "i");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT}/)+`, "i");
   return withoutLeading.replace(repoPrefix, "");
 }
 function normalizeRepoPrefixedPath(value) {
@@ -47643,12 +47643,12 @@ function normalizeRepoPrefixedPath(value) {
   if (!trimmed) return "";
   if (!trimmed.startsWith("/")) return trimmed;
   const withoutLeading = trimmed.replace(/^\/+/, "");
-  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT$1}/)+`, "i");
+  const repoPrefix = new RegExp(`^(?:${REPO_SEGMENT}/)+`, "i");
   if (!repoPrefix.test(withoutLeading)) {
     return trimmed;
   }
   const stripped = withoutLeading.replace(repoPrefix, "");
-  return `/${REPO_SEGMENT$1}/${stripped}`;
+  return `/${REPO_SEGMENT}/${stripped}`;
 }
 function normalizeAbsoluteRepoUrl(value) {
   if (typeof value !== "string") return value;
@@ -47656,8 +47656,8 @@ function normalizeAbsoluteRepoUrl(value) {
   try {
     const parsed = new URL(value);
     parsed.pathname = parsed.pathname.replace(
-      new RegExp(`/${REPO_SEGMENT$1}/${REPO_SEGMENT$1}(?=/|$)`, "g"),
-      `/${REPO_SEGMENT$1}`
+      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+      `/${REPO_SEGMENT}`
     );
     return parsed.toString();
   } catch {
@@ -50101,6 +50101,7 @@ var MeshoptDecoder = (function() {
     }
   };
 })();
+const __vite_import_meta_env__$2 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const DEFAULT_BASIS_TRANSCODER_PATH = "https://unpkg.com/three@0.180.0/examples/jsm/libs/basis/";
 const LOCAL_TRANSCODER_SUBPATH = "basis/";
 const ABSOLUTE_PROTOCOL_REGEX$1 = /^[a-z]+:\/\//i;
@@ -50111,34 +50112,11 @@ function ensureTrailingSlash$1(value) {
   }
   return value.endsWith("/") ? value : `${value}/`;
 }
-function resolveDocumentBasePath$1() {
-  if (typeof document === "undefined" || !document.baseURI) {
-    return "/athens-game-starter/";
-  }
-  try {
-    const url = new URL(document.baseURI);
-    let { pathname } = url;
-    if (!pathname) {
-      return "/athens-game-starter/";
-    }
-    if (!pathname.endsWith("/")) {
-      const lastSlash = pathname.lastIndexOf("/");
-      pathname = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
-    }
-    return pathname || "/athens-game-starter/";
-  } catch (error) {
-    console.warn("Unable to parse document.baseURI for BASE_URL fallback", error);
-    return "/athens-game-starter/";
-  }
-}
 function resolveBaseUrl$2() {
-  const meta = typeof import.meta !== "undefined" ? import.meta : null;
-  const env = meta && meta.env ? meta.env : null;
-  const baseValue = env && typeof env.BASE_URL === "string" ? env.BASE_URL : null;
-  if (baseValue && baseValue.length > 0) {
-    return ensureTrailingSlash$1(baseValue);
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$2 && true) {
+    return ensureTrailingSlash$1("/athens-game-starter/");
   }
-  return ensureTrailingSlash$1(resolveDocumentBasePath$1());
+  return "/";
 }
 function resolveProtocol$1() {
   if (typeof window !== "undefined" && window.location?.protocol) {
@@ -50195,7 +50173,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B2GeBH-U.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dg37q6eN.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50589,6 +50567,7 @@ function DRACOWorker() {
     }
   }
 }
+const __vite_import_meta_env__$1 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const DEFAULT_DRACO_DECODER_PATH = "https://www.gstatic.com/draco/versioned/decoders/1.5.6/";
 const LOCAL_DECODER_SUBPATH = "draco/";
 const ABSOLUTE_PROTOCOL_REGEX = /^[a-z]+:\/\//i;
@@ -50599,34 +50578,11 @@ function ensureTrailingSlash(value) {
   }
   return value.endsWith("/") ? value : `${value}/`;
 }
-function resolveDocumentBasePath() {
-  if (typeof document === "undefined" || !document.baseURI) {
-    return "/athens-game-starter/";
-  }
-  try {
-    const url = new URL(document.baseURI);
-    let { pathname } = url;
-    if (!pathname) {
-      return "/athens-game-starter/";
-    }
-    if (!pathname.endsWith("/")) {
-      const lastSlash = pathname.lastIndexOf("/");
-      pathname = lastSlash >= 0 ? pathname.slice(0, lastSlash + 1) : "/";
-    }
-    return pathname || "/athens-game-starter/";
-  } catch (error) {
-    console.warn("Unable to parse document.baseURI for BASE_URL fallback", error);
-    return "/athens-game-starter/";
-  }
-}
 function resolveBaseUrl$1() {
-  const meta = typeof import.meta !== "undefined" ? import.meta : null;
-  const env = meta && meta.env ? meta.env : null;
-  const baseValue = env && typeof env.BASE_URL === "string" ? env.BASE_URL : null;
-  if (baseValue && baseValue.length > 0) {
-    return ensureTrailingSlash(baseValue);
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true) {
+    return ensureTrailingSlash("/athens-game-starter/");
   }
-  return ensureTrailingSlash(resolveDocumentBasePath());
+  return "/";
 }
 function resolveProtocol() {
   if (typeof window !== "undefined" && window.location?.protocol) {
@@ -50706,7 +50662,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DEBplmgg.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DUSFdE-K.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51499,7 +51455,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B2GeBH-U.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dg37q6eN.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -53492,33 +53448,9 @@ function createAthensLayoutConfig(environment = getRuntimeEnvironment(), overrid
   );
 }
 const baseUrl$1 = (path) => joinPath(resolveBaseUrl$5(), path);
-const REPO_SEGMENT = REPO_BASE_PATH.replace(/\//g, "");
-const DOUBLE_REPO_PREFIX = `${REPO_SEGMENT}/${REPO_SEGMENT}/`;
 function normalizeDistrictRuleCandidate(value) {
   if (typeof value !== "string") return "";
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
-    try {
-      const parsed = new URL(trimmed);
-      parsed.pathname = parsed.pathname.replace(
-        new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
-        `/${REPO_SEGMENT}`
-      );
-      return parsed.toString();
-    } catch {
-      return trimmed;
-    }
-  }
-  let normalized = trimmed.replace(/^\.\//, "");
-  normalized = normalized.replace(
-    new RegExp(`^/?${DOUBLE_REPO_PREFIX}`, "i"),
-    REPO_BASE_PATH
-  );
-  if (REPO_SEGMENT && normalized.startsWith(`${REPO_SEGMENT}/`)) {
-    normalized = `/${normalized}`;
-  }
-  return normalized;
+  return value.trim().replace(/^\.\//, "");
 }
 function buildDistrictRuleUrlCandidates(resolvedBase) {
   const urls = /* @__PURE__ */ new Set();
@@ -53531,21 +53463,8 @@ function buildDistrictRuleUrlCandidates(resolvedBase) {
     if (!base) return;
     push(joinPath(base, rel));
   };
-  push(baseUrl$1("config/districts.json"));
   pushJoined(resolvedBase, "config/districts.json");
-  if (REPO_BASE_PATH && (!resolvedBase || !resolvedBase.includes(REPO_BASE_PATH))) {
-    pushJoined(REPO_BASE_PATH, "config/districts.json");
-  }
-  if (typeof window !== "undefined" && window.location) {
-    const { pathname } = window.location;
-    if (REPO_BASE_PATH && pathname && pathname.includes(REPO_BASE_PATH)) {
-      const idx = pathname.indexOf(REPO_BASE_PATH);
-      const repoBase = pathname.slice(0, idx + REPO_BASE_PATH.length);
-      pushJoined(repoBase, "config/districts.json");
-    }
-  } else {
-    push(joinPath(REPO_BASE_PATH, "config/districts.json"));
-  }
+  push("config/districts.json");
   return Array.from(urls);
 }
 async function loadDistrictRules(baseUrlStr = "") {
@@ -63695,7 +63614,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T11:30:04.375Z" : "",
+      time: true ? "2025-12-27T12:25:49.259Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -74127,9 +74046,14 @@ class Application {
       }
     );
     let audioManifestMissing = false;
-    soundscape.loadManifest("audio/manifest.json").catch(() => {
+    soundscape.loadManifest("audio/manifest.json").then((manifest) => {
+      if (!manifest) {
+        audioManifestMissing = true;
+      }
+    }).catch(() => {
       audioManifestMissing = true;
-    }).then(() => soundscape.initFromManifest("audio/manifest.json")).then(() => soundscape.ensureUserGestureResume()).catch(() => {
+    }).finally(() => {
+      soundscape.ensureUserGestureResume();
     });
     updateLoadingStatus("Sculpting the Attic landscape...");
     const terrain = createTerrain(scene2);
@@ -74949,4 +74873,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BWQixJ4w.js.map
+//# sourceMappingURL=index-CX9YjFKY.js.map
