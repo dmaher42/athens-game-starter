@@ -49697,14 +49697,15 @@ async function makeMarblePBR() {
   const ao = await loadTexture(tl, MATERIALS.stoneFallback?.ao, {
     warnKey: "stoneFallback.ao"
   });
-  return new MeshStandardMaterial({
+  const materialOptions = {
     map: baseColor,
-    normalMap: normal || void 0,
-    roughnessMap: roughness || void 0,
-    aoMap: ao || void 0,
     metalness: 0,
     roughness: 1
-  });
+  };
+  if (normal) materialOptions.normalMap = normal;
+  if (roughness) materialOptions.roughnessMap = roughness;
+  if (ao) materialOptions.aoMap = ao;
+  return new MeshStandardMaterial(materialOptions);
 }
 async function makeTiledPBR(_basePath, repeat = [6, 6]) {
   const tl = new TextureLoader();
@@ -49727,17 +49728,18 @@ async function makeTiledPBR(_basePath, repeat = [6, 6]) {
     m.wrapS = m.wrapT = RepeatWrapping;
     m.repeat.set(repeat[0], repeat[1]);
   }
-  const mat = new MeshStandardMaterial({
+  const materialOptions = {
     map: base,
-    normalMap: normal || void 0,
-    roughnessMap: roughness || void 0,
-    aoMap: ao || void 0,
     metalness: 0,
     roughness: 1,
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1
-  });
+  };
+  if (normal) materialOptions.normalMap = normal;
+  if (roughness) materialOptions.roughnessMap = roughness;
+  if (ao) materialOptions.aoMap = ao;
+  const mat = new MeshStandardMaterial(materialOptions);
   return mat;
 }
 function applyMaterialToTree(root, material) {
@@ -50218,7 +50220,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DvtoPT86.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-RR3kVzbX.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50707,7 +50709,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-d-wwLOIS.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-aolumIKC.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51500,7 +51502,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DvtoPT86.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-RR3kVzbX.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63664,8 +63666,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-28T10:13:39.714Z" : "",
-      sha: true ? "202a00705018a5740190d2a275521bdbad5c1947" : ""
+      time: true ? "2025-12-28T10:16:07.715Z" : "",
+      sha: true ? "c2888df861e0f0f760e492f2c20bbed9d988c04d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74923,4 +74925,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CrLuafN1.js.map
+//# sourceMappingURL=index-DtAWdLgJ.js.map
