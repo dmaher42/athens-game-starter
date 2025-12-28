@@ -50220,7 +50220,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-RR3kVzbX.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-xnWWcw.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50709,7 +50709,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-aolumIKC.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-sSwsD9oO.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51502,7 +51502,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-RR3kVzbX.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-xnWWcw.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -62102,7 +62102,8 @@ function mountAudioMixer(soundscape, opts = {}) {
     return null;
   }
   const hasGainNode = (node) => !!node && typeof node === "object" && "gain" in node && typeof node.gain === "object" && node.gain?.value !== void 0;
-  if (!hasGainNode(soundscape.masterGain) || !soundscape.bus || !hasGainNode(soundscape.bus.ambience) || !hasGainNode(soundscape.bus.voices) || !hasGainNode(soundscape.bus.effects)) {
+  const bus = soundscape.bus;
+  if (!hasGainNode(soundscape.masterGain) || !hasGainNode(bus) || !hasGainNode(bus.ambience) || !hasGainNode(bus.voices) || !hasGainNode(bus.effects)) {
     console.warn("[AudioMixer] Missing required soundscape nodes; mixer disabled.");
     return null;
   }
@@ -62141,9 +62142,9 @@ function mountAudioMixer(soundscape, opts = {}) {
     return row;
   };
   wrap.appendChild(createSlider2("Master", soundscape.masterGain, 0.9));
-  wrap.appendChild(createSlider2("Ambience", soundscape.bus.ambience, 0.9));
-  wrap.appendChild(createSlider2("Voices", soundscape.bus.voices, 0.7));
-  wrap.appendChild(createSlider2("Effects", soundscape.bus.effects, 0.7));
+  wrap.appendChild(createSlider2("Ambience", bus.ambience, 0.9));
+  wrap.appendChild(createSlider2("Voices", bus.voices, 0.7));
+  wrap.appendChild(createSlider2("Effects", bus.effects, 0.7));
   registerPanel("audioMixer", wrap, 1);
   const handleKeydown = (event) => {
     if (event.key === key) {
@@ -63666,8 +63667,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-28T10:16:07.715Z" : "",
-      sha: true ? "c2888df861e0f0f760e492f2c20bbed9d988c04d" : ""
+      time: true ? "2025-12-28T11:21:06.682Z" : "",
+      sha: true ? "dc37358aa7557031745655595d26e665162b0adb" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74925,4 +74926,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DtAWdLgJ.js.map
+//# sourceMappingURL=index-CbzO24bW.js.map
