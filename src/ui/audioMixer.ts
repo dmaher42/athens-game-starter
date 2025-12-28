@@ -28,25 +28,12 @@ export function mountAudioMixer(
     return null;
   }
 
-  const hasGainNode = (node: unknown): node is { gain: { value: number } } =>
-    !!node &&
-    typeof node === "object" &&
-    "gain" in node &&
-    typeof (node as { gain?: unknown }).gain === "object" &&
-    (node as { gain?: { value?: unknown } }).gain?.value !== undefined;
-
-  const bus = soundscape.bus;
-
-  if (
-    !hasGainNode(soundscape.masterGain) ||
-    !hasGainNode(bus) ||
-    !hasGainNode(bus.ambience) ||
-    !hasGainNode(bus.voices) ||
-    !hasGainNode(bus.effects)
-  ) {
-    console.warn("[AudioMixer] Missing required soundscape nodes; mixer disabled.");
-    return null;
-  }
+  // Defensive: some runtime builds may pass a partial/placeholder soundscape
+  // Guard against missing bus nodes to avoid hard crashes in the UI.
+  const safeGainNode = (node: any, fallback = 0) => {
+    if (node && node.gain && typeof node.gain.value === "number") return node;
+    return { gain: { value: fallback } };
+  };
 
   const key = typeof opts.key === "string" && opts.key.trim().length > 0 ? opts.key : DEFAULT_HOTKEY;
 
@@ -92,10 +79,29 @@ export function mountAudioMixer(
     return row;
   };
 
+<<<<<<< HEAD
   wrap.appendChild(createSlider("Master", soundscape.masterGain, 0.9));
   wrap.appendChild(createSlider("Ambience", bus.ambience, 0.9));
   wrap.appendChild(createSlider("Voices", bus.voices, 0.7));
   wrap.appendChild(createSlider("Effects", bus.effects, 0.7));
+=======
+  // Defensive: some runtime builds may pass a partial/placeholder soundscape
+  // Guard against missing bus nodes to avoid hard crashes in the UI.
+  const safeGainNode = (node: any, fallback = 0) => {
+    if (node && node.gain && typeof node.gain.value === "number") return node;
+    return { gain: { value: fallback } };
+  };
+
+  const masterNode = safeGainNode(soundscape.masterGain, 0.9);
+  const ambienceNode = safeGainNode(soundscape.bus?.ambience, 0.9);
+  const voicesNode = safeGainNode(soundscape.bus?.voices, 0.7);
+  const effectsNode = safeGainNode(soundscape.bus?.effects, 0.7);
+
+  wrap.appendChild(createSlider("Master", masterNode, masterNode.gain.value));
+  wrap.appendChild(createSlider("Ambience", ambienceNode, ambienceNode.gain.value));
+  wrap.appendChild(createSlider("Voices", voicesNode, voicesNode.gain.value));
+  wrap.appendChild(createSlider("Effects", effectsNode, effectsNode.gain.value));
+>>>>>>> 0eb833d (fix(ui): guard audio mixer against missing bus nodes; normalize district rules URLs to avoid double-repo probes)
 
   registerPanel("audioMixer", wrap, 1);
 
