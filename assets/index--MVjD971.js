@@ -50236,7 +50236,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DaDd1iNL.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B8603kSk.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50725,7 +50725,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-TQc-6Kcx.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cbc2vnV4.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51544,7 +51544,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DaDd1iNL.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B8603kSk.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63717,8 +63717,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-28T12:45:46.587Z" : "",
-      sha: true ? "94df30f2bdbce890b18a488737ba12725ed78b96" : ""
+      time: true ? "2025-12-28T23:29:53.038Z" : "",
+      sha: true ? "f775ea4b350ac05eedd3dbc73fa295e67f9a8f5c" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74976,4 +74976,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DN2J-3Jn.js.map
+//# sourceMappingURL=index--MVjD971.js.map
