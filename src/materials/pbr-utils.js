@@ -55,14 +55,16 @@ export async function makeMarblePBR() {
     warnKey: "stoneFallback.ao",
   });
 
-  return new MeshStandardMaterial({
+  const materialOptions = {
     map: baseColor,
-    normalMap: normal || undefined,
-    roughnessMap: roughness || undefined,
-    aoMap: ao || undefined,
     metalness: 0.0,
     roughness: 1.0,
-  });
+  };
+  if (normal) materialOptions.normalMap = normal;
+  if (roughness) materialOptions.roughnessMap = roughness;
+  if (ao) materialOptions.aoMap = ao;
+
+  return new MeshStandardMaterial(materialOptions);
 }
 
 /** Tiled PBR builder with repeat + polygonOffset-friendly params */
@@ -93,17 +95,19 @@ export async function makeTiledPBR(_basePath, repeat = [6, 6]) {
   }
 
   // Slight polygon offset helps avoid path/road z-fighting on terrain
-  const mat = new MeshStandardMaterial({
+  const materialOptions = {
     map: base,
-    normalMap: normal || undefined,
-    roughnessMap: roughness || undefined,
-    aoMap: ao || undefined,
     metalness: 0.0,
     roughness: 1.0,
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
-  });
+  };
+  if (normal) materialOptions.normalMap = normal;
+  if (roughness) materialOptions.roughnessMap = roughness;
+  if (ao) materialOptions.aoMap = ao;
+
+  const mat = new MeshStandardMaterial(materialOptions);
 
   return mat;
 }
