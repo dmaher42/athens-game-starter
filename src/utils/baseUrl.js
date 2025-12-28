@@ -19,6 +19,15 @@ function normalizeAbsoluteBaseUrl(value) {
   }
 }
 
+function normalizeRelativeBaseUrl(value) {
+  if (typeof value !== "string") return value;
+  if (/^(?:[a-z]+:)?\/\//i.test(value)) return value;
+  return value.replace(
+    new RegExp(`/${REPO_SEGMENT}(?:/${REPO_SEGMENT})+`, "gi"),
+    `/${REPO_SEGMENT}`,
+  );
+}
+
 export function resolveBaseUrl() {
   let base = "/";
   if (
@@ -39,7 +48,7 @@ export function resolveBaseUrl() {
     base = `/${base}`;
   }
 
-  return base;
+  return normalizeRelativeBaseUrl(base);
 }
 
 export function normalizeBaseUrl(base) {
