@@ -42077,13 +42077,27 @@ function getMaterialAmbientOcclusion(material) {
 }
 const __vite_import_meta_env__$5 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const REPO_SEGMENT$1 = "athens-game-starter";
+function normalizeAbsoluteBaseUrl(value) {
+  if (typeof value !== "string") return value;
+  if (!/^(?:[a-z]+:)?\/\//i.test(value)) return value;
+  try {
+    const parsed = new URL(value);
+    parsed.pathname = parsed.pathname.replace(
+      new RegExp(`/${REPO_SEGMENT$1}(?:/${REPO_SEGMENT$1})+`, "gi"),
+      `/${REPO_SEGMENT$1}`
+    );
+    return parsed.toString();
+  } catch {
+    return value;
+  }
+}
 function resolveBaseUrl$5() {
   let base = "/";
   if (typeof import.meta !== "undefined" && __vite_import_meta_env__$5 && true) {
     base = "/athens-game-starter/";
   }
   if (/^(?:[a-z]+:)?\/\//i.test(base)) {
-    return base;
+    return normalizeAbsoluteBaseUrl(base);
   }
   if (!base.startsWith("/")) {
     base = `/${base}`;
@@ -42092,7 +42106,8 @@ function resolveBaseUrl$5() {
 }
 function normalizeBaseUrl$1(base) {
   const b = base || resolveBaseUrl$5();
-  return b.endsWith("/") ? b : `${b}/`;
+  const normalized = /^(?:[a-z]+:)?\/\//i.test(b) ? normalizeAbsoluteBaseUrl(b) : b;
+  return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
 function joinPath(base, rel) {
   const effectiveBase = base || resolveBaseUrl$5();
@@ -47672,7 +47687,7 @@ function normalizeAbsoluteRepoUrl(value) {
   try {
     const parsed = new URL(value);
     parsed.pathname = parsed.pathname.replace(
-      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+      new RegExp(`/${REPO_SEGMENT}(?:/${REPO_SEGMENT})+`, "gi"),
       `/${REPO_SEGMENT}`
     );
     return parsed.toString();
@@ -50203,7 +50218,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D5G8pCKe.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DvtoPT86.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50692,7 +50707,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C-pJF-nO.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-d-wwLOIS.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51485,7 +51500,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D5G8pCKe.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DvtoPT86.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63649,8 +63664,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T22:46:06.019Z" : "",
-      sha: true ? "041fff94e5ec8daed521e9dc88cc0ac13a8d345d" : ""
+      time: true ? "2025-12-28T10:13:39.714Z" : "",
+      sha: true ? "202a00705018a5740190d2a275521bdbad5c1947" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74908,4 +74923,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CoKeT2ok.js.map
+//# sourceMappingURL=index-CrLuafN1.js.map
