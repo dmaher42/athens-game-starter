@@ -41948,7 +41948,15 @@ function installAmbientOcclusionPatch() {
   patched = true;
   const originalSetValues = MeshStandardMaterial.prototype.setValues;
   MeshStandardMaterial.prototype.setValues = function setValues(values) {
-    originalSetValues.call(this, values);
+    if (values && typeof values === "object") {
+      const cleaned = {};
+      for (const [k, v] of Object.entries(values)) {
+        if (v !== void 0) cleaned[k] = v;
+      }
+      originalSetValues.call(this, cleaned);
+    } else {
+      originalSetValues.call(this, values);
+    }
     applyDefaults(this);
   };
   const originalClone = MeshStandardMaterial.prototype.clone;
@@ -50228,7 +50236,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DgGntWJA.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CQfd-x9a.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50717,10 +50725,21 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-MefFEGem.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C8r1l4Ne.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
+  const _origWarn = console.warn;
+  console.warn = (...args) => {
+    try {
+      const m = String(args[0] ?? "");
+      if (m.includes("KHR_materials_pbrSpecularGlossiness") || m.includes("Unknown extension")) {
+        return;
+      }
+    } catch {
+    }
+    return _origWarn.apply(console, args);
+  };
   if (renderer2) {
     try {
       const ktx2 = await createKTX2Loader(renderer2);
@@ -50790,58 +50809,73 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
   }
   const baseUrl2 = resolveBaseUrl$5();
   const seen2 = /* @__PURE__ */ new Set();
-  for (const candidate of urls) {
-    const raw = typeof candidate === "string" ? candidate.trim() : "";
-    if (!raw) {
-      continue;
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    try {
+      const msg = String(args[0] ?? "");
+      if (msg.includes("KHR_materials_pbrSpecularGlossiness") || msg.includes("Unknown extension")) {
+        return;
+      }
+    } catch {
     }
-    const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
-    const relative = sanitizeRelativePath$3(raw);
-    if (!relative && !isAbsolute) {
-      continue;
-    }
-    const candidatesToTry = Array.from(
-      new Set(
-        isAbsolute ? [raw] : [joinPath(baseUrl2, relative), relative]
-      )
-    );
-    for (const url of candidatesToTry) {
-      if (!url) continue;
-      if (seen2.has(url)) {
+    return originalWarn.apply(console, args);
+  };
+  try {
+    for (const candidate of urls) {
+      const raw = typeof candidate === "string" ? candidate.trim() : "";
+      if (!raw) {
         continue;
       }
-      seen2.add(url);
-      if (!await headOk$2(url)) {
+      const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
+      const relative = sanitizeRelativePath$3(raw);
+      if (!relative && !isAbsolute) {
         continue;
       }
-      try {
-        const gltf = await loader2.loadAsync(url);
-        const { scene: scene2, scenes } = gltf || {};
-        const bufferScene = scene2 || (Array.isArray(scenes) ? scenes[0] : null);
-        const root = bufferScene || null;
-        if (!root) throw new Error(`No scene in GLB: ${url}`);
-        if (targetHeight && targetHeight > 0) {
-          root.updateMatrixWorld(true);
-          const box = new Box3().setFromObject(root);
-          const size = new Vector3();
-          box.getSize(size);
-          const currentH = size.y || 1;
-          const scaleFactor = currentH !== 0 ? targetHeight / currentH : 1;
-          if (Number.isFinite(scaleFactor) && scaleFactor > 0) {
-            root.scale.multiplyScalar(scaleFactor);
-          }
+      const candidatesToTry = Array.from(
+        new Set(
+          isAbsolute ? [raw] : [joinPath(baseUrl2, relative), relative]
+        )
+      );
+      for (const url of candidatesToTry) {
+        if (!url) continue;
+        if (seen2.has(url)) {
+          continue;
         }
-        applyTextureBudgetToObject(root, { renderer: renderer2 });
-        if (typeof onLoaded === "function") {
-          try {
-            onLoaded({ url, gltf, root });
-          } catch {
-          }
+        seen2.add(url);
+        if (!await headOk$2(url)) {
+          continue;
         }
-        return { url, gltf, root };
-      } catch {
+        try {
+          const gltf = await loader2.loadAsync(url);
+          const { scene: scene2, scenes } = gltf || {};
+          const bufferScene = scene2 || (Array.isArray(scenes) ? scenes[0] : null);
+          const root = bufferScene || null;
+          if (!root) throw new Error(`No scene in GLB: ${url}`);
+          if (targetHeight && targetHeight > 0) {
+            root.updateMatrixWorld(true);
+            const box = new Box3().setFromObject(root);
+            const size = new Vector3();
+            box.getSize(size);
+            const currentH = size.y || 1;
+            const scaleFactor = currentH !== 0 ? targetHeight / currentH : 1;
+            if (Number.isFinite(scaleFactor) && scaleFactor > 0) {
+              root.scale.multiplyScalar(scaleFactor);
+            }
+          }
+          applyTextureBudgetToObject(root, { renderer: renderer2 });
+          if (typeof onLoaded === "function") {
+            try {
+              onLoaded({ url, gltf, root });
+            } catch {
+            }
+          }
+          return { url, gltf, root };
+        } catch {
+        }
       }
     }
+  } finally {
+    console.warn = originalWarn;
   }
   return null;
 }
@@ -51510,7 +51544,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DgGntWJA.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CQfd-x9a.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -53520,7 +53554,7 @@ function buildDistrictRuleUrlCandidates(resolvedBase) {
   };
   pushJoined(resolvedBase, "config/districts.json");
   push("config/districts.json");
-  const repoSeg = (REPO_BASE_PATH || "").replace(/^\/+|\/+$/g, "");
+  const repoSeg = (REPO_SEGMENT$1 || "").replace(/^\/+|\/+$/g, "");
   if (repoSeg) {
     const double = `/${repoSeg}/${repoSeg}/`;
     return Array.from(urls).map((u) => typeof u === "string" ? u.replace(new RegExp(double, "i"), `/${repoSeg}/`) : u);
@@ -63682,8 +63716,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-28T12:05:21.780Z" : "",
-      sha: true ? "cf431535669ac2736f3c76320e77c0edcf3ea298" : ""
+      time: true ? "2025-12-28T12:40:25.013Z" : "",
+      sha: true ? "01ba4db3a253bd00a92ca404ce7119d8ced4ab36" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74941,4 +74975,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DD0JyTMf.js.map
+//# sourceMappingURL=index-JPBPPJsm.js.map
