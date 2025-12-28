@@ -68,7 +68,7 @@ function normalizeAbsoluteRepoUrl(value) {
   try {
     const parsed = new URL(value);
     parsed.pathname = parsed.pathname.replace(
-      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+      new RegExp(`/${REPO_SEGMENT}(?:/${REPO_SEGMENT})+`, "gi"),
       `/${REPO_SEGMENT}`,
     );
     return parsed.toString();
