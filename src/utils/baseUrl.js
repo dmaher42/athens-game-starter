@@ -4,6 +4,21 @@
 // but it is no longer used for base URL resolution logic.
 export const REPO_SEGMENT = "athens-game-starter";
 
+function normalizeAbsoluteBaseUrl(value) {
+  if (typeof value !== "string") return value;
+  if (!/^(?:[a-z]+:)?\/\//i.test(value)) return value;
+  try {
+    const parsed = new URL(value);
+    parsed.pathname = parsed.pathname.replace(
+      new RegExp(`/${REPO_SEGMENT}(?:/${REPO_SEGMENT})+`, "gi"),
+      `/${REPO_SEGMENT}`,
+    );
+    return parsed.toString();
+  } catch {
+    return value;
+  }
+}
+
 export function resolveBaseUrl() {
   let base = "/";
   if (
@@ -16,7 +31,7 @@ export function resolveBaseUrl() {
 
   // If it's a full URL (http/https), return as is
   if (/^(?:[a-z]+:)?\/\//i.test(base)) {
-    return base;
+    return normalizeAbsoluteBaseUrl(base);
   }
 
   // Ensure it starts with a slash
@@ -29,7 +44,10 @@ export function resolveBaseUrl() {
 
 export function normalizeBaseUrl(base) {
   const b = base || resolveBaseUrl();
-  return b.endsWith("/") ? b : `${b}/`;
+  const normalized = /^(?:[a-z]+:)?\/\//i.test(b)
+    ? normalizeAbsoluteBaseUrl(b)
+    : b;
+  return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
 
 export function joinPath(base, rel) {
