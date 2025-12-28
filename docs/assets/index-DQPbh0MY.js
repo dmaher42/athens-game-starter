@@ -42077,15 +42077,45 @@ function getMaterialAmbientOcclusion(material) {
 }
 const __vite_import_meta_env__$5 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const REPO_SEGMENT$1 = "athens-game-starter";
-function resolveBaseUrl$5() {
-  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$5 && true) {
-    return "/athens-game-starter/";
+function normalizeAbsoluteBaseUrl(value) {
+  if (typeof value !== "string") return value;
+  if (!/^(?:[a-z]+:)?\/\//i.test(value)) return value;
+  try {
+    const parsed = new URL(value);
+    parsed.pathname = parsed.pathname.replace(
+      new RegExp(`/${REPO_SEGMENT$1}(?:/${REPO_SEGMENT$1})+`, "gi"),
+      `/${REPO_SEGMENT$1}`
+    );
+    return parsed.toString();
+  } catch {
+    return value;
   }
-  return "/";
+}
+function normalizeRelativeBaseUrl(value) {
+  if (typeof value !== "string") return value;
+  if (/^(?:[a-z]+:)?\/\//i.test(value)) return value;
+  return value.replace(
+    new RegExp(`/${REPO_SEGMENT$1}(?:/${REPO_SEGMENT$1})+`, "gi"),
+    `/${REPO_SEGMENT$1}`
+  );
+}
+function resolveBaseUrl$5() {
+  let base = "/";
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$5 && true) {
+    base = "/athens-game-starter/";
+  }
+  if (/^(?:[a-z]+:)?\/\//i.test(base)) {
+    return normalizeAbsoluteBaseUrl(base);
+  }
+  if (!base.startsWith("/")) {
+    base = `/${base}`;
+  }
+  return normalizeRelativeBaseUrl(base);
 }
 function normalizeBaseUrl$1(base) {
   const b = base || resolveBaseUrl$5();
-  return b.endsWith("/") ? b : `${b}/`;
+  const normalized = /^(?:[a-z]+:)?\/\//i.test(b) ? normalizeAbsoluteBaseUrl(b) : b;
+  return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
 function joinPath(base, rel) {
   const effectiveBase = base || resolveBaseUrl$5();
@@ -42257,6 +42287,7 @@ class Soundscape {
       acropolis: { pos: anchors.acropolis, radius: 40 }
     };
     this.mode = null;
+    this._initAudioGraph();
   }
   _registerZoneTrack(key, config) {
     this._zoneTrackConfigs.set(key, config || {});
@@ -43781,6 +43812,7 @@ function loadTexture$1(url, options, onError) {
         placeholder.format = loadedTexture.format;
         placeholder.type = loadedTexture.type;
         placeholder.colorSpace = loadedTexture.colorSpace;
+        placeholder.isDataTexture = false;
         configureTexture(placeholder, options);
       },
       void 0,
@@ -44978,6 +45010,7 @@ function loadTextureWithFallback(url, options, fallbackFactory) {
         fallbackTexture.format = loadedTexture.format;
         fallbackTexture.type = loadedTexture.type;
         fallbackTexture.colorSpace = loadedTexture.colorSpace;
+        fallbackTexture.isDataTexture = false;
         fallbackTexture.needsUpdate = true;
       },
       void 0,
@@ -46519,6 +46552,12 @@ async function createOcean(scene2, terrain, options = {}) {
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */
       `
+      // Clipping Logic for Mainland: Remove water from the West (inland) side
+      // Harbor water ends at x = -120. We clip further west to be safe.
+      if (vWorldPosition.x < -180.0) {
+        discard;
+      }
+
       vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
@@ -47656,7 +47695,7 @@ function normalizeAbsoluteRepoUrl(value) {
   try {
     const parsed = new URL(value);
     parsed.pathname = parsed.pathname.replace(
-      new RegExp(`/${REPO_SEGMENT}/${REPO_SEGMENT}(?=/|$)`, "g"),
+      new RegExp(`/${REPO_SEGMENT}(?:/${REPO_SEGMENT})+`, "gi"),
       `/${REPO_SEGMENT}`
     );
     return parsed.toString();
@@ -47708,11 +47747,23 @@ class AssetLoader {
       probes.push(...candidatesToUse);
     }
     for (const relativePath of probes) {
-      const url = joinPath(base, relativePath);
+      let url;
+      if (relativePath.startsWith(base) || /^(?:[a-z]+:)?\/\//i.test(relativePath)) {
+        url = relativePath;
+      } else {
+        url = joinPath(base, relativePath);
+      }
       try {
-        const method = relativePath.endsWith(".json") ? "GET" : "HEAD";
+        const method = url.endsWith(".json") ? "GET" : "HEAD";
         const response = await fetch(url, { method, cache: "no-cache" });
-        if (IS_DEV) console.log("[probe]", relativePath, response.status, response.ok, url);
+        if (IS_DEV)
+          console.log(
+            "[probe]",
+            relativePath,
+            response.status,
+            response.ok,
+            url
+          );
       } catch (error) {
         if (IS_DEV) console.warn("[probe-failed]", relativePath, url, error);
       }
@@ -48631,6 +48682,8 @@ class BackdropMountains {
     this.scene.add(this.group);
   }
   create() {
+    this.createMountains();
+    this.createMainlandExtension();
   }
   createMountains() {
     const count = 120;
@@ -48683,8 +48736,8 @@ class BackdropMountains {
     }
   }
   createMainlandExtension() {
-    const innerRadius = 180;
-    const outerRadius = 2400;
+    const innerRadius = 1100;
+    const outerRadius = 4500;
     const geometry = new RingGeometry(innerRadius, outerRadius, 64, 8);
     const pos = geometry.attributes.position;
     for (let i = 0; i < pos.count; i++) {
@@ -49652,14 +49705,15 @@ async function makeMarblePBR() {
   const ao = await loadTexture(tl, MATERIALS.stoneFallback?.ao, {
     warnKey: "stoneFallback.ao"
   });
-  return new MeshStandardMaterial({
+  const materialOptions = {
     map: baseColor,
-    normalMap: normal || void 0,
-    roughnessMap: roughness || void 0,
-    aoMap: ao || void 0,
     metalness: 0,
     roughness: 1
-  });
+  };
+  if (normal) materialOptions.normalMap = normal;
+  if (roughness) materialOptions.roughnessMap = roughness;
+  if (ao) materialOptions.aoMap = ao;
+  return new MeshStandardMaterial(materialOptions);
 }
 async function makeTiledPBR(_basePath, repeat = [6, 6]) {
   const tl = new TextureLoader();
@@ -49682,17 +49736,18 @@ async function makeTiledPBR(_basePath, repeat = [6, 6]) {
     m.wrapS = m.wrapT = RepeatWrapping;
     m.repeat.set(repeat[0], repeat[1]);
   }
-  const mat = new MeshStandardMaterial({
+  const materialOptions = {
     map: base,
-    normalMap: normal || void 0,
-    roughnessMap: roughness || void 0,
-    aoMap: ao || void 0,
     metalness: 0,
     roughness: 1,
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1
-  });
+  };
+  if (normal) materialOptions.normalMap = normal;
+  if (roughness) materialOptions.roughnessMap = roughness;
+  if (ao) materialOptions.aoMap = ao;
+  const mat = new MeshStandardMaterial(materialOptions);
   return mat;
 }
 function applyMaterialToTree(root, material) {
@@ -50173,7 +50228,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dg37q6eN.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-snsLot.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50662,7 +50717,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DUSFdE-K.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-ZILE5GX3.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51455,7 +51510,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dg37q6eN.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-snsLot.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -62054,6 +62109,12 @@ function mountAudioMixer(soundscape, opts = {}) {
   if (!soundscape || typeof document === "undefined") {
     return null;
   }
+  const hasGainNode = (node) => !!node && typeof node === "object" && "gain" in node && typeof node.gain === "object" && node.gain?.value !== void 0;
+  const bus = soundscape.bus;
+  if (!hasGainNode(soundscape.masterGain) || !hasGainNode(bus) || !hasGainNode(bus.ambience) || !hasGainNode(bus.voices) || !hasGainNode(bus.effects)) {
+    console.warn("[AudioMixer] Missing required soundscape nodes; mixer disabled.");
+    return null;
+  }
   const key = typeof opts.key === "string" && opts.key.trim().length > 0 ? opts.key : DEFAULT_HOTKEY;
   const wrap = document.createElement("div");
   Object.assign(wrap.style, {
@@ -62089,9 +62150,9 @@ function mountAudioMixer(soundscape, opts = {}) {
     return row;
   };
   wrap.appendChild(createSlider2("Master", soundscape.masterGain, 0.9));
-  wrap.appendChild(createSlider2("Ambience", soundscape.bus.ambience, 0.9));
-  wrap.appendChild(createSlider2("Voices", soundscape.bus.voices, 0.7));
-  wrap.appendChild(createSlider2("Effects", soundscape.bus.effects, 0.7));
+  wrap.appendChild(createSlider2("Ambience", bus.ambience, 0.9));
+  wrap.appendChild(createSlider2("Voices", bus.voices, 0.7));
+  wrap.appendChild(createSlider2("Effects", bus.effects, 0.7));
   registerPanel("audioMixer", wrap, 1);
   const handleKeydown = (event) => {
     if (event.key === key) {
@@ -63614,7 +63675,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-27T12:25:49.259Z" : "",
+      time: true ? "2025-12-28T11:38:53.655Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -74873,4 +74934,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CX9YjFKY.js.map
+//# sourceMappingURL=index-DQPbh0MY.js.map
