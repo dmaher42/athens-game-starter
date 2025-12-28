@@ -50236,7 +50236,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CQfd-x9a.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DaDd1iNL.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50725,7 +50725,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C8r1l4Ne.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-TQc-6Kcx.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51544,7 +51544,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CQfd-x9a.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DaDd1iNL.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -53554,7 +53554,8 @@ function buildDistrictRuleUrlCandidates(resolvedBase) {
   };
   pushJoined(resolvedBase, "config/districts.json");
   push("config/districts.json");
-  const repoSeg = (REPO_SEGMENT$1 || "").replace(/^\/+|\/+$/g, "");
+  const repoSegRaw = typeof REPO_SEGMENT$1 !== "undefined" ? String(REPO_SEGMENT$1) : typeof REPO_BASE_PATH !== "undefined" ? String(REPO_BASE_PATH) : "";
+  const repoSeg = (repoSegRaw || "").replace(/^\/+|\/+$/g, "");
   if (repoSeg) {
     const double = `/${repoSeg}/${repoSeg}/`;
     return Array.from(urls).map((u) => typeof u === "string" ? u.replace(new RegExp(double, "i"), `/${repoSeg}/`) : u);
@@ -63716,8 +63717,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-28T12:40:25.013Z" : "",
-      sha: true ? "01ba4db3a253bd00a92ca404ce7119d8ced4ab36" : ""
+      time: true ? "2025-12-28T12:45:46.587Z" : "",
+      sha: true ? "94df30f2bdbce890b18a488737ba12725ed78b96" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74975,4 +74976,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-JPBPPJsm.js.map
+//# sourceMappingURL=index-DN2J-3Jn.js.map
