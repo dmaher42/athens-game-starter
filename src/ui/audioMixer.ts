@@ -35,12 +35,14 @@ export function mountAudioMixer(
     typeof (node as { gain?: unknown }).gain === "object" &&
     (node as { gain?: { value?: unknown } }).gain?.value !== undefined;
 
+  const bus = soundscape.bus;
+
   if (
     !hasGainNode(soundscape.masterGain) ||
-    !soundscape.bus ||
-    !hasGainNode(soundscape.bus.ambience) ||
-    !hasGainNode(soundscape.bus.voices) ||
-    !hasGainNode(soundscape.bus.effects)
+    !hasGainNode(bus) ||
+    !hasGainNode(bus.ambience) ||
+    !hasGainNode(bus.voices) ||
+    !hasGainNode(bus.effects)
   ) {
     console.warn("[AudioMixer] Missing required soundscape nodes; mixer disabled.");
     return null;
@@ -91,9 +93,9 @@ export function mountAudioMixer(
   };
 
   wrap.appendChild(createSlider("Master", soundscape.masterGain, 0.9));
-  wrap.appendChild(createSlider("Ambience", soundscape.bus.ambience, 0.9));
-  wrap.appendChild(createSlider("Voices", soundscape.bus.voices, 0.7));
-  wrap.appendChild(createSlider("Effects", soundscape.bus.effects, 0.7));
+  wrap.appendChild(createSlider("Ambience", bus.ambience, 0.9));
+  wrap.appendChild(createSlider("Voices", bus.voices, 0.7));
+  wrap.appendChild(createSlider("Effects", bus.effects, 0.7));
 
   registerPanel("audioMixer", wrap, 1);
 
