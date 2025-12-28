@@ -1,6 +1,7 @@
 import {
   resolveBaseUrl,
   joinPath,
+  REPO_SEGMENT,
 } from "../utils/baseUrl.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 
@@ -31,7 +32,7 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
   push("config/districts.json");
 
   // Normalize any accidental double-repo segments (e.g. '/repo/repo/...')
-  const repoSeg = (REPO_BASE_PATH || "").replace(/^\/+|\/+$/g, "");
+  const repoSeg = (REPO_SEGMENT || "").replace(/^\/+|\/+$/g, "");
   if (repoSeg) {
     const double = `/${repoSeg}/${repoSeg}/`;
     return Array.from(urls).map((u) => (typeof u === "string" ? u.replace(new RegExp(double, "i"), `/${repoSeg}/`) : u));

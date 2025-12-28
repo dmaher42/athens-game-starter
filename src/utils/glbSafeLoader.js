@@ -24,6 +24,20 @@ export async function createGLTFLoader(renderer) {
   const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
   const loader = new GLTFLoader();
 
+  // Globally filter the specific legacy GLTF extension warning which is
+  // benign for our use-case but noisy in the console. This keeps the app
+  // output cleaner while still allowing other warnings.
+  const _origWarn = console.warn;
+  console.warn = (...args) => {
+    try {
+      const m = String(args[0] ?? "");
+      if (m.includes('KHR_materials_pbrSpecularGlossiness') || m.includes('Unknown extension')) {
+        return;
+      }
+    } catch {}
+    return _origWarn.apply(console, args);
+  };
+
   if (renderer) {
     try {
       const ktx2 = await createKTX2Loader(renderer);
@@ -105,7 +119,22 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
   const baseUrl = resolveBaseUrl();
   const seen = new Set();
 
-  for (const candidate of urls) {
+  // Temporarily filter GLTFLoader warnings about legacy PBR extensions while
+  // we attempt loading multiple candidate URLs. Restore `console.warn`
+  // afterward to avoid hiding unrelated warnings.
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    try {
+      const msg = String(args[0] ?? "");
+      if (msg.includes('KHR_materials_pbrSpecularGlossiness') || msg.includes('Unknown extension')) {
+        return;
+      }
+    } catch {}
+    return originalWarn.apply(console, args);
+  };
+
+  try {
+    for (const candidate of urls) {
     const raw = typeof candidate === "string" ? candidate.trim() : "";
     if (!raw) {
       continue;
@@ -171,6 +200,9 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
         }
       }
     }
+  } finally {
+    console.warn = originalWarn;
+  }
 
   return null;
 }

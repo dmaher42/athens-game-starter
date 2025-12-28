@@ -48,7 +48,18 @@ function installAmbientOcclusionPatch() {
 
   const originalSetValues = MeshStandardMaterial.prototype.setValues;
   MeshStandardMaterial.prototype.setValues = function setValues(values) {
-    originalSetValues.call(this, values);
+    // Filter out explicitly-undefined texture parameters to avoid three.js
+    // warnings like "parameter 'normalMap' has value of undefined" which
+    // occur when objects pass optional texture keys as undefined.
+    if (values && typeof values === 'object') {
+      const cleaned = {};
+      for (const [k, v] of Object.entries(values)) {
+        if (v !== undefined) cleaned[k] = v;
+      }
+      originalSetValues.call(this, cleaned);
+    } else {
+      originalSetValues.call(this, values);
+    }
     applyDefaults(this);
   };
 
