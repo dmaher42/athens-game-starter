@@ -32,7 +32,12 @@ export function buildDistrictRuleUrlCandidates(resolvedBase) {
   push("config/districts.json");
 
   // Normalize any accidental double-repo segments (e.g. '/repo/repo/...')
-  const repoSeg = (REPO_SEGMENT || "").replace(/^\/+|\/+$/g, "");
+  // Support either the modern `REPO_SEGMENT` export or the legacy global
+  // `REPO_BASE_PATH` variable without throwing a ReferenceError.
+  const repoSegRaw = typeof REPO_SEGMENT !== "undefined"
+    ? String(REPO_SEGMENT)
+    : (typeof REPO_BASE_PATH !== "undefined" ? String(REPO_BASE_PATH) : "");
+  const repoSeg = (repoSegRaw || "").replace(/^\/+|\/+$/g, "");
   if (repoSeg) {
     const double = `/${repoSeg}/${repoSeg}/`;
     return Array.from(urls).map((u) => (typeof u === "string" ? u.replace(new RegExp(double, "i"), `/${repoSeg}/`) : u));
