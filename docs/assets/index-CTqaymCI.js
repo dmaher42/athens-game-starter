@@ -53520,7 +53520,12 @@ function buildDistrictRuleUrlCandidates(resolvedBase) {
   };
   pushJoined(resolvedBase, "config/districts.json");
   push("config/districts.json");
-  const repoSeg = (REPO_BASE_PATH || "").replace(/^\/+|\/+$/g, "");
+  // Guard against undeclared legacy global `REPO_BASE_PATH` and prefer
+  // the exported `REPO_SEGMENT` when available.
+  const repoSegRaw = typeof REPO_SEGMENT !== "undefined"
+    ? String(REPO_SEGMENT)
+    : (typeof REPO_BASE_PATH !== "undefined" ? String(REPO_BASE_PATH) : "");
+  const repoSeg = (repoSegRaw || "").replace(/^\/+|\/+$/g, "");
   if (repoSeg) {
     const double = `/${repoSeg}/${repoSeg}/`;
     return Array.from(urls).map((u) => typeof u === "string" ? u.replace(new RegExp(double, "i"), `/${repoSeg}/`) : u);
