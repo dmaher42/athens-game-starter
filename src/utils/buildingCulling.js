@@ -86,8 +86,6 @@ export function updateBuildingCulling(scene, camera, options = {}) {
   buildingGroups.forEach((group) => {
     group.traverse((obj) => {
       if (!obj.isMesh) return;
-      if (obj.userData.noCull) return; // Skip protected meshes
-      
       const worldPos = obj.getWorldPosition(new THREE.Vector3());
       const distance = worldPos.distanceTo(cameraPos);
       // Quick fade/hide for near-far balance: hide building meshes beyond FADE_DISTANCE
