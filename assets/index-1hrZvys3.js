@@ -41920,6 +41920,16 @@ function clamp01$1(value) {
   if (value >= 1) return 1;
   return value;
 }
+function ensureStandardMaterial(material) {
+  if (material instanceof MeshStandardMaterial) {
+    return material;
+  }
+  const wrapped = new MeshStandardMaterial();
+  if (material && typeof material === "object") {
+    wrapped.setValues(material);
+  }
+  return wrapped;
+}
 function applyDefaults(material) {
   if (!material) return;
   if (!material.userData) material.userData = {};
@@ -60143,7 +60153,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-gO5xvrCH.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B778Z-b9.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60632,6 +60642,9 @@ function sanitizeRelativePath$1(value) {
 }
 class GLTFMeshStandardSGMaterial extends MeshStandardMaterial {
   constructor(params) {
+    if (params instanceof MeshStandardMaterial) {
+      return params;
+    }
     super();
     this.isGLTFSpecularGlossinessMaterial = true;
     const specularMapParsFragmentChunk = [
@@ -60812,6 +60825,9 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
     if (materialParams instanceof MeshStandardMaterial) {
       return materialParams;
     }
+    if (materialParams?.isMeshStandardMaterial) {
+      return materialParams;
+    }
     const material = new GLTFMeshStandardSGMaterial(materialParams);
     material.fog = true;
     material.color = materialParams.color;
@@ -60846,7 +60862,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D2TLO-NM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CPP8CHUx.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61794,8 +61810,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T23:08:37.412Z" : "",
-      sha: true ? "6954ebd8ff03bda67d34e2d5864acd2d54f62e50" : ""
+      time: true ? "2025-12-29T23:25:25.183Z" : "",
+      sha: true ? "42369e418c5f5bcd4ffde1e6575486c249b77ddc" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72546,4 +72562,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Bpnv3QZX.js.map
+//# sourceMappingURL=index-1hrZvys3.js.map
