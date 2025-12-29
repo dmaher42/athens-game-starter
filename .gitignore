@@ -7,6 +7,7 @@ dist/
 *.log
 test-results/
 verification.png
+server.pid
 # HDRI / Environment lighting binaries
 /assets/hdr/*.hdr
 /assets/hdr/*.exr
