@@ -834,7 +834,7 @@ export class Application {
 
       let interactor: any = createInteractor(renderer, camera, scene);
 
-      const safeModeFlag = engineConfig.featureFlags?.safeMode === true;
+      const safeModeFlag = engineConfig.featureFlags?.['safeMode'] === true;
       const safeModeParam = new URLSearchParams(window.location.search).get("safeMode");
       // Safe mode is optional and only enabled explicitly (not the default render path).
       const enableSafeMode = safeModeFlag || safeModeParam === "1" || safeModeParam === "true";
