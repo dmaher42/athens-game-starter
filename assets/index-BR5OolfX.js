@@ -47633,19 +47633,14 @@ function parseToggleValue(value, defaultValue = true) {
 }
 const DEFAULT_ASSET_CONFIG = {
   manifestProbes: ["audio/manifest.json", "models/npcs/manifest.json"],
-  probeGlbCandidates: [
-    "models/landmarks/poseidon_temple.glb",
-    "models/landmarks/akropol.glb"
-  ],
+  probeGlbCandidates: [],
   quickChecks: [
     { label: "Audio Manifest", path: "audio/manifest.json" },
     { label: "Aristotle Tomb", candidateKey: "aristotle" },
     { label: "District Rules", path: "config/districts.json" },
     { label: "Ground Dirt Albedo", path: "textures/ground/dirt-albedo.jpg" },
     { label: "Ground Grass Albedo", path: "textures/grass/albedo.jpg" },
-    { label: "Water Normals", path: "textures/water/normals.png" },
-    { label: "Akropol Landmark", path: "models/landmarks/akropol.glb" },
-    { label: "Poseidon Temple Landmark", path: "models/landmarks/poseidon_temple.glb" }
+    { label: "Water Normals", path: "textures/water/normals.png" }
   ],
   candidates: {
     aristotle: [
@@ -47667,9 +47662,7 @@ const ENVIRONMENT_OVERRIDES$3 = {
       { label: "District Rules", path: "config/districts.json" },
       { label: "Ground Dirt Albedo", path: "textures/ground/dirt-albedo.jpg" },
       { label: "Ground Grass Albedo", path: "textures/grass/albedo.jpg" },
-      { label: "Water Normals", path: "textures/water/normals.png" },
-      { label: "Akropol Landmark", path: "models/landmarks/akropol.glb" },
-      { label: "Poseidon Temple Landmark", path: "models/landmarks/poseidon_temple.glb" }
+      { label: "Water Normals", path: "textures/water/normals.png" }
     ]
   }
 };
@@ -50280,7 +50273,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BtDavdAr.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BIdReJT1.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50980,7 +50973,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-AL-l14s1.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-AsIi2iAV.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51779,7 +51772,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BtDavdAr.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BIdReJT1.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63953,8 +63946,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T12:40:55.983Z" : "",
-      sha: true ? "16dfddb3109bfb06bcaa447e21ae59ec6bc25e49" : ""
+      time: true ? "2025-12-29T12:42:56.769Z" : "",
+      sha: true ? "5deae28a40d93cf0b75a2e9211f2292b6f12e230" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -75126,4 +75119,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DDY7RHn0.js.map
+//# sourceMappingURL=index-BR5OolfX.js.map
