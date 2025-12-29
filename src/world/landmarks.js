@@ -486,7 +486,6 @@ function copyMaterialFlags(source, target) {
 }
 
 export async function loadLandmark() {
-  // Landmarks are intentionally disabled in this solo project.
   return null;
 }
 
