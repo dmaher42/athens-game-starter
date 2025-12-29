@@ -9,10 +9,7 @@ import {
 
 const DEFAULT_ASSET_CONFIG = {
   manifestProbes: ["audio/manifest.json", "models/npcs/manifest.json"],
-  probeGlbCandidates: [
-    "models/landmarks/poseidon_temple.glb",
-    "models/landmarks/akropol.glb",
-  ],
+  probeGlbCandidates: [],
   quickChecks: [
     { label: "Audio Manifest", path: "audio/manifest.json" },
     { label: "Aristotle Tomb", candidateKey: "aristotle" },
@@ -20,8 +17,6 @@ const DEFAULT_ASSET_CONFIG = {
     { label: "Ground Dirt Albedo", path: "textures/ground/dirt-albedo.jpg" },
     { label: "Ground Grass Albedo", path: "textures/grass/albedo.jpg" },
     { label: "Water Normals", path: "textures/water/normals.png" },
-    { label: "Akropol Landmark", path: "models/landmarks/akropol.glb" },
-    { label: "Poseidon Temple Landmark", path: "models/landmarks/poseidon_temple.glb" },
   ],
   candidates: {
     aristotle: [
@@ -45,8 +40,6 @@ const ENVIRONMENT_OVERRIDES = {
       { label: "Ground Dirt Albedo", path: "textures/ground/dirt-albedo.jpg" },
       { label: "Ground Grass Albedo", path: "textures/grass/albedo.jpg" },
       { label: "Water Normals", path: "textures/water/normals.png" },
-      { label: "Akropol Landmark", path: "models/landmarks/akropol.glb" },
-      { label: "Poseidon Temple Landmark", path: "models/landmarks/poseidon_temple.glb" },
     ],
   },
 };
