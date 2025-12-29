@@ -29,6 +29,7 @@ const DEFAULT_ENGINE_CONFIG = ({
   // the `glb` query param to 0, we disable GLB loading and fall back to procedural.
   const forceGlb = queryParams.has("glb") ? queryParams.get("glb") !== "0" : true;
   const forceProcedural = !forceGlb;
+  const safeMode = parseToggleValue(queryParams.get("safeMode"), false);
 
   return {
     environment: getRuntimeEnvironment(),
@@ -42,6 +43,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     featureFlags: {
       forceGlb,
       forceProcedural,
+      safeMode,
       useThirdPersonCamera: true,
     },
     debug: {
