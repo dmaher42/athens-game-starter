@@ -22,12 +22,6 @@ const DEFAULT_ASSET_CONFIG = {
     aristotle: [
       "models/buildings/aristotle_tomb_in_macedonia_greece.glb",
     ],
-    poseidon: [
-      "models/landmarks/poseidon_temple.glb",
-    ],
-    akropol: [
-      "models/landmarks/akropol.glb",
-    ],
   },
 };
 

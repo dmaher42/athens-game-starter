@@ -197,8 +197,6 @@ export function updateDistanceCulling(scene, camera, options = {}) {
     // Only process small props that haven't been permanently culled
     if (!isSmallProp(obj)) return;
     if (obj.userData.culled) return; // Skip permanently culled props
-    if (obj.userData.noCull) return; // Skip props marked as important
-    
     const worldPos = getWorldPosition(obj, new THREE.Vector3());
     const distance = worldPos.distanceTo(cameraPos);
     

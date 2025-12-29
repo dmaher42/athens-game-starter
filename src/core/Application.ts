@@ -273,11 +273,7 @@ export class Application {
     let devHud: any = (this.devHud = null);
     let ocean: any = (this.ocean = null);
     let pendingOceanStatus: any = (this.pendingOceanStatus = null);
-    const FORCE_PROCEDURAL_LANDMARKS = FORCE_PROC;
-    let proceduralLandmarkCount = 0;
-    let proceduralStatusMessage = FORCE_PROC
-      ? "Procedural: ON"
-      : "Procedural: OFF";
+    const proceduralStatus = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
     const updateOceanHudStatus = () => {
       if (!pendingOceanStatus || !devHud) {
         return;
@@ -639,7 +635,7 @@ export class Application {
         this.terrain,
         {
           roadsVisible,
-          useProceduralBlocks: FORCE_PROCEDURAL_LANDMARKS,
+          useProceduralBlocks: FORCE_PROC,
           forceProcedural: FORCE_PROC,
           seaLevel: resolvedSeaLevel,
         },
@@ -915,11 +911,7 @@ export class Application {
         this.devHud = devHud;
         devHud?.setActivePreset?.(lightingSystem.lastAppliedLightingPreset);
 
-        proceduralStatusMessage = FORCE_PROC ? "Procedural: ON" : "Procedural: OFF";
-        devHud?.setStatusLine?.(
-          "proc",
-          FORCE_PROC ? "Procedural: ON" : "Procedural: OFF",
-        );
+        devHud?.setStatusLine?.("proc", proceduralStatus);
         onFogChange(fogEnabled);
       }
       updateOceanHudStatus();
@@ -927,10 +919,7 @@ export class Application {
         devHud?.setStatusLine?.("audio", "Audio: Off (no manifest)");
       }
       if (devHud?.setStatusLine) {
-        devHud.setStatusLine(
-          "proc",
-          FORCE_PROC ? "Procedural: ON" : "Procedural: OFF",
-        );
+        devHud.setStatusLine("proc", proceduralStatus);
       }
 
       renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
