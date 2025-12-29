@@ -7,7 +7,6 @@ import {
   CITY_CHUNK_CENTER,
   HARBOR_CENTER_3D,
 } from "../world/locations.js";
-import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 import { createHudPanel } from "./hudShared.js";
 import { registerUIUpdate } from "./updateLoop.js";
 import { registerPanel, unregisterPanel } from "./HudManager.js";
@@ -31,7 +30,7 @@ export interface MiniMapFeature {
   readonly id: string;
   readonly name: string;
   readonly position: MiniMapPoint;
-  readonly type: "landmark" | "district";
+  readonly type: "district";
 }
 
 export interface MiniMapOptions {
@@ -58,35 +57,6 @@ function normalizePosition(position: unknown): MiniMapPoint | null {
     return { x: Number(position[0]) || 0, z: Number(position[2]) || 0 };
   }
   return null;
-}
-
-function buildLandmarkFeatures(): MiniMapFeature[] {
-  const features: MiniMapFeature[] = [];
-  const groups = (athensLayoutConfig?.groups ?? []) as Array<{
-    landmarks?: Array<{
-      enabled?: boolean;
-      name?: string;
-      id?: string;
-      placement?: { position?: unknown };
-    }>;
-  }>;
-  for (const group of groups) {
-    if (!group || !Array.isArray(group.landmarks)) continue;
-    for (const landmark of group.landmarks) {
-      if (!landmark) continue;
-      const { enabled, name, id } = landmark;
-      if (enabled === false) continue;
-      const point = normalizePosition(landmark.placement?.position);
-      if (!point) continue;
-      features.push({
-        id: `landmark:${id ?? name ?? features.length}`,
-        name: String(name || id || "Landmark"),
-        position: point,
-        type: "landmark",
-      });
-    }
-  }
-  return features;
 }
 
 function buildDistrictFeatures(): MiniMapFeature[] {
@@ -152,7 +122,7 @@ function buildDistrictFeatures(): MiniMapFeature[] {
 }
 
 function combineFeatures(): MiniMapFeature[] {
-  const combined = [...buildDistrictFeatures(), ...buildLandmarkFeatures()];
+  const combined = buildDistrictFeatures();
   const seen = new Set<string>();
   return combined.filter((feature) => {
     if (!feature?.id) return false;
@@ -286,10 +256,10 @@ function drawFeatures(
     const { position, name, type } = feature || {};
     const mapped = worldToCanvas(position, canvas, bounds);
     if (!mapped) continue;
-    const color = type === "landmark" ? "#ffd166" : "#72e0ff";
+    const color = "#72e0ff";
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(mapped.x, mapped.y, type === "landmark" ? 3.5 : 2.5, 0, Math.PI * 2);
+    ctx.arc(mapped.x, mapped.y, 2.5, 0, Math.PI * 2);
     ctx.fill();
 
     const label = String(name || "");
@@ -365,7 +335,7 @@ function updateLegend(
   for (const entry of items) {
     const li = document.createElement("li");
     const label = document.createElement("span");
-    label.textContent = entry.type === "landmark" ? "Landmark" : "District";
+    label.textContent = "District";
     const name = document.createElement("strong");
     name.textContent = entry.name;
     name.style.fontWeight = "600";
