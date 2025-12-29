@@ -21,6 +21,9 @@ function sanitizeRelativePath(value) {
 
 class GLTFMeshStandardSGMaterial extends THREE.MeshStandardMaterial {
   constructor(params) {
+    if (params instanceof THREE.MeshStandardMaterial) {
+      return params;
+    }
     super();
 
     this.isGLTFSpecularGlossinessMaterial = true;
@@ -238,6 +241,9 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 
   createMaterial(materialParams) {
     if (materialParams instanceof THREE.MeshStandardMaterial) {
+      return materialParams;
+    }
+    if (materialParams?.isMeshStandardMaterial) {
       return materialParams;
     }
     const material = new GLTFMeshStandardSGMaterial(materialParams);

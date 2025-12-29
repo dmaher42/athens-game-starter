@@ -17,6 +17,17 @@ function clamp01(value) {
   return value;
 }
 
+function ensureStandardMaterial(material) {
+  if (material instanceof MeshStandardMaterial) {
+    return material;
+  }
+  const wrapped = new MeshStandardMaterial();
+  if (material && typeof material === "object") {
+    wrapped.setValues(material);
+  }
+  return wrapped;
+}
+
 function applyDefaults(material) {
   if (!material) return;
   if (!material.userData) material.userData = {};
