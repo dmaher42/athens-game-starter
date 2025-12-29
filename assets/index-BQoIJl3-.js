@@ -46303,51 +46303,7 @@ class Water extends Mesh {
     };
   }
 }
-function isDebugRenderEnabled() {
-  const isDev = typeof import.meta !== "undefined" && Boolean(false);
-  if (!isDev) return false;
-  try {
-    if (typeof window !== "undefined" && window.location && window.location.search) {
-      const params = new URLSearchParams(window.location.search);
-      if (params.has("debugRender")) {
-        const v = params.get("debugRender");
-        return v === null || String(v) === "1" || String(v).toLowerCase() === "true";
-      }
-    }
-  } catch {
-  }
-  try {
-    if (typeof window !== "undefined" && window.localStorage) {
-      const stored = window.localStorage.getItem("debugRender");
-      if (stored != null) {
-        return stored === "1" || String(stored).toLowerCase() === "true";
-      }
-    }
-  } catch {
-  }
-  try {
-    if (typeof window !== "undefined" && typeof window.DEBUG_RENDER === "boolean") {
-      return window.DEBUG_RENDER;
-    }
-  } catch {
-  }
-  return false;
-}
-function enableDebugRenderPersistent(value = true) {
-  try {
-    if (typeof window !== "undefined" && window.localStorage) {
-      window.localStorage.setItem("debugRender", value ? "1" : "0");
-    }
-  } catch {
-  }
-}
-const debugFlags = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  enableDebugRenderPersistent,
-  isDebugRenderEnabled
-}, Symbol.toStringTag, { value: "Module" }));
 function mountWaterBoundsDebug(scene2, center, size) {
-  if (!isDebugRenderEnabled()) return;
   const box = new Box3(
     new Vector3(center.x - size.x / 2, center.y, center.z - size.y / 2),
     new Vector3(center.x + size.x / 2, center.y, center.z + size.y / 2)
@@ -46750,7 +46706,6 @@ function createBoundsLoop(bounds, color = 16777215, yOffset = 0) {
   return loop;
 }
 function mountWaterClipDebug(scene2, rawBounds, clipBounds, seaLevel = getSeaLevelY()) {
-  if (!isDebugRenderEnabled()) return null;
   const group = new Group();
   group.name = "WaterClipDebug";
   const baseY = seaLevel + 0.01;
@@ -50273,7 +50228,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BuSXMFtG.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-VZzta7.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50973,7 +50928,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cr1NpM9y.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-R7xufIfq.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51729,7 +51684,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BuSXMFtG.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-VZzta7.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63877,8 +63832,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T13:02:53.764Z" : "",
-      sha: true ? "dc4473da1a4bd5ffe9ba2e7dcd29774d69c2c1ef" : ""
+      time: true ? "2025-12-29T13:11:49.880Z" : "",
+      sha: true ? "e3695d7aeac7c2930a532044e09dcc104af99bda" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74292,11 +74247,11 @@ class Application {
     };
     const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: true, devDefault: true };
     const cameraHudToggle = engineConfig.debug?.overlays?.cameraSettings || { defaultValue: true, devDefault: true };
-    const { isDebugRenderEnabled: isDebugRenderEnabled2 } = await __vitePreload(async () => {
-      const { isDebugRenderEnabled: isDebugRenderEnabled3 } = await Promise.resolve().then(() => debugFlags);
-      return { isDebugRenderEnabled: isDebugRenderEnabled3 };
-    }, true ? void 0 : void 0);
-    const runtimeDebugAllowed = typeof isDebugRenderEnabled2 === "function" && isDebugRenderEnabled2();
+    const { isDebugRenderEnabled } = await __vitePreload(async () => {
+      const { isDebugRenderEnabled: isDebugRenderEnabled2 } = await import("./debugFlags-Injbs8ne.js");
+      return { isDebugRenderEnabled: isDebugRenderEnabled2 };
+    }, true ? [] : void 0);
+    const runtimeDebugAllowed = typeof isDebugRenderEnabled === "function" && isDebugRenderEnabled();
     if (runtimeDebugAllowed && (resolveFeatureToggle(devHudToggle) || resolveFeatureToggle(cameraHudToggle))) {
       UIManager.init({
         renderer: renderer2,
@@ -74676,4 +74631,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DntQVh5o.js.map
+//# sourceMappingURL=index-BQoIJl3-.js.map
