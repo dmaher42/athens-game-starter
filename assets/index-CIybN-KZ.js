@@ -58514,27 +58514,6 @@ function normalizePosition(position) {
   }
   return null;
 }
-function buildLandmarkFeatures() {
-  const features = [];
-  const groups = athensLayoutConfig?.groups ?? [];
-  for (const group of groups) {
-    if (!group || !Array.isArray(group.landmarks)) continue;
-    for (const landmark of group.landmarks) {
-      if (!landmark) continue;
-      const { enabled, name, id } = landmark;
-      if (enabled === false) continue;
-      const point = normalizePosition(landmark.placement?.position);
-      if (!point) continue;
-      features.push({
-        id: `landmark:${id ?? name ?? features.length}`,
-        name: String(name || id || "Landmark"),
-        position: point,
-        type: "landmark"
-      });
-    }
-  }
-  return features;
-}
 function buildDistrictFeatures() {
   const agora = normalizePosition(AGORA_CENTER_3D);
   const harbor = normalizePosition(HARBOR_CENTER_3D);
@@ -58597,7 +58576,7 @@ function buildDistrictFeatures() {
   return features;
 }
 function combineFeatures() {
-  const combined = [...buildDistrictFeatures(), ...buildLandmarkFeatures()];
+  const combined = buildDistrictFeatures();
   const seen2 = /* @__PURE__ */ new Set();
   return combined.filter((feature) => {
     if (!feature?.id) return false;
@@ -58709,10 +58688,10 @@ function drawFeatures(ctx, canvas, features, bounds) {
     const { position, name, type } = feature || {};
     const mapped = worldToCanvas(position, canvas, bounds);
     if (!mapped) continue;
-    const color = type === "landmark" ? "#ffd166" : "#72e0ff";
+    const color = "#72e0ff";
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(mapped.x, mapped.y, type === "landmark" ? 3.5 : 2.5, 0, Math.PI * 2);
+    ctx.arc(mapped.x, mapped.y, 2.5, 0, Math.PI * 2);
     ctx.fill();
     const label = String(name || "");
     if (label) {
@@ -58769,7 +58748,7 @@ function updateLegend(listElement, position, features) {
   for (const entry of items) {
     const li = document.createElement("li");
     const label = document.createElement("span");
-    label.textContent = entry.type === "landmark" ? "Landmark" : "District";
+    label.textContent = "District";
     const name = document.createElement("strong");
     name.textContent = entry.name;
     name.style.fontWeight = "600";
@@ -60164,7 +60143,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BY6v7xTx.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bjpr0KN8.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60864,7 +60843,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CP6UIY8N.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-2yWtVdhm.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60917,7 +60896,6 @@ async function probeWithGet(url) {
     return false;
   }
 }
-const LANDMARK_GLB_PATH = /(?:^|\/)models\/landmarks\/.+\.glb(?:$|[?#])/i;
 async function loadGLBWithFallbacks(loader, urls, options = {}) {
   if (!loader || typeof loader.loadAsync !== "function") {
     return null;
@@ -60961,7 +60939,7 @@ async function loadGLBWithFallbacks(loader, urls, options = {}) {
           continue;
         }
         seen2.add(url);
-        if (!LANDMARK_GLB_PATH.test(url) && !await headOk$1(url)) {
+        if (!await headOk$1(url)) {
           continue;
         }
         try {
@@ -61813,8 +61791,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T22:27:53.615Z" : "",
-      sha: true ? "388467ec10803d83383b72efa3acbbf94d6fdd53" : ""
+      time: true ? "2025-12-29T22:41:37.232Z" : "",
+      sha: true ? "15740dbc5fadfbcf0f6d6cb1050e34f241930e09" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72565,4 +72543,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CX1fIQD1.js.map
+//# sourceMappingURL=index-CIybN-KZ.js.map
