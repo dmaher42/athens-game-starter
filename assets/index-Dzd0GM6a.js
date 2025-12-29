@@ -50273,7 +50273,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-dGOuAy6X.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BZuj_eUU.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50973,7 +50973,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BC-TxDDA.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D6v9MKR9.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -50997,7 +50997,7 @@ async function createGLTFLoader(renderer2) {
   loader2.setMeshoptDecoder(MeshoptDecoder);
   return loader2;
 }
-async function headOk$2(url) {
+async function headOk$1(url) {
   if (!url) return false;
   try {
     const res = await fetch(url, { method: "HEAD" });
@@ -51026,6 +51026,7 @@ async function probeWithGet(url) {
     return false;
   }
 }
+const LANDMARK_GLB_PATH = /(?:^|\/)models\/landmarks\/.+\.glb(?:$|[?#])/i;
 async function loadGLBWithFallbacks(loader2, urls, options = {}) {
   if (!loader2 || typeof loader2.loadAsync !== "function") {
     return null;
@@ -51069,7 +51070,7 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
           continue;
         }
         seen2.add(url);
-        if (!await headOk$2(url)) {
+        if (!LANDMARK_GLB_PATH.test(url) && !await headOk$1(url)) {
           continue;
         }
         try {
@@ -51703,49 +51704,6 @@ function sanitizeRelativePath$1(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
-function deriveGithubRawCandidates(relativePath) {
-  if (typeof window === "undefined") return [];
-  const { hostname, pathname } = window.location || {};
-  if (!hostname || !pathname) return [];
-  const hostMatch = hostname.match(/^([^.:]+)\.github\.io$/i);
-  if (!hostMatch) return [];
-  const owner = hostMatch[1];
-  const segments = pathname.split("/").filter(Boolean);
-  if (!segments.length) return [];
-  const repo = segments[0];
-  let sanitizedRelative = String(relativePath || "").replace(/^\/+/, "");
-  const repoPrefix = `${repo}/`;
-  if (sanitizedRelative.toLowerCase().startsWith(repoPrefix.toLowerCase())) {
-    sanitizedRelative = sanitizedRelative.slice(repoPrefix.length);
-  }
-  if (!sanitizedRelative) return [];
-  const pathCandidates = /* @__PURE__ */ new Set([sanitizedRelative]);
-  if (!sanitizedRelative.toLowerCase().startsWith("public/")) {
-    pathCandidates.add(`public/${sanitizedRelative}`);
-  }
-  if (!sanitizedRelative.toLowerCase().startsWith("docs/")) {
-    pathCandidates.add(`docs/${sanitizedRelative}`);
-  }
-  const branches = ["main", "master", "gh-pages"];
-  const urls = [];
-  for (const branch of branches) {
-    for (const candidate of pathCandidates) {
-      urls.push(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${candidate}`);
-    }
-  }
-  return urls;
-}
-async function headOk$1(url) {
-  if (!url) return false;
-  try {
-    const response = await fetch(url, { method: "HEAD", cache: "no-cache" });
-    if (!response.ok) return false;
-    const contentType = response.headers?.get?.("content-type") || "";
-    return !contentType.toLowerCase().includes("text/html");
-  } catch {
-    return false;
-  }
-}
 const missingLandmarkWarnings = /* @__PURE__ */ new Set();
 function warnMissingLandmark(key, message) {
   if (!key) return;
@@ -51772,7 +51730,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-dGOuAy6X.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BZuj_eUU.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -52182,47 +52140,21 @@ async function loadLandmark(scene2, url, options = {}) {
         urlSet.add(normalized);
       }
     }
-    if (!isProtocolAbsolute && normalized) {
-      const githubRawCandidates = deriveGithubRawCandidates(normalized);
-      for (const candidate of githubRawCandidates) {
-        urlSet.add(candidate);
-      }
-    }
     const urls = Array.from(urlSet).filter(Boolean);
     const cacheKey = isProtocolAbsolute ? sanitizedUrl : normalized;
-    let availableUrl = null;
-    for (const candidate of urls) {
-      const ok = await headOk$1(candidate);
-      if (ok) {
-        availableUrl = candidate;
-        break;
-      }
-    }
-    if (!availableUrl) {
-      const fallbackObject = await tryProceduralFallback("missing-url", { requestedUrl: sanitizedUrl });
-      if (fallbackObject) {
-        return fallbackObject;
-      }
-      warnMissingLandmark(cacheKey || sanitizedUrl, `[landmarks] Missing GLB: ${sanitizedUrl}`);
-      cleanupEntry();
-      return null;
-    }
-    const prioritizedUrls = [
-      availableUrl,
-      ...urls.filter((candidate) => candidate !== availableUrl)
-    ];
     const { materialPreset } = options;
     const resolvedRenderer = resolveRenderer(scene2, options?.renderer);
-    const loaded2 = await loadGLBWithFallbacks(loader, prioritizedUrls, {
+    const loaded2 = await loadGLBWithFallbacks(loader, urls, {
       renderer: resolvedRenderer,
       targetHeight: options?.targetHeight || null,
       forceProcedural: options.forceProcedural === true
     });
     if (!loaded2 || !loaded2.root) {
-      const fallbackObject = await tryProceduralFallback("load-failed", { requestedUrl: availableUrl });
+      const fallbackObject = await tryProceduralFallback("load-failed", { requestedUrl: sanitizedUrl });
       if (fallbackObject) {
         return fallbackObject;
       }
+      warnMissingLandmark(cacheKey || sanitizedUrl, `[landmarks] Missing GLB: ${sanitizedUrl}`);
       cleanupEntry();
       return null;
     }
@@ -63946,8 +63878,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T12:55:22.745Z" : "",
-      sha: true ? "c65fbb29ebcb35ff5264d833d555cb0fdf1dacd2" : ""
+      time: true ? "2025-12-29T13:00:49.386Z" : "",
+      sha: true ? "bc42a6745f4b5aa8d16a46c0fb13db0f1360ed6d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74745,4 +74677,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-DoVeDDqx.js.map
+//# sourceMappingURL=index-Dzd0GM6a.js.map
