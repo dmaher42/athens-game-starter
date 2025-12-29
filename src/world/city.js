@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { IS_DEV } from "../utils/env.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   CITY_CHUNK_CENTER,
@@ -9,10 +8,7 @@ import {
 } from "./locations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
-import { generateStoaGeometry, generateTholosGeometry } from "./monuments.js";
-import { generateTempleGeometry, createParthenon, createTempleOfZeus, createTheater } from "./landmarks.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
-import { canPlaceLandmark, registerLandmark, SPACING_RULES } from "./cityPlan.js";
 
 const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
 const ROOF_COLOR_PRESETS = ["#a94a30", "#b55634", "#9f432d"];
@@ -76,61 +72,6 @@ function findSteepestSlope(terrain, center, radius, step = 10) {
     }
   }
   return best;
-}
-
-function findLandmarkSpots(terrain, center = CITY_CHUNK_CENTER) {
-  const centerY = sampleHeight(terrain, center.x, center.z, center.y);
-
-  // Look for the highest point for the Acropolis within 150m radius
-  let acropolisPos = new THREE.Vector3(center.x, centerY, center.z);
-  let highest = -Infinity;
-  for (let x = center.x - 150; x <= center.x + 150; x += 6) {
-    for (let z = center.z - 150; z <= center.z + 150; z += 6) {
-      const y = sampleHeight(terrain, x, z, centerY);
-      if (!Number.isFinite(y)) continue;
-      if (y > highest) {
-        highest = y;
-        acropolisPos.set(x, y, z);
-      }
-    }
-  }
-
-  // Move south from the Acropolis to find a sloping spot for the Theater
-  const theaterPos = acropolisPos.clone();
-  const southOffset = 40;
-  const baseY = sampleHeight(terrain, acropolisPos.x, acropolisPos.z + southOffset, acropolisPos.y);
-  theaterPos.set(acropolisPos.x, baseY, acropolisPos.z + southOffset);
-  for (let dist = southOffset + 10; dist <= southOffset + 60; dist += 10) {
-    const candidateY = sampleHeight(terrain, acropolisPos.x, acropolisPos.z + dist, theaterPos.y);
-    if (candidateY < theaterPos.y) {
-      theaterPos.set(acropolisPos.x, candidateY, acropolisPos.z + dist);
-    }
-  }
-
-  // Search for the flattest ground near the center for the Agora
-  let agoraPos = new THREE.Vector3(center.x, centerY, center.z);
-  let lowestVariance = Infinity;
-  for (let x = center.x - 80; x <= center.x + 80; x += 8) {
-    for (let z = center.z - 80; z <= center.z + 80; z += 8) {
-      const samples = [];
-      for (let dx = -6; dx <= 6; dx += 6) {
-        for (let dz = -6; dz <= 6; dz += 6) {
-          const h = sampleHeight(terrain, x + dx, z + dz, centerY);
-          if (Number.isFinite(h)) samples.push(h);
-        }
-      }
-      if (samples.length === 0) continue;
-      const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
-      const variance = samples.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / samples.length;
-      if (variance < lowestVariance) {
-        lowestVariance = variance;
-        const y = sampleHeight(terrain, x, z, centerY);
-        agoraPos.set(x, y, z);
-      }
-    }
-  }
-
-  return { acropolisPos, theaterPos, agoraPos };
 }
 
 function populateCityDetails(cityGroup, terrain, buildingPlacements, roadCurves) {
@@ -381,12 +322,6 @@ export async function createCity(scene, terrain, options = {}) {
   city.name = "HarborCity";
   scene.add(city);
 
-  const monuments = new THREE.Group();
-  monuments.name = "Monuments";
-  city.add(monuments);
-
-  const landmarkSpots = findLandmarkSpots(terrain, origin);
-
   // Roads radiating from center
   const roadCurves = [];
   for (let i = 0; i < 5; i++) {
@@ -430,23 +365,6 @@ export async function createCity(scene, terrain, options = {}) {
   const cityGeometries = [];
   const placedPoints = [];
   const buildingPlacements = [];
-  const landmarkBuffers = [];
-
-  const addLandmarkBuffer = (x, z, radius) => {
-    if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(radius)) return;
-    landmarkBuffers.push({ x, z, radius });
-    placedPoints.push({ x, z, radius });
-  };
-
-  if (landmarkSpots?.acropolisPos) {
-    addLandmarkBuffer(landmarkSpots.acropolisPos.x, landmarkSpots.acropolisPos.z, 70);
-  }
-  if (landmarkSpots?.theaterPos) {
-    addLandmarkBuffer(landmarkSpots.theaterPos.x, landmarkSpots.theaterPos.z, 80);
-  }
-  if (landmarkSpots?.agoraPos) {
-    addLandmarkBuffer(landmarkSpots.agoraPos.x, landmarkSpots.agoraPos.z, 75);
-  }
 
   const OCEAN_BOUNDARY_Z = -100;
   const CITY_BOUNDARY_Z = -40;
@@ -498,56 +416,8 @@ export async function createCity(scene, terrain, options = {}) {
       const dist = Math.hypot(x - p.x, z - p.z);
       if (dist < radius + p.radius) return false;
     }
-    for (const landmark of landmarkBuffers) {
-      const dist = Math.hypot(x - landmark.x, z - landmark.z);
-      if (dist < radius + landmark.radius) return false;
-    }
     return true;
   };
-
-  // Central monuments
-  const tholosRadius = 5;
-  const tholosHeight = 7;
-  const tholosX = origin.x + 6;
-  const tholosZ = origin.z;
-  
-  // Validate landmark spacing for tholos
-  if (!canPlaceLandmark(tholosX, tholosZ, 'tholos')) {
-    if (IS_DEV) console.warn(`[City] Tholos placement rejected at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)}) - violates 8-tile landmark spacing`);
-  } else {
-    const tholosY = sampleHeight(terrain, tholosX, tholosZ, origin.y);
-    const tholosGeo = generateTholosGeometry(tholosRadius, tholosHeight);
-    tholosGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(tholosX, tholosY, tholosZ));
-    cityGeometries.push(tholosGeo);
-    const tholosRadiusMeters = tholosRadius * 1.2;
-    placedPoints.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters });
-    landmarkBuffers.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters + 6 });
-    buildingPlacements.push({ x: tholosX, z: tholosZ, rotation: 0, width: tholosRadius * 2, depth: tholosRadius * 2 });
-    registerLandmark(tholosX, tholosZ, 'tholos');
-    if (IS_DEV) console.log(`[City] Tholos placed at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)})`);
-  }
-
-  const stoaLength = 22;
-  const stoaWidth = 8;
-  const stoaHeight = 6;
-  const stoaX = origin.x - 10;
-  const stoaZ = origin.z - 6;
-  
-  // Validate landmark spacing for stoa
-  if (!canPlaceLandmark(stoaX, stoaZ, 'stoa')) {
-    if (IS_DEV) console.warn(`[City] Stoa placement rejected at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)}) - violates 8-tile landmark spacing`);
-  } else {
-    const stoaY = sampleHeight(terrain, stoaX, stoaZ, origin.y);
-    const stoaGeo = generateStoaGeometry(stoaLength, stoaWidth, stoaHeight);
-    stoaGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(stoaX, stoaY, stoaZ));
-    cityGeometries.push(stoaGeo);
-    const stoaRadius = Math.hypot(stoaLength, stoaWidth) * 0.5;
-    placedPoints.push({ x: stoaX, z: stoaZ, radius: stoaRadius });
-    landmarkBuffers.push({ x: stoaX, z: stoaZ, radius: stoaRadius + 10 });
-    buildingPlacements.push({ x: stoaX, z: stoaZ, rotation: 0, width: stoaLength, depth: stoaWidth });
-    registerLandmark(stoaX, stoaZ, 'stoa');
-    if (IS_DEV) console.log(`[City] Stoa placed at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)})`);
-  }
 
   const zoneACount = 800;
   let zoneAPlaced = 0;
@@ -699,51 +569,6 @@ export async function createCity(scene, terrain, options = {}) {
     cityMesh.castShadow = true;
     cityMesh.receiveShadow = true;
     city.add(cityMesh);
-  }
-
-  const acropolisPeak = landmarkSpots?.acropolisPos;
-  if (acropolisPeak) {
-    const parthenon = createParthenon();
-    parthenon.position.set(acropolisPeak.x, acropolisPeak.y, acropolisPeak.z);
-
-    const foundationGeo = new THREE.BoxGeometry(40, 20, 80);
-    foundationGeo.translate(0, -10, 0);
-    const foundationMaterial = new THREE.MeshStandardMaterial({ color: "#7a7a7a", roughness: 0.9, fog: false });
-    const foundation = new THREE.Mesh(foundationGeo, foundationMaterial);
-    foundation.castShadow = true;
-    foundation.receiveShadow = true;
-    foundation.position.set(acropolisPeak.x, acropolisPeak.y, acropolisPeak.z);
-    monuments.add(foundation);
-
-    monuments.add(parthenon);
-
-    const gatewayGeo = generateTempleGeometry(16, 28, 8, 6, 12);
-    const gatewayMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.02, fog: false });
-    const gateway = new THREE.Mesh(gatewayGeo, gatewayMaterial);
-    gateway.castShadow = true;
-    gateway.receiveShadow = true;
-    const gatewayPos = new THREE.Vector3(acropolisPeak.x + 10, acropolisPeak.y, acropolisPeak.z - 24);
-    gatewayPos.y = sampleHeight(terrain, gatewayPos.x, gatewayPos.z, gatewayPos.y);
-    gateway.position.copy(gatewayPos);
-    monuments.add(gateway);
-  }
-
-  const theaterPos = landmarkSpots?.theaterPos;
-  if (theaterPos) {
-    const theater = createTheater();
-    theater.position.copy(theaterPos);
-    const awayFromAcropolis = acropolisPeak
-      ? new THREE.Vector3().subVectors(theaterPos, acropolisPeak)
-      : new THREE.Vector3(0, 0, 1);
-    theater.rotation.y = Math.atan2(awayFromAcropolis.x, awayFromAcropolis.z);
-    monuments.add(theater);
-  }
-
-  const zeusPos = landmarkSpots?.agoraPos;
-  if (zeusPos) {
-    const templeOfZeus = createTempleOfZeus();
-    templeOfZeus.position.copy(zeusPos);
-    monuments.add(templeOfZeus);
   }
 
   populateCityDetails(city, terrain, buildingPlacements, roadCurves);

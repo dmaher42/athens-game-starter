@@ -13,7 +13,6 @@
 // -----------------------------------------------------------------------------
 
 import * as THREE from "three";
-import { loadLandmark } from "./landmarks.js";
 import { getSeaLevelY } from "./locations.js";
 import { snapAboveGround } from "./ground.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
@@ -558,46 +557,12 @@ export class LandmarkManager {
   }
 
   async attemptLoad(urls, spec, transformInfo, label) {
-    if (!urls.length) return null;
-    if (spec?.type === "procedural") {
-      return this.placeProcedural(spec);
-    }
-
-    const name = spec.name || spec.id || "Landmark";
-    for (const url of urls) {
-      const loadOptions = cloneTransformOptions(transformInfo.options);
-      loadOptions.proceduralFallback = (context = {}) =>
-        this.spawnProceduralFallback(spec, transformInfo, context);
-      loadOptions.forceProcedural = this.forceProcedural === true;
-      try {
-        const object = await loadLandmark(this.scene, url, loadOptions);
-        if (!object) continue;
-        this.reparent(object);
-        this.snapObject(object, transformInfo);
-        this.applyCollisionSettings(object, spec.collision);
-        if (typeof spec.onLoaded === "function") {
-          try {
-            spec.onLoaded(object, { url, label });
-          } catch (hookError) {
-            this.logMessage(
-              "warn",
-              `[LandmarkManager] onLoaded hook failed for ${name}: ${hookError?.message || hookError}`
-            );
-          }
-        }
-        return { object, url };
-      } catch (error) {
-        this.logMessage(
-          "warn",
-          `[LandmarkManager] ${name} failed to load from ${url}${label === "fallback" ? " (fallback)" : ""}`
-        );
-        this.logMessage("warn", error);
-      }
-    }
     return null;
   }
 
   async placeLandmark(spec = {}) {
+    // Landmarks are intentionally disabled in this solo project.
+    return null;
     const name = spec.name || spec.id || "Landmark";
     const transformInfo = this.prepareTransform(spec);
     const type = typeof spec.type === "string" ? spec.type.trim().toLowerCase() : "";

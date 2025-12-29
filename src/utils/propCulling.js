@@ -237,24 +237,11 @@ export function initPropCulling(scene, camera, options = {}) {
   // Get camera position for visibility scoring
   const cameraPos = camera.getWorldPosition(new THREE.Vector3());
   
-  // Mark important props (e.g., large props, named landmarks)
+  // Mark important props (e.g., large props)
   markImportantProps(scene, (obj) => {
     // Don't cull anything with "important" in the name
     if (obj.name && obj.name.toLowerCase().includes("important")) return true;
-    
-    // Don't cull props that are part of landmarks or key structures
-    let parent = obj.parent;
-    while (parent) {
-      if (parent.name && (
-        parent.name.includes("Landmark") ||
-        parent.name.includes("Temple") ||
-        parent.name.includes("Monument")
-      )) {
-        return true;
-      }
-      parent = parent.parent;
-    }
-    
+
     return false;
   });
   
