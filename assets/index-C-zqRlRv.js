@@ -50236,7 +50236,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bb7cnc4B.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-x5di2Aq-.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50725,7 +50725,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BuchaAbO.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CoDXq3Ne.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -50733,7 +50733,8 @@ async function createGLTFLoader(renderer2) {
     const _origParse = loader2.parse.bind(loader2);
     loader2.parse = function(data, path, onLoad, onError) {
       const _warn = console.warn;
-      console.warn = (...args) => {
+      const _err = console.error;
+      const filter = (...args) => {
         try {
           const m = String(args[0] ?? "");
           if (m.includes("KHR_materials_pbrSpecularGlossiness") || m.includes("Unknown extension")) {
@@ -50741,12 +50742,28 @@ async function createGLTFLoader(renderer2) {
           }
         } catch {
         }
-        return _warn.apply(console, args);
+        return null;
+      };
+      console.warn = (...args) => {
+        const r = filter(...args);
+        if (r === null) return _warn.apply(console, args);
+        return r;
+      };
+      console.error = (...args) => {
+        try {
+          const m = String(args[0] ?? "");
+          if (m.includes("KHR_materials_pbrSpecularGlossiness") || m.includes("Unknown extension")) {
+            return;
+          }
+        } catch {
+        }
+        return _err.apply(console, args);
       };
       try {
         return _origParse(data, path, onLoad, onError);
       } finally {
         console.warn = _warn;
+        console.error = _err;
       }
     };
   }
@@ -50820,6 +50837,7 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
   const baseUrl2 = resolveBaseUrl$5();
   const seen2 = /* @__PURE__ */ new Set();
   const originalWarn = console.warn;
+  const originalError = console.error;
   console.warn = (...args) => {
     try {
       const msg = String(args[0] ?? "");
@@ -50829,6 +50847,16 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
     } catch {
     }
     return originalWarn.apply(console, args);
+  };
+  console.error = (...args) => {
+    try {
+      const msg = String(args[0] ?? "");
+      if (msg.includes("KHR_materials_pbrSpecularGlossiness") || msg.includes("Unknown extension")) {
+        return;
+      }
+    } catch {
+    }
+    return originalError.apply(console, args);
   };
   try {
     for (const candidate of urls) {
@@ -50886,6 +50914,7 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
     }
   } finally {
     console.warn = originalWarn;
+    console.error = originalError;
   }
   return null;
 }
@@ -51554,7 +51583,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bb7cnc4B.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-x5di2Aq-.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63727,8 +63756,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T03:56:45.872Z" : "",
-      sha: true ? "a00f0e6bf4fd922d1d05d25777512cc0643479a0" : ""
+      time: true ? "2025-12-29T11:37:25.305Z" : "",
+      sha: true ? "3a16e69f7db56be2df781c4fd29bde713f0dc867" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74997,4 +75026,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-Bm9G7n-Q.js.map
+//# sourceMappingURL=index-C-zqRlRv.js.map
