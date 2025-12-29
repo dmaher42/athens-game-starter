@@ -43,59 +43,6 @@ function sanitizeRelativePath(value) {
     .replace(/^\/+/, "");
 }
 
-function deriveGithubRawCandidates(relativePath) {
-  if (typeof window === "undefined") return [];
-
-  const { hostname, pathname } = window.location || {};
-  if (!hostname || !pathname) return [];
-
-  const hostMatch = hostname.match(/^([^.:]+)\.github\.io$/i);
-  if (!hostMatch) return [];
-
-  const owner = hostMatch[1];
-  const segments = pathname.split("/").filter(Boolean);
-  if (!segments.length) return [];
-
-  const repo = segments[0];
-  let sanitizedRelative = String(relativePath || "").replace(/^\/+/, "");
-  // Strip repo segment to avoid double-prefixing (e.g., athens-game-starter/athens-game-starter/...)
-  const repoPrefix = `${repo}/`;
-  if (sanitizedRelative.toLowerCase().startsWith(repoPrefix.toLowerCase())) {
-    sanitizedRelative = sanitizedRelative.slice(repoPrefix.length);
-  }
-  if (!sanitizedRelative) return [];
-
-  const pathCandidates = new Set([sanitizedRelative]);
-  if (!sanitizedRelative.toLowerCase().startsWith("public/")) {
-    pathCandidates.add(`public/${sanitizedRelative}`);
-  }
-  if (!sanitizedRelative.toLowerCase().startsWith("docs/")) {
-    pathCandidates.add(`docs/${sanitizedRelative}`);
-  }
-
-  const branches = ["main", "master", "gh-pages"];
-  const urls = [];
-
-  for (const branch of branches) {
-    for (const candidate of pathCandidates) {
-      urls.push(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${candidate}`);
-    }
-  }
-
-  return urls;
-}
-
-async function headOk(url) {
-  if (!url) return false;
-  try {
-    const response = await fetch(url, { method: "HEAD", cache: "no-cache" });
-    if (!response.ok) return false;
-    const contentType = response.headers?.get?.("content-type") || "";
-    return !contentType.toLowerCase().includes("text/html");
-  } catch {
-    return false;
-  }
-}
 const missingLandmarkWarnings = new Set();
 
 function warnMissingLandmark(key, message) {
@@ -644,54 +591,24 @@ export async function loadLandmark(scene, url, options = {}) {
       }
     }
 
-    if (!isProtocolAbsolute && normalized) {
-      const githubRawCandidates = deriveGithubRawCandidates(normalized);
-      for (const candidate of githubRawCandidates) {
-        urlSet.add(candidate);
-      }
-    }
-
     const urls = Array.from(urlSet).filter(Boolean);
     const cacheKey = isProtocolAbsolute ? sanitizedUrl : normalized;
-
-    let availableUrl = null;
-    for (const candidate of urls) {
-      const ok = await headOk(candidate);
-      if (ok) {
-        availableUrl = candidate;
-        break;
-      }
-    }
-
-    if (!availableUrl) {
-      const fallbackObject = await tryProceduralFallback("missing-url", { requestedUrl: sanitizedUrl });
-      if (fallbackObject) {
-        return fallbackObject;
-      }
-      warnMissingLandmark(cacheKey || sanitizedUrl, `[landmarks] Missing GLB: ${sanitizedUrl}`);
-      cleanupEntry();
-      return null;
-    }
-
-    const prioritizedUrls = [
-      availableUrl,
-      ...urls.filter((candidate) => candidate !== availableUrl),
-    ];
 
     const { materialPreset } = options;
     const resolvedRenderer = resolveRenderer(scene, options?.renderer);
 
-    const loaded = await loadGLBWithFallbacks(loader, prioritizedUrls, {
+    const loaded = await loadGLBWithFallbacks(loader, urls, {
       renderer: resolvedRenderer,
       targetHeight: options?.targetHeight || null,
       forceProcedural: options.forceProcedural === true,
     });
 
     if (!loaded || !loaded.root) {
-      const fallbackObject = await tryProceduralFallback("load-failed", { requestedUrl: availableUrl });
+      const fallbackObject = await tryProceduralFallback("load-failed", { requestedUrl: sanitizedUrl });
       if (fallbackObject) {
         return fallbackObject;
       }
+      warnMissingLandmark(cacheKey || sanitizedUrl, `[landmarks] Missing GLB: ${sanitizedUrl}`);
       cleanupEntry();
       return null;
     }
