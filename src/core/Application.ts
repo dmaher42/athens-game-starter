@@ -67,7 +67,6 @@ import { addDepthOccluderRibbon } from "../world/occluders.js";
 import { snapAboveGround } from "../world/ground.js";
 import { findSafePlayerSpawn } from "../world/spawn.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
-import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { LandmarkManager } from "../world/LandmarkManager.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 import { LIGHTING_PRESETS } from "../config/LookProfiles.js";
@@ -834,12 +833,7 @@ export class Application {
 
       let interactor: any = createInteractor(renderer, camera, scene);
 
-      const safeModeFlag = engineConfig.featureFlags?.safeMode === true;
-      const safeModeParam = new URLSearchParams(window.location.search).get("safeMode");
-      // Safe mode is optional and only enabled explicitly (not the default render path).
-      const enableSafeMode = safeModeFlag || safeModeParam === "1" || safeModeParam === "true";
-
-      applyTextureBudgetToObject(scene, { safeMode: enableSafeMode });
+      // Safe mode texture budgeting is intentionally disabled for normal gameplay.
 
       const loop = this.gameLoop;
 
