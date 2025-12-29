@@ -23288,8 +23288,8 @@ class LoadingManager {
       urlModifier = transform;
       return this;
     };
-    this.addHandler = function(regex, loader2) {
-      handlers.push(regex, loader2);
+    this.addHandler = function(regex, loader) {
+      handlers.push(regex, loader);
       return this;
     };
     this.removeHandler = function(regex) {
@@ -23302,10 +23302,10 @@ class LoadingManager {
     this.getHandler = function(file) {
       for (let i = 0, l = handlers.length; i < l; i += 2) {
         const regex = handlers[i];
-        const loader2 = handlers[i + 1];
+        const loader = handlers[i + 1];
         if (regex.global) regex.lastIndex = 0;
         if (regex.test(file)) {
-          return loader2;
+          return loader;
         }
       }
       return null;
@@ -23635,11 +23635,11 @@ class AnimationLoader extends Loader {
    */
   load(url, onLoad, onProgress, onError) {
     const scope = this;
-    const loader2 = new FileLoader(this.manager);
-    loader2.setPath(this.path);
-    loader2.setRequestHeader(this.requestHeader);
-    loader2.setWithCredentials(this.withCredentials);
-    loader2.load(url, function(text) {
+    const loader = new FileLoader(this.manager);
+    loader.setPath(this.path);
+    loader.setRequestHeader(this.requestHeader);
+    loader.setWithCredentials(this.withCredentials);
+    loader.load(url, function(text) {
       try {
         onLoad(scope.parse(JSON.parse(text)));
       } catch (e) {
@@ -23692,14 +23692,14 @@ class CompressedTextureLoader extends Loader {
     const scope = this;
     const images = [];
     const texture = new CompressedTexture();
-    const loader2 = new FileLoader(this.manager);
-    loader2.setPath(this.path);
-    loader2.setResponseType("arraybuffer");
-    loader2.setRequestHeader(this.requestHeader);
-    loader2.setWithCredentials(scope.withCredentials);
+    const loader = new FileLoader(this.manager);
+    loader.setPath(this.path);
+    loader.setResponseType("arraybuffer");
+    loader.setRequestHeader(this.requestHeader);
+    loader.setWithCredentials(scope.withCredentials);
     let loaded2 = 0;
     function loadTexture2(i) {
-      loader2.load(url[i], function(buffer) {
+      loader.load(url[i], function(buffer) {
         const texDatas = scope.parse(buffer, true);
         images[i] = {
           width: texDatas.width,
@@ -23722,7 +23722,7 @@ class CompressedTextureLoader extends Loader {
         loadTexture2(i);
       }
     } else {
-      loader2.load(url, function(buffer) {
+      loader.load(url, function(buffer) {
         const texDatas = scope.parse(buffer, true);
         if (texDatas.isCubemap) {
           const faces = texDatas.mipmaps.length / texDatas.mipmapCount;
@@ -23862,12 +23862,12 @@ class CubeTextureLoader extends Loader {
   load(urls, onLoad, onProgress, onError) {
     const texture = new CubeTexture();
     texture.colorSpace = SRGBColorSpace;
-    const loader2 = new ImageLoader(this.manager);
-    loader2.setCrossOrigin(this.crossOrigin);
-    loader2.setPath(this.path);
+    const loader = new ImageLoader(this.manager);
+    loader.setCrossOrigin(this.crossOrigin);
+    loader.setPath(this.path);
     let loaded2 = 0;
     function loadTexture2(i) {
-      loader2.load(urls[i], function(image) {
+      loader.load(urls[i], function(image) {
         texture.images[i] = image;
         loaded2++;
         if (loaded2 === 6) {
@@ -23906,12 +23906,12 @@ class DataTextureLoader extends Loader {
   load(url, onLoad, onProgress, onError) {
     const scope = this;
     const texture = new DataTexture();
-    const loader2 = new FileLoader(this.manager);
-    loader2.setResponseType("arraybuffer");
-    loader2.setRequestHeader(this.requestHeader);
-    loader2.setPath(this.path);
-    loader2.setWithCredentials(scope.withCredentials);
-    loader2.load(url, function(buffer) {
+    const loader = new FileLoader(this.manager);
+    loader.setResponseType("arraybuffer");
+    loader.setRequestHeader(this.requestHeader);
+    loader.setPath(this.path);
+    loader.setWithCredentials(scope.withCredentials);
+    loader.load(url, function(buffer) {
       let texData;
       try {
         texData = scope.parse(buffer);
@@ -23986,10 +23986,10 @@ class TextureLoader extends Loader {
    */
   load(url, onLoad, onProgress, onError) {
     const texture = new Texture();
-    const loader2 = new ImageLoader(this.manager);
-    loader2.setCrossOrigin(this.crossOrigin);
-    loader2.setPath(this.path);
-    loader2.load(url, function(image) {
+    const loader = new ImageLoader(this.manager);
+    loader.setCrossOrigin(this.crossOrigin);
+    loader.setPath(this.path);
+    loader.load(url, function(image) {
       texture.image = image;
       texture.needsUpdate = true;
       if (onLoad !== void 0) {
@@ -24906,11 +24906,11 @@ class MaterialLoader extends Loader {
    */
   load(url, onLoad, onProgress, onError) {
     const scope = this;
-    const loader2 = new FileLoader(scope.manager);
-    loader2.setPath(scope.path);
-    loader2.setRequestHeader(scope.requestHeader);
-    loader2.setWithCredentials(scope.withCredentials);
-    loader2.load(url, function(text) {
+    const loader = new FileLoader(scope.manager);
+    loader.setPath(scope.path);
+    loader.setRequestHeader(scope.requestHeader);
+    loader.setWithCredentials(scope.withCredentials);
+    loader.load(url, function(text) {
       try {
         onLoad(scope.parse(JSON.parse(text)));
       } catch (e) {
@@ -25234,11 +25234,11 @@ class BufferGeometryLoader extends Loader {
    */
   load(url, onLoad, onProgress, onError) {
     const scope = this;
-    const loader2 = new FileLoader(scope.manager);
-    loader2.setPath(scope.path);
-    loader2.setRequestHeader(scope.requestHeader);
-    loader2.setWithCredentials(scope.withCredentials);
-    loader2.load(url, function(text) {
+    const loader = new FileLoader(scope.manager);
+    loader.setPath(scope.path);
+    loader.setRequestHeader(scope.requestHeader);
+    loader.setWithCredentials(scope.withCredentials);
+    loader.load(url, function(text) {
       try {
         onLoad(scope.parse(JSON.parse(text)));
       } catch (e) {
@@ -25363,11 +25363,11 @@ class ObjectLoader extends Loader {
     const scope = this;
     const path = this.path === "" ? LoaderUtils.extractUrlBase(url) : this.path;
     this.resourcePath = this.resourcePath || path;
-    const loader2 = new FileLoader(this.manager);
-    loader2.setPath(this.path);
-    loader2.setRequestHeader(this.requestHeader);
-    loader2.setWithCredentials(this.withCredentials);
-    loader2.load(url, function(text) {
+    const loader = new FileLoader(this.manager);
+    loader.setPath(this.path);
+    loader.setRequestHeader(this.requestHeader);
+    loader.setWithCredentials(this.withCredentials);
+    loader.load(url, function(text) {
       let json = null;
       try {
         json = JSON.parse(text);
@@ -25397,11 +25397,11 @@ class ObjectLoader extends Loader {
     const scope = this;
     const path = this.path === "" ? LoaderUtils.extractUrlBase(url) : this.path;
     this.resourcePath = this.resourcePath || path;
-    const loader2 = new FileLoader(this.manager);
-    loader2.setPath(this.path);
-    loader2.setRequestHeader(this.requestHeader);
-    loader2.setWithCredentials(this.withCredentials);
-    const text = await loader2.loadAsync(url, onProgress);
+    const loader = new FileLoader(this.manager);
+    loader.setPath(this.path);
+    loader.setRequestHeader(this.requestHeader);
+    loader.setWithCredentials(this.withCredentials);
+    const text = await loader.loadAsync(url, onProgress);
     const json = JSON.parse(text);
     const metadata = json.metadata;
     if (metadata === void 0 || metadata.type === void 0 || metadata.type.toLowerCase() === "geometry") {
@@ -25517,12 +25517,12 @@ class ObjectLoader extends Loader {
     const cache = {};
     const materials = {};
     if (json !== void 0) {
-      const loader2 = new MaterialLoader();
-      loader2.setTextures(textures);
+      const loader = new MaterialLoader();
+      loader.setTextures(textures);
       for (let i = 0, l = json.length; i < l; i++) {
         const data = json[i];
         if (cache[data.uuid] === void 0) {
-          cache[data.uuid] = loader2.parse(data);
+          cache[data.uuid] = loader.parse(data);
         }
         materials[data.uuid] = cache[data.uuid];
       }
@@ -25543,10 +25543,10 @@ class ObjectLoader extends Loader {
   parseImages(json, onLoad) {
     const scope = this;
     const images = {};
-    let loader2;
+    let loader;
     function loadImage(url) {
       scope.manager.itemStart(url);
-      return loader2.load(url, function() {
+      return loader.load(url, function() {
         scope.manager.itemEnd(url);
       }, void 0, function() {
         scope.manager.itemError(url);
@@ -25572,8 +25572,8 @@ class ObjectLoader extends Loader {
     }
     if (json !== void 0 && json.length > 0) {
       const manager2 = new LoadingManager(onLoad);
-      loader2 = new ImageLoader(manager2);
-      loader2.setCrossOrigin(this.crossOrigin);
+      loader = new ImageLoader(manager2);
+      loader.setCrossOrigin(this.crossOrigin);
       for (let i = 0, il = json.length; i < il; i++) {
         const image = json[i];
         const url = image.url;
@@ -25602,12 +25602,12 @@ class ObjectLoader extends Loader {
   async parseImagesAsync(json) {
     const scope = this;
     const images = {};
-    let loader2;
+    let loader;
     async function deserializeImage(image) {
       if (typeof image === "string") {
         const url = image;
         const path = /^(\/\/)|([a-z]+:(\/\/)?)/i.test(url) ? url : scope.resourcePath + url;
-        return await loader2.loadAsync(path);
+        return await loader.loadAsync(path);
       } else {
         if (image.data) {
           return {
@@ -25621,8 +25621,8 @@ class ObjectLoader extends Loader {
       }
     }
     if (json !== void 0 && json.length > 0) {
-      loader2 = new ImageLoader(this.manager);
-      loader2.setCrossOrigin(this.crossOrigin);
+      loader = new ImageLoader(this.manager);
+      loader.setCrossOrigin(this.crossOrigin);
       for (let i = 0, il = json.length; i < il; i++) {
         const image = json[i];
         const url = image.url;
@@ -26149,12 +26149,12 @@ class AudioLoader extends Loader {
    */
   load(url, onLoad, onProgress, onError) {
     const scope = this;
-    const loader2 = new FileLoader(this.manager);
-    loader2.setResponseType("arraybuffer");
-    loader2.setPath(this.path);
-    loader2.setRequestHeader(this.requestHeader);
-    loader2.setWithCredentials(this.withCredentials);
-    loader2.load(url, function(buffer) {
+    const loader = new FileLoader(this.manager);
+    loader.setResponseType("arraybuffer");
+    loader.setPath(this.path);
+    loader.setRequestHeader(this.requestHeader);
+    loader.setWithCredentials(this.withCredentials);
+    loader.load(url, function(buffer) {
       try {
         const bufferCopy = buffer.slice(0);
         const context = AudioContext.getContext();
@@ -44745,7 +44745,7 @@ function computeSafeModePriority(node, slot) {
 function isTexture(value) {
   return Boolean(value && typeof value === "object" && value.isTexture);
 }
-function resolveRenderer$1(options) {
+function resolveRenderer(options) {
   if (!options) return null;
   if (options.renderer) {
     return options.renderer;
@@ -44756,7 +44756,7 @@ function resolveRenderer$1(options) {
   return null;
 }
 function resolveTextureLimit(options) {
-  const renderer2 = resolveRenderer$1(options);
+  const renderer2 = resolveRenderer(options);
   if (Number.isFinite(options?.maxTextures)) {
     return Math.max(1, Math.floor(options.maxTextures));
   }
@@ -46319,13 +46319,13 @@ function generateNormalComponent(x, y, octave) {
   return Math.sin(angle * 1.7 + octave * 1.1) * 0.6;
 }
 const textureLoader = new TextureLoader();
-function sanitizeRelativePath$4(value) {
+function sanitizeRelativePath$3(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
 function getDefaultWaterNormalCandidates(base = resolveBaseUrl$5()) {
   return HARBOR_WATER_NORMAL_CANDIDATES.map((relative) => {
-    const sanitized = sanitizeRelativePath$4(relative);
+    const sanitized = sanitizeRelativePath$3(relative);
     if (!sanitized) {
       return null;
     }
@@ -46440,7 +46440,7 @@ async function resolveWaterNormalsTexture(options) {
     const normalized = candidate.trim();
     if (!normalized) continue;
     const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(normalized) || normalized.startsWith("data:");
-    const resolved = isAbsolute ? normalized : joinPath(base, sanitizeRelativePath$4(normalized));
+    const resolved = isAbsolute ? normalized : joinPath(base, sanitizeRelativePath$3(normalized));
     if (!resolved || tried.has(resolved)) continue;
     tried.add(resolved);
     if (cachedWaterNormalsTexture && cachedWaterNormalsKey === resolved) {
@@ -47722,7 +47722,7 @@ let AKROPOL_CANDIDATES = getAssetCandidates("akropol");
 function isHtmlResponse(res) {
   return HTML_CONTENT_TYPE.test(res.headers.get("content-type") || "");
 }
-function sanitizeRelativePath$3(value) {
+function sanitizeRelativePath$2(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
@@ -47886,7 +47886,7 @@ class AssetLoader {
         seen2.add(trimmed);
         continue;
       }
-      const relative = sanitizeRelativePath$3(trimmed);
+      const relative = sanitizeRelativePath$2(trimmed);
       if (!relative) {
         continue;
       }
@@ -48055,7 +48055,7 @@ function fbm(x, y, { seed = 0, octaves = 5, persistence = 0.5, lacunarity = 2 } 
   }
   return value;
 }
-function createSolidDataTexture$1(color, { colorSpace = SRGBColorSpace } = {}) {
+function createSolidDataTexture(color, { colorSpace = SRGBColorSpace } = {}) {
   const data = new Uint8Array(4);
   data[0] = color >> 16 & 255;
   data[1] = color >> 8 & 255;
@@ -48075,16 +48075,16 @@ function createProceduralMarbleTextures() {
   }
   if (typeof document === "undefined" || !document.createElement) {
     cachedMonumentTextures = {
-      map: createSolidDataTexture$1(15723754, {
+      map: createSolidDataTexture(15723754, {
         colorSpace: SRGBColorSpace
       }),
-      normalMap: createSolidDataTexture$1(8421631, {
+      normalMap: createSolidDataTexture(8421631, {
         colorSpace: LinearSRGBColorSpace
       }),
-      roughnessMap: createSolidDataTexture$1(11776947, {
+      roughnessMap: createSolidDataTexture(11776947, {
         colorSpace: LinearSRGBColorSpace
       }),
-      aoMap: createSolidDataTexture$1(14737632, {
+      aoMap: createSolidDataTexture(14737632, {
         colorSpace: LinearSRGBColorSpace
       })
     };
@@ -49731,10 +49731,10 @@ function warnOnce$1(key, message) {
   warnedKeys.add(key);
   console.warn(message);
 }
-async function loadTexture(loader2, url, { isSRGB = false, warnKey } = {}) {
+async function loadTexture(loader, url, { isSRGB = false, warnKey } = {}) {
   if (typeof url !== "string" || url.length === 0) return null;
   try {
-    const tex = await loader2.loadAsync(url);
+    const tex = await loader.loadAsync(url);
     applyNormalMapConvention(tex, url);
     if (tex && isSRGB) {
       tex.colorSpace = SRGBColorSpace;
@@ -49819,7 +49819,22 @@ function applyMaterialToTree(root, material) {
     }
   });
 }
-function applyVertexColor$2(geometry, color) {
+const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
+const ROOF_COLOR_PRESETS = ["#a94a30", "#b55634", "#9f432d"];
+function pickRandom(array, rng) {
+  if (!Array.isArray(array) || array.length === 0) return null;
+  const index = Math.floor(rng() * array.length) % array.length;
+  return array[index];
+}
+function sampleHeight$1(terrain, x, z, fallback) {
+  const getter = terrain?.userData?.getHeightAt;
+  if (typeof getter === "function") {
+    const height = getter(x, z);
+    if (Number.isFinite(height)) return height;
+  }
+  return fallback;
+}
+function applyVertexColor(geometry, color) {
   const c = color instanceof Color ? color : new Color(color);
   const geom = geometry.toNonIndexed();
   const count = geom.getAttribute("position").count;
@@ -49832,2481 +49847,821 @@ function applyVertexColor$2(geometry, color) {
   geom.setAttribute("color", new BufferAttribute(colors, 3));
   return geom;
 }
-function generateTholosGeometry(radius, height) {
+function findHighestPoint(terrain, center, radius, step = 6) {
+  let best = null;
+  for (let x = center.x - radius; x <= center.x + radius; x += step) {
+    for (let z = center.z - radius; z <= center.z + radius; z += step) {
+      const y = sampleHeight$1(terrain, x, z, center.y);
+      if (!Number.isFinite(y)) continue;
+      if (!best || y > best.y) {
+        best = { x, y, z };
+      }
+    }
+  }
+  return best;
+}
+function findSteepestSlope(terrain, center, radius, step = 10) {
+  let best = null;
+  for (let x = center.x - radius; x <= center.x + radius; x += step) {
+    for (let z = center.z - radius; z <= center.z + radius; z += step) {
+      const h = sampleHeight$1(terrain, x, z, center.y);
+      const hx = sampleHeight$1(terrain, x + step, z, h);
+      const hz = sampleHeight$1(terrain, x, z + step, h);
+      if (!Number.isFinite(h) || !Number.isFinite(hx) || !Number.isFinite(hz)) continue;
+      const slopeVec = new Vector3(hx - h, 0, hz - h);
+      const magnitude = slopeVec.length();
+      if (!best || magnitude > best.slope) {
+        best = { x, z, y: h, slope: magnitude, downhill: slopeVec.clone().normalize() };
+      }
+    }
+  }
+  return best;
+}
+function populateCityDetails(cityGroup, terrain, buildingPlacements, roadCurves) {
+  if (!cityGroup) return;
+  const detailGroup = new Group();
+  detailGroup.name = "CityDetails";
+  const up = new Vector3(0, 1, 0);
+  const tempMatrix2 = new Matrix4();
+  const amphoraGeometry = new SphereGeometry(1, 14, 10);
+  amphoraGeometry.scale(0.3, 0.6, 0.3);
+  const crateGeometry = new BoxGeometry(0.4, 0.35, 0.4);
+  const amphoraMaterial2 = new MeshStandardMaterial({ color: "#c05621", roughness: 0.75, fog: true });
+  const crateMaterial2 = new MeshStandardMaterial({ color: "#8f6b45", roughness: 0.9, fog: true });
+  const amphoraMatrices = [];
+  const crateMatrices = [];
+  buildingPlacements.forEach((placement) => {
+    const { x, z, rotation = 0, width = 1, depth = 1 } = placement;
+    const base = new Vector3(x, 0, z);
+    const forward = new Vector3(0, 0, 1).applyAxisAngle(up, rotation);
+    const right = new Vector3(1, 0, 0).applyAxisAngle(up, rotation);
+    const walls = [
+      { normal: forward, span: width, offset: depth * 0.5 },
+      { normal: forward.clone().multiplyScalar(-1), span: width, offset: depth * 0.5 },
+      { normal: right, span: depth, offset: width * 0.5 },
+      { normal: right.clone().multiplyScalar(-1), span: depth, offset: width * 0.5 }
+    ];
+    const propCount = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < propCount; i++) {
+      const wall = walls[Math.floor(Math.random() * walls.length)];
+      const tangent = new Vector3().crossVectors(up, wall.normal).normalize();
+      const alongWall = (Math.random() - 0.5) * wall.span * 0.8;
+      const offset = base.clone().add(wall.normal.clone().setLength(wall.offset + 0.6 + Math.random() * 0.2)).add(tangent.multiplyScalar(alongWall));
+      const y = sampleHeight$1(terrain, offset.x, offset.z, base.y);
+      offset.y = y;
+      const scale = 0.9 + Math.random() * 0.25;
+      const rotationY = Math.random() * Math.PI * 2;
+      tempMatrix2.compose(
+        offset,
+        new Quaternion().setFromAxisAngle(up, rotationY),
+        new Vector3(scale, scale, scale)
+      );
+      if (Math.random() > 0.4) {
+        amphoraMatrices.push(tempMatrix2.clone());
+      } else {
+        crateMatrices.push(tempMatrix2.clone());
+      }
+    }
+  });
+  if (amphoraMatrices.length > 0) {
+    const amphoraMesh = new InstancedMesh(amphoraGeometry, amphoraMaterial2, amphoraMatrices.length);
+    amphoraMesh.castShadow = true;
+    amphoraMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    amphoraMatrices.forEach((matrix2, idx) => {
+      amphoraMesh.setMatrixAt(idx, matrix2);
+    });
+    detailGroup.add(amphoraMesh);
+  }
+  if (crateMatrices.length > 0) {
+    const crateMesh = new InstancedMesh(crateGeometry, crateMaterial2, crateMatrices.length);
+    crateMesh.castShadow = true;
+    crateMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    crateMatrices.forEach((matrix2, idx) => {
+      crateMesh.setMatrixAt(idx, matrix2);
+    });
+    detailGroup.add(crateMesh);
+  }
+  const bushGeometry = new DodecahedronGeometry(0.6, 0);
+  const bushMaterial = new MeshStandardMaterial({ color: "#5d6e52", roughness: 1, fog: true });
+  const bushMatrices = [];
+  const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(80));
+  const targetBushes = 1500;
+  let attempts = 0;
+  while (bushMatrices.length < targetBushes && attempts < targetBushes * 8) {
+    attempts++;
+    const r = Math.sqrt(Math.random()) * CITY_AREA_RADIUS;
+    const theta = Math.random() * Math.PI * 2;
+    const x = CITY_CHUNK_CENTER.x + r * Math.cos(theta);
+    const z = CITY_CHUNK_CENTER.z + r * Math.sin(theta);
+    let tooCloseToRoad = false;
+    for (let i = 0; i < roadCurves.length && !tooCloseToRoad; i++) {
+      const points = roadSamples[i];
+      for (let p = 0; p < points.length; p++) {
+        const pt = points[p];
+        if (Math.hypot(x - pt.x, z - pt.z) < 2.5) {
+          tooCloseToRoad = true;
+          break;
+        }
+      }
+    }
+    if (tooCloseToRoad) continue;
+    let insideBuilding = false;
+    for (const placement of buildingPlacements) {
+      const buildingRadius = Math.max(placement.width, placement.depth) * 0.5;
+      if (Math.hypot(x - placement.x, z - placement.z) < buildingRadius) {
+        insideBuilding = true;
+        break;
+      }
+    }
+    if (insideBuilding) continue;
+    const y = sampleHeight$1(terrain, x, z, CITY_CHUNK_CENTER.y);
+    const position = new Vector3(x, y, z);
+    const bushScale = 0.8 + Math.random() * 0.6;
+    const rotationY = Math.random() * Math.PI * 2;
+    const colorMix = Math.random();
+    const bushColor = new Color("#5d6e52").lerp(new Color("#556b2f"), colorMix);
+    tempMatrix2.compose(
+      position,
+      new Quaternion().setFromAxisAngle(up, rotationY),
+      new Vector3(bushScale, bushScale * 1.1, bushScale)
+    );
+    bushMatrices.push({ matrix: tempMatrix2.clone(), color: bushColor });
+  }
+  if (bushMatrices.length > 0) {
+    const bushMesh = new InstancedMesh(bushGeometry, bushMaterial, bushMatrices.length);
+    bushMesh.castShadow = true;
+    bushMesh.receiveShadow = true;
+    bushMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    bushMatrices.forEach((entry, idx) => {
+      bushMesh.setMatrixAt(idx, entry.matrix);
+      bushMesh.setColorAt(idx, entry.color);
+    });
+    bushMesh.instanceColor.needsUpdate = true;
+    detailGroup.add(bushMesh);
+  }
+  cityGroup.add(detailGroup);
+}
+function generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor, options = {}) {
   const geometries = [];
-  const foundationHeight = Math.max(0.3, height * 0.12);
-  const columnHeight = Math.max(1.5, height * 0.6);
-  const roofHeight = Math.max(1, height * 0.35);
-  const foundationGeo = new CylinderGeometry(radius * 1.1, radius * 1.1, foundationHeight, 32);
+  const porchInset = 1;
+  const foundationHeight = 0.2;
+  const courtyard = Boolean(options.courtyard);
+  const foundationGeo = new BoxGeometry(width + 0.4, foundationHeight, depth + 0.4);
   foundationGeo.translate(0, foundationHeight * 0.5, 0);
-  geometries.push(applyVertexColor$2(foundationGeo, 13421772));
-  const columnCount = Math.max(12, Math.min(16, 12 + Math.floor(radius)));
-  const columnRadius = Math.max(0.2, radius * 0.07);
-  const columnGeo = new CylinderGeometry(columnRadius, columnRadius * 0.95, columnHeight, 16);
-  columnGeo.translate(0, foundationHeight + columnHeight * 0.5, 0);
-  const columnRingRadius = radius * 0.95;
-  for (let i = 0; i < columnCount; i++) {
-    const angle = i / columnCount * Math.PI * 2;
-    const x = Math.cos(angle) * columnRingRadius;
-    const z = Math.sin(angle) * columnRingRadius;
-    const col = columnGeo.clone();
-    col.translate(x, 0, z);
-    geometries.push(applyVertexColor$2(col, 15658734));
+  geometries.push(applyVertexColor(foundationGeo, 8026746));
+  if (courtyard) {
+    const wingDepth = Math.max(0.5, depth - porchInset);
+    const wingWidth = width * 0.42;
+    const wingHeight = wallHeight;
+    const wingYOffset = foundationHeight + wingHeight * 0.5;
+    const leftWing = new BoxGeometry(wingWidth, wingHeight, wingDepth);
+    leftWing.translate(-width * 0.5 + wingWidth * 0.5, wingYOffset, -porchInset * 0.5);
+    geometries.push(applyVertexColor(leftWing, wallColor));
+    const rightWing = leftWing.clone();
+    rightWing.translate(width - wingWidth, 0, 0);
+    geometries.push(applyVertexColor(rightWing, wallColor));
+    const backWingDepth = Math.max(0.5, wingDepth * 0.45);
+    const backWing = new BoxGeometry(width - wingWidth * 0.5, wingHeight, backWingDepth);
+    backWing.translate(0, wingYOffset, -wingDepth * 0.35 - porchInset * 0.25);
+    geometries.push(applyVertexColor(backWing, wallColor));
+    const courtyardFloor = new PlaneGeometry(width - 1, Math.max(1, depth * 0.7));
+    courtyardFloor.rotateX(-Math.PI / 2);
+    courtyardFloor.translate(0, foundationHeight + 0.02, -porchInset * 0.35);
+    geometries.push(applyVertexColor(courtyardFloor, 14272672));
+  } else {
+    const roomDepth = Math.max(0.5, depth - porchInset);
+    const wallGeo = new BoxGeometry(width, wallHeight, roomDepth);
+    wallGeo.translate(0, foundationHeight + wallHeight * 0.5, -porchInset * 0.5);
+    geometries.push(applyVertexColor(wallGeo, wallColor));
+    const columnCount = Math.max(1, Math.floor(width / 1.5));
+    const spacing = width / (columnCount + 1);
+    const columnHeight = wallHeight;
+    const columnGeo = new CylinderGeometry(0.15, 0.15, columnHeight, 8);
+    columnGeo.translate(0, foundationHeight + columnHeight * 0.5, 0);
+    const porchZ = depth * 0.5 - porchInset * 0.5;
+    for (let i = 0; i < columnCount; i++) {
+      const col = columnGeo.clone();
+      const x = -width * 0.5 + spacing * (i + 1);
+      col.translate(x, 0, porchZ - 0.1);
+      geometries.push(applyVertexColor(col, 14540253));
+    }
   }
-  const cellaRadius = radius * 0.55;
-  const cellaHeight = columnHeight * 0.75;
-  const cellaGeo = new CylinderGeometry(cellaRadius, cellaRadius, cellaHeight, 24);
-  cellaGeo.translate(0, foundationHeight + cellaHeight * 0.5, 0);
-  geometries.push(applyVertexColor$2(cellaGeo, 15592941));
-  const roofGeo = new ConeGeometry(radius * 1.05, roofHeight, 24);
-  roofGeo.translate(0, foundationHeight + columnHeight + roofHeight * 0.5, 0);
-  geometries.push(applyVertexColor$2(roofGeo, 11553832));
-  return mergeGeometries(geometries, false);
-}
-function generateStoaGeometry(length, width, height) {
-  const geometries = [];
-  const foundationHeight = Math.max(0.3, height * 0.08);
-  const wallThickness = Math.max(0.3, width * 0.1);
-  const wallHeight = height;
-  const baseGeo = new BoxGeometry(length + wallThickness * 2, foundationHeight, width + wallThickness);
-  baseGeo.translate(0, foundationHeight * 0.5, 0);
-  geometries.push(applyVertexColor$2(baseGeo, 12498855));
-  const backWallGeo = new BoxGeometry(length, wallHeight, wallThickness);
-  backWallGeo.translate(0, foundationHeight + wallHeight * 0.5, -width * 0.5 + wallThickness * 0.5);
-  geometries.push(applyVertexColor$2(backWallGeo, 16045728));
-  const sideWallGeo = new BoxGeometry(wallThickness, wallHeight, width);
-  sideWallGeo.translate(length * 0.5 - wallThickness * 0.5, foundationHeight + wallHeight * 0.5, 0);
-  geometries.push(applyVertexColor$2(sideWallGeo, 16045728));
-  const oppositeWall = sideWallGeo.clone();
-  oppositeWall.translate(-length + wallThickness, 0, 0);
-  geometries.push(applyVertexColor$2(oppositeWall, 16045728));
-  const columnCount = Math.max(3, Math.ceil(length / 3));
-  const columnRadius = Math.max(0.18, width * 0.06);
-  const spacing = length / (columnCount + 1);
-  const columnGeo = new CylinderGeometry(columnRadius, columnRadius * 0.95, wallHeight, 12);
-  columnGeo.translate(0, foundationHeight + wallHeight * 0.5, width * 0.5 - wallThickness * 0.5);
-  for (let i = 0; i < columnCount; i++) {
-    const x = -length * 0.5 + spacing * (i + 1);
-    const col = columnGeo.clone();
-    col.translate(x, 0, 0);
-    geometries.push(applyVertexColor$2(col, 15658734));
-  }
-  const roofRadius = Math.max(width * 0.55, 1.5);
-  const roofGeo = new CylinderGeometry(roofRadius, roofRadius, length + wallThickness * 2, 3, 1, true);
+  const roofRadius = Math.max(depth * 0.55, 0.5);
+  const roofGeo = new CylinderGeometry(roofRadius, roofRadius, width, 3, 1, true);
   roofGeo.rotateZ(Math.PI / 2);
-  roofGeo.translate(0, foundationHeight + wallHeight + roofRadius * 0.2, 0);
-  geometries.push(applyVertexColor$2(roofGeo, 11553832));
-  return mergeGeometries(geometries, false);
-}
-var MeshoptDecoder = (function() {
-  var wasm_base = "b9H79Tebbbe8Fv9Gbb9Gvuuuuueu9Giuuub9Geueu9Giuuueuikqbeeedddillviebeoweuec:q:Odkr;leDo9TW9T9VV95dbH9F9F939H79T9F9J9H229F9Jt9VV7bb8A9TW79O9V9Wt9F9KW9J9V9KW9wWVtW949c919M9MWVbeY9TW79O9V9Wt9F9KW9J9V9KW69U9KW949c919M9MWVbdE9TW79O9V9Wt9F9KW9J9V9KW69U9KW949tWG91W9U9JWbiL9TW79O9V9Wt9F9KW9J9V9KWS9P2tWV9p9JtblK9TW79O9V9Wt9F9KW9J9V9KWS9P2tWV9r919HtbvL9TW79O9V9Wt9F9KW9J9V9KWS9P2tWVT949Wbol79IV9Rbrq;w8Wqdbk;esezu8Jjjjjbcj;eb9Rgv8Kjjjjbc9:hodnadcefal0mbcuhoaiRbbc:Ge9hmbavaialfgrad9Radz1jjjbhwcj;abad9Uc;WFbGgocjdaocjd6EhDaicefhocbhqdnindndndnaeaq9nmbaDaeaq9RaqaDfae6Egkcsfglcl4cifcd4hxalc9WGgmTmecbhPawcjdfhsaohzinaraz9Rax6mvarazaxfgo9RcK6mvczhlcbhHinalgic9WfgOawcj;cbffhldndndndndnazaOco4fRbbaHcoG4ciGPlbedibkal9cb83ibalcwf9cb83ibxikalaoRblaoRbbgOco4gAaAciSgAE86bbawcj;cbfaifglcGfaoclfaAfgARbbaOcl4ciGgCaCciSgCE86bbalcVfaAaCfgARbbaOcd4ciGgCaCciSgCE86bbalc7faAaCfgARbbaOciGgOaOciSgOE86bbalctfaAaOfgARbbaoRbegOco4gCaCciSgCE86bbalc91faAaCfgARbbaOcl4ciGgCaCciSgCE86bbalc4faAaCfgARbbaOcd4ciGgCaCciSgCE86bbalc93faAaCfgARbbaOciGgOaOciSgOE86bbalc94faAaOfgARbbaoRbdgOco4gCaCciSgCE86bbalc95faAaCfgARbbaOcl4ciGgCaCciSgCE86bbalc96faAaCfgARbbaOcd4ciGgCaCciSgCE86bbalc97faAaCfgARbbaOciGgOaOciSgOE86bbalc98faAaOfgORbbaoRbigoco4gAaAciSgAE86bbalc99faOaAfgORbbaocl4ciGgAaAciSgAE86bbalc9:faOaAfgORbbaocd4ciGgAaAciSgAE86bbalcufaOaAfglRbbaociGgoaociSgoE86bbalaofhoxdkalaoRbwaoRbbgOcl4gAaAcsSgAE86bbawcj;cbfaifglcGfaocwfaAfgARbbaOcsGgOaOcsSgOE86bbalcVfaAaOfgORbbaoRbegAcl4gCaCcsSgCE86bbalc7faOaCfgORbbaAcsGgAaAcsSgAE86bbalctfaOaAfgORbbaoRbdgAcl4gCaCcsSgCE86bbalc91faOaCfgORbbaAcsGgAaAcsSgAE86bbalc4faOaAfgORbbaoRbigAcl4gCaCcsSgCE86bbalc93faOaCfgORbbaAcsGgAaAcsSgAE86bbalc94faOaAfgORbbaoRblgAcl4gCaCcsSgCE86bbalc95faOaCfgORbbaAcsGgAaAcsSgAE86bbalc96faOaAfgORbbaoRbvgAcl4gCaCcsSgCE86bbalc97faOaCfgORbbaAcsGgAaAcsSgAE86bbalc98faOaAfgORbbaoRbogAcl4gCaCcsSgCE86bbalc99faOaCfgORbbaAcsGgAaAcsSgAE86bbalc9:faOaAfgORbbaoRbrgocl4gAaAcsSgAE86bbalcufaOaAfglRbbaocsGgoaocsSgoE86bbalaofhoxekalao8Pbb83bbalcwfaocwf8Pbb83bbaoczfhokdnaiam9pmbaHcdfhHaiczfhlarao9RcL0mekkaiam6mvaoTmvdnakTmbawaPfRbbhHawcj;cbfhlashiakhOinaialRbbgzce4cbazceG9R7aHfgH86bbaiadfhialcefhlaOcufgOmbkkascefhsaohzaPcefgPad9hmbxikkcbc99arao9Radcaadca0ESEhoxlkaoaxad2fhCdnakmbadhlinaoTmlarao9Rax6mlaoaxfhoalcufglmbkaChoxekcbhmawcjdfhAinarao9Rax6miawamfRbbhHawcj;cbfhlaAhiakhOinaialRbbgzce4cbazceG9R7aHfgH86bbaiadfhialcefhlaOcufgOmbkaAcefhAaoaxfhoamcefgmad9hmbkaChokabaqad2fawcjdfakad2z1jjjb8Aawawcjdfakcufad2fadz1jjjb8Aakaqfhqaombkc9:hoxekc9:hokavcj;ebf8Kjjjjbaok;cseHu8Jjjjjbc;ae9Rgv8Kjjjjbc9:hodnaeci9UgrcHfal0mbcuhoaiRbbgwc;WeGc;Ge9hmbawcsGgwce0mbavc;abfcFecjez:jjjjb8AavcUf9cu83ibavc8Wf9cu83ibavcyf9cu83ibavcaf9cu83ibavcKf9cu83ibavczf9cu83ibav9cu83iwav9cu83ibaialfc9WfhDaicefgqarfhidnaeTmbcmcsawceSEhkcbhxcbhmcbhPcbhwcbhlindnaiaD9nmbc9:hoxikdndnaqRbbgoc;Ve0mbavc;abfalaocu7gscl4fcsGcitfgzydlhrazydbhzdnaocsGgHak9pmbavawasfcsGcdtfydbaxaHEhoaHThsdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkaxasfhxcdhHavawcdtfaoBdbawasfhwcehsalhOxdkdndnaHcsSmbaHc987aHamffcefhoxekaicefhoai8SbbgHcFeGhsdndnaHcu9mmbaohixekaicvfhiascFbGhscrhHdninao8SbbgOcFbGaHtasVhsaOcu9kmeaocefhoaHcrfgHc8J9hmbxdkkaocefhikasce4cbasceG9R7amfhokdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkcdhHavawcdtfaoBdbcehsawcefhwalhOaohmxekdnaocpe0mbaxcefgHavawaDaocsGfRbbgocl49RcsGcdtfydbaocz6gzEhravawao9RcsGcdtfydbaHazfgAaocsGgHEhoaHThCdndnadcd9hmbabaPcetfgHax87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHaxBdbaHcwfaoBdbaHclfarBdbkcdhsavawcdtfaxBdbavawcefgwcsGcdtfarBdbcihHavc;abfalcitfgOaxBdlaOarBdbavawazfgwcsGcdtfaoBdbalcefcsGhOawaCfhwaxhzaAaCfhxxekaxcbaiRbbgOEgzaoc;:eSgHfhraOcsGhCaOcl4hAdndnaOcs0mbarcefhoxekarhoavawaA9RcsGcdtfydbhrkdndnaCmbaocefhxxekaohxavawaO9RcsGcdtfydbhokdndnaHTmbaicefhHxekaicdfhHai8SbegscFeGhzdnascu9kmbaicofhXazcFbGhzcrhidninaH8SbbgscFbGaitazVhzascu9kmeaHcefhHaicrfgic8J9hmbkaXhHxekaHcefhHkazce4cbazceG9R7amfgmhzkdndnaAcsSmbaHhsxekaHcefhsaH8SbbgicFeGhrdnaicu9kmbaHcvfhXarcFbGhrcrhidninas8SbbgHcFbGaitarVhraHcu9kmeascefhsaicrfgic8J9hmbkaXhsxekascefhskarce4cbarceG9R7amfgmhrkdndnaCcsSmbashixekascefhias8SbbgocFeGhHdnaocu9kmbascvfhXaHcFbGhHcrhodninai8SbbgscFbGaotaHVhHascu9kmeaicefhiaocrfgoc8J9hmbkaXhixekaicefhikaHce4cbaHceG9R7amfgmhokdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkcdhsavawcdtfazBdbavawcefgwcsGcdtfarBdbcihHavc;abfalcitfgXazBdlaXarBdbavawaOcz6aAcsSVfgwcsGcdtfaoBdbawaCTaCcsSVfhwalcefcsGhOkaqcefhqavc;abfaOcitfgOarBdlaOaoBdbavc;abfalasfcsGcitfgraoBdlarazBdbawcsGhwalaHfcsGhlaPcifgPae6mbkkcbc99aiaDSEhokavc;aef8Kjjjjbaok:flevu8Jjjjjbcz9Rhvc9:hodnaecvfal0mbcuhoaiRbbc;:eGc;qe9hmbav9cb83iwaicefhraialfc98fhwdnaeTmbdnadcdSmbcbhDindnaraw6mbc9:skarcefhoar8SbbglcFeGhidndnalcu9mmbaohrxekarcvfhraicFbGhicrhldninao8SbbgdcFbGaltaiVhiadcu9kmeaocefhoalcrfglc8J9hmbxdkkaocefhrkabaDcdtfaic8Etc8F91aicd47avcwfaiceGcdtVgoydbfglBdbaoalBdbaDcefgDae9hmbxdkkcbhDindnaraw6mbc9:skarcefhoar8SbbglcFeGhidndnalcu9mmbaohrxekarcvfhraicFbGhicrhldninao8SbbgdcFbGaltaiVhiadcu9kmeaocefhoalcrfglc8J9hmbxdkkaocefhrkabaDcetfaic8Etc8F91aicd47avcwfaiceGcdtVgoydbfgl87ebaoalBdbaDcefgDae9hmbkkcbc99arawSEhokaok:Lvoeue99dud99eud99dndnadcl9hmbaeTmeindndnabcdfgd8Sbb:Yab8Sbbgi:Ygl:l:tabcefgv8Sbbgo:Ygr:l:tgwJbb;:9cawawNJbbbbawawJbbbb9GgDEgq:mgkaqaicb9iEalMgwawNakaqaocb9iEarMgqaqNMM:r:vglNJbbbZJbbb:;aDEMgr:lJbbb9p9DTmbar:Ohixekcjjjj94hikadai86bbdndnaqalNJbbbZJbbb:;aqJbbbb9GEMgq:lJbbb9p9DTmbaq:Ohdxekcjjjj94hdkavad86bbdndnawalNJbbbZJbbb:;awJbbbb9GEMgw:lJbbb9p9DTmbaw:Ohdxekcjjjj94hdkabad86bbabclfhbaecufgembxdkkaeTmbindndnabclfgd8Ueb:Yab8Uebgi:Ygl:l:tabcdfgv8Uebgo:Ygr:l:tgwJb;:FSawawNJbbbbawawJbbbb9GgDEgq:mgkaqaicb9iEalMgwawNakaqaocb9iEarMgqaqNMM:r:vglNJbbbZJbbb:;aDEMgr:lJbbb9p9DTmbar:Ohixekcjjjj94hikadai87ebdndnaqalNJbbbZJbbb:;aqJbbbb9GEMgq:lJbbb9p9DTmbaq:Ohdxekcjjjj94hdkavad87ebdndnawalNJbbbZJbbb:;awJbbbb9GEMgw:lJbbb9p9DTmbaw:Ohdxekcjjjj94hdkabad87ebabcwfhbaecufgembkkk;oiliui99iue99dnaeTmbcbhiabhlindndnJ;Zl81Zalcof8UebgvciV:Y:vgoal8Ueb:YNgrJb;:FSNJbbbZJbbb:;arJbbbb9GEMgw:lJbbb9p9DTmbaw:OhDxekcjjjj94hDkalclf8Uebhqalcdf8UebhkabaiavcefciGfcetfaD87ebdndnaoak:YNgwJb;:FSNJbbbZJbbb:;awJbbbb9GEMgx:lJbbb9p9DTmbax:OhDxekcjjjj94hDkabaiavciGfgkcd7cetfaD87ebdndnaoaq:YNgoJb;:FSNJbbbZJbbb:;aoJbbbb9GEMgx:lJbbb9p9DTmbax:OhDxekcjjjj94hDkabaiavcufciGfcetfaD87ebdndnJbbjZararN:tawawN:taoaoN:tgrJbbbbarJbbbb9GE:rJb;:FSNJbbbZMgr:lJbbb9p9DTmbar:Ohvxekcjjjj94hvkabakcetfav87ebalcwfhlaiclfhiaecufgembkkk9mbdnadcd4ae2gdTmbinababydbgecwtcw91:Yaece91cjjj98Gcjjj;8if::NUdbabclfhbadcufgdmbkkk9teiucbcbydj1jjbgeabcifc98GfgbBdj1jjbdndnabZbcztgd9nmbcuhiabad9RcFFifcz4nbcuSmekaehikaik;LeeeudndnaeabVciGTmbabhixekdndnadcz9pmbabhixekabhiinaiaeydbBdbaiclfaeclfydbBdbaicwfaecwfydbBdbaicxfaecxfydbBdbaeczfheaiczfhiadc9Wfgdcs0mbkkadcl6mbinaiaeydbBdbaeclfheaiclfhiadc98fgdci0mbkkdnadTmbinaiaeRbb86bbaicefhiaecefheadcufgdmbkkabk;aeedudndnabciGTmbabhixekaecFeGc:b:c:ew2hldndnadcz9pmbabhixekabhiinaialBdbaicxfalBdbaicwfalBdbaiclfalBdbaiczfhiadc9Wfgdcs0mbkkadcl6mbinaialBdbaiclfhiadc98fgdci0mbkkdnadTmbinaiae86bbaicefhiadcufgdmbkkabkkkebcjwklzNbb";
-  var wasm_simd = "b9H79TebbbeKl9Gbb9Gvuuuuueu9Giuuub9Geueuikqbbebeedddilve9Weeeviebeoweuec:q:6dkr;leDo9TW9T9VV95dbH9F9F939H79T9F9J9H229F9Jt9VV7bb8A9TW79O9V9Wt9F9KW9J9V9KW9wWVtW949c919M9MWVbdY9TW79O9V9Wt9F9KW9J9V9KW69U9KW949c919M9MWVblE9TW79O9V9Wt9F9KW9J9V9KW69U9KW949tWG91W9U9JWbvL9TW79O9V9Wt9F9KW9J9V9KWS9P2tWV9p9JtboK9TW79O9V9Wt9F9KW9J9V9KWS9P2tWV9r919HtbrL9TW79O9V9Wt9F9KW9J9V9KWS9P2tWVT949Wbwl79IV9RbDq:p9sqlbzik9:evu8Jjjjjbcz9Rhbcbheincbhdcbhiinabcwfadfaicjuaead4ceGglE86bbaialfhiadcefgdcw9hmbkaec:q:yjjbfai86bbaecitc:q1jjbfab8Piw83ibaecefgecjd9hmbkk:N8JlHud97euo978Jjjjjbcj;kb9Rgv8Kjjjjbc9:hodnadcefal0mbcuhoaiRbbc:Ge9hmbavaialfgrad9Rad;8qbbcj;abad9UhlaicefhodnaeTmbadTmbalc;WFbGglcjdalcjd6EhwcbhDinawaeaD9RaDawfae6Egqcsfglc9WGgkci2hxakcethmalcl4cifcd4hPabaDad2fhsakc;ab6hzcbhHincbhOaohAdndninaraA9RaP6meavcj;cbfaOak2fhCaAaPfhocbhidnazmbarao9Rc;Gb6mbcbhlinaCalfhidndndndndnaAalco4fRbbgXciGPlbedibkaipxbbbbbbbbbbbbbbbbpklbxikaiaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklbaoclfaYpQbfaKc:q:yjjbfRbbfhoxdkaiaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklbaocwfaYpQbfaKc:q:yjjbfRbbfhoxekaiaopbbbpklbaoczfhokdndndndndnaXcd4ciGPlbedibkaipxbbbbbbbbbbbbbbbbpklzxikaiaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklzaoclfaYpQbfaKc:q:yjjbfRbbfhoxdkaiaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklzaocwfaYpQbfaKc:q:yjjbfRbbfhoxekaiaopbbbpklzaoczfhokdndndndndnaXcl4ciGPlbedibkaipxbbbbbbbbbbbbbbbbpklaxikaiaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklaaoclfaYpQbfaKc:q:yjjbfRbbfhoxdkaiaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklaaocwfaYpQbfaKc:q:yjjbfRbbfhoxekaiaopbbbpklaaoczfhokdndndndndnaXco4Plbedibkaipxbbbbbbbbbbbbbbbbpkl8WxikaiaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgXcitc:q1jjbfpbibaXc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgXcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spkl8WaoclfaYpQbfaXc:q:yjjbfRbbfhoxdkaiaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgXcitc:q1jjbfpbibaXc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgXcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spkl8WaocwfaYpQbfaXc:q:yjjbfRbbfhoxekaiaopbbbpkl8Waoczfhokalc;abfhialcjefak0meaihlarao9Rc;Fb0mbkkdnaiak9pmbaici4hlinarao9RcK6miaCaifhXdndndndndnaAaico4fRbbalcoG4ciGPlbedibkaXpxbbbbbbbbbbbbbbbbpkbbxikaXaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spkbbaoclfaYpQbfaKc:q:yjjbfRbbfhoxdkaXaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spkbbaocwfaYpQbfaKc:q:yjjbfRbbfhoxekaXaopbbbpkbbaoczfhokalcdfhlaiczfgiak6mbkkaoTmeaohAaOcefgOclSmdxbkkc9:hoxlkdnakTmbavcjdfaHfhiavaHfpbdbhYcbhXinaiavcj;cbfaXfglpblbgLcep9TaLpxeeeeeeeeeeeeeeeegQp9op9Hp9rgLalakfpblbg8Acep9Ta8AaQp9op9Hp9rg8ApmbzeHdOiAlCvXoQrLgEalamfpblbg3cep9Ta3aQp9op9Hp9rg3alaxfpblbg5cep9Ta5aQp9op9Hp9rg5pmbzeHdOiAlCvXoQrLg8EpmbezHdiOAlvCXorQLgQaQpmbedibedibedibediaYp9UgYp9AdbbaiadfglaYaQaQpmlvorlvorlvorlvorp9UgYp9AdbbaladfglaYaQaQpmwDqkwDqkwDqkwDqkp9UgYp9AdbbaladfglaYaQaQpmxmPsxmPsxmPsxmPsp9UgYp9AdbbaladfglaYaEa8EpmwDKYqk8AExm35Ps8E8FgQaQpmbedibedibedibedip9UgYp9AdbbaladfglaYaQaQpmlvorlvorlvorlvorp9UgYp9AdbbaladfglaYaQaQpmwDqkwDqkwDqkwDqkp9UgYp9AdbbaladfglaYaQaQpmxmPsxmPsxmPsxmPsp9UgYp9AdbbaladfglaYaLa8ApmwKDYq8AkEx3m5P8Es8FgLa3a5pmwKDYq8AkEx3m5P8Es8Fg8ApmbezHdiOAlvCXorQLgQaQpmbedibedibedibedip9UgYp9AdbbaladfglaYaQaQpmlvorlvorlvorlvorp9UgYp9AdbbaladfglaYaQaQpmwDqkwDqkwDqkwDqkp9UgYp9AdbbaladfglaYaQaQpmxmPsxmPsxmPsxmPsp9UgYp9AdbbaladfglaYaLa8ApmwDKYqk8AExm35Ps8E8FgQaQpmbedibedibedibedip9UgYp9AdbbaladfglaYaQaQpmlvorlvorlvorlvorp9UgYp9AdbbaladfglaYaQaQpmwDqkwDqkwDqkwDqkp9UgYp9AdbbaladfglaYaQaQpmxmPsxmPsxmPsxmPsp9UgYp9AdbbaladfhiaXczfgXak6mbkkaHclfgHad6mbkasavcjdfaqad2;8qbbavavcjdfaqcufad2fad;8qbbaqaDfgDae6mbkkcbc99arao9Radcaadca0ESEhokavcj;kbf8Kjjjjbaokwbz:bjjjbk::seHu8Jjjjjbc;ae9Rgv8Kjjjjbc9:hodnaeci9UgrcHfal0mbcuhoaiRbbgwc;WeGc;Ge9hmbawcsGgwce0mbavc;abfcFecje;8kbavcUf9cu83ibavc8Wf9cu83ibavcyf9cu83ibavcaf9cu83ibavcKf9cu83ibavczf9cu83ibav9cu83iwav9cu83ibaialfc9WfhDaicefgqarfhidnaeTmbcmcsawceSEhkcbhxcbhmcbhPcbhwcbhlindnaiaD9nmbc9:hoxikdndnaqRbbgoc;Ve0mbavc;abfalaocu7gscl4fcsGcitfgzydlhrazydbhzdnaocsGgHak9pmbavawasfcsGcdtfydbaxaHEhoaHThsdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkaxasfhxcdhHavawcdtfaoBdbawasfhwcehsalhOxdkdndnaHcsSmbaHc987aHamffcefhoxekaicefhoai8SbbgHcFeGhsdndnaHcu9mmbaohixekaicvfhiascFbGhscrhHdninao8SbbgOcFbGaHtasVhsaOcu9kmeaocefhoaHcrfgHc8J9hmbxdkkaocefhikasce4cbasceG9R7amfhokdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkcdhHavawcdtfaoBdbcehsawcefhwalhOaohmxekdnaocpe0mbaxcefgHavawaDaocsGfRbbgocl49RcsGcdtfydbaocz6gzEhravawao9RcsGcdtfydbaHazfgAaocsGgHEhoaHThCdndnadcd9hmbabaPcetfgHax87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHaxBdbaHcwfaoBdbaHclfarBdbkcdhsavawcdtfaxBdbavawcefgwcsGcdtfarBdbcihHavc;abfalcitfgOaxBdlaOarBdbavawazfgwcsGcdtfaoBdbalcefcsGhOawaCfhwaxhzaAaCfhxxekaxcbaiRbbgOEgzaoc;:eSgHfhraOcsGhCaOcl4hAdndnaOcs0mbarcefhoxekarhoavawaA9RcsGcdtfydbhrkdndnaCmbaocefhxxekaohxavawaO9RcsGcdtfydbhokdndnaHTmbaicefhHxekaicdfhHai8SbegscFeGhzdnascu9kmbaicofhXazcFbGhzcrhidninaH8SbbgscFbGaitazVhzascu9kmeaHcefhHaicrfgic8J9hmbkaXhHxekaHcefhHkazce4cbazceG9R7amfgmhzkdndnaAcsSmbaHhsxekaHcefhsaH8SbbgicFeGhrdnaicu9kmbaHcvfhXarcFbGhrcrhidninas8SbbgHcFbGaitarVhraHcu9kmeascefhsaicrfgic8J9hmbkaXhsxekascefhskarce4cbarceG9R7amfgmhrkdndnaCcsSmbashixekascefhias8SbbgocFeGhHdnaocu9kmbascvfhXaHcFbGhHcrhodninai8SbbgscFbGaotaHVhHascu9kmeaicefhiaocrfgoc8J9hmbkaXhixekaicefhikaHce4cbaHceG9R7amfgmhokdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkcdhsavawcdtfazBdbavawcefgwcsGcdtfarBdbcihHavc;abfalcitfgXazBdlaXarBdbavawaOcz6aAcsSVfgwcsGcdtfaoBdbawaCTaCcsSVfhwalcefcsGhOkaqcefhqavc;abfaOcitfgOarBdlaOaoBdbavc;abfalasfcsGcitfgraoBdlarazBdbawcsGhwalaHfcsGhlaPcifgPae6mbkkcbc99aiaDSEhokavc;aef8Kjjjjbaok:flevu8Jjjjjbcz9Rhvc9:hodnaecvfal0mbcuhoaiRbbc;:eGc;qe9hmbav9cb83iwaicefhraialfc98fhwdnaeTmbdnadcdSmbcbhDindnaraw6mbc9:skarcefhoar8SbbglcFeGhidndnalcu9mmbaohrxekarcvfhraicFbGhicrhldninao8SbbgdcFbGaltaiVhiadcu9kmeaocefhoalcrfglc8J9hmbxdkkaocefhrkabaDcdtfaic8Etc8F91aicd47avcwfaiceGcdtVgoydbfglBdbaoalBdbaDcefgDae9hmbxdkkcbhDindnaraw6mbc9:skarcefhoar8SbbglcFeGhidndnalcu9mmbaohrxekarcvfhraicFbGhicrhldninao8SbbgdcFbGaltaiVhiadcu9kmeaocefhoalcrfglc8J9hmbxdkkaocefhrkabaDcetfaic8Etc8F91aicd47avcwfaiceGcdtVgoydbfgl87ebaoalBdbaDcefgDae9hmbkkcbc99arawSEhokaok:wPliuo97eue978Jjjjjbca9Rhiaec98Ghldndnadcl9hmbdnalTmbcbhvabhdinadadpbbbgocKp:RecKp:Sep;6egraocwp:RecKp:Sep;6earp;Geaoczp:RecKp:Sep;6egwp;Gep;Kep;LegDpxbbbbbbbbbbbbbbbbp:2egqarpxbbbjbbbjbbbjbbbjgkp9op9rp;Kegrpxbb;:9cbb;:9cbb;:9cbb;:9cararp;MeaDaDp;Meawaqawakp9op9rp;Kegrarp;Mep;Kep;Kep;Jep;Negwp;Mepxbbn0bbn0bbn0bbn0gqp;KepxFbbbFbbbFbbbFbbbp9oaopxbbbFbbbFbbbFbbbFp9op9qarawp;Meaqp;Kecwp:RepxbFbbbFbbbFbbbFbbp9op9qaDawp;Meaqp;Keczp:RepxbbFbbbFbbbFbbbFbp9op9qpkbbadczfhdavclfgval6mbkkalaeSmeaipxbbbbbbbbbbbbbbbbgqpklbaiabalcdtfgdaeciGglcdtgv;8qbbdnalTmbaiaipblbgocKp:RecKp:Sep;6egraocwp:RecKp:Sep;6earp;Geaoczp:RecKp:Sep;6egwp;Gep;Kep;LegDaqp:2egqarpxbbbjbbbjbbbjbbbjgkp9op9rp;Kegrpxbb;:9cbb;:9cbb;:9cbb;:9cararp;MeaDaDp;Meawaqawakp9op9rp;Kegrarp;Mep;Kep;Kep;Jep;Negwp;Mepxbbn0bbn0bbn0bbn0gqp;KepxFbbbFbbbFbbbFbbbp9oaopxbbbFbbbFbbbFbbbFp9op9qarawp;Meaqp;Kecwp:RepxbFbbbFbbbFbbbFbbp9op9qaDawp;Meaqp;Keczp:RepxbbFbbbFbbbFbbbFbp9op9qpklbkadaiav;8qbbskdnalTmbcbhvabhdinadczfgxaxpbbbgopxbbbbbbFFbbbbbbFFgkp9oadpbbbgDaopmbediwDqkzHOAKY8AEgwczp:Reczp:Sep;6egraDaopmlvorxmPsCXQL358E8FpxFubbFubbFubbFubbp9op;6eawczp:Sep;6egwp;Gearp;Gep;Kep;Legopxbbbbbbbbbbbbbbbbp:2egqarpxbbbjbbbjbbbjbbbjgmp9op9rp;Kegrpxb;:FSb;:FSb;:FSb;:FSararp;Meaoaop;Meawaqawamp9op9rp;Kegrarp;Mep;Kep;Kep;Jep;Negwp;Mepxbbn0bbn0bbn0bbn0gqp;KepxFFbbFFbbFFbbFFbbp9oaoawp;Meaqp;Keczp:Rep9qgoarawp;Meaqp;KepxFFbbFFbbFFbbFFbbp9ogrpmwDKYqk8AExm35Ps8E8Fp9qpkbbadaDakp9oaoarpmbezHdiOAlvCXorQLp9qpkbbadcafhdavclfgval6mbkkalaeSmbaiaeciGgvcitgdfcbcaad9R;8kbaiabalcitfglad;8qbbdnavTmbaiaipblzgopxbbbbbbFFbbbbbbFFgkp9oaipblbgDaopmbediwDqkzHOAKY8AEgwczp:Reczp:Sep;6egraDaopmlvorxmPsCXQL358E8FpxFubbFubbFubbFubbp9op;6eawczp:Sep;6egwp;Gearp;Gep;Kep;Legopxbbbbbbbbbbbbbbbbp:2egqarpxbbbjbbbjbbbjbbbjgmp9op9rp;Kegrpxb;:FSb;:FSb;:FSb;:FSararp;Meaoaop;Meawaqawamp9op9rp;Kegrarp;Mep;Kep;Kep;Jep;Negwp;Mepxbbn0bbn0bbn0bbn0gqp;KepxFFbbFFbbFFbbFFbbp9oaoawp;Meaqp;Keczp:Rep9qgoarawp;Meaqp;KepxFFbbFFbbFFbbFFbbp9ogrpmwDKYqk8AExm35Ps8E8Fp9qpklzaiaDakp9oaoarpmbezHdiOAlvCXorQLp9qpklbkalaiad;8qbbkk;4wllue97euv978Jjjjjbc8W9Rhidnaec98GglTmbcbhvabhoinaiaopbbbgraoczfgwpbbbgDpmlvorxmPsCXQL358E8Fgqczp:Segkclp:RepklbaopxbbjZbbjZbbjZbbjZpx;Zl81Z;Zl81Z;Zl81Z;Zl81Zakpxibbbibbbibbbibbbp9qp;6ep;NegkaraDpmbediwDqkzHOAKY8AEgrczp:Reczp:Sep;6ep;MegDaDp;Meakarczp:Sep;6ep;Megxaxp;Meakaqczp:Reczp:Sep;6ep;Megqaqp;Mep;Kep;Kep;Lepxbbbbbbbbbbbbbbbbp:4ep;Jepxb;:FSb;:FSb;:FSb;:FSgkp;Mepxbbn0bbn0bbn0bbn0grp;KepxFFbbFFbbFFbbFFbbgmp9oaxakp;Mearp;Keczp:Rep9qgxaDakp;Mearp;Keamp9oaqakp;Mearp;Keczp:Rep9qgkpmbezHdiOAlvCXorQLgrp5baipblbpEb:T:j83ibaocwfarp5eaipblbpEe:T:j83ibawaxakpmwDKYqk8AExm35Ps8E8Fgkp5baipblbpEd:T:j83ibaocKfakp5eaipblbpEi:T:j83ibaocafhoavclfgval6mbkkdnalaeSmbaiaeciGgvcitgofcbcaao9R;8kbaiabalcitfgwao;8qbbdnavTmbaiaipblbgraipblzgDpmlvorxmPsCXQL358E8Fgqczp:Segkclp:RepklaaipxbbjZbbjZbbjZbbjZpx;Zl81Z;Zl81Z;Zl81Z;Zl81Zakpxibbbibbbibbbibbbp9qp;6ep;NegkaraDpmbediwDqkzHOAKY8AEgrczp:Reczp:Sep;6ep;MegDaDp;Meakarczp:Sep;6ep;Megxaxp;Meakaqczp:Reczp:Sep;6ep;Megqaqp;Mep;Kep;Kep;Lepxbbbbbbbbbbbbbbbbp:4ep;Jepxb;:FSb;:FSb;:FSb;:FSgkp;Mepxbbn0bbn0bbn0bbn0grp;KepxFFbbFFbbFFbbFFbbgmp9oaxakp;Mearp;Keczp:Rep9qgxaDakp;Mearp;Keamp9oaqakp;Mearp;Keczp:Rep9qgkpmbezHdiOAlvCXorQLgrp5baipblapEb:T:j83ibaiarp5eaipblapEe:T:j83iwaiaxakpmwDKYqk8AExm35Ps8E8Fgkp5baipblapEd:T:j83izaiakp5eaipblapEi:T:j83iKkawaiao;8qbbkk:Pddiue978Jjjjjbc;ab9Rhidnadcd4ae2glc98GgvTmbcbheabhdinadadpbbbgocwp:Recwp:Sep;6eaocep:SepxbbjFbbjFbbjFbbjFp9opxbbjZbbjZbbjZbbjZp:Uep;Mepkbbadczfhdaeclfgeav6mbkkdnavalSmbaialciGgecdtgdVcbc;abad9R;8kbaiabavcdtfgvad;8qbbdnaeTmbaiaipblbgocwp:Recwp:Sep;6eaocep:SepxbbjFbbjFbbjFbbjFp9opxbbjZbbjZbbjZbbjZp:Uep;Mepklbkavaiad;8qbbkk9teiucbcbydj1jjbgeabcifc98GfgbBdj1jjbdndnabZbcztgd9nmbcuhiabad9RcFFifcz4nbcuSmekaehikaikkkebcjwklz:Dbb";
-  var detector = new Uint8Array([
-    0,
-    97,
-    115,
-    109,
-    1,
-    0,
-    0,
-    0,
-    1,
-    4,
-    1,
-    96,
-    0,
-    0,
-    3,
-    3,
-    2,
-    0,
-    0,
-    5,
-    3,
-    1,
-    0,
-    1,
-    12,
-    1,
-    0,
-    10,
-    22,
-    2,
-    12,
-    0,
-    65,
-    0,
-    65,
-    0,
-    65,
-    0,
-    252,
-    10,
-    0,
-    0,
-    11,
-    7,
-    0,
-    65,
-    0,
-    253,
-    15,
-    26,
-    11
-  ]);
-  var wasmpack = new Uint8Array([
-    32,
-    0,
-    65,
-    2,
-    1,
-    106,
-    34,
-    33,
-    3,
-    128,
-    11,
-    4,
-    13,
-    64,
-    6,
-    253,
-    10,
-    7,
-    15,
-    116,
-    127,
-    5,
-    8,
-    12,
-    40,
-    16,
-    19,
-    54,
-    20,
-    9,
-    27,
-    255,
-    113,
-    17,
-    42,
-    67,
-    24,
-    23,
-    146,
-    148,
-    18,
-    14,
-    22,
-    45,
-    70,
-    69,
-    56,
-    114,
-    101,
-    21,
-    25,
-    63,
-    75,
-    136,
-    108,
-    28,
-    118,
-    29,
-    73,
-    115
-  ]);
-  if (typeof WebAssembly !== "object") {
-    return {
-      supported: false
-    };
-  }
-  var wasm = WebAssembly.validate(detector) ? unpack(wasm_simd) : unpack(wasm_base);
-  var instance;
-  var ready = WebAssembly.instantiate(wasm, {}).then(function(result) {
-    instance = result.instance;
-    instance.exports.__wasm_call_ctors();
-  });
-  function unpack(data) {
-    var result = new Uint8Array(data.length);
-    for (var i = 0; i < data.length; ++i) {
-      var ch3 = data.charCodeAt(i);
-      result[i] = ch3 > 96 ? ch3 - 97 : ch3 > 64 ? ch3 - 39 : ch3 + 4;
-    }
-    var write = 0;
-    for (var i = 0; i < data.length; ++i) {
-      result[write++] = result[i] < 60 ? wasmpack[result[i]] : (result[i] - 60) * 64 + result[++i];
-    }
-    return result.buffer.slice(0, write);
-  }
-  function decode(instance2, fun, target, count, size, source, filter) {
-    var sbrk = instance2.exports.sbrk;
-    var count4 = count + 3 & ~3;
-    var tp = sbrk(count4 * size);
-    var sp = sbrk(source.length);
-    var heap = new Uint8Array(instance2.exports.memory.buffer);
-    heap.set(source, sp);
-    var res = fun(tp, count, size, sp, source.length);
-    if (res == 0 && filter) {
-      filter(tp, count4, size);
-    }
-    target.set(heap.subarray(tp, tp + count * size));
-    sbrk(tp - sbrk(0));
-    if (res != 0) {
-      throw new Error("Malformed buffer data: " + res);
-    }
-  }
-  var filters = {
-    NONE: "",
-    OCTAHEDRAL: "meshopt_decodeFilterOct",
-    QUATERNION: "meshopt_decodeFilterQuat",
-    EXPONENTIAL: "meshopt_decodeFilterExp"
-  };
-  var decoders = {
-    ATTRIBUTES: "meshopt_decodeVertexBuffer",
-    TRIANGLES: "meshopt_decodeIndexBuffer",
-    INDICES: "meshopt_decodeIndexSequence"
-  };
-  var workers = [];
-  var requestId = 0;
-  function createWorker(url) {
-    var worker = {
-      object: new Worker(url),
-      pending: 0,
-      requests: {}
-    };
-    worker.object.onmessage = function(event) {
-      var data = event.data;
-      worker.pending -= data.count;
-      worker.requests[data.id][data.action](data.value);
-      delete worker.requests[data.id];
-    };
-    return worker;
-  }
-  function initWorkers(count) {
-    var source = "self.ready = WebAssembly.instantiate(new Uint8Array([" + new Uint8Array(wasm) + "]), {}).then(function(result) { result.instance.exports.__wasm_call_ctors(); return result.instance; });self.onmessage = " + workerProcess.name + ";" + decode.toString() + workerProcess.toString();
-    var blob = new Blob([source], { type: "text/javascript" });
-    var url = URL.createObjectURL(blob);
-    for (var i = workers.length; i < count; ++i) {
-      workers[i] = createWorker(url);
-    }
-    for (var i = count; i < workers.length; ++i) {
-      workers[i].object.postMessage({});
-    }
-    workers.length = count;
-    URL.revokeObjectURL(url);
-  }
-  function decodeWorker(count, size, source, mode, filter) {
-    var worker = workers[0];
-    for (var i = 1; i < workers.length; ++i) {
-      if (workers[i].pending < worker.pending) {
-        worker = workers[i];
-      }
-    }
-    return new Promise(function(resolve, reject) {
-      var data = new Uint8Array(source);
-      var id = ++requestId;
-      worker.pending += count;
-      worker.requests[id] = { resolve, reject };
-      worker.object.postMessage({ id, count, size, source: data, mode, filter }, [data.buffer]);
-    });
-  }
-  function workerProcess(event) {
-    var data = event.data;
-    if (!data.id) {
-      return self.close();
-    }
-    self.ready.then(function(instance2) {
-      try {
-        var target = new Uint8Array(data.count * data.size);
-        decode(instance2, instance2.exports[data.mode], target, data.count, data.size, data.source, instance2.exports[data.filter]);
-        self.postMessage({ id: data.id, count: data.count, action: "resolve", value: target }, [target.buffer]);
-      } catch (error) {
-        self.postMessage({ id: data.id, count: data.count, action: "reject", value: error });
-      }
-    });
-  }
-  return {
-    ready,
-    supported: true,
-    useWorkers: function(count) {
-      initWorkers(count);
-    },
-    decodeVertexBuffer: function(target, count, size, source, filter) {
-      decode(instance, instance.exports.meshopt_decodeVertexBuffer, target, count, size, source, instance.exports[filters[filter]]);
-    },
-    decodeIndexBuffer: function(target, count, size, source) {
-      decode(instance, instance.exports.meshopt_decodeIndexBuffer, target, count, size, source);
-    },
-    decodeIndexSequence: function(target, count, size, source) {
-      decode(instance, instance.exports.meshopt_decodeIndexSequence, target, count, size, source);
-    },
-    decodeGltfBuffer: function(target, count, size, source, mode, filter) {
-      decode(instance, instance.exports[decoders[mode]], target, count, size, source, instance.exports[filters[filter]]);
-    },
-    decodeGltfBufferAsync: function(count, size, source, mode, filter) {
-      if (workers.length > 0) {
-        return decodeWorker(count, size, source, decoders[mode], filters[filter]);
-      }
-      return ready.then(function() {
-        var target = new Uint8Array(count * size);
-        decode(instance, instance.exports[decoders[mode]], target, count, size, source, instance.exports[filters[filter]]);
-        return target;
-      });
-    }
-  };
-})();
-const __vite_import_meta_env__$2 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-const DEFAULT_BASIS_TRANSCODER_PATH = "https://unpkg.com/three@0.180.0/examples/jsm/libs/basis/";
-const LOCAL_TRANSCODER_SUBPATH = "basis/";
-const ABSOLUTE_PROTOCOL_REGEX$1 = /^[a-z]+:\/\//i;
-const PROTOCOL_RELATIVE_REGEX$1 = /^\/\//;
-function ensureTrailingSlash$1(value) {
-  if (typeof value !== "string" || value.length === 0) {
-    return value;
-  }
-  return value.endsWith("/") ? value : `${value}/`;
-}
-function resolveBaseUrl$2() {
-  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$2 && true) {
-    return ensureTrailingSlash$1("/athens-game-starter/");
-  }
-  return "/";
-}
-function resolveProtocol$1() {
-  if (typeof window !== "undefined" && window.location?.protocol) {
-    return window.location.protocol;
-  }
-  return "https:";
-}
-function normaliseCandidate$1(candidate, baseUrl2) {
-  if (typeof candidate !== "string") {
-    return null;
-  }
-  const trimmed = candidate.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-  if (PROTOCOL_RELATIVE_REGEX$1.test(trimmed)) {
-    const protocol = resolveProtocol$1();
-    return ensureTrailingSlash$1(`${protocol}${trimmed}`);
-  }
-  const safeBase = `https://example.com${baseUrl2}`;
-  try {
-    const resolved = new URL(trimmed, safeBase);
-    if (ABSOLUTE_PROTOCOL_REGEX$1.test(trimmed)) {
-      return ensureTrailingSlash$1(resolved.href);
-    }
-    if (resolved.origin !== "https://example.com") {
-      return ensureTrailingSlash$1(resolved.href);
-    }
-    return ensureTrailingSlash$1(resolved.pathname);
-  } catch {
-    return ensureTrailingSlash$1(trimmed);
-  }
-}
-function resolveKTX2TranscoderPath() {
-  const baseUrl2 = resolveBaseUrl$2();
-  const candidates = [];
-  const meta = typeof import.meta !== "undefined" ? import.meta : null;
-  const env = meta && meta.env ? meta.env : null;
-  if (env && typeof env.VITE_BASIS_TRANSCODER_PATH === "string") {
-    candidates.push(env.VITE_BASIS_TRANSCODER_PATH);
-  }
-  if (typeof window !== "undefined" && typeof window.__BASIS_TRANSCODER_PATH__ === "string") {
-    candidates.push(window.__BASIS_TRANSCODER_PATH__);
-  }
-  candidates.push(LOCAL_TRANSCODER_SUBPATH);
-  candidates.push(DEFAULT_BASIS_TRANSCODER_PATH);
-  for (const candidate of candidates) {
-    const normalised = normaliseCandidate$1(candidate, baseUrl2);
-    if (normalised) {
-      return normalised;
-    }
-  }
-  return DEFAULT_BASIS_TRANSCODER_PATH;
-}
-async function createKTX2Loader(renderer2) {
-  const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-VZzta7.js");
-    return { KTX2Loader: KTX2Loader2 };
-  }, true ? [] : void 0);
-  const loader2 = new KTX2Loader();
-  const path = resolveKTX2TranscoderPath();
-  loader2.setTranscoderPath(path);
-  if (renderer2) {
-    try {
-      loader2.detectSupport(renderer2);
-    } catch (error) {
-      console.warn("KTX2Loader.detectSupport failed; continuing without GPU compression", error);
-    }
-  }
-  return loader2;
-}
-const _taskCache = /* @__PURE__ */ new WeakMap();
-class DRACOLoader extends Loader {
-  /**
-   * Constructs a new Draco loader.
-   *
-   * @param {LoadingManager} [manager] - The loading manager.
-   */
-  constructor(manager2) {
-    super(manager2);
-    this.decoderPath = "";
-    this.decoderConfig = {};
-    this.decoderBinary = null;
-    this.decoderPending = null;
-    this.workerLimit = 4;
-    this.workerPool = [];
-    this.workerNextTaskID = 1;
-    this.workerSourceURL = "";
-    this.defaultAttributeIDs = {
-      position: "POSITION",
-      normal: "NORMAL",
-      color: "COLOR",
-      uv: "TEX_COORD"
-    };
-    this.defaultAttributeTypes = {
-      position: "Float32Array",
-      normal: "Float32Array",
-      color: "Float32Array",
-      uv: "Float32Array"
-    };
-  }
-  /**
-   * Provides configuration for the decoder libraries. Configuration cannot be changed after decoding begins.
-   *
-   * @param {string} path - The decoder path.
-   * @return {DRACOLoader} A reference to this loader.
-   */
-  setDecoderPath(path) {
-    this.decoderPath = path;
-    return this;
-  }
-  /**
-   * Provides configuration for the decoder libraries. Configuration cannot be changed after decoding begins.
-   *
-   * @param {{type:('js'|'wasm')}} config - The decoder config.
-   * @return {DRACOLoader} A reference to this loader.
-   */
-  setDecoderConfig(config) {
-    this.decoderConfig = config;
-    return this;
-  }
-  /**
-   * Sets the maximum number of Web Workers to be used during decoding.
-   * A lower limit may be preferable if workers are also for other tasks in the application.
-   *
-   * @param {number} workerLimit - The worker limit.
-   * @return {DRACOLoader} A reference to this loader.
-   */
-  setWorkerLimit(workerLimit) {
-    this.workerLimit = workerLimit;
-    return this;
-  }
-  /**
-   * Starts loading from the given URL and passes the loaded Draco asset
-   * to the `onLoad()` callback.
-   *
-   * @param {string} url - The path/URL of the file to be loaded. This can also be a data URI.
-   * @param {function(BufferGeometry)} onLoad - Executed when the loading process has been finished.
-   * @param {onProgressCallback} onProgress - Executed while the loading is in progress.
-   * @param {onErrorCallback} onError - Executed when errors occur.
-   */
-  load(url, onLoad, onProgress, onError) {
-    const loader2 = new FileLoader(this.manager);
-    loader2.setPath(this.path);
-    loader2.setResponseType("arraybuffer");
-    loader2.setRequestHeader(this.requestHeader);
-    loader2.setWithCredentials(this.withCredentials);
-    loader2.load(url, (buffer) => {
-      this.parse(buffer, onLoad, onError);
-    }, onProgress, onError);
-  }
-  /**
-   * Parses the given Draco data.
-   *
-   * @param {ArrayBuffer} buffer - The raw Draco data as an array buffer.
-   * @param {function(BufferGeometry)} onLoad - Executed when the loading/parsing process has been finished.
-   * @param {onErrorCallback} onError - Executed when errors occur.
-   */
-  parse(buffer, onLoad, onError = () => {
-  }) {
-    this.decodeDracoFile(buffer, onLoad, null, null, SRGBColorSpace, onError).catch(onError);
-  }
-  //
-  decodeDracoFile(buffer, callback, attributeIDs, attributeTypes, vertexColorSpace = LinearSRGBColorSpace, onError = () => {
-  }) {
-    const taskConfig = {
-      attributeIDs: attributeIDs || this.defaultAttributeIDs,
-      attributeTypes: attributeTypes || this.defaultAttributeTypes,
-      useUniqueIDs: !!attributeIDs,
-      vertexColorSpace
-    };
-    return this.decodeGeometry(buffer, taskConfig).then(callback).catch(onError);
-  }
-  decodeGeometry(buffer, taskConfig) {
-    const taskKey = JSON.stringify(taskConfig);
-    if (_taskCache.has(buffer)) {
-      const cachedTask = _taskCache.get(buffer);
-      if (cachedTask.key === taskKey) {
-        return cachedTask.promise;
-      } else if (buffer.byteLength === 0) {
-        throw new Error(
-          "THREE.DRACOLoader: Unable to re-decode a buffer with different settings. Buffer has already been transferred."
-        );
-      }
-    }
-    let worker;
-    const taskID = this.workerNextTaskID++;
-    const taskCost = buffer.byteLength;
-    const geometryPending = this._getWorker(taskID, taskCost).then((_worker) => {
-      worker = _worker;
-      return new Promise((resolve, reject) => {
-        worker._callbacks[taskID] = { resolve, reject };
-        worker.postMessage({ type: "decode", id: taskID, taskConfig, buffer }, [buffer]);
-      });
-    }).then((message) => this._createGeometry(message.geometry));
-    geometryPending.catch(() => true).then(() => {
-      if (worker && taskID) {
-        this._releaseTask(worker, taskID);
-      }
-    });
-    _taskCache.set(buffer, {
-      key: taskKey,
-      promise: geometryPending
-    });
-    return geometryPending;
-  }
-  _createGeometry(geometryData) {
-    const geometry = new BufferGeometry();
-    if (geometryData.index) {
-      geometry.setIndex(new BufferAttribute(geometryData.index.array, 1));
-    }
-    for (let i = 0; i < geometryData.attributes.length; i++) {
-      const result = geometryData.attributes[i];
-      const name = result.name;
-      const array = result.array;
-      const itemSize = result.itemSize;
-      const attribute = new BufferAttribute(array, itemSize);
-      if (name === "color") {
-        this._assignVertexColorSpace(attribute, result.vertexColorSpace);
-        attribute.normalized = array instanceof Float32Array === false;
-      }
-      geometry.setAttribute(name, attribute);
-    }
-    return geometry;
-  }
-  _assignVertexColorSpace(attribute, inputColorSpace) {
-    if (inputColorSpace !== SRGBColorSpace) return;
-    const _color3 = new Color();
-    for (let i = 0, il = attribute.count; i < il; i++) {
-      _color3.fromBufferAttribute(attribute, i);
-      ColorManagement.colorSpaceToWorking(_color3, SRGBColorSpace);
-      attribute.setXYZ(i, _color3.r, _color3.g, _color3.b);
-    }
-  }
-  _loadLibrary(url, responseType) {
-    const loader2 = new FileLoader(this.manager);
-    loader2.setPath(this.decoderPath);
-    loader2.setResponseType(responseType);
-    loader2.setWithCredentials(this.withCredentials);
-    return new Promise((resolve, reject) => {
-      loader2.load(url, resolve, void 0, reject);
-    });
-  }
-  preload() {
-    this._initDecoder();
-    return this;
-  }
-  _initDecoder() {
-    if (this.decoderPending) return this.decoderPending;
-    const useJS = typeof WebAssembly !== "object" || this.decoderConfig.type === "js";
-    const librariesPending = [];
-    if (useJS) {
-      librariesPending.push(this._loadLibrary("draco_decoder.js", "text"));
-    } else {
-      librariesPending.push(this._loadLibrary("draco_wasm_wrapper.js", "text"));
-      librariesPending.push(this._loadLibrary("draco_decoder.wasm", "arraybuffer"));
-    }
-    this.decoderPending = Promise.all(librariesPending).then((libraries) => {
-      const jsContent = libraries[0];
-      if (!useJS) {
-        this.decoderConfig.wasmBinary = libraries[1];
-      }
-      const fn = DRACOWorker.toString();
-      const body = [
-        "/* draco decoder */",
-        jsContent,
-        "",
-        "/* worker */",
-        fn.substring(fn.indexOf("{") + 1, fn.lastIndexOf("}"))
-      ].join("\n");
-      this.workerSourceURL = URL.createObjectURL(new Blob([body]));
-    });
-    return this.decoderPending;
-  }
-  _getWorker(taskID, taskCost) {
-    return this._initDecoder().then(() => {
-      if (this.workerPool.length < this.workerLimit) {
-        const worker2 = new Worker(this.workerSourceURL);
-        worker2._callbacks = {};
-        worker2._taskCosts = {};
-        worker2._taskLoad = 0;
-        worker2.postMessage({ type: "init", decoderConfig: this.decoderConfig });
-        worker2.onmessage = function(e) {
-          const message = e.data;
-          switch (message.type) {
-            case "decode":
-              worker2._callbacks[message.id].resolve(message);
-              break;
-            case "error":
-              worker2._callbacks[message.id].reject(message);
-              break;
-            default:
-              console.error('THREE.DRACOLoader: Unexpected message, "' + message.type + '"');
-          }
-        };
-        this.workerPool.push(worker2);
-      } else {
-        this.workerPool.sort(function(a, b) {
-          return a._taskLoad > b._taskLoad ? -1 : 1;
-        });
-      }
-      const worker = this.workerPool[this.workerPool.length - 1];
-      worker._taskCosts[taskID] = taskCost;
-      worker._taskLoad += taskCost;
-      return worker;
-    });
-  }
-  _releaseTask(worker, taskID) {
-    worker._taskLoad -= worker._taskCosts[taskID];
-    delete worker._callbacks[taskID];
-    delete worker._taskCosts[taskID];
-  }
-  debug() {
-    console.log("Task load: ", this.workerPool.map((worker) => worker._taskLoad));
-  }
-  dispose() {
-    for (let i = 0; i < this.workerPool.length; ++i) {
-      this.workerPool[i].terminate();
-    }
-    this.workerPool.length = 0;
-    if (this.workerSourceURL !== "") {
-      URL.revokeObjectURL(this.workerSourceURL);
-    }
-    return this;
-  }
-}
-function DRACOWorker() {
-  let decoderConfig;
-  let decoderPending;
-  onmessage = function(e) {
-    const message = e.data;
-    switch (message.type) {
-      case "init":
-        decoderConfig = message.decoderConfig;
-        decoderPending = new Promise(function(resolve) {
-          decoderConfig.onModuleLoaded = function(draco) {
-            resolve({ draco });
-          };
-          DracoDecoderModule(decoderConfig);
-        });
-        break;
-      case "decode":
-        const buffer = message.buffer;
-        const taskConfig = message.taskConfig;
-        decoderPending.then((module) => {
-          const draco = module.draco;
-          const decoder = new draco.Decoder();
-          try {
-            const geometry = decodeGeometry(draco, decoder, new Int8Array(buffer), taskConfig);
-            const buffers = geometry.attributes.map((attr) => attr.array.buffer);
-            if (geometry.index) buffers.push(geometry.index.array.buffer);
-            self.postMessage({ type: "decode", id: message.id, geometry }, buffers);
-          } catch (error) {
-            console.error(error);
-            self.postMessage({ type: "error", id: message.id, error: error.message });
-          } finally {
-            draco.destroy(decoder);
-          }
-        });
-        break;
-    }
-  };
-  function decodeGeometry(draco, decoder, array, taskConfig) {
-    const attributeIDs = taskConfig.attributeIDs;
-    const attributeTypes = taskConfig.attributeTypes;
-    let dracoGeometry;
-    let decodingStatus;
-    const geometryType = decoder.GetEncodedGeometryType(array);
-    if (geometryType === draco.TRIANGULAR_MESH) {
-      dracoGeometry = new draco.Mesh();
-      decodingStatus = decoder.DecodeArrayToMesh(array, array.byteLength, dracoGeometry);
-    } else if (geometryType === draco.POINT_CLOUD) {
-      dracoGeometry = new draco.PointCloud();
-      decodingStatus = decoder.DecodeArrayToPointCloud(array, array.byteLength, dracoGeometry);
-    } else {
-      throw new Error("THREE.DRACOLoader: Unexpected geometry type.");
-    }
-    if (!decodingStatus.ok() || dracoGeometry.ptr === 0) {
-      throw new Error("THREE.DRACOLoader: Decoding failed: " + decodingStatus.error_msg());
-    }
-    const geometry = { index: null, attributes: [] };
-    for (const attributeName in attributeIDs) {
-      const attributeType = self[attributeTypes[attributeName]];
-      let attribute;
-      let attributeID;
-      if (taskConfig.useUniqueIDs) {
-        attributeID = attributeIDs[attributeName];
-        attribute = decoder.GetAttributeByUniqueId(dracoGeometry, attributeID);
-      } else {
-        attributeID = decoder.GetAttributeId(dracoGeometry, draco[attributeIDs[attributeName]]);
-        if (attributeID === -1) continue;
-        attribute = decoder.GetAttribute(dracoGeometry, attributeID);
-      }
-      const attributeResult = decodeAttribute(draco, decoder, dracoGeometry, attributeName, attributeType, attribute);
-      if (attributeName === "color") {
-        attributeResult.vertexColorSpace = taskConfig.vertexColorSpace;
-      }
-      geometry.attributes.push(attributeResult);
-    }
-    if (geometryType === draco.TRIANGULAR_MESH) {
-      geometry.index = decodeIndex(draco, decoder, dracoGeometry);
-    }
-    draco.destroy(dracoGeometry);
-    return geometry;
-  }
-  function decodeIndex(draco, decoder, dracoGeometry) {
-    const numFaces = dracoGeometry.num_faces();
-    const numIndices = numFaces * 3;
-    const byteLength = numIndices * 4;
-    const ptr = draco._malloc(byteLength);
-    decoder.GetTrianglesUInt32Array(dracoGeometry, byteLength, ptr);
-    const index = new Uint32Array(draco.HEAPF32.buffer, ptr, numIndices).slice();
-    draco._free(ptr);
-    return { array: index, itemSize: 1 };
-  }
-  function decodeAttribute(draco, decoder, dracoGeometry, attributeName, attributeType, attribute) {
-    const numComponents = attribute.num_components();
-    const numPoints = dracoGeometry.num_points();
-    const numValues = numPoints * numComponents;
-    const byteLength = numValues * attributeType.BYTES_PER_ELEMENT;
-    const dataType = getDracoDataType(draco, attributeType);
-    const ptr = draco._malloc(byteLength);
-    decoder.GetAttributeDataArrayForAllPoints(dracoGeometry, attribute, dataType, byteLength, ptr);
-    const array = new attributeType(draco.HEAPF32.buffer, ptr, numValues).slice();
-    draco._free(ptr);
-    return {
-      name: attributeName,
-      array,
-      itemSize: numComponents
-    };
-  }
-  function getDracoDataType(draco, attributeType) {
-    switch (attributeType) {
-      case Float32Array:
-        return draco.DT_FLOAT32;
-      case Int8Array:
-        return draco.DT_INT8;
-      case Int16Array:
-        return draco.DT_INT16;
-      case Int32Array:
-        return draco.DT_INT32;
-      case Uint8Array:
-        return draco.DT_UINT8;
-      case Uint16Array:
-        return draco.DT_UINT16;
-      case Uint32Array:
-        return draco.DT_UINT32;
-    }
-  }
-}
-const __vite_import_meta_env__$1 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-const DEFAULT_DRACO_DECODER_PATH = "https://www.gstatic.com/draco/versioned/decoders/1.5.6/";
-const LOCAL_DECODER_SUBPATH = "draco/";
-const ABSOLUTE_PROTOCOL_REGEX = /^[a-z]+:\/\//i;
-const PROTOCOL_RELATIVE_REGEX = /^\/\//;
-function ensureTrailingSlash(value) {
-  if (typeof value !== "string" || value.length === 0) {
-    return value;
-  }
-  return value.endsWith("/") ? value : `${value}/`;
-}
-function resolveBaseUrl$1() {
-  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true) {
-    return ensureTrailingSlash("/athens-game-starter/");
-  }
-  return "/";
-}
-function resolveProtocol() {
-  if (typeof window !== "undefined" && window.location?.protocol) {
-    return window.location.protocol;
-  }
-  return "https:";
-}
-function normaliseCandidate(candidate, baseUrl2) {
-  if (typeof candidate !== "string") {
-    return null;
-  }
-  const trimmed = candidate.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-  if (PROTOCOL_RELATIVE_REGEX.test(trimmed)) {
-    const protocol = resolveProtocol();
-    return ensureTrailingSlash(`${protocol}${trimmed}`);
-  }
-  const safeBase = `https://example.com${baseUrl2}`;
-  try {
-    const resolved = new URL(trimmed, safeBase);
-    if (ABSOLUTE_PROTOCOL_REGEX.test(trimmed)) {
-      return ensureTrailingSlash(resolved.href);
-    }
-    if (resolved.origin !== "https://example.com") {
-      return ensureTrailingSlash(resolved.href);
-    }
-    return ensureTrailingSlash(resolved.pathname);
-  } catch {
-    return ensureTrailingSlash(trimmed);
-  }
-}
-function resolveDracoDecoderPath() {
-  const baseUrl2 = resolveBaseUrl$1();
-  const candidates = [];
-  const meta = typeof import.meta !== "undefined" ? import.meta : null;
-  const env = meta && meta.env ? meta.env : null;
-  if (env && typeof env.VITE_DRACO_DECODER_PATH === "string") {
-    candidates.push(env.VITE_DRACO_DECODER_PATH);
-  }
-  if (typeof window !== "undefined" && typeof window.__DRACO_DECODER_PATH__ === "string") {
-    candidates.push(window.__DRACO_DECODER_PATH__);
-  }
-  candidates.push(LOCAL_DECODER_SUBPATH);
-  candidates.push(DEFAULT_DRACO_DECODER_PATH);
-  for (const candidate of candidates) {
-    const normalised = normaliseCandidate(candidate, baseUrl2);
-    if (normalised) {
-      return normalised;
-    }
-  }
-  return DEFAULT_DRACO_DECODER_PATH;
-}
-let sharedDracoLoader = null;
-let currentDecoderPath = null;
-function createDracoLoader() {
-  if (!sharedDracoLoader) {
-    sharedDracoLoader = new DRACOLoader();
-  }
-  const decoderPath = resolveDracoDecoderPath();
-  if (decoderPath && decoderPath !== currentDecoderPath) {
-    sharedDracoLoader.setDecoderPath(decoderPath);
-    try {
-      sharedDracoLoader.preload();
-    } catch (error) {
-      console.warn("DRACOLoader.preload failed; continuing with lazy decoding", error);
-    }
-    currentDecoderPath = decoderPath;
-  }
-  return sharedDracoLoader;
-}
-const ENABLE_GLB_MODE$3 = true;
-function sanitizeRelativePath$2(value) {
-  if (typeof value !== "string") return "";
-  return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
-}
-class GLTFMeshStandardSGMaterial extends MeshStandardMaterial {
-  constructor(params) {
-    super();
-    this.isGLTFSpecularGlossinessMaterial = true;
-    const specularMapParsFragmentChunk = [
-      "#ifdef USE_SPECULARMAP",
-      "	uniform sampler2D specularMap;",
-      "#endif"
-    ].join("\n");
-    const glossinessMapParsFragmentChunk = [
-      "#ifdef USE_GLOSSINESSMAP",
-      "	uniform sampler2D glossinessMap;",
-      "#endif"
-    ].join("\n");
-    const specularMapFragmentChunk = [
-      "vec3 specularFactor = specular;",
-      "#ifdef USE_SPECULARMAP",
-      "	vec4 texelSpecular = texture2D( specularMap, vUv );",
-      "	texelSpecular = sRGBToLinear( texelSpecular );",
-      "	// reads channel RGB, compatible with a glTF Specular-Glossiness (RGBA) texture",
-      "	specularFactor *= texelSpecular.rgb;",
-      "#endif"
-    ].join("\n");
-    const glossinessMapFragmentChunk = [
-      "float glossinessFactor = glossiness;",
-      "#ifdef USE_GLOSSINESSMAP",
-      "	vec4 texelGlossiness = texture2D( glossinessMap, vUv );",
-      "	// reads channel A, compatible with a glTF Specular-Glossiness (RGBA) texture",
-      "	glossinessFactor *= texelGlossiness.a;",
-      "#endif"
-    ].join("\n");
-    const lightPhysicalFragmentChunk = [
-      "PhysicalMaterial material;",
-      "material.diffuseColor = diffuseColor.rgb * ( 1. - max( specularFactor.r, max( specularFactor.g, specularFactor.b ) ) );",
-      "vec3 dxy = max( abs( dFdx( geometryNormal ) ), abs( dFdy( geometryNormal ) ) );",
-      "float geometryRoughness = max( max( dxy.x, dxy.y ), dxy.z );",
-      "material.specularRoughness = max( 1.0 - glossinessFactor, 0.0525 ); // 0.0525 corresponds to the base mip of a 256 cubemap.",
-      "material.specularRoughness += geometryRoughness;",
-      "material.specularRoughness = min( material.specularRoughness, 1.0 );",
-      "material.specularColor = specularFactor;"
-    ].join("\n");
-    const uniforms = {
-      specular: { value: new Color().setHex(16777215) },
-      glossiness: { value: 1 },
-      specularMap: { value: null },
-      glossinessMap: { value: null }
-    };
-    this._extraUniforms = uniforms;
-    this.onBeforeCompile = (shader) => {
-      for (const uniformName of Object.keys(uniforms)) {
-        shader.uniforms[uniformName] = uniforms[uniformName];
-      }
-      shader.fragmentShader = shader.fragmentShader.replace("uniform float roughness;", "uniform vec3 specular;").replace("uniform float metalness;", "uniform float glossiness;").replace(
-        "#include <roughnessmap_pars_fragment>",
-        specularMapParsFragmentChunk
-      ).replace(
-        "#include <metalnessmap_pars_fragment>",
-        glossinessMapParsFragmentChunk
-      ).replace("#include <roughnessmap_fragment>", specularMapFragmentChunk).replace("#include <metalnessmap_fragment>", glossinessMapFragmentChunk).replace(
-        "#include <lights_physical_fragment>",
-        lightPhysicalFragmentChunk
-      );
-    };
-    Object.defineProperties(this, {
-      specular: {
-        get() {
-          return uniforms.specular.value;
-        },
-        set(value) {
-          uniforms.specular.value = value;
-        }
-      },
-      specularMap: {
-        get() {
-          return uniforms.specularMap.value;
-        },
-        set(value) {
-          uniforms.specularMap.value = value;
-          if (value) {
-            this.defines.USE_SPECULARMAP = "";
-          } else {
-            delete this.defines.USE_SPECULARMAP;
-          }
-        }
-      },
-      glossiness: {
-        get() {
-          return uniforms.glossiness.value;
-        },
-        set(value) {
-          uniforms.glossiness.value = value;
-        }
-      },
-      glossinessMap: {
-        get() {
-          return uniforms.glossinessMap.value;
-        },
-        set(value) {
-          uniforms.glossinessMap.value = value;
-          if (value) {
-            this.defines.USE_GLOSSINESSMAP = "";
-            this.defines.USE_UV = "";
-          } else {
-            delete this.defines.USE_GLOSSINESSMAP;
-            delete this.defines.USE_UV;
-          }
-        }
-      }
-    });
-    delete this.metalness;
-    delete this.roughness;
-    delete this.metalnessMap;
-    delete this.roughnessMap;
-    this.setValues(params);
-  }
-  copy(source) {
-    super.copy(source);
-    this.specularMap = source.specularMap;
-    this.specular.copy(source.specular);
-    this.glossinessMap = source.glossinessMap;
-    this.glossiness = source.glossiness;
-    delete this.metalness;
-    delete this.roughness;
-    delete this.metalnessMap;
-    delete this.roughnessMap;
-    return this;
-  }
-}
-class GLTFMaterialsPbrSpecularGlossinessExtension {
-  constructor(parser) {
-    this.parser = parser;
-    this.name = "KHR_materials_pbrSpecularGlossiness";
-  }
-  getMaterialType() {
-    return GLTFMeshStandardSGMaterial;
-  }
-  extendParams(materialParams, materialDef, parser) {
-    const pbrSpecularGlossiness = materialDef.extensions[this.name];
-    materialParams.color = new Color(1, 1, 1);
-    materialParams.opacity = 1;
-    const pending = [];
-    if (Array.isArray(pbrSpecularGlossiness.diffuseFactor)) {
-      const array = pbrSpecularGlossiness.diffuseFactor;
-      materialParams.color.fromArray(array);
-      materialParams.opacity = array[3];
-    }
-    if (pbrSpecularGlossiness.diffuseTexture !== void 0) {
-      pending.push(
-        parser.assignTexture(
-          materialParams,
-          "map",
-          pbrSpecularGlossiness.diffuseTexture,
-          SRGBColorSpace
-        )
-      );
-    }
-    materialParams.emissive = new Color(0, 0, 0);
-    materialParams.glossiness = pbrSpecularGlossiness.glossinessFactor !== void 0 ? pbrSpecularGlossiness.glossinessFactor : 1;
-    materialParams.specular = new Color(1, 1, 1);
-    if (Array.isArray(pbrSpecularGlossiness.specularFactor)) {
-      materialParams.specular.fromArray(pbrSpecularGlossiness.specularFactor);
-    }
-    if (pbrSpecularGlossiness.specularGlossinessTexture !== void 0) {
-      const specGlossMapDef = pbrSpecularGlossiness.specularGlossinessTexture;
-      pending.push(
-        parser.assignTexture(materialParams, "glossinessMap", specGlossMapDef)
-      );
-      pending.push(
-        parser.assignTexture(
-          materialParams,
-          "specularMap",
-          specGlossMapDef,
-          SRGBColorSpace
-        )
-      );
-    }
-    return Promise.all(pending);
-  }
-  createMaterial(materialParams) {
-    const material = new GLTFMeshStandardSGMaterial(materialParams);
-    material.fog = true;
-    material.color = materialParams.color;
-    material.map = materialParams.map === void 0 ? null : materialParams.map;
-    material.lightMap = null;
-    material.lightMapIntensity = 1;
-    material.aoMap = materialParams.aoMap === void 0 ? null : materialParams.aoMap;
-    material.aoMapIntensity = 1;
-    material.emissive = materialParams.emissive;
-    material.emissiveIntensity = 1;
-    material.emissiveMap = materialParams.emissiveMap === void 0 ? null : materialParams.emissiveMap;
-    material.bumpMap = materialParams.bumpMap === void 0 ? null : materialParams.bumpMap;
-    material.bumpScale = 1;
-    material.normalMap = materialParams.normalMap === void 0 ? null : materialParams.normalMap;
-    material.normalMapType = TangentSpaceNormalMap;
-    if (materialParams.normalScale) {
-      material.normalScale = materialParams.normalScale;
-    }
-    material.displacementMap = null;
-    material.displacementScale = 1;
-    material.displacementBias = 0;
-    material.specularMap = materialParams.specularMap === void 0 ? null : materialParams.specularMap;
-    material.specular = materialParams.specular;
-    material.glossinessMap = materialParams.glossinessMap === void 0 ? null : materialParams.glossinessMap;
-    material.glossiness = materialParams.glossiness;
-    material.alphaMap = null;
-    material.envMap = materialParams.envMap === void 0 ? null : materialParams.envMap;
-    material.envMapIntensity = 1;
-    material.refractionRatio = 0.98;
-    return material;
-  }
-}
-async function createGLTFLoader(renderer2) {
-  const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-R7xufIfq.js");
-    return { GLTFLoader: GLTFLoader2 };
-  }, true ? [] : void 0);
-  const loader2 = new GLTFLoader();
-  loader2.register((parser) => new GLTFMaterialsPbrSpecularGlossinessExtension(parser));
-  if (renderer2) {
-    try {
-      const ktx2 = await createKTX2Loader(renderer2);
-      if (ktx2) {
-        loader2.setKTX2Loader(ktx2);
-      }
-    } catch {
-    }
-  }
-  try {
-    const draco = createDracoLoader();
-    if (draco) {
-      loader2.setDRACOLoader(draco);
-    }
-  } catch {
-  }
-  loader2.setMeshoptDecoder(MeshoptDecoder);
-  return loader2;
-}
-async function headOk$1(url) {
-  if (!url) return false;
-  try {
-    const res = await fetch(url, { method: "HEAD" });
-    if (!res.ok) {
-      if (res.status === 405 || res.status === 501) {
-        return await probeWithGet(url);
-      }
-      return false;
-    }
-    const contentType = res.headers?.get?.("content-type") || "";
-    return !contentType.toLowerCase().includes("text/html");
-  } catch {
-    return await probeWithGet(url);
-  }
-}
-async function probeWithGet(url) {
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: { Range: "bytes=0-0" }
-    });
-    if (!res.ok) return false;
-    const contentType = res.headers?.get?.("content-type") || "";
-    return !contentType.toLowerCase().includes("text/html");
-  } catch {
-    return false;
-  }
-}
-const LANDMARK_GLB_PATH = /(?:^|\/)models\/landmarks\/.+\.glb(?:$|[?#])/i;
-async function loadGLBWithFallbacks(loader2, urls, options = {}) {
-  if (!loader2 || typeof loader2.loadAsync !== "function") {
-    return null;
-  }
-  if (!Array.isArray(urls) || urls.length === 0) {
-    return null;
-  }
-  const {
-    targetHeight = null,
-    renderer: renderer2 = null,
-    onLoaded = null,
-    forceProcedural = false
-  } = options;
-  if (forceProcedural) {
-    return null;
-  }
-  if (!ENABLE_GLB_MODE$3 && !options.allowSingleModel) {
-    return null;
-  }
-  const baseUrl2 = resolveBaseUrl$5();
-  const seen2 = /* @__PURE__ */ new Set();
-  try {
-    for (const candidate of urls) {
-      const raw = typeof candidate === "string" ? candidate.trim() : "";
-      if (!raw) {
-        continue;
-      }
-      const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
-      const relative = sanitizeRelativePath$2(raw);
-      if (!relative && !isAbsolute) {
-        continue;
-      }
-      const candidatesToTry = Array.from(
-        new Set(
-          isAbsolute ? [raw] : [joinPath(baseUrl2, relative), relative]
-        )
-      );
-      for (const url of candidatesToTry) {
-        if (!url) continue;
-        if (seen2.has(url)) {
-          continue;
-        }
-        seen2.add(url);
-        if (!LANDMARK_GLB_PATH.test(url) && !await headOk$1(url)) {
-          continue;
-        }
-        try {
-          const gltf = await loader2.loadAsync(url);
-          const { scene: scene2, scenes } = gltf || {};
-          const bufferScene = scene2 || (Array.isArray(scenes) ? scenes[0] : null);
-          const root = bufferScene || null;
-          if (!root) throw new Error(`No scene in GLB: ${url}`);
-          if (targetHeight && targetHeight > 0) {
-            root.updateMatrixWorld(true);
-            const box = new Box3().setFromObject(root);
-            const size = new Vector3();
-            box.getSize(size);
-            const currentH = size.y || 1;
-            const scaleFactor = currentH !== 0 ? targetHeight / currentH : 1;
-            if (Number.isFinite(scaleFactor) && scaleFactor > 0) {
-              root.scale.multiplyScalar(scaleFactor);
-            }
-          }
-          applyTextureBudgetToObject(root, { renderer: renderer2 });
-          if (typeof onLoaded === "function") {
-            try {
-              onLoaded({ url, gltf, root });
-            } catch {
-            }
-          }
-          return { url, gltf, root };
-        } catch {
-        }
-      }
-    }
-  } finally {
-    console.warn = originalWarn;
-    console.error = originalError;
-  }
-  return null;
-}
-function createSolidDataTexture(color, { colorSpace = SRGBColorSpace } = {}) {
-  const data = new Uint8Array(4);
-  data[0] = color >> 16 & 255;
-  data[1] = color >> 8 & 255;
-  data[2] = color & 255;
-  data[3] = 255;
-  const texture = new DataTexture(data, 1, 1, RGBAFormat);
-  texture.colorSpace = colorSpace;
-  texture.wrapS = texture.wrapT = RepeatWrapping;
-  texture.needsUpdate = true;
-  return texture;
-}
-function ensureUv2Attribute(geometry) {
-  if (!geometry) return geometry;
-  const uv = geometry.getAttribute("uv");
-  if (!uv) return geometry;
-  if (!geometry.getAttribute("uv2")) {
-    const uv2 = uv.clone();
-    geometry.setAttribute("uv2", uv2);
-  }
-  return geometry;
-}
-function cloneTexture$1(texture, options = {}) {
-  if (!texture) return null;
-  if (typeof texture.clone === "function") {
-    const cloned = texture.clone();
-    cloned.needsUpdate = texture.needsUpdate;
-    if (options.repeat) {
-      cloned.repeat.copy(texture.repeat ?? new Vector2(1, 1));
-    }
-    cloned.wrapS = texture.wrapS;
-    cloned.wrapT = texture.wrapT;
-    cloned.offset.copy?.(texture.offset ?? new Vector2());
-    cloned.center?.copy?.(texture.center ?? new Vector2());
-    cloned.rotation = texture.rotation;
-    cloned.colorSpace = texture.colorSpace;
-    return cloned;
-  }
-  return texture;
-}
-const MARBLE_TEXTURE_DEFAULTS = {
-  map: "textures/marble_base.jpg",
-  normal: "textures/marble_normal-dx.jpg",
-  // Updated to -dx per instructions
-  rough: "textures/marble_rough.jpg",
-  ao: "textures/marble_ao.jpg"
-};
-const marbleTextureLoader = new TextureLoader();
-function resolveTextureUrl(baseUrl2, candidate) {
-  if (typeof candidate !== "string") return null;
-  const trimmed = candidate.trim();
-  if (!trimmed) return null;
-  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-  const root = typeof baseUrl2 === "string" && baseUrl2 ? baseUrl2 : resolveBaseUrl$5();
-  return joinPath(root, trimmed.replace(/^\/+/, ""));
-}
-async function loadTextureCandidate({ baseUrl: baseUrl2, candidate, colorSpace }) {
-  const url = resolveTextureUrl(baseUrl2, candidate);
-  if (!url) return null;
-  try {
-    const texture = await marbleTextureLoader.loadAsync(url);
-    applyNormalMapConvention(texture, url);
-    texture.wrapS = texture.wrapT = RepeatWrapping;
-    texture.anisotropy = 8;
-    texture.colorSpace = colorSpace;
-    texture.needsUpdate = true;
-    return texture;
-  } catch (error) {
-    console.warn("[buildingKit] Marble texture load failed", url, error);
-    return null;
-  }
-}
-async function makeMarbleMaterialSet({
-  baseUrl: baseUrl2 = resolveBaseUrl$5(),
-  map = MARBLE_TEXTURE_DEFAULTS.map,
-  normal = MARBLE_TEXTURE_DEFAULTS.normal,
-  rough = MARBLE_TEXTURE_DEFAULTS.rough,
-  ao = MARBLE_TEXTURE_DEFAULTS.ao
-} = {}) {
-  let generated = null;
-  const ensureGenerated = () => {
-    if (!generated) {
-      generated = createProceduralMarbleTextures?.() || null;
-    }
-    return generated;
-  };
-  const fallback = {
-    map: createSolidDataTexture(15723754, { colorSpace: SRGBColorSpace }),
-    normalMap: createSolidDataTexture(8421631, {
-      colorSpace: LinearSRGBColorSpace
-    }),
-    roughnessMap: createSolidDataTexture(11776947, {
-      colorSpace: LinearSRGBColorSpace
-    }),
-    aoMap: createSolidDataTexture(14737632, {
-      colorSpace: LinearSRGBColorSpace
-    })
-  };
-  const [mapTexture, normalTexture, roughTexture, aoTexture] = await Promise.all([
-    loadTextureCandidate({
-      baseUrl: baseUrl2,
-      candidate: map,
-      colorSpace: SRGBColorSpace
-    }),
-    loadTextureCandidate({
-      baseUrl: baseUrl2,
-      candidate: normal,
-      colorSpace: LinearSRGBColorSpace
-    }),
-    loadTextureCandidate({
-      baseUrl: baseUrl2,
-      candidate: rough,
-      colorSpace: LinearSRGBColorSpace
-    }),
-    loadTextureCandidate({
-      baseUrl: baseUrl2,
-      candidate: ao,
-      colorSpace: LinearSRGBColorSpace
-    })
-  ]);
-  const procedural = ensureGenerated();
-  return {
-    map: mapTexture || procedural?.map || fallback.map,
-    normalMap: normalTexture || procedural?.normalMap || fallback.normalMap,
-    roughnessMap: roughTexture || procedural?.roughnessMap || fallback.roughnessMap,
-    aoMap: aoTexture || procedural?.aoMap || fallback.aoMap
-  };
-}
-function makePlasterMaterial({
-  color = 14209476,
-  roughness = 0.65
-} = {}) {
-  return new MeshStandardMaterial({
-    color,
-    roughness,
-    metalness: 0.04
-  });
-}
-function makeTerracottaMaterial({ color = 12150080 } = {}) {
-  return new MeshStandardMaterial({
-    color,
-    roughness: 0.6,
-    metalness: 0.08
-  });
-}
-async function makeColumn({
-  height = 7,
-  radiusTop = 0.7,
-  radiusBottom = 0.75,
-  radialSegments = 32,
-  heightSegments = 1,
-  material = null,
-  materialOptions = {}
-} = {}) {
-  const marbleSet = await makeMarbleMaterialSet(materialOptions);
-  const columnMaterial = material || new MeshPhysicalMaterial({
-    color: 16777215,
-    roughness: 0.42,
-    metalness: 0.08,
-    map: cloneTexture$1(marbleSet.map, { repeat: true }),
-    normalMap: cloneTexture$1(marbleSet.normalMap, { repeat: true }),
-    roughnessMap: cloneTexture$1(marbleSet.roughnessMap, { repeat: true }),
-    aoMap: cloneTexture$1(marbleSet.aoMap, { repeat: true }),
-    clearcoat: 0.28,
-    clearcoatRoughness: 0.5,
-    envMapIntensity: 0.9
-  });
-  const geometry = new CylinderGeometry(
-    radiusTop,
-    radiusBottom,
-    height,
-    radialSegments,
-    heightSegments,
-    false
-  );
-  geometry.translate(0, height / 2, 0);
-  ensureUv2Attribute(geometry);
-  const mesh = new Mesh(geometry, columnMaterial);
-  mesh.name = "ProceduralColumn";
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.userData = mesh.userData || {};
-  mesh.userData.noCollision = false;
-  return mesh;
-}
-async function makeStylobateSteps({
-  width = 20,
-  depth = 38,
-  stepCount = 3,
-  stepHeight = 0.35,
-  stepInset = 0.6,
-  material = null,
-  materialOptions = {}
-} = {}) {
-  const group = new Group();
-  group.name = "StylobateSteps";
-  const marbleSet = await makeMarbleMaterialSet(materialOptions);
-  const stepMaterial = material || new MeshPhysicalMaterial({
-    color: 16777215,
-    roughness: 0.5,
-    metalness: 0.04,
-    map: cloneTexture$1(marbleSet.map, { repeat: true }),
-    normalMap: cloneTexture$1(marbleSet.normalMap, { repeat: true }),
-    roughnessMap: cloneTexture$1(marbleSet.roughnessMap, { repeat: true }),
-    aoMap: cloneTexture$1(marbleSet.aoMap, { repeat: true }),
-    clearcoat: 0.18,
-    clearcoatRoughness: 0.4,
-    envMapIntensity: 0.85
-  });
-  const clampedSteps = Math.max(1, Math.floor(stepCount));
-  const safeInset = Math.max(0, stepInset);
-  for (let i = 0; i < clampedSteps; i++) {
-    const inset = (clampedSteps - 1 - i) * safeInset;
-    const stepWidth = Math.max(0.5, width + inset * 2);
-    const stepDepth = Math.max(0.5, depth + inset * 2);
-    const geometry = new BoxGeometry(stepWidth, stepHeight, stepDepth);
-    ensureUv2Attribute(geometry);
-    const mesh = new Mesh(geometry, stepMaterial);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.position.y = stepHeight * (i + 0.5);
-    mesh.userData = mesh.userData || {};
-    mesh.userData.noCollision = false;
-    mesh.name = `StylobateStep_${i}`;
-    group.add(mesh);
-  }
-  return group;
-}
-async function makePediment({
-  width = 20,
-  depth = 1.6,
-  height = 4.2,
-  material = null,
-  materialOptions = {}
-} = {}) {
-  const group = new Group();
-  group.name = "TemplePediment";
-  const marbleSet = await makeMarbleMaterialSet(materialOptions);
-  const pedimentMaterial = material || new MeshPhysicalMaterial({
-    color: 16777215,
-    roughness: 0.48,
-    metalness: 0.05,
-    map: cloneTexture$1(marbleSet.map, { repeat: true }),
-    normalMap: cloneTexture$1(marbleSet.normalMap, { repeat: true }),
-    roughnessMap: cloneTexture$1(marbleSet.roughnessMap, { repeat: true }),
-    aoMap: cloneTexture$1(marbleSet.aoMap, { repeat: true }),
-    clearcoat: 0.2,
-    clearcoatRoughness: 0.45,
-    envMapIntensity: 0.85
-  });
-  const shape = new Shape();
-  const halfWidth = width / 2;
-  shape.moveTo(-halfWidth, 0);
-  shape.lineTo(0, height);
-  shape.lineTo(halfWidth, 0);
-  shape.closePath();
-  const extrude = new ExtrudeGeometry(shape, {
-    depth,
-    bevelEnabled: false,
-    steps: 1
-  });
-  extrude.translate(0, 0, -depth / 2);
-  ensureUv2Attribute(extrude);
-  const mesh = new Mesh(extrude, pedimentMaterial);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.userData = mesh.userData || {};
-  mesh.userData.noCollision = false;
-  group.add(mesh);
-  return group;
-}
-function createRoofSide({ width, depth, height, material, flip = false }) {
-  const halfDepth = depth / 2;
-  const halfWidth = width / 2;
-  const baseX = flip ? halfWidth : -halfWidth;
-  const ridgeX = 0;
-  const positions = new Float32Array([
-    baseX,
-    0,
-    -halfDepth,
-    baseX,
-    0,
-    halfDepth,
-    ridgeX,
-    height,
-    halfDepth,
-    ridgeX,
-    height,
-    -halfDepth
-  ]);
-  const uvs = new Float32Array([0, 0, 0, 1, 1, 1, 1, 0]);
-  const indices = flip ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3];
-  const geometry = new BufferGeometry();
-  geometry.setAttribute("position", new BufferAttribute(positions, 3));
-  geometry.setAttribute("uv", new BufferAttribute(uvs, 2));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-  ensureUv2Attribute(geometry);
-  const mesh = new Mesh(geometry, material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = false;
-  mesh.userData = mesh.userData || {};
-  mesh.userData.noCollision = false;
-  return mesh;
-}
-function makeRoof({
-  width = 20,
-  depth = 38,
-  height = 4,
-  overhang = 1.4,
-  material = null
-} = {}) {
-  const group = new Group();
-  group.name = "TempleRoof";
-  const roofMaterial = material || new MeshStandardMaterial({
-    color: 13135682,
-    roughness: 0.62,
-    metalness: 0.05
-  });
-  const effectiveWidth = width + overhang * 2;
-  const effectiveDepth = depth + overhang * 2;
-  const left = createRoofSide({
-    width: effectiveWidth,
-    depth: effectiveDepth,
-    height,
-    material: roofMaterial,
-    flip: false
-  });
-  const right = createRoofSide({
-    width: effectiveWidth,
-    depth: effectiveDepth,
-    height,
-    material: roofMaterial,
-    flip: true
-  });
-  group.add(left);
-  group.add(right);
-  return group;
-}
-async function makeColonnadeInstanced({
-  countX = 6,
-  countZ = 12,
-  spacingX = 4,
-  spacingZ = 4.5,
-  columnGeom = null,
-  columnMat = null,
-  materialOptions = {}
-} = {}) {
-  const needsSampleColumn = !(columnGeom instanceof BufferGeometry && columnMat);
-  const baseColumn = needsSampleColumn ? await makeColumn({ materialOptions }) : null;
-  const geometry = columnGeom instanceof BufferGeometry ? columnGeom : baseColumn.geometry;
-  const material = columnMat || baseColumn.material;
-  ensureUv2Attribute(geometry);
-  const perimeterCount = Math.max(0, countX) * 2 + Math.max(0, countZ - 2) * 2;
-  const instanceCount = Math.max(1, perimeterCount);
-  const instanced = new InstancedMesh(geometry, material, instanceCount);
-  instanced.instanceMatrix.setUsage(DynamicDrawUsage);
-  instanced.castShadow = true;
-  instanced.receiveShadow = true;
-  instanced.name = "TempleColonnade";
-  instanced.userData = instanced.userData || {};
-  instanced.userData.noCollision = false;
-  const dummy = new Object3D();
-  const halfSpanX = spacingX * Math.max(0, countX - 1) * 0.5;
-  const halfSpanZ = spacingZ * Math.max(0, countZ - 1) * 0.5;
-  let index = 0;
-  const placeColumn = (x, z) => {
-    dummy.position.set(x, 0, z);
-    dummy.rotation.set(0, 0, 0);
-    dummy.updateMatrix();
-    if (index < instanced.count) {
-      instanced.setMatrixAt(index, dummy.matrix);
-      index += 1;
-    }
-  };
-  for (let ix = 0; ix < countX; ix++) {
-    const x = -halfSpanX + ix * spacingX;
-    placeColumn(x, -halfSpanZ);
-    if (countZ > 1) {
-      placeColumn(x, halfSpanZ);
-    }
-  }
-  if (countZ > 2) {
-    for (let iz = 1; iz < countZ - 1; iz++) {
-      const z = -halfSpanZ + iz * spacingZ;
-      placeColumn(-halfSpanX, z);
-      if (countX > 1) {
-        placeColumn(halfSpanX, z);
-      }
-    }
-  }
-  instanced.count = index;
-  instanced.instanceMatrix.needsUpdate = true;
-  return instanced;
-}
-function cloneTexture(texture) {
-  if (!texture) return null;
-  if (typeof texture.clone === "function") {
-    const cloned = texture.clone();
-    cloned.needsUpdate = texture.needsUpdate;
-    cloned.repeat.copy?.(texture.repeat ?? new Vector2(1, 1));
-    cloned.offset.copy?.(texture.offset ?? new Vector2());
-    cloned.center?.copy?.(texture.center ?? new Vector2());
-    cloned.rotation = texture.rotation;
-    cloned.wrapS = texture.wrapS;
-    cloned.wrapT = texture.wrapT;
-    cloned.colorSpace = texture.colorSpace;
-    return cloned;
-  }
-  return texture;
-}
-async function createMarbleMaterial(overrides = {}, materialOptions = {}) {
-  return new Promise((resolve) => {
-    requestAnimationFrame(async () => {
-      const marbleSet = await makeMarbleMaterialSet(materialOptions);
-      const material = new MeshPhysicalMaterial({
-        color: 16777215,
-        roughness: 0.45,
-        metalness: 0.08,
-        clearcoat: 0.24,
-        clearcoatRoughness: 0.48,
-        envMapIntensity: 0.9,
-        ...overrides
-      });
-      if (!overrides.map) material.map = cloneTexture(marbleSet.map);
-      if (!overrides.normalMap) material.normalMap = cloneTexture(marbleSet.normalMap);
-      if (!overrides.roughnessMap) material.roughnessMap = cloneTexture(marbleSet.roughnessMap);
-      if (!overrides.aoMap) material.aoMap = cloneTexture(marbleSet.aoMap);
-      console.info("[temples] Marble material loaded in background");
-      resolve(material);
-    });
-  });
-}
-function setCollisionTag(object, shouldCollide = true) {
-  object.traverse?.((child) => {
-    if (!child?.isMesh) return;
-    child.userData = child.userData || {};
-    child.userData.noCollision = !shouldCollide;
-  });
-}
-async function buildTemple(options = {}) {
-  const {
-    width = 22,
-    depth = 42,
-    colX = 6,
-    colZ = 13,
-    scale = 1,
-    order = "doric",
-    materialPreset = "marble",
-    columnHeight: columnHeightOverride,
-    entablatureHeight: entablatureHeightOverride,
-    pedimentHeight: pedimentHeightOverride,
-    roofHeight: roofHeightOverride,
-    materialOptions = {}
-  } = options;
-  const group = new Group();
-  group.name = `ProceduralTemple_${order}`;
-  group.userData = {
-    ...group.userData || {},
-    proceduralType: "temple",
-    materialPreset
-  };
-  group.userData.noCollision = false;
-  const stylobateStepHeight = 0.38;
-  const stylobateSteps = Math.max(3, Math.floor(options.stepCount ?? 3));
-  const stylobateWidth = width + Math.max(2, (colX - 1) * 0.2);
-  const stylobateDepth = depth + Math.max(2, (colZ - 1) * 0.2);
-  const stylobate = await makeStylobateSteps({
-    width: stylobateWidth,
-    depth: stylobateDepth,
-    stepCount: stylobateSteps,
-    stepHeight: stylobateStepHeight,
-    materialOptions
-  });
-  group.add(stylobate);
-  const stylobateHeight = stylobateSteps * stylobateStepHeight;
-  const columnHeight = columnHeightOverride ?? Math.max(6, width * 0.7);
-  const entablatureHeight = entablatureHeightOverride ?? columnHeight * 0.16;
-  const pedimentHeight = pedimentHeightOverride ?? columnHeight * 0.22;
-  const roofHeight = roofHeightOverride ?? columnHeight * 0.3;
-  const columnSample = await makeColumn({
-    height: columnHeight,
-    materialOptions
-  });
-  const spacingX = colX > 1 ? width / (colX - 1) : width;
-  const spacingZ = colZ > 1 ? depth / (colZ - 1) : depth;
-  const colonnade = await makeColonnadeInstanced({
-    countX: colX,
-    countZ: colZ,
-    spacingX,
-    spacingZ,
-    columnGeom: columnSample.geometry,
-    columnMat: columnSample.material,
-    materialOptions
-  });
-  colonnade.position.y = stylobateHeight;
-  group.add(colonnade);
-  const entablatureWidth = width + spacingX * 0.6;
-  const entablatureDepth = depth + spacingZ * 0.6;
-  const entablatureGeometry = new BoxGeometry(
-    entablatureWidth,
-    entablatureHeight,
-    entablatureDepth
-  );
-  ensureUv2Attribute(entablatureGeometry);
-  const entablatureMaterial = await createMarbleMaterial({}, materialOptions);
-  const entablature = new Mesh(entablatureGeometry, entablatureMaterial);
-  entablature.castShadow = true;
-  entablature.receiveShadow = true;
-  entablature.position.y = stylobateHeight + columnHeight + entablatureHeight / 2;
-  entablature.userData = entablature.userData || {};
-  entablature.userData.noCollision = false;
-  group.add(entablature);
-  const pedimentMaterial = await createMarbleMaterial({
-    roughness: 0.42,
-    clearcoat: 0.25
-  }, materialOptions);
-  const pedimentDepth = Math.max(1.2, spacingZ * 0.4);
-  const frontPediment = await makePediment({
-    width: entablatureWidth,
-    depth: pedimentDepth,
-    height: pedimentHeight,
-    material: pedimentMaterial.clone(),
-    materialOptions
-  });
-  frontPediment.position.y = stylobateHeight + columnHeight + entablatureHeight;
-  frontPediment.position.z = depth / 2 + pedimentDepth * 0.5;
-  group.add(frontPediment);
-  const rearPediment = await makePediment({
-    width: entablatureWidth,
-    depth: pedimentDepth,
-    height: pedimentHeight,
-    material: pedimentMaterial.clone(),
-    materialOptions
-  });
-  rearPediment.rotation.y = Math.PI;
-  rearPediment.position.y = stylobateHeight + columnHeight + entablatureHeight;
-  rearPediment.position.z = -depth / 2 - pedimentDepth * 0.5;
-  group.add(rearPediment);
-  const roofMaterial = makeTerracottaMaterial({
-    color: 13399888
-  });
-  const roof = makeRoof({
-    width: entablatureWidth,
-    depth: entablatureDepth,
-    height: roofHeight,
-    overhang: spacingX * 0.35,
-    material: roofMaterial
-  });
-  roof.position.y = stylobateHeight + columnHeight + entablatureHeight;
-  group.add(roof);
-  const cellaInsetX = Math.max(spacingX * 0.8, 3);
-  const cellaInsetZ = Math.max(spacingZ * 0.8, 3);
-  const cellaWidth = Math.max(4, width - cellaInsetX);
-  const cellaDepth = Math.max(6, depth - cellaInsetZ);
-  const cellaHeight = columnHeight * 0.72;
-  const cellaGeometry = new BoxGeometry(cellaWidth, cellaHeight, cellaDepth);
-  ensureUv2Attribute(cellaGeometry);
-  const cellaMaterial = makePlasterMaterial();
-  const cella = new Mesh(cellaGeometry, cellaMaterial);
-  cella.position.y = stylobateHeight + cellaHeight / 2;
-  cella.castShadow = true;
-  cella.receiveShadow = true;
-  cella.userData = cella.userData || {};
-  cella.userData.noCollision = false;
-  group.add(cella);
-  setCollisionTag(group, true);
-  if (Number.isFinite(scale)) {
-    group.scale.setScalar(scale);
-  } else if (scale?.isVector3) {
-    group.scale.copy(scale);
-  } else if (Array.isArray(scale) && scale.length >= 3) {
-    group.scale.set(scale[0], scale[1], scale[2]);
-  }
-  return group;
-}
-function alignToGround(object, terrain, x, z, surfaceOffset = 0) {
-  if (!object) return;
-  const sampler = terrain?.userData?.getHeightAt?.bind(terrain.userData) || terrain?.getHeightAt || null;
-  if (typeof sampler !== "function") return;
-  const px2 = Number.isFinite(x) ? x : object.position?.x;
-  const pz2 = Number.isFinite(z) ? z : object.position?.z;
-  if (!Number.isFinite(px2) || !Number.isFinite(pz2)) return;
-  const height = sampler(px2, pz2);
-  if (!Number.isFinite(height)) return;
-  const offset = Number.isFinite(surfaceOffset) ? surfaceOffset : 0;
-  object.position.y = height + offset;
-}
-const ENABLE_GLB_MODE$2 = true;
-function sanitizeRelativePath$1(value) {
-  if (typeof value !== "string") return "";
-  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
-}
-const missingLandmarkWarnings = /* @__PURE__ */ new Set();
-function warnMissingLandmark(key, message) {
-  if (!key) return;
-  if (missingLandmarkWarnings.has(key)) {
-    return;
-  }
-  missingLandmarkWarnings.add(key);
-  if (IS_DEV) console.warn(message);
-}
-let loader = null;
-let ktx2Loader = null;
-let supportsKTX2 = false;
-let hasWarnedUnsupportedKTX2 = false;
-let currentTranscoderPath = null;
-let hasLoggedCdnFallback = false;
-async function initializeAssetTranscoders(renderer2) {
-  if (!ENABLE_GLB_MODE$2) return null;
-  if (!renderer2 || typeof renderer2.getContext !== "function") {
-    return;
-  }
-  if (!loader) {
-    loader = await createGLTFLoader(renderer2);
-  }
-  const transcoderPath = resolveKTX2TranscoderPath();
-  if (!ktx2Loader) {
-    const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-VZzta7.js");
-      return { KTX2Loader: KTX2Loader2 };
-    }, true ? [] : void 0);
-    ktx2Loader = new KTX2Loader();
-  }
-  if (transcoderPath && transcoderPath !== currentTranscoderPath) {
-    ktx2Loader.setTranscoderPath(transcoderPath);
-    currentTranscoderPath = transcoderPath;
-    if (!hasLoggedCdnFallback && transcoderPath === DEFAULT_BASIS_TRANSCODER_PATH) {
-      if (IS_DEV) console.info(
-        "KTX2 transcoder path not configured; falling back to the three.js CDN. Add public/basis/ or set VITE_BASIS_TRANSCODER_PATH to avoid extra requests."
-      );
-      hasLoggedCdnFallback = true;
-    }
-  }
-  try {
-    ktx2Loader.detectSupport(renderer2);
-    const supportFlags = ktx2Loader.workerConfig || {};
-    supportsKTX2 = Object.values(supportFlags).some(Boolean);
-    if (!supportsKTX2) {
-      if (!hasWarnedUnsupportedKTX2) {
-        if (IS_DEV) console.warn(
-          "KTX2 is not supported on this GPU/driver combo. Falling back to standard textures."
-        );
-        hasWarnedUnsupportedKTX2 = true;
-      }
-      loader.setKTX2Loader(null);
-    } else {
-      loader.setKTX2Loader(ktx2Loader);
-      hasWarnedUnsupportedKTX2 = false;
-    }
-    loader.setMeshoptDecoder(MeshoptDecoder);
-  } catch (error) {
-    supportsKTX2 = false;
-    hasWarnedUnsupportedKTX2 = true;
-    console.warn(
-      "KTX2 not supported in this browser. Falling back to standard textures.",
-      error
-    );
-    loader.setKTX2Loader(null);
-  }
-}
-const HARBOR_LANDMARKS = [
-  { name: "HarborLighthouse", type: "lighthouse", pos: [24, 0, -60], yawDeg: 135, radius: 8 },
-  { name: "ClockTower", type: "clocktower", pos: [-10, 6, -24], yawDeg: 0, radius: 6 },
-  { name: "HarborSculpture", type: "sculpture", pos: [6, 0, -10], yawDeg: 40, radius: 4 }
-];
-function createHarborLandmarkFallback(type, THREE2) {
-  if (type === "lighthouse") {
-    const g2 = new THREE2.Group();
-    g2.add(new THREE2.Mesh(new THREE2.CylinderGeometry(2.6, 3, 9.5, 16), new THREE2.MeshStandardMaterial({ color: "#e7e0d6", roughness: 0.7, fog: false })));
-    const cap = new THREE2.Mesh(new THREE2.CylinderGeometry(1.6, 1.9, 1.4, 16), new THREE2.MeshStandardMaterial({ color: "#b4472c", roughness: 0.6, fog: false }));
-    cap.position.y = 5.5;
-    g2.add(cap);
-    const lamp = new THREE2.PointLight("#ffd26a", 2.1, 40, 2);
-    lamp.position.y = 6.2;
-    g2.add(lamp);
-    applyForegroundFogPolicy(g2);
-    return g2;
-  }
-  if (type === "clocktower") {
-    const g2 = new THREE2.Group();
-    g2.add(new THREE2.Mesh(new THREE2.BoxGeometry(3.2, 10.5, 3.2), new THREE2.MeshStandardMaterial({ color: "#f5efe3", roughness: 0.75, fog: false })));
-    const face = new THREE2.Mesh(new THREE2.CircleGeometry(0.8, 24), new THREE2.MeshStandardMaterial({ color: "#ffffff", emissive: "#ffe6bf", emissiveIntensity: 0.15, fog: false }));
-    face.position.set(0, 2.5, 1.65);
-    g2.add(face);
-    applyForegroundFogPolicy(g2);
-    return g2;
-  }
-  const g = new THREE2.Group();
-  const plinth = new THREE2.Mesh(new THREE2.BoxGeometry(2.2, 0.8, 2.2), new THREE2.MeshStandardMaterial({ color: "#d9d3c7", roughness: 0.8, fog: false }));
-  plinth.position.y = 0.4;
-  g.add(plinth);
-  const form = new THREE2.Mesh(new THREE2.TorusKnotGeometry(0.9, 0.25, 80, 10), new THREE2.MeshStandardMaterial({ color: "#b5a689", roughness: 0.55, metalness: 0.15, fog: false }));
-  form.position.y = 1.6;
-  g.add(form);
-  applyForegroundFogPolicy(g);
-  return g;
-}
-function placeHarborLandmarks({ THREE: THREE2, scene: scene2, lots, getHeightAt, seaLevel = 0, loadModel }) {
-  const reserve = (center, r) => {
-    const r2 = r * r;
-    for (const lot of lots) {
-      const dx = lot.pos.x - center.x, dz = lot.pos.z - center.z;
-      if (dx * dx + dz * dz <= r2) lot.blocked = true;
-    }
-  };
-  for (const lm of HARBOR_LANDMARKS) {
-    const yaw = THREE2.MathUtils.degToRad(lm.yawDeg || 0);
-    const y = typeof getHeightAt === "function" ? getHeightAt(lm.pos[0], lm.pos[2]) : lm.pos[1] ?? seaLevel;
-    const at = new THREE2.Vector3(lm.pos[0], y, lm.pos[2]);
-    let obj = null;
-    if (typeof loadModel === "function") obj = loadModel(lm.type) || null;
-    if (!obj) obj = createHarborLandmarkFallback(lm.type, THREE2);
-    obj.position.copy(at);
-    obj.rotation.y = yaw;
-    scene2.add(obj);
-    reserve(at, lm.radius ?? 6);
-  }
-}
-function initLandmarks(scene2, renderer2) {
-  initializeAssetTranscoders(renderer2);
-  return scene2;
-}
-const trackedLandmarks = /* @__PURE__ */ new Set();
-function resolveRenderer(scene2, explicitRenderer = null) {
-  if (explicitRenderer) {
-    return explicitRenderer;
-  }
-  let current = scene2 || null;
-  while (current) {
-    const candidate = current?.userData?.renderer;
-    if (candidate) {
-      return candidate;
-    }
-    current = current.parent || null;
-  }
-  return null;
-}
-function applyTransform(object, options) {
-  const { position, rotation, scale } = options;
-  if (position) {
-    object.position.set(position.x ?? position[0] ?? 0, position.y ?? position[1] ?? 0, position.z ?? position[2] ?? 0);
-  }
-  if (rotation) {
-    object.rotation.set(
-      rotation.x ?? rotation[0] ?? 0,
-      rotation.y ?? rotation[1] ?? 0,
-      rotation.z ?? rotation[2] ?? 0
-    );
-  }
-  if (scale !== void 0) {
-    if (typeof scale === "number") {
-      object.scale.set(scale, scale, scale);
-    } else {
-      const sx = scale.x ?? scale[0] ?? 1;
-      const sy = scale.y ?? scale[1] ?? sx;
-      const sz = scale.z ?? scale[2] ?? sx;
-      object.scale.set(sx, sy, sz);
-    }
-  }
-}
-function liftObjectAboveGround(scene2, object, offset = 0.05) {
-  if (!scene2 || !object) return null;
-  const candidates = [];
-  const sceneUserData = scene2.userData || {};
-  candidates.push(
-    sceneUserData.getHeightAt,
-    sceneUserData.terrainHeightSampler,
-    sceneUserData.heightSampler,
-    sceneUserData.terrainSampler
-  );
-  const terrain = sceneUserData.terrain;
-  if (terrain?.userData?.getHeightAt) {
-    candidates.push(terrain.userData.getHeightAt);
-  }
-  let sampler = null;
-  for (const candidate of candidates) {
-    if (typeof candidate === "function") {
-      sampler = candidate;
-      break;
-    }
-  }
-  if (!sampler || !object.position) {
-    return null;
-  }
-  const { x, z } = object.position;
-  if (!Number.isFinite(x) || !Number.isFinite(z)) {
-    return null;
-  }
-  const ground = sampler(x, z);
-  if (!Number.isFinite(ground)) {
-    return null;
-  }
-  const currentY = Number.isFinite(object.position.y) ? object.position.y : 0;
-  const desiredY = Math.max(currentY, ground + offset);
-  if (Number.isFinite(desiredY)) {
-    object.position.y = desiredY;
-    return desiredY;
-  }
-  return null;
-}
-function disposeObject(object, scene2) {
-  if (!object) return;
-  if (scene2) {
-    scene2.remove(object);
-  }
-  object.traverse?.((child) => {
-    if (child.isMesh) {
-      child.geometry?.dispose?.();
-      if (Array.isArray(child.material)) {
-        for (const material of child.material) {
-          material?.dispose?.();
-        }
-      } else {
-        child.material?.dispose?.();
-      }
-    }
-  });
-}
-function removePlaceholder(entry) {
-  const { placeholder, scene: scene2 } = entry;
-  if (!placeholder) return;
-  if (scene2) {
-    scene2.remove(placeholder);
-  }
-  placeholder.geometry?.dispose?.();
-  placeholder.material?.dispose?.();
-  entry.placeholder = null;
-}
-function finalizeLandmarkObject(entry, object, scene2, options, materialPreset) {
-  if (!object || !scene2 || !entry) {
-    return null;
-  }
-  applyTransform(object, options || {});
-  removePlaceholder(entry);
-  if (entry.disposed) {
-    disposeObject(object);
-    trackedLandmarks.delete(entry);
-    return null;
-  }
-  const initialY = Number.isFinite(object?.position?.y) ? object.position.y : 0;
-  const liftedY = liftObjectAboveGround(scene2, object, 0.05);
-  if (Number.isFinite(liftedY)) {
-    object.position.y = Math.max(initialY, liftedY);
-  }
-  scene2.add(object);
-  entry.object = object;
-  object.userData = object.userData || {};
-  object.userData.interactable = true;
-  object.userData.onUse = () => {
-    const label = object.name || "a landmark";
-    console.log(`You interacted with ${label}`);
-  };
-  object.traverse?.((mesh) => {
-    if (!mesh?.isMesh || typeof mesh.name !== "string") return;
-    const isInteractiveDoor = mesh.name === "Door" || mesh.name.startsWith("INT_");
-    if (!isInteractiveDoor) return;
-    mesh.userData = mesh.userData || {};
-    mesh.userData.interactable = true;
-    mesh.userData.onUse = () => {
-      mesh.userData.isOpen = !mesh.userData.isOpen;
-      const isDoor = mesh.name === "Door";
-      mesh.rotation.y = mesh.userData.isOpen ? Math.PI / 2 : 0;
-      if (isDoor) {
-        console.log(mesh.userData.isOpen ? "Door opened!" : "Door closed!");
-      } else {
-        console.log(`You interacted with ${mesh.name}`);
-      }
-    };
-  });
-  queueSceneInteractable(scene2, object);
-  if (materialPreset) {
-    const factory = MATERIAL_PRESETS[materialPreset];
-    const presetMaterial = typeof factory === "function" ? factory(THREE) : null;
-    if (presetMaterial) {
-      object.traverse?.((mesh) => {
-        if (!mesh?.isMesh) return;
-        if (Array.isArray(mesh.material)) {
-          const nextMaterials = mesh.material.map((material) => {
-            const clonedMaterial = presetMaterial.clone();
-            copyMaterialFlags(material, clonedMaterial);
-            material?.dispose?.();
-            return clonedMaterial;
-          });
-          mesh.material = nextMaterials;
-        } else if (mesh.material) {
-          const currentMaterial = mesh.material;
-          const clonedMaterial = presetMaterial.clone();
-          copyMaterialFlags(currentMaterial, clonedMaterial);
-          currentMaterial.dispose?.();
-          mesh.material = clonedMaterial;
-        } else {
-          mesh.material = presetMaterial.clone();
-        }
-      });
-      presetMaterial.dispose?.();
-    }
-  }
-  return object;
-}
-async function spawnProceduralFallback({
-  kind = "temple",
-  params = {},
-  transform = {}
-} = {}) {
-  const finalParams = { ...params || {} };
-  const transformOptions = { ...transform || {} };
-  if (finalParams.scale == null && transformOptions.scale != null) {
-    finalParams.scale = transformOptions.scale;
-    delete transformOptions.scale;
-  }
-  let object = null;
-  switch (kind) {
-    case "temple":
-      object = await buildTemple(finalParams);
-      break;
-    default:
-      console.warn(`[landmarks] Unknown procedural fallback kind: ${kind}`);
-      return null;
-  }
-  if (!object || typeof object !== "object") {
-    return null;
-  }
-  return { object, transform: transformOptions };
-}
-const MATERIAL_PRESETS = {
-  marble: makeMarbleMaterial,
-  bronze: makeBronzeMaterial,
-  "mediterranean-plaster": makeMediterraneanPlasterMaterial
-};
-const MATERIAL_FLAG_PROPERTIES = [
-  "skinning",
-  "morphTargets",
-  "morphNormals",
-  "transparent"
-];
-function copyMaterialFlags(source, target) {
-  if (!source || !target) return target;
-  MATERIAL_FLAG_PROPERTIES.forEach((key) => {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
-      target[key] = source[key];
-    }
-  });
-  return target;
-}
-async function loadLandmark(scene2, url, options = {}) {
-  const timerLabel = `loadLandmark:${url}`;
-  if (typeof console?.time === "function") {
-    console.time(timerLabel);
-  }
-  if (!loader) {
-    const resolvedRenderer = resolveRenderer(scene2, options?.renderer);
-    if (resolvedRenderer) {
-      await initializeAssetTranscoders(resolvedRenderer);
-    } else {
-      loader = await createGLTFLoader(null);
-    }
-  }
-  const placeholderGeometry = new BoxGeometry(0.8, 0.8, 0.8);
-  const placeholderMaterial = new MeshStandardMaterial({
-    color: 4473924,
-    emissive: new Color(6711039),
-    transparent: true,
-    opacity: 0.6
-  });
-  const placeholder = new Mesh(placeholderGeometry, placeholderMaterial);
-  placeholder.name = "LandmarkPlaceholder";
-  applyTransform(placeholder, { position: options.position });
-  liftObjectAboveGround(scene2, placeholder, 0.05);
-  const entry = { scene: scene2, url, placeholder, object: null };
-  trackedLandmarks.add(entry);
-  const cleanupEntry = () => {
-    removePlaceholder(entry);
-    trackedLandmarks.delete(entry);
-  };
-  const tryProceduralFallback = async (reason, extra = {}) => {
-    if (typeof options?.proceduralFallback !== "function") {
-      return null;
-    }
-    try {
-      const result = await options.proceduralFallback({
-        reason,
-        url,
-        ...extra
-      });
-      if (result) {
-        cleanupEntry();
-        return result;
-      }
-    } catch (fallbackError) {
-      console.warn("[landmarks] Procedural fallback failed", fallbackError);
-    }
-    return null;
-  };
-  try {
-    const sanitizedUrl = typeof url === "string" ? url.trim() : "";
-    if (!sanitizedUrl) {
-      throw new Error("loadLandmark requires a non-empty URL");
-    }
-    if (!ENABLE_GLB_MODE$2) {
-      console.warn(`[GLB Disabled] Skipping model load: ${sanitizedUrl}`);
-      const fallbackObject = await tryProceduralFallback("glb-disabled");
-      if (fallbackObject) {
-        return fallbackObject;
-      }
-      cleanupEntry();
-      return null;
-    }
-    const skipGlb = options.forceProcedural === true;
-    if (skipGlb) {
-      const fallbackObject = await tryProceduralFallback("force-procedural");
-      if (fallbackObject) {
-        return fallbackObject;
-      }
-      cleanupEntry();
-      return null;
-    }
-    const isProtocolAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(sanitizedUrl) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(sanitizedUrl);
-    const normalized = sanitizeRelativePath$1(sanitizedUrl);
-    const urlSet = /* @__PURE__ */ new Set();
-    if (isProtocolAbsolute) {
-      urlSet.add(sanitizedUrl);
-    } else {
-      if (normalized) {
-        const baseUrl2 = resolveBaseUrl$5();
-        urlSet.add(joinPath(baseUrl2, normalized));
-        urlSet.add(normalized);
-      }
-    }
-    const urls = Array.from(urlSet).filter(Boolean);
-    const cacheKey = isProtocolAbsolute ? sanitizedUrl : normalized;
-    const { materialPreset } = options;
-    const resolvedRenderer = resolveRenderer(scene2, options?.renderer);
-    const loaded2 = await loadGLBWithFallbacks(loader, urls, {
-      renderer: resolvedRenderer,
-      targetHeight: options?.targetHeight || null,
-      forceProcedural: options.forceProcedural === true
-    });
-    if (!loaded2 || !loaded2.root) {
-      const fallbackObject = await tryProceduralFallback("load-failed", { requestedUrl: sanitizedUrl });
-      if (fallbackObject) {
-        return fallbackObject;
-      }
-      warnMissingLandmark(cacheKey || sanitizedUrl, `[landmarks] Missing GLB: ${sanitizedUrl}`);
-      cleanupEntry();
-      return null;
-    }
-    const { root } = loaded2;
-    let finalObject = root;
-    root.traverse?.((mesh) => {
-      if (!mesh?.isMesh) return;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.frustumCulled = false;
-    });
-    if (root.children?.length) {
-      const lodLevels = root.children.filter((child) => child?.name?.startsWith("LOD")).map((child) => ({
-        object3D: child,
-        level: parseInt(child.name.slice(3)) || 0
-      }));
-      if (lodLevels.length) {
-        const lod = new LOD();
-        const baseName = root.name || "Landmark";
-        lod.name = `${baseName}_LOD`;
-        lod.position.copy(root.position);
-        lod.rotation.copy(root.rotation);
-        lod.scale.copy(root.scale);
-        lodLevels.sort((a, b) => a.level - b.level).forEach(({ object3D, level }) => {
-          lod.addLevel(object3D, level * 50);
-        });
-        lod.userData = { ...root.userData || {} };
-        finalObject = lod;
-      }
-    }
-    const finalized = finalizeLandmarkObject(entry, finalObject, scene2, options, materialPreset);
-    if (finalized) {
-      finalized.traverse((child) => {
-        if (child.isMesh && child.material) {
-          if (Array.isArray(child.material)) {
-            child.material.forEach((m) => {
-              if (m) m.fog = false;
-            });
-          } else {
-            child.material.fog = false;
-          }
-        }
-      });
-      applyForegroundFogPolicy(finalized);
-      return finalized;
-    }
-    return null;
-  } catch (error) {
-    const fallbackObject = attemptProceduralFallback("glb-exception");
-    if (fallbackObject) {
-      return fallbackObject;
-    }
-    removePlaceholder(entry);
-    trackedLandmarks.delete(entry);
-    throw error;
-  } finally {
-    if (typeof console?.timeEnd === "function") {
-      console.timeEnd(timerLabel);
-    }
-  }
-}
-function disposeLandmarks() {
-  for (const entry of trackedLandmarks) {
-    entry.disposed = true;
-    disposeObject(entry.object, entry.scene);
-    removePlaceholder(entry);
-  }
-  trackedLandmarks.clear();
-}
-function applyVertexColor$1(geometry, color) {
-  const geom = geometry.toNonIndexed();
-  const c = new Color(color);
-  const count = geom.getAttribute("position").count;
-  const colors = new Float32Array(count * 3);
-  for (let i = 0; i < count; i++) {
-    colors[i * 3] = c.r;
-    colors[i * 3 + 1] = c.g;
-    colors[i * 3 + 2] = c.b;
-  }
-  geom.setAttribute("color", new BufferAttribute(colors, 3));
-  return geom;
-}
-function generateTempleGeometry(width, length, height, columnCountFront, columnCountSide) {
-  const geometries = [];
-  const marbleColor = 15790320;
-  const roofColor = 10963504;
-  const accentColor = 3497104;
-  const baseStepHeight = Math.max(0.4, height * 0.08);
-  const basePadding = 1.5;
-  for (let tier = 0; tier < 3; tier++) {
-    const tierGeo = new BoxGeometry(
-      width + basePadding * 2 - tier * 0.6,
-      baseStepHeight,
-      length + basePadding * 2 - tier * 0.6
-    );
-    tierGeo.translate(0, baseStepHeight * 0.5 + tier * baseStepHeight, 0);
-    geometries.push(applyVertexColor$1(tierGeo, marbleColor));
-  }
-  const columnHeight = height;
-  const columnGeo = new CylinderGeometry(0.8, 1, columnHeight, 8);
-  columnGeo.translate(0, baseStepHeight * 3 + columnHeight * 0.5, 0);
-  const frontSpacing = width / (columnCountFront - 1);
-  const sideSpacing = length / (columnCountSide - 1);
-  const halfWidth = width * 0.5;
-  const halfLength = length * 0.5;
-  for (let i = 0; i < columnCountFront; i++) {
-    const x = -halfWidth + frontSpacing * i;
-    const frontCol = columnGeo.clone();
-    frontCol.translate(x, 0, -halfLength);
-    geometries.push(applyVertexColor$1(frontCol, marbleColor));
-    if (i === 0 || i === columnCountFront - 1) continue;
-    const backCol = columnGeo.clone();
-    backCol.translate(x, 0, halfLength);
-    geometries.push(applyVertexColor$1(backCol, marbleColor));
-  }
-  for (let i = 0; i < columnCountSide; i++) {
-    const z = -halfLength + sideSpacing * i;
-    const leftCol = columnGeo.clone();
-    leftCol.translate(-halfWidth, 0, z);
-    geometries.push(applyVertexColor$1(leftCol, marbleColor));
-    if (i === 0 || i === columnCountSide - 1) continue;
-    const rightCol = columnGeo.clone();
-    rightCol.translate(halfWidth, 0, z);
-    geometries.push(applyVertexColor$1(rightCol, marbleColor));
-  }
-  const lintelHeight = Math.max(1.5, height * 0.25);
-  const lintelGeo = new BoxGeometry(width + 0.6, lintelHeight, length + 0.6);
-  lintelGeo.translate(0, baseStepHeight * 3 + columnHeight + lintelHeight * 0.5, 0);
-  geometries.push(applyVertexColor$1(lintelGeo, marbleColor));
-  const pedimentHeight = Math.max(2, height * 0.35);
-  const roofGeo = new CylinderGeometry(width * 0.55, width * 0.55, length + 1.2, 3, 1, true);
-  roofGeo.rotateX(Math.PI / 2);
-  roofGeo.translate(0, baseStepHeight * 3 + columnHeight + lintelHeight + pedimentHeight * 0.5, 0);
-  geometries.push(applyVertexColor$1(roofGeo, roofColor));
-  const pedimentGeo = new ConeGeometry(width * 0.5, pedimentHeight, 3, 1, true);
-  pedimentGeo.rotateY(Math.PI / 6);
-  pedimentGeo.translate(0, baseStepHeight * 3 + columnHeight + lintelHeight + pedimentHeight * 0.5, -halfLength - 0.3);
-  geometries.push(applyVertexColor$1(pedimentGeo, accentColor));
-  const pedimentBack = pedimentGeo.clone();
-  pedimentBack.translate(0, 0, length + 0.6);
-  geometries.push(applyVertexColor$1(pedimentBack, accentColor));
-  return mergeGeometries(geometries, true);
-}
-function generateTheaterGeometry(radius, tierCount) {
-  const geometries = [];
-  const marbleColor = 15790320;
-  const stepHeight = Math.max(0.35, radius * 0.01);
-  const stepDepth = Math.max(0.8, radius / (tierCount * 1.5));
-  const thetaLength = Math.PI;
-  for (let tier = 0; tier < tierCount; tier++) {
-    const tierRadius = radius + tier * stepDepth;
-    const tierGeo = new CylinderGeometry(
-      tierRadius + stepDepth,
-      tierRadius,
-      stepHeight,
-      32,
-      1,
-      false,
-      -thetaLength * 0.5,
-      thetaLength
-    );
-    tierGeo.translate(0, stepHeight * 0.5 + tier * stepHeight, 0);
-    geometries.push(applyVertexColor$1(tierGeo, marbleColor));
-  }
-  const orchestraGeo = new CylinderGeometry(radius * 0.4, radius * 0.4, stepHeight * 0.6, 32, 1, false);
-  orchestraGeo.translate(0, stepHeight * 0.3, 0);
-  geometries.push(applyVertexColor$1(orchestraGeo, marbleColor));
-  const merged = mergeGeometries(geometries, true);
-  merged.rotateY(Math.PI);
+  roofGeo.scale(1, roofHeight / (roofRadius * 2), 1);
+  roofGeo.translate(0, foundationHeight + wallHeight + roofHeight * 0.5, -porchInset * 0.2);
+  geometries.push(applyVertexColor(roofGeo, roofColor));
+  const merged = mergeGeometries(geometries, false);
+  merged.userData = merged.userData || {};
+  merged.userData.courtyard = courtyard;
   return merged;
 }
-function createParthenon() {
-  const geometry = generateTempleGeometry(30, 70, 12, 8, 17);
-  const material = new MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0, fog: false });
-  const mesh = new Mesh(geometry, material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.name = "Parthenon";
-  return mesh;
+async function createCity(scene2, terrain, options = {}) {
+  const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
+  const seaLevel = Number.isFinite(options.seaLevel) ? options.seaLevel : getSeaLevelY();
+  const rng = (seed) => {
+    let s = seed;
+    return () => (s = s * 1664525 + 1013904223 >>> 0) / 4294967295;
+  };
+  const random = rng(options.seed ?? CITY_SEED);
+  const city = new Group();
+  city.name = "HarborCity";
+  scene2.add(city);
+  const roadCurves = [];
+  for (let i = 0; i < 5; i++) {
+    const angle = i / 5 * Math.PI * 2 + random() * 0.4;
+    const start = origin.clone();
+    const end = new Vector3(
+      origin.x + Math.cos(angle) * CITY_AREA_RADIUS,
+      origin.y,
+      origin.z + Math.sin(angle) * CITY_AREA_RADIUS
+    );
+    const mid = start.clone().lerp(end, 0.5);
+    mid.x += (random() - 0.5) * 30;
+    mid.z += (random() - 0.5) * 30;
+    [start, mid, end].forEach((p) => p.y = sampleHeight$1(terrain, p.x, p.z, origin.y) + 0.05);
+    const curve = new CatmullRomCurve3([start, mid, end]);
+    roadCurves.push(curve);
+  }
+  const roadGeometries = roadCurves.map((curve) => {
+    const tube = new TubeGeometry(curve, 80, 1.5, 8, false);
+    return applyVertexColor(tube, 9406070);
+  });
+  if (roadGeometries.length > 0) {
+    const mergedRoads = mergeGeometries(roadGeometries, true);
+    const roadMaterial = new MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 1,
+      metalness: 0,
+      side: DoubleSide,
+      fog: true
+    });
+    const roadMesh = new Mesh(mergedRoads, roadMaterial);
+    roadMesh.receiveShadow = true;
+    roadMesh.userData.noCollision = true;
+    city.add(roadMesh);
+  }
+  const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(60));
+  const cityGeometries = [];
+  const placedPoints = [];
+  const buildingPlacements = [];
+  const OCEAN_BOUNDARY_Z = -100;
+  const CITY_BOUNDARY_Z = -40;
+  const OCEAN_DEPTH2 = -12;
+  const CITY_HEIGHT2 = 4;
+  const CITY_MIN_HEIGHT = 2;
+  const sampleElevation = (x, z) => {
+    const oceanHeight = seaLevel + OCEAN_DEPTH2;
+    const cityHeight = seaLevel + CITY_HEIGHT2;
+    let baseHeight = cityHeight;
+    if (z < OCEAN_BOUNDARY_Z) {
+      baseHeight = oceanHeight;
+    } else if (z > CITY_BOUNDARY_Z) {
+      baseHeight = cityHeight;
+    } else {
+      const t = (z - OCEAN_BOUNDARY_Z) / (CITY_BOUNDARY_Z - OCEAN_BOUNDARY_Z);
+      baseHeight = MathUtils.lerp(oceanHeight, cityHeight, t);
+    }
+    let height = baseHeight;
+    if (z > CITY_BOUNDARY_Z && height < seaLevel + CITY_MIN_HEIGHT) {
+      height = seaLevel + CITY_MIN_HEIGHT;
+    }
+    const sampled = sampleHeight$1(terrain, x, z, height);
+    return Number.isFinite(sampled) ? sampled : height;
+  };
+  const findNearestRoad = (x, z) => {
+    let bestDist = Infinity;
+    let bestCurve = null;
+    let bestT = 0;
+    roadCurves.forEach((curve, idx) => {
+      const samples = roadSamples[idx];
+      for (let s = 0; s < samples.length; s++) {
+        const pt = samples[s];
+        const d = Math.hypot(x - pt.x, z - pt.z);
+        if (d < bestDist) {
+          bestDist = d;
+          bestCurve = curve;
+          bestT = s / (samples.length - 1);
+        }
+      }
+    });
+    return { bestDist, bestCurve, bestT };
+  };
+  const canPlace = (x, z, radius) => {
+    for (const p of placedPoints) {
+      const dist = Math.hypot(x - p.x, z - p.z);
+      if (dist < radius + p.radius) return false;
+    }
+    return true;
+  };
+  const zoneACount = 800;
+  let zoneAPlaced = 0;
+  let attemptsA = 0;
+  while (zoneAPlaced < zoneACount && attemptsA < zoneACount * 8) {
+    attemptsA++;
+    const r = Math.sqrt(random()) * 120;
+    const theta = random() * Math.PI * 2;
+    const x = origin.x + r * Math.cos(theta);
+    const z = origin.z + r * Math.sin(theta);
+    if (z >= origin.z - 50) continue;
+    const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
+    if (bestDist > 18 || bestDist < 2) continue;
+    const width = 2.5;
+    const depth = 2.5;
+    const wallHeight = 4;
+    const roofHeight = 1;
+    const neighborRadius = Math.max(width, depth) * 0.5 + 0.5;
+    if (!canPlace(x, z, neighborRadius)) continue;
+    const y = sampleElevation(x, z);
+    if (y < seaLevel + 0.5) continue;
+    const wallColor = new Color(pickRandom(WALL_COLOR_PRESETS, random));
+    const roofColor = new Color(pickRandom(ROOF_COLOR_PRESETS, random));
+    const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
+    let angle = 0;
+    if (bestCurve) {
+      const tangent = bestCurve.getTangent(bestT);
+      angle = Math.atan2(tangent.x, tangent.z);
+    }
+    angle += MathUtils.degToRad((random() - 0.5) * 60);
+    houseGeo.applyMatrix4(new Matrix4().makeRotationY(angle));
+    houseGeo.applyMatrix4(new Matrix4().makeTranslation(x, y, z));
+    cityGeometries.push(houseGeo);
+    placedPoints.push({ x, z, radius: neighborRadius });
+    buildingPlacements.push({ x, z, rotation: angle, width, depth });
+    zoneAPlaced++;
+  }
+  const zoneBCount = 600;
+  let zoneBPlaced = 0;
+  let attemptsB = 0;
+  while (zoneBPlaced < zoneBCount && attemptsB < zoneBCount * 8) {
+    attemptsB++;
+    const r = Math.sqrt(random()) * 200;
+    const theta = random() * Math.PI * 2;
+    const x = origin.x + r * Math.cos(theta);
+    const z = origin.z + r * Math.sin(theta);
+    const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
+    if (bestDist > 20 || bestDist < 3) continue;
+    const width = 4;
+    const depth = 4;
+    const wallHeight = 3;
+    const roofHeight = 1;
+    const neighborRadius = Math.max(width, depth) * 0.5 + 2;
+    if (!canPlace(x, z, neighborRadius)) continue;
+    const y = sampleElevation(x, z);
+    if (y < seaLevel + 0.5) continue;
+    const wallColor = new Color(pickRandom(WALL_COLOR_PRESETS, random));
+    const roofColor = new Color(pickRandom(ROOF_COLOR_PRESETS, random));
+    const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
+    let angle = 0;
+    if (bestCurve) {
+      const tangent = bestCurve.getTangent(bestT);
+      angle = Math.atan2(tangent.x, tangent.z);
+    }
+    angle += MathUtils.degToRad((random() - 0.5) * 12);
+    houseGeo.applyMatrix4(new Matrix4().makeRotationY(angle));
+    houseGeo.applyMatrix4(new Matrix4().makeTranslation(x, y, z));
+    cityGeometries.push(houseGeo);
+    placedPoints.push({ x, z, radius: neighborRadius });
+    buildingPlacements.push({ x, z, rotation: angle, width, depth });
+    zoneBPlaced++;
+  }
+  const zoneCCount = 150;
+  let zoneCPlaced = 0;
+  let attemptsC = 0;
+  while (zoneCPlaced < zoneCCount && attemptsC < zoneCCount * 12) {
+    attemptsC++;
+    const r = 200 + Math.sqrt(random()) * Math.max(0, CITY_AREA_RADIUS - 200);
+    const theta = random() * Math.PI * 2;
+    const x = origin.x + r * Math.cos(theta);
+    const z = origin.z + r * Math.sin(theta);
+    const y = sampleElevation(x, z);
+    if (y <= seaLevel + 0.5) continue;
+    if (Math.hypot(x - origin.x, z - origin.z) < 190 && y <= 10) continue;
+    const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
+    if (bestDist < 3) continue;
+    const width = 6;
+    const depth = 6;
+    const wallHeight = 3.6;
+    const roofHeight = 1.2;
+    const neighborRadius = Math.max(width, depth) * 0.5 + 8;
+    if (!canPlace(x, z, neighborRadius)) continue;
+    const wallColor = new Color(pickRandom(WALL_COLOR_PRESETS, random));
+    const roofColor = new Color(pickRandom(ROOF_COLOR_PRESETS, random));
+    const houseGeo = generateGreekHouseGeometry(
+      width,
+      depth,
+      wallHeight,
+      roofHeight,
+      wallColor,
+      roofColor,
+      { courtyard: true }
+    );
+    let angle = 0;
+    if (bestCurve) {
+      const tangent = bestCurve.getTangent(bestT);
+      angle = Math.atan2(tangent.x, tangent.z);
+    }
+    angle += MathUtils.degToRad((random() - 0.5) * 30);
+    houseGeo.applyMatrix4(new Matrix4().makeRotationY(angle));
+    houseGeo.applyMatrix4(new Matrix4().makeTranslation(x, y, z));
+    cityGeometries.push(houseGeo);
+    placedPoints.push({ x, z, radius: neighborRadius });
+    buildingPlacements.push({ x, z, rotation: angle, width, depth });
+    zoneCPlaced++;
+  }
+  if (cityGeometries.length > 0) {
+    const mergedCity = mergeGeometries(cityGeometries, true);
+    const cityMaterial = await makeTiledPBR("textures/marble", { repeat: { x: 0.25, y: 0.25 } }) || new MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
+    cityMaterial.vertexColors = true;
+    cityMaterial.fog = true;
+    const cityMesh = new Mesh(mergedCity, cityMaterial);
+    cityMesh.castShadow = true;
+    cityMesh.receiveShadow = true;
+    city.add(cityMesh);
+  }
+  populateCityDetails(city, terrain, buildingPlacements, roadCurves);
+  applyForegroundFogPolicy(city);
+  applyTextureBudgetToObject(city, scene2?.userData?.renderer);
+  city.userData = city.userData || {};
+  city.userData.roadCurves = roadCurves;
+  city.userData.buildingPlacements = buildingPlacements;
+  return { city, roadCurves };
 }
-function createTempleOfZeus() {
-  const geometry = generateTempleGeometry(40, 96, 20, 8, 20);
-  const material = new MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0.05, fog: false });
-  const mesh = new Mesh(geometry, material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.name = "TempleOfZeus";
-  return mesh;
+function updateCityLighting(city, nightFactor = 0, opts = {}) {
+  if (!city) return;
 }
-function createTheater() {
-  const geometry = generateTheaterGeometry(50, 30);
-  const material = new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.02, side: DoubleSide, fog: false });
-  const mesh = new Mesh(geometry, material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.rotation.x = Math.PI;
-  mesh.name = "TheaterOfEpidaurus";
-  return mesh;
+function createHillCity(scene2, terrain, curve, opts = {}) {
+  const group = new Group();
+  group.name = "HillCity";
+  scene2.add(group);
+  return group;
+}
+const TILE_SIZE = 40;
+const TILE_RADIUS = 1;
+const BLADES_PER_TILE = 1800;
+const MAX_TILE_COUNT = (TILE_RADIUS * 2 + 1) ** 2;
+const BLADE_HEIGHT_MIN = 0.75;
+const BLADE_HEIGHT_MAX = 1.6;
+const WIND_DIR = new Vector2(0.6, 0.4).normalize();
+const BASE_COLOR = new Color(5017402);
+const NIGHT_DESAT = 0.55;
+const NIGHT_DARKEN = 0.45;
+const WORLD_BOUNDS = new Box3(
+  new Vector3(-TILE_SIZE, -10, -TILE_SIZE),
+  new Vector3(TILE_SIZE, 30, TILE_SIZE)
+);
+let grassState = null;
+function mulberry32$1(seed) {
+  let t = seed >>> 0;
+  return function() {
+    t += 1831565813;
+    let r = t;
+    r = Math.imul(r ^ r >>> 15, r | 1);
+    r ^= r + Math.imul(r ^ r >>> 7, r | 61);
+    return ((r ^ r >>> 14) >>> 0) / 4294967296;
+  };
+}
+function hashSeed(x, z, baseSeed) {
+  let h = x * 374761393 + z * 668265263 + baseSeed * 362437;
+  h = (h ^ h >>> 13) * 1274126177;
+  h = (h ^ h >>> 16) >>> 0;
+  return h;
+}
+function createBladeGeometry(instanceCount) {
+  const base = new BufferGeometry();
+  const positions = new Float32Array([
+    0,
+    0,
+    0,
+    -0.04,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0.04,
+    0,
+    0
+  ]);
+  base.setAttribute("position", new BufferAttribute(positions, 3));
+  base.computeVertexNormals();
+  const geometry = new InstancedBufferGeometry();
+  geometry.instanceCount = instanceCount;
+  geometry.setAttribute("position", base.getAttribute("position"));
+  geometry.setAttribute("normal", base.getAttribute("normal"));
+  const offsets = new Float32Array(instanceCount * 3);
+  const scales = new Float32Array(instanceCount);
+  const phases = new Float32Array(instanceCount);
+  geometry.setAttribute(
+    "instanceOffset",
+    new InstancedBufferAttribute(offsets, 3)
+  );
+  geometry.setAttribute(
+    "instanceScale",
+    new InstancedBufferAttribute(scales, 1)
+  );
+  geometry.setAttribute(
+    "instancePhase",
+    new InstancedBufferAttribute(phases, 1)
+  );
+  geometry.boundingBox = WORLD_BOUNDS.clone();
+  geometry.boundingSphere = new Sphere(
+    new Vector3(0, BLADE_HEIGHT_MAX * 0.5, 0),
+    Math.sqrt(2 * TILE_SIZE * TILE_SIZE) + BLADE_HEIGHT_MAX
+  );
+  return {
+    geometry,
+    offsets,
+    scales,
+    phases
+  };
+}
+function createGrassMaterial() {
+  const uniforms = {
+    uTime: { value: 0 },
+    uWindDir: { value: WIND_DIR.clone() },
+    uColor: { value: BASE_COLOR.clone() },
+    uNightFactor: { value: 0 }
+  };
+  const vertexShader = (
+    /* glsl */
+    `
+    attribute vec3 instanceOffset;
+    attribute float instanceScale;
+    attribute float instancePhase;
+
+    uniform float uTime;
+    uniform vec2 uWindDir;
+
+    varying float vTipFactor;
+    varying float vWorldY;
+
+    mat2 rotation2D(float angle) {
+      float s = sin(angle);
+      float c = cos(angle);
+      return mat2(c, -s, s, c);
+    }
+
+    void main() {
+      float phase = instancePhase * 6.28318530718;
+      float fastSway = sin(uTime * 7.0 + phase) * 0.05;
+      float slowSway = sin(uTime * 1.3 + phase * 1.7) * 0.02;
+      float sway = fastSway + slowSway;
+
+      vec3 transformed = position;
+      float tip = clamp(position.y, 0.0, 1.0);
+
+      transformed.y *= instanceScale;
+
+      vec2 rotated = rotation2D(phase) * vec2(transformed.x, transformed.z);
+      transformed.x = rotated.x;
+      transformed.z = rotated.y;
+
+      float bend = tip * tip;
+      vec2 windOffset = uWindDir * sway * bend;
+      transformed.x += windOffset.x;
+      transformed.z += windOffset.y;
+
+      vec3 worldPosition = transformed + instanceOffset;
+
+      vTipFactor = tip;
+      vWorldY = worldPosition.y;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPosition, 1.0);
+    }
+  `
+  );
+  const fragmentShader = (
+    /* glsl */
+    `
+    uniform vec3 uColor;
+    uniform float uNightFactor;
+
+    varying float vTipFactor;
+    varying float vWorldY;
+
+    // Avoid conflict with Three.js ShaderChunk-defined helpers
+    float luma3(vec3 color) {
+      return dot(color, vec3(0.299, 0.587, 0.114));
+    }
+
+    void main() {
+      float heightTint = mix(0.55, 1.08, clamp(vTipFactor, 0.0, 1.0));
+      float altitudeTint = clamp((vWorldY + 2.0) * 0.03, 0.85, 1.1);
+      vec3 color = uColor * heightTint * altitudeTint;
+
+      float desatAmount = uNightFactor * ${NIGHT_DESAT.toFixed(2)};
+      float darkenAmount = uNightFactor * ${NIGHT_DARKEN.toFixed(2)};
+
+      float lum = luma3(color);
+      color = mix(color, vec3(lum), desatAmount);
+      color *= mix(1.0, 0.6, darkenAmount);
+
+      gl_FragColor = vec4(color, 1.0);
+    }
+  `
+  );
+  const material = new ShaderMaterial({
+    uniforms,
+    vertexShader,
+    fragmentShader,
+    side: DoubleSide
+  });
+  return material;
+}
+function resolveHeightSampler(scene2) {
+  if (!scene2) return null;
+  const explicit = scene2.userData?.terrainHeightSampler;
+  if (typeof explicit === "function") return explicit;
+  const direct = scene2.userData?.getHeightAt;
+  if (typeof direct === "function") return direct;
+  const terrain = scene2.userData?.terrain;
+  const sampler = terrain?.userData?.getHeightAt;
+  return typeof sampler === "function" ? sampler : null;
+}
+function populateTile(tile, coordX, coordZ, state) {
+  const { geometry, offsets, scales, phases } = tile;
+  const sampler = state.heightSampler;
+  const baseSeed = state.seed;
+  const originX = (coordX + 0.5) * TILE_SIZE;
+  const originZ = (coordZ + 0.5) * TILE_SIZE;
+  const rng = mulberry32$1(hashSeed(coordX, coordZ, baseSeed));
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (let i = 0; i < BLADES_PER_TILE; i += 1) {
+    const dx = (rng() - 0.5) * TILE_SIZE;
+    const dz = (rng() - 0.5) * TILE_SIZE;
+    const worldX = originX + dx;
+    const worldZ = originZ + dz;
+    let worldY = 0;
+    if (sampler) {
+      const h = sampler(worldX, worldZ);
+      if (Number.isFinite(h)) {
+        worldY = h;
+      }
+    }
+    const offsetIndex = i * 3;
+    offsets[offsetIndex + 0] = worldX;
+    offsets[offsetIndex + 1] = worldY;
+    offsets[offsetIndex + 2] = worldZ;
+    const bladeScale = MathUtils.lerp(
+      BLADE_HEIGHT_MIN,
+      BLADE_HEIGHT_MAX,
+      rng()
+    );
+    scales[i] = bladeScale;
+    phases[i] = rng();
+    if (worldX < minX) minX = worldX;
+    if (worldX > maxX) maxX = worldX;
+    if (worldY < minY) minY = worldY;
+    if (worldY + bladeScale > maxY) maxY = worldY + bladeScale;
+    if (worldZ < minZ) minZ = worldZ;
+    if (worldZ > maxZ) maxZ = worldZ;
+  }
+  const padding = 0.5;
+  geometry.boundingBox.min.set(minX - padding, minY, minZ - padding);
+  geometry.boundingBox.max.set(maxX + padding, maxY, maxZ + padding);
+  if (!geometry.boundingSphere) {
+    geometry.boundingSphere = new Sphere();
+  }
+  geometry.boundingBox.getBoundingSphere(geometry.boundingSphere);
+  geometry.instanceCount = BLADES_PER_TILE;
+  geometry.attributes.instanceOffset.needsUpdate = true;
+  geometry.attributes.instanceScale.needsUpdate = true;
+  geometry.attributes.instancePhase.needsUpdate = true;
+  tile.coord.set(coordX, coordZ);
+}
+function createTile(state) {
+  const { geometry, offsets, scales, phases } = createBladeGeometry(
+    BLADES_PER_TILE
+  );
+  const tile = {
+    geometry,
+    mesh: new Mesh(geometry, state.material),
+    offsets,
+    scales,
+    phases,
+    coord: new Vector2(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY)
+  };
+  tile.mesh.frustumCulled = true;
+  tile.mesh.name = "GrassTile";
+  tile.mesh.userData.isGrassTile = true;
+  return tile;
+}
+function ensureState(scene2) {
+  if (!scene2) return null;
+  if (grassState) return grassState;
+  const material = createGrassMaterial();
+  const root = new Group();
+  root.name = "InstancedGrass";
+  scene2.add(root);
+  const state = {
+    root,
+    scene: scene2,
+    material,
+    tiles: [],
+    seed: 1013904223,
+    heightSampler: resolveHeightSampler(scene2),
+    time: 0,
+    lastCenter: new Vector2(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY)
+  };
+  for (let i = 0; i < MAX_TILE_COUNT; i += 1) {
+    const tile = createTile(state);
+    state.tiles.push(tile);
+    root.add(tile.mesh);
+  }
+  grassState = state;
+  return state;
+}
+function updateTileAssignments(state, centerX, centerZ) {
+  const desired = [];
+  for (let dz = -TILE_RADIUS; dz <= TILE_RADIUS; dz += 1) {
+    for (let dx = -TILE_RADIUS; dx <= TILE_RADIUS; dx += 1) {
+      desired.push({ x: centerX + dx, z: centerZ + dz });
+    }
+  }
+  const tiles = state.tiles;
+  const unmatched = new Set(desired.map((_, idx) => idx));
+  const freeTiles = [];
+  for (const tile of tiles) {
+    let matchedIndex = -1;
+    for (let i = 0; i < desired.length; i += 1) {
+      const coord = desired[i];
+      if (unmatched.has(i) && tile.coord.x === coord.x && tile.coord.y === coord.z) {
+        matchedIndex = i;
+        break;
+      }
+    }
+    if (matchedIndex !== -1) {
+      unmatched.delete(matchedIndex);
+    } else {
+      freeTiles.push(tile);
+    }
+  }
+  if (unmatched.size === 0) return;
+  const unmatchedList = Array.from(unmatched);
+  let freeIndex = 0;
+  for (const desiredIndex of unmatchedList) {
+    const coord = desired[desiredIndex];
+    const tile = freeTiles[freeIndex] ?? tiles[freeIndex % tiles.length];
+    freeIndex += 1;
+    populateTile(tile, coord.x, coord.z, state);
+  }
+}
+function mount$1(scene2) {
+  const state = ensureState(scene2);
+  if (!state) return null;
+  state.heightSampler = resolveHeightSampler(scene2);
+  for (const tile of state.tiles) {
+    tile.coord.set(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+  }
+  return state.root;
+}
+function update(dt = 0, playerPosition = null) {
+  if (!grassState) return;
+  grassState.time += dt;
+  grassState.material.uniforms.uTime.value = grassState.time;
+  if (!playerPosition) return;
+  const px2 = playerPosition.x ?? 0;
+  const pz2 = playerPosition.z ?? 0;
+  const tileX = Math.floor(px2 / TILE_SIZE);
+  const tileZ = Math.floor(pz2 / TILE_SIZE);
+  if (grassState.lastCenter.x !== tileX || grassState.lastCenter.y !== tileZ) {
+    updateTileAssignments(grassState, tileX, tileZ);
+    grassState.lastCenter.set(tileX, tileZ);
+  }
+}
+function setNightFactor(value) {
+  if (!grassState) return;
+  grassState.material.uniforms.uNightFactor.value = MathUtils.clamp(
+    value ?? 0,
+    0,
+    1
+  );
+}
+function dispose() {
+  if (!grassState) return;
+  const { root, tiles, material } = grassState;
+  if (root && root.parent) {
+    root.parent.remove(root);
+  }
+  for (const tile of tiles) {
+    if (tile.mesh) {
+      tile.mesh.parent?.remove(tile.mesh);
+    }
+    tile.geometry?.dispose();
+    tile.mesh = void 0;
+    tile.geometry = void 0;
+  }
+  material.dispose();
+  grassState = null;
 }
 const ROUGHNESS_BASE_KEY = Symbol("buildingBaseRoughness");
 const BUILDING_ROUGHNESS_VARIATION = 0.1;
@@ -52731,7 +51086,7 @@ const TYPE_MAP = {
 function pick(arr, rnd) {
   return arr[Math.floor(rnd() * arr.length)];
 }
-function mulberry32$1(a) {
+function mulberry32(a) {
   return function() {
     let t = a += 1831565813;
     t = Math.imul(t ^ t >>> 15, t | 1);
@@ -52799,8 +51154,8 @@ function spawnBuilding(options = {}) {
 async function spawnBuildingsFromPads(worldRoot, options = {}) {
   const seed = Number.isFinite(options.seed) ? options.seed : 12345;
   const districtRules = options.districtRules || { districts: [] };
-  const rng = mulberry32$1(seed);
-  const glowRng = mulberry32$1(seed ^ 2654435769);
+  const rng = mulberry32(seed);
+  const glowRng = mulberry32(seed ^ 2654435769);
   const seaLevel = Number.isFinite(options.seaLevel) ? options.seaLevel : getSeaLevelY();
   const padsGroup = worldRoot.getObjectByName("LotPads");
   if (!padsGroup) return { count: 0 };
@@ -52826,7 +51181,7 @@ async function spawnBuildingsFromPads(worldRoot, options = {}) {
   };
   let count = 0;
   for (const pad of padsGroup.children.slice()) {
-    const padRng = mulberry32$1(getPadSeed(pad, seed) || seed);
+    const padRng = mulberry32(getPadSeed(pad, seed) || seed);
     if (pad.blocked || pad.userData?.blocked) {
       continue;
     }
@@ -53915,11 +52270,8 @@ const MIN_X = -10, MAX_X = 10;
 const MIN_Z = -10, MAX_Z = 20;
 const BLOCK_SIZE = 48;
 const SPACING_RULES = {
-  LANDMARK_MIN_SPACING: 12 * BLOCK_SIZE,
-  // 12-tile radius between landmarks (576m)
-  CIVIC_CLUSTER_MAX_DISTANCE: 30 * BLOCK_SIZE,
+  CIVIC_CLUSTER_MAX_DISTANCE: 30 * BLOCK_SIZE
   // 30 tiles from starting point (1440m)
-  LANDMARK_TYPES: ["parthenon", "temple", "monument", "tholos", "stoa"]
 };
 const WALKABILITY_CONFIG = {
   PATH_SPACING: 4,
@@ -53935,29 +52287,10 @@ const WALKABILITY_CONFIG = {
     HARBOR: { x: 10, z: 0 }
   }
 };
-const placedLandmarks = [];
 function inHarborBand(pos, shorelineCenter = { x: HARBOR_CENTER_3D.x, z: HARBOR_CENTER_3D.z }) {
   if (!pos) return false;
   const harborStartX = shorelineCenter.x - HARBOR_ZONE.bandWidth;
   return pos.x >= harborStartX;
-}
-function canPlaceLandmark(x, z, type = "landmark") {
-  const isLandmark = SPACING_RULES.LANDMARK_TYPES.includes(type);
-  if (!isLandmark) {
-    return true;
-  }
-  for (const existing of placedLandmarks) {
-    const distance = Math.sqrt(
-      Math.pow(x - existing.x, 2) + Math.pow(z - existing.z, 2)
-    );
-    if (distance < SPACING_RULES.LANDMARK_MIN_SPACING) {
-      return false;
-    }
-  }
-  return true;
-}
-function registerLandmark(x, z, type) {
-  placedLandmarks.push({ x, z, type });
 }
 function isWithinCivicClusterRange(x, z) {
   const startX = CITY_CENTER_ORIGIN.x;
@@ -53966,9 +52299,6 @@ function isWithinCivicClusterRange(x, z) {
     Math.pow(x - startX, 2) + Math.pow(z - startZ, 2)
   );
   return distance <= SPACING_RULES.CIVIC_CLUSTER_MAX_DISTANCE;
-}
-function clearLandmarkRegistry() {
-  placedLandmarks.length = 0;
 }
 function findPath(grid, startX, startZ, endX, endZ, maxSlope = WALKABILITY_CONFIG.MAX_PATH_SLOPE) {
   const getCell = (x, z) => grid.find((c) => c.gridX === x && c.gridZ === z);
@@ -54207,20 +52537,7 @@ function generateCityGrid(terrainSampler) {
         cell.type = "road";
         cell.buildable = true;
       } else if (cell.district === "sacred") {
-        if (gridX === 0 && gridZ === 0) {
-          cell.type = "parthenon";
-          if (terrainSampler && cell.slope > SLOPE_THRESHOLDS.FLAT * 0.5) {
-            cell.buildable = false;
-          }
-          if (!canPlaceLandmark(worldX, worldZ, "parthenon")) {
-            cell.buildable = false;
-            console.log(`[CityPlan] Parthenon rejected at (${gridX}, ${gridZ}) - too close to other landmarks`);
-          } else {
-            registerLandmark(worldX, worldZ, "parthenon");
-          }
-        } else {
-          cell.type = "building";
-        }
+        cell.type = "building";
       } else if (cell.district === "commercial") {
         if (gridX % 3 === 0 || gridZ % 3 === 0) {
           cell.type = "road";
@@ -54338,16 +52655,6 @@ async function createCivicDistrict(scene2, options = {}) {
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 8943462 : 6710886);
       roadMesh.position.set(localX, localY, localZ);
       group.add(roadMesh);
-    } else if (cell.type === "parthenon") {
-      const temple = await buildTemple({
-        width: 30,
-        depth: 60,
-        scale: 1.5,
-        order: "doric",
-        materialPreset: "marble"
-      });
-      temple.position.set(localX, localY, localZ);
-      group.add(temple);
     } else if (cell.type === "plaza") {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 11184810);
       plazaMesh.position.set(localX, localY, localZ);
@@ -54406,994 +52713,6 @@ async function createCivicDistrict(scene2, options = {}) {
     promenadeWidth: 14
     // Legacy support
   };
-}
-const WALL_COLOR_PRESETS = ["#f4d6a0", "#fbe3b1", "#fdd3c6", "#fff9ed", "#e6cbb2"];
-const ROOF_COLOR_PRESETS = ["#a94a30", "#b55634", "#9f432d"];
-function pickRandom(array, rng) {
-  if (!Array.isArray(array) || array.length === 0) return null;
-  const index = Math.floor(rng() * array.length) % array.length;
-  return array[index];
-}
-function sampleHeight$1(terrain, x, z, fallback) {
-  const getter = terrain?.userData?.getHeightAt;
-  if (typeof getter === "function") {
-    const height = getter(x, z);
-    if (Number.isFinite(height)) return height;
-  }
-  return fallback;
-}
-function applyVertexColor(geometry, color) {
-  const c = color instanceof Color ? color : new Color(color);
-  const geom = geometry.toNonIndexed();
-  const count = geom.getAttribute("position").count;
-  const colors = new Float32Array(count * 3);
-  for (let i = 0; i < count; i++) {
-    colors[i * 3] = c.r;
-    colors[i * 3 + 1] = c.g;
-    colors[i * 3 + 2] = c.b;
-  }
-  geom.setAttribute("color", new BufferAttribute(colors, 3));
-  return geom;
-}
-function findHighestPoint(terrain, center, radius, step = 6) {
-  let best = null;
-  for (let x = center.x - radius; x <= center.x + radius; x += step) {
-    for (let z = center.z - radius; z <= center.z + radius; z += step) {
-      const y = sampleHeight$1(terrain, x, z, center.y);
-      if (!Number.isFinite(y)) continue;
-      if (!best || y > best.y) {
-        best = { x, y, z };
-      }
-    }
-  }
-  return best;
-}
-function findSteepestSlope(terrain, center, radius, step = 10) {
-  let best = null;
-  for (let x = center.x - radius; x <= center.x + radius; x += step) {
-    for (let z = center.z - radius; z <= center.z + radius; z += step) {
-      const h = sampleHeight$1(terrain, x, z, center.y);
-      const hx = sampleHeight$1(terrain, x + step, z, h);
-      const hz = sampleHeight$1(terrain, x, z + step, h);
-      if (!Number.isFinite(h) || !Number.isFinite(hx) || !Number.isFinite(hz)) continue;
-      const slopeVec = new Vector3(hx - h, 0, hz - h);
-      const magnitude = slopeVec.length();
-      if (!best || magnitude > best.slope) {
-        best = { x, z, y: h, slope: magnitude, downhill: slopeVec.clone().normalize() };
-      }
-    }
-  }
-  return best;
-}
-function findLandmarkSpots(terrain, center = CITY_CHUNK_CENTER) {
-  const centerY = sampleHeight$1(terrain, center.x, center.z, center.y);
-  let acropolisPos = new Vector3(center.x, centerY, center.z);
-  let highest = -Infinity;
-  for (let x = center.x - 150; x <= center.x + 150; x += 6) {
-    for (let z = center.z - 150; z <= center.z + 150; z += 6) {
-      const y = sampleHeight$1(terrain, x, z, centerY);
-      if (!Number.isFinite(y)) continue;
-      if (y > highest) {
-        highest = y;
-        acropolisPos.set(x, y, z);
-      }
-    }
-  }
-  const theaterPos = acropolisPos.clone();
-  const southOffset = 40;
-  const baseY = sampleHeight$1(terrain, acropolisPos.x, acropolisPos.z + southOffset, acropolisPos.y);
-  theaterPos.set(acropolisPos.x, baseY, acropolisPos.z + southOffset);
-  for (let dist = southOffset + 10; dist <= southOffset + 60; dist += 10) {
-    const candidateY = sampleHeight$1(terrain, acropolisPos.x, acropolisPos.z + dist, theaterPos.y);
-    if (candidateY < theaterPos.y) {
-      theaterPos.set(acropolisPos.x, candidateY, acropolisPos.z + dist);
-    }
-  }
-  let agoraPos = new Vector3(center.x, centerY, center.z);
-  let lowestVariance = Infinity;
-  for (let x = center.x - 80; x <= center.x + 80; x += 8) {
-    for (let z = center.z - 80; z <= center.z + 80; z += 8) {
-      const samples = [];
-      for (let dx = -6; dx <= 6; dx += 6) {
-        for (let dz = -6; dz <= 6; dz += 6) {
-          const h = sampleHeight$1(terrain, x + dx, z + dz, centerY);
-          if (Number.isFinite(h)) samples.push(h);
-        }
-      }
-      if (samples.length === 0) continue;
-      const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
-      const variance = samples.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / samples.length;
-      if (variance < lowestVariance) {
-        lowestVariance = variance;
-        const y = sampleHeight$1(terrain, x, z, centerY);
-        agoraPos.set(x, y, z);
-      }
-    }
-  }
-  return { acropolisPos, theaterPos, agoraPos };
-}
-function populateCityDetails(cityGroup, terrain, buildingPlacements, roadCurves) {
-  if (!cityGroup) return;
-  const detailGroup = new Group();
-  detailGroup.name = "CityDetails";
-  const up = new Vector3(0, 1, 0);
-  const tempMatrix2 = new Matrix4();
-  const amphoraGeometry = new SphereGeometry(1, 14, 10);
-  amphoraGeometry.scale(0.3, 0.6, 0.3);
-  const crateGeometry = new BoxGeometry(0.4, 0.35, 0.4);
-  const amphoraMaterial2 = new MeshStandardMaterial({ color: "#c05621", roughness: 0.75, fog: true });
-  const crateMaterial2 = new MeshStandardMaterial({ color: "#8f6b45", roughness: 0.9, fog: true });
-  const amphoraMatrices = [];
-  const crateMatrices = [];
-  buildingPlacements.forEach((placement) => {
-    const { x, z, rotation = 0, width = 1, depth = 1 } = placement;
-    const base = new Vector3(x, 0, z);
-    const forward = new Vector3(0, 0, 1).applyAxisAngle(up, rotation);
-    const right = new Vector3(1, 0, 0).applyAxisAngle(up, rotation);
-    const walls = [
-      { normal: forward, span: width, offset: depth * 0.5 },
-      { normal: forward.clone().multiplyScalar(-1), span: width, offset: depth * 0.5 },
-      { normal: right, span: depth, offset: width * 0.5 },
-      { normal: right.clone().multiplyScalar(-1), span: depth, offset: width * 0.5 }
-    ];
-    const propCount = 1 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < propCount; i++) {
-      const wall = walls[Math.floor(Math.random() * walls.length)];
-      const tangent = new Vector3().crossVectors(up, wall.normal).normalize();
-      const alongWall = (Math.random() - 0.5) * wall.span * 0.8;
-      const offset = base.clone().add(wall.normal.clone().setLength(wall.offset + 0.6 + Math.random() * 0.2)).add(tangent.multiplyScalar(alongWall));
-      const y = sampleHeight$1(terrain, offset.x, offset.z, base.y);
-      offset.y = y;
-      const scale = 0.9 + Math.random() * 0.25;
-      const rotationY = Math.random() * Math.PI * 2;
-      tempMatrix2.compose(
-        offset,
-        new Quaternion().setFromAxisAngle(up, rotationY),
-        new Vector3(scale, scale, scale)
-      );
-      if (Math.random() > 0.4) {
-        amphoraMatrices.push(tempMatrix2.clone());
-      } else {
-        crateMatrices.push(tempMatrix2.clone());
-      }
-    }
-  });
-  if (amphoraMatrices.length > 0) {
-    const amphoraMesh = new InstancedMesh(amphoraGeometry, amphoraMaterial2, amphoraMatrices.length);
-    amphoraMesh.castShadow = true;
-    amphoraMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    amphoraMatrices.forEach((matrix2, idx) => {
-      amphoraMesh.setMatrixAt(idx, matrix2);
-    });
-    detailGroup.add(amphoraMesh);
-  }
-  if (crateMatrices.length > 0) {
-    const crateMesh = new InstancedMesh(crateGeometry, crateMaterial2, crateMatrices.length);
-    crateMesh.castShadow = true;
-    crateMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    crateMatrices.forEach((matrix2, idx) => {
-      crateMesh.setMatrixAt(idx, matrix2);
-    });
-    detailGroup.add(crateMesh);
-  }
-  const bushGeometry = new DodecahedronGeometry(0.6, 0);
-  const bushMaterial = new MeshStandardMaterial({ color: "#5d6e52", roughness: 1, fog: true });
-  const bushMatrices = [];
-  const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(80));
-  const targetBushes = 1500;
-  let attempts = 0;
-  while (bushMatrices.length < targetBushes && attempts < targetBushes * 8) {
-    attempts++;
-    const r = Math.sqrt(Math.random()) * CITY_AREA_RADIUS;
-    const theta = Math.random() * Math.PI * 2;
-    const x = CITY_CHUNK_CENTER.x + r * Math.cos(theta);
-    const z = CITY_CHUNK_CENTER.z + r * Math.sin(theta);
-    let tooCloseToRoad = false;
-    for (let i = 0; i < roadCurves.length && !tooCloseToRoad; i++) {
-      const points = roadSamples[i];
-      for (let p = 0; p < points.length; p++) {
-        const pt = points[p];
-        if (Math.hypot(x - pt.x, z - pt.z) < 2.5) {
-          tooCloseToRoad = true;
-          break;
-        }
-      }
-    }
-    if (tooCloseToRoad) continue;
-    let insideBuilding = false;
-    for (const placement of buildingPlacements) {
-      const buildingRadius = Math.max(placement.width, placement.depth) * 0.5;
-      if (Math.hypot(x - placement.x, z - placement.z) < buildingRadius) {
-        insideBuilding = true;
-        break;
-      }
-    }
-    if (insideBuilding) continue;
-    const y = sampleHeight$1(terrain, x, z, CITY_CHUNK_CENTER.y);
-    const position = new Vector3(x, y, z);
-    const bushScale = 0.8 + Math.random() * 0.6;
-    const rotationY = Math.random() * Math.PI * 2;
-    const colorMix = Math.random();
-    const bushColor = new Color("#5d6e52").lerp(new Color("#556b2f"), colorMix);
-    tempMatrix2.compose(
-      position,
-      new Quaternion().setFromAxisAngle(up, rotationY),
-      new Vector3(bushScale, bushScale * 1.1, bushScale)
-    );
-    bushMatrices.push({ matrix: tempMatrix2.clone(), color: bushColor });
-  }
-  if (bushMatrices.length > 0) {
-    const bushMesh = new InstancedMesh(bushGeometry, bushMaterial, bushMatrices.length);
-    bushMesh.castShadow = true;
-    bushMesh.receiveShadow = true;
-    bushMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    bushMatrices.forEach((entry, idx) => {
-      bushMesh.setMatrixAt(idx, entry.matrix);
-      bushMesh.setColorAt(idx, entry.color);
-    });
-    bushMesh.instanceColor.needsUpdate = true;
-    detailGroup.add(bushMesh);
-  }
-  cityGroup.add(detailGroup);
-}
-function generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor, options = {}) {
-  const geometries = [];
-  const porchInset = 1;
-  const foundationHeight = 0.2;
-  const courtyard = Boolean(options.courtyard);
-  const foundationGeo = new BoxGeometry(width + 0.4, foundationHeight, depth + 0.4);
-  foundationGeo.translate(0, foundationHeight * 0.5, 0);
-  geometries.push(applyVertexColor(foundationGeo, 8026746));
-  if (courtyard) {
-    const wingDepth = Math.max(0.5, depth - porchInset);
-    const wingWidth = width * 0.42;
-    const wingHeight = wallHeight;
-    const wingYOffset = foundationHeight + wingHeight * 0.5;
-    const leftWing = new BoxGeometry(wingWidth, wingHeight, wingDepth);
-    leftWing.translate(-width * 0.5 + wingWidth * 0.5, wingYOffset, -porchInset * 0.5);
-    geometries.push(applyVertexColor(leftWing, wallColor));
-    const rightWing = leftWing.clone();
-    rightWing.translate(width - wingWidth, 0, 0);
-    geometries.push(applyVertexColor(rightWing, wallColor));
-    const backWingDepth = Math.max(0.5, wingDepth * 0.45);
-    const backWing = new BoxGeometry(width - wingWidth * 0.5, wingHeight, backWingDepth);
-    backWing.translate(0, wingYOffset, -wingDepth * 0.35 - porchInset * 0.25);
-    geometries.push(applyVertexColor(backWing, wallColor));
-    const courtyardFloor = new PlaneGeometry(width - 1, Math.max(1, depth * 0.7));
-    courtyardFloor.rotateX(-Math.PI / 2);
-    courtyardFloor.translate(0, foundationHeight + 0.02, -porchInset * 0.35);
-    geometries.push(applyVertexColor(courtyardFloor, 14272672));
-  } else {
-    const roomDepth = Math.max(0.5, depth - porchInset);
-    const wallGeo = new BoxGeometry(width, wallHeight, roomDepth);
-    wallGeo.translate(0, foundationHeight + wallHeight * 0.5, -porchInset * 0.5);
-    geometries.push(applyVertexColor(wallGeo, wallColor));
-    const columnCount = Math.max(1, Math.floor(width / 1.5));
-    const spacing = width / (columnCount + 1);
-    const columnHeight = wallHeight;
-    const columnGeo = new CylinderGeometry(0.15, 0.15, columnHeight, 8);
-    columnGeo.translate(0, foundationHeight + columnHeight * 0.5, 0);
-    const porchZ = depth * 0.5 - porchInset * 0.5;
-    for (let i = 0; i < columnCount; i++) {
-      const col = columnGeo.clone();
-      const x = -width * 0.5 + spacing * (i + 1);
-      col.translate(x, 0, porchZ - 0.1);
-      geometries.push(applyVertexColor(col, 14540253));
-    }
-  }
-  const roofRadius = Math.max(depth * 0.55, 0.5);
-  const roofGeo = new CylinderGeometry(roofRadius, roofRadius, width, 3, 1, true);
-  roofGeo.rotateZ(Math.PI / 2);
-  roofGeo.scale(1, roofHeight / (roofRadius * 2), 1);
-  roofGeo.translate(0, foundationHeight + wallHeight + roofHeight * 0.5, -porchInset * 0.2);
-  geometries.push(applyVertexColor(roofGeo, roofColor));
-  const merged = mergeGeometries(geometries, false);
-  merged.userData = merged.userData || {};
-  merged.userData.courtyard = courtyard;
-  return merged;
-}
-async function createCity(scene2, terrain, options = {}) {
-  const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
-  const seaLevel = Number.isFinite(options.seaLevel) ? options.seaLevel : getSeaLevelY();
-  const rng = (seed) => {
-    let s = seed;
-    return () => (s = s * 1664525 + 1013904223 >>> 0) / 4294967295;
-  };
-  const random = rng(options.seed ?? CITY_SEED);
-  const city = new Group();
-  city.name = "HarborCity";
-  scene2.add(city);
-  const monuments = new Group();
-  monuments.name = "Monuments";
-  city.add(monuments);
-  const landmarkSpots = findLandmarkSpots(terrain, origin);
-  const roadCurves = [];
-  for (let i = 0; i < 5; i++) {
-    const angle = i / 5 * Math.PI * 2 + random() * 0.4;
-    const start = origin.clone();
-    const end = new Vector3(
-      origin.x + Math.cos(angle) * CITY_AREA_RADIUS,
-      origin.y,
-      origin.z + Math.sin(angle) * CITY_AREA_RADIUS
-    );
-    const mid = start.clone().lerp(end, 0.5);
-    mid.x += (random() - 0.5) * 30;
-    mid.z += (random() - 0.5) * 30;
-    [start, mid, end].forEach((p) => p.y = sampleHeight$1(terrain, p.x, p.z, origin.y) + 0.05);
-    const curve = new CatmullRomCurve3([start, mid, end]);
-    roadCurves.push(curve);
-  }
-  const roadGeometries = roadCurves.map((curve) => {
-    const tube = new TubeGeometry(curve, 80, 1.5, 8, false);
-    return applyVertexColor(tube, 9406070);
-  });
-  if (roadGeometries.length > 0) {
-    const mergedRoads = mergeGeometries(roadGeometries, true);
-    const roadMaterial = new MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 1,
-      metalness: 0,
-      side: DoubleSide,
-      fog: true
-    });
-    const roadMesh = new Mesh(mergedRoads, roadMaterial);
-    roadMesh.receiveShadow = true;
-    roadMesh.userData.noCollision = true;
-    city.add(roadMesh);
-  }
-  const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(60));
-  const cityGeometries = [];
-  const placedPoints = [];
-  const buildingPlacements = [];
-  const landmarkBuffers = [];
-  const addLandmarkBuffer = (x, z, radius) => {
-    if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(radius)) return;
-    landmarkBuffers.push({ x, z, radius });
-    placedPoints.push({ x, z, radius });
-  };
-  if (landmarkSpots?.acropolisPos) {
-    addLandmarkBuffer(landmarkSpots.acropolisPos.x, landmarkSpots.acropolisPos.z, 70);
-  }
-  if (landmarkSpots?.theaterPos) {
-    addLandmarkBuffer(landmarkSpots.theaterPos.x, landmarkSpots.theaterPos.z, 80);
-  }
-  if (landmarkSpots?.agoraPos) {
-    addLandmarkBuffer(landmarkSpots.agoraPos.x, landmarkSpots.agoraPos.z, 75);
-  }
-  const OCEAN_BOUNDARY_Z = -100;
-  const CITY_BOUNDARY_Z = -40;
-  const OCEAN_DEPTH2 = -12;
-  const CITY_HEIGHT2 = 4;
-  const CITY_MIN_HEIGHT = 2;
-  const sampleElevation = (x, z) => {
-    const oceanHeight = seaLevel + OCEAN_DEPTH2;
-    const cityHeight = seaLevel + CITY_HEIGHT2;
-    let baseHeight = cityHeight;
-    if (z < OCEAN_BOUNDARY_Z) {
-      baseHeight = oceanHeight;
-    } else if (z > CITY_BOUNDARY_Z) {
-      baseHeight = cityHeight;
-    } else {
-      const t = (z - OCEAN_BOUNDARY_Z) / (CITY_BOUNDARY_Z - OCEAN_BOUNDARY_Z);
-      baseHeight = MathUtils.lerp(oceanHeight, cityHeight, t);
-    }
-    let height = baseHeight;
-    if (z > CITY_BOUNDARY_Z && height < seaLevel + CITY_MIN_HEIGHT) {
-      height = seaLevel + CITY_MIN_HEIGHT;
-    }
-    const sampled = sampleHeight$1(terrain, x, z, height);
-    return Number.isFinite(sampled) ? sampled : height;
-  };
-  const findNearestRoad = (x, z) => {
-    let bestDist = Infinity;
-    let bestCurve = null;
-    let bestT = 0;
-    roadCurves.forEach((curve, idx) => {
-      const samples = roadSamples[idx];
-      for (let s = 0; s < samples.length; s++) {
-        const pt = samples[s];
-        const d = Math.hypot(x - pt.x, z - pt.z);
-        if (d < bestDist) {
-          bestDist = d;
-          bestCurve = curve;
-          bestT = s / (samples.length - 1);
-        }
-      }
-    });
-    return { bestDist, bestCurve, bestT };
-  };
-  const canPlace = (x, z, radius) => {
-    for (const p of placedPoints) {
-      const dist = Math.hypot(x - p.x, z - p.z);
-      if (dist < radius + p.radius) return false;
-    }
-    for (const landmark of landmarkBuffers) {
-      const dist = Math.hypot(x - landmark.x, z - landmark.z);
-      if (dist < radius + landmark.radius) return false;
-    }
-    return true;
-  };
-  const tholosRadius = 5;
-  const tholosHeight = 7;
-  const tholosX = origin.x + 6;
-  const tholosZ = origin.z;
-  if (!canPlaceLandmark(tholosX, tholosZ, "tholos")) {
-    if (IS_DEV) console.warn(`[City] Tholos placement rejected at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)}) - violates 8-tile landmark spacing`);
-  } else {
-    const tholosY = sampleHeight$1(terrain, tholosX, tholosZ, origin.y);
-    const tholosGeo = generateTholosGeometry(tholosRadius, tholosHeight);
-    tholosGeo.applyMatrix4(new Matrix4().makeTranslation(tholosX, tholosY, tholosZ));
-    cityGeometries.push(tholosGeo);
-    const tholosRadiusMeters = tholosRadius * 1.2;
-    placedPoints.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters });
-    landmarkBuffers.push({ x: tholosX, z: tholosZ, radius: tholosRadiusMeters + 6 });
-    buildingPlacements.push({ x: tholosX, z: tholosZ, rotation: 0, width: tholosRadius * 2, depth: tholosRadius * 2 });
-    registerLandmark(tholosX, tholosZ, "tholos");
-    if (IS_DEV) console.log(`[City] Tholos placed at (${tholosX.toFixed(1)}, ${tholosZ.toFixed(1)})`);
-  }
-  const stoaLength = 22;
-  const stoaWidth = 8;
-  const stoaHeight = 6;
-  const stoaX = origin.x - 10;
-  const stoaZ = origin.z - 6;
-  if (!canPlaceLandmark(stoaX, stoaZ, "stoa")) {
-    if (IS_DEV) console.warn(`[City] Stoa placement rejected at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)}) - violates 8-tile landmark spacing`);
-  } else {
-    const stoaY = sampleHeight$1(terrain, stoaX, stoaZ, origin.y);
-    const stoaGeo = generateStoaGeometry(stoaLength, stoaWidth, stoaHeight);
-    stoaGeo.applyMatrix4(new Matrix4().makeTranslation(stoaX, stoaY, stoaZ));
-    cityGeometries.push(stoaGeo);
-    const stoaRadius = Math.hypot(stoaLength, stoaWidth) * 0.5;
-    placedPoints.push({ x: stoaX, z: stoaZ, radius: stoaRadius });
-    landmarkBuffers.push({ x: stoaX, z: stoaZ, radius: stoaRadius + 10 });
-    buildingPlacements.push({ x: stoaX, z: stoaZ, rotation: 0, width: stoaLength, depth: stoaWidth });
-    registerLandmark(stoaX, stoaZ, "stoa");
-    if (IS_DEV) console.log(`[City] Stoa placed at (${stoaX.toFixed(1)}, ${stoaZ.toFixed(1)})`);
-  }
-  const zoneACount = 800;
-  let zoneAPlaced = 0;
-  let attemptsA = 0;
-  while (zoneAPlaced < zoneACount && attemptsA < zoneACount * 8) {
-    attemptsA++;
-    const r = Math.sqrt(random()) * 120;
-    const theta = random() * Math.PI * 2;
-    const x = origin.x + r * Math.cos(theta);
-    const z = origin.z + r * Math.sin(theta);
-    if (z >= origin.z - 50) continue;
-    const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
-    if (bestDist > 18 || bestDist < 2) continue;
-    const width = 2.5;
-    const depth = 2.5;
-    const wallHeight = 4;
-    const roofHeight = 1;
-    const neighborRadius = Math.max(width, depth) * 0.5 + 0.5;
-    if (!canPlace(x, z, neighborRadius)) continue;
-    const y = sampleElevation(x, z);
-    if (y < seaLevel + 0.5) continue;
-    const wallColor = new Color(pickRandom(WALL_COLOR_PRESETS, random));
-    const roofColor = new Color(pickRandom(ROOF_COLOR_PRESETS, random));
-    const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
-    let angle = 0;
-    if (bestCurve) {
-      const tangent = bestCurve.getTangent(bestT);
-      angle = Math.atan2(tangent.x, tangent.z);
-    }
-    angle += MathUtils.degToRad((random() - 0.5) * 60);
-    houseGeo.applyMatrix4(new Matrix4().makeRotationY(angle));
-    houseGeo.applyMatrix4(new Matrix4().makeTranslation(x, y, z));
-    cityGeometries.push(houseGeo);
-    placedPoints.push({ x, z, radius: neighborRadius });
-    buildingPlacements.push({ x, z, rotation: angle, width, depth });
-    zoneAPlaced++;
-  }
-  const zoneBCount = 600;
-  let zoneBPlaced = 0;
-  let attemptsB = 0;
-  while (zoneBPlaced < zoneBCount && attemptsB < zoneBCount * 8) {
-    attemptsB++;
-    const r = Math.sqrt(random()) * 200;
-    const theta = random() * Math.PI * 2;
-    const x = origin.x + r * Math.cos(theta);
-    const z = origin.z + r * Math.sin(theta);
-    const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
-    if (bestDist > 20 || bestDist < 3) continue;
-    const width = 4;
-    const depth = 4;
-    const wallHeight = 3;
-    const roofHeight = 1;
-    const neighborRadius = Math.max(width, depth) * 0.5 + 2;
-    if (!canPlace(x, z, neighborRadius)) continue;
-    const y = sampleElevation(x, z);
-    if (y < seaLevel + 0.5) continue;
-    const wallColor = new Color(pickRandom(WALL_COLOR_PRESETS, random));
-    const roofColor = new Color(pickRandom(ROOF_COLOR_PRESETS, random));
-    const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
-    let angle = 0;
-    if (bestCurve) {
-      const tangent = bestCurve.getTangent(bestT);
-      angle = Math.atan2(tangent.x, tangent.z);
-    }
-    angle += MathUtils.degToRad((random() - 0.5) * 12);
-    houseGeo.applyMatrix4(new Matrix4().makeRotationY(angle));
-    houseGeo.applyMatrix4(new Matrix4().makeTranslation(x, y, z));
-    cityGeometries.push(houseGeo);
-    placedPoints.push({ x, z, radius: neighborRadius });
-    buildingPlacements.push({ x, z, rotation: angle, width, depth });
-    zoneBPlaced++;
-  }
-  const zoneCCount = 150;
-  let zoneCPlaced = 0;
-  let attemptsC = 0;
-  while (zoneCPlaced < zoneCCount && attemptsC < zoneCCount * 12) {
-    attemptsC++;
-    const r = 200 + Math.sqrt(random()) * Math.max(0, CITY_AREA_RADIUS - 200);
-    const theta = random() * Math.PI * 2;
-    const x = origin.x + r * Math.cos(theta);
-    const z = origin.z + r * Math.sin(theta);
-    const y = sampleElevation(x, z);
-    if (y <= seaLevel + 0.5) continue;
-    if (Math.hypot(x - origin.x, z - origin.z) < 190 && y <= 10) continue;
-    const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
-    if (bestDist < 3) continue;
-    const width = 6;
-    const depth = 6;
-    const wallHeight = 3.6;
-    const roofHeight = 1.2;
-    const neighborRadius = Math.max(width, depth) * 0.5 + 8;
-    if (!canPlace(x, z, neighborRadius)) continue;
-    const wallColor = new Color(pickRandom(WALL_COLOR_PRESETS, random));
-    const roofColor = new Color(pickRandom(ROOF_COLOR_PRESETS, random));
-    const houseGeo = generateGreekHouseGeometry(
-      width,
-      depth,
-      wallHeight,
-      roofHeight,
-      wallColor,
-      roofColor,
-      { courtyard: true }
-    );
-    let angle = 0;
-    if (bestCurve) {
-      const tangent = bestCurve.getTangent(bestT);
-      angle = Math.atan2(tangent.x, tangent.z);
-    }
-    angle += MathUtils.degToRad((random() - 0.5) * 30);
-    houseGeo.applyMatrix4(new Matrix4().makeRotationY(angle));
-    houseGeo.applyMatrix4(new Matrix4().makeTranslation(x, y, z));
-    cityGeometries.push(houseGeo);
-    placedPoints.push({ x, z, radius: neighborRadius });
-    buildingPlacements.push({ x, z, rotation: angle, width, depth });
-    zoneCPlaced++;
-  }
-  if (cityGeometries.length > 0) {
-    const mergedCity = mergeGeometries(cityGeometries, true);
-    const cityMaterial = await makeTiledPBR("textures/marble", { repeat: { x: 0.25, y: 0.25 } }) || new MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
-    cityMaterial.vertexColors = true;
-    cityMaterial.fog = true;
-    const cityMesh = new Mesh(mergedCity, cityMaterial);
-    cityMesh.castShadow = true;
-    cityMesh.receiveShadow = true;
-    city.add(cityMesh);
-  }
-  const acropolisPeak = landmarkSpots?.acropolisPos;
-  if (acropolisPeak) {
-    const parthenon = createParthenon();
-    parthenon.position.set(acropolisPeak.x, acropolisPeak.y, acropolisPeak.z);
-    const foundationGeo = new BoxGeometry(40, 20, 80);
-    foundationGeo.translate(0, -10, 0);
-    const foundationMaterial = new MeshStandardMaterial({ color: "#7a7a7a", roughness: 0.9, fog: false });
-    const foundation = new Mesh(foundationGeo, foundationMaterial);
-    foundation.castShadow = true;
-    foundation.receiveShadow = true;
-    foundation.position.set(acropolisPeak.x, acropolisPeak.y, acropolisPeak.z);
-    monuments.add(foundation);
-    monuments.add(parthenon);
-    const gatewayGeo = generateTempleGeometry(16, 28, 8, 6, 12);
-    const gatewayMaterial = new MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.02, fog: false });
-    const gateway = new Mesh(gatewayGeo, gatewayMaterial);
-    gateway.castShadow = true;
-    gateway.receiveShadow = true;
-    const gatewayPos = new Vector3(acropolisPeak.x + 10, acropolisPeak.y, acropolisPeak.z - 24);
-    gatewayPos.y = sampleHeight$1(terrain, gatewayPos.x, gatewayPos.z, gatewayPos.y);
-    gateway.position.copy(gatewayPos);
-    monuments.add(gateway);
-  }
-  const theaterPos = landmarkSpots?.theaterPos;
-  if (theaterPos) {
-    const theater = createTheater();
-    theater.position.copy(theaterPos);
-    const awayFromAcropolis = acropolisPeak ? new Vector3().subVectors(theaterPos, acropolisPeak) : new Vector3(0, 0, 1);
-    theater.rotation.y = Math.atan2(awayFromAcropolis.x, awayFromAcropolis.z);
-    monuments.add(theater);
-  }
-  const zeusPos = landmarkSpots?.agoraPos;
-  if (zeusPos) {
-    const templeOfZeus = createTempleOfZeus();
-    templeOfZeus.position.copy(zeusPos);
-    monuments.add(templeOfZeus);
-  }
-  populateCityDetails(city, terrain, buildingPlacements, roadCurves);
-  applyForegroundFogPolicy(city);
-  applyTextureBudgetToObject(city, scene2?.userData?.renderer);
-  city.userData = city.userData || {};
-  city.userData.roadCurves = roadCurves;
-  city.userData.buildingPlacements = buildingPlacements;
-  return { city, roadCurves };
-}
-function updateCityLighting(city, nightFactor = 0, opts = {}) {
-  if (!city) return;
-}
-function createHillCity(scene2, terrain, curve, opts = {}) {
-  const group = new Group();
-  group.name = "HillCity";
-  scene2.add(group);
-  return group;
-}
-const TILE_SIZE = 40;
-const TILE_RADIUS = 1;
-const BLADES_PER_TILE = 1800;
-const MAX_TILE_COUNT = (TILE_RADIUS * 2 + 1) ** 2;
-const BLADE_HEIGHT_MIN = 0.75;
-const BLADE_HEIGHT_MAX = 1.6;
-const WIND_DIR = new Vector2(0.6, 0.4).normalize();
-const BASE_COLOR = new Color(5017402);
-const NIGHT_DESAT = 0.55;
-const NIGHT_DARKEN = 0.45;
-const WORLD_BOUNDS = new Box3(
-  new Vector3(-TILE_SIZE, -10, -TILE_SIZE),
-  new Vector3(TILE_SIZE, 30, TILE_SIZE)
-);
-let grassState = null;
-function mulberry32(seed) {
-  let t = seed >>> 0;
-  return function() {
-    t += 1831565813;
-    let r = t;
-    r = Math.imul(r ^ r >>> 15, r | 1);
-    r ^= r + Math.imul(r ^ r >>> 7, r | 61);
-    return ((r ^ r >>> 14) >>> 0) / 4294967296;
-  };
-}
-function hashSeed(x, z, baseSeed) {
-  let h = x * 374761393 + z * 668265263 + baseSeed * 362437;
-  h = (h ^ h >>> 13) * 1274126177;
-  h = (h ^ h >>> 16) >>> 0;
-  return h;
-}
-function createBladeGeometry(instanceCount) {
-  const base = new BufferGeometry();
-  const positions = new Float32Array([
-    0,
-    0,
-    0,
-    -0.04,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0.04,
-    0,
-    0
-  ]);
-  base.setAttribute("position", new BufferAttribute(positions, 3));
-  base.computeVertexNormals();
-  const geometry = new InstancedBufferGeometry();
-  geometry.instanceCount = instanceCount;
-  geometry.setAttribute("position", base.getAttribute("position"));
-  geometry.setAttribute("normal", base.getAttribute("normal"));
-  const offsets = new Float32Array(instanceCount * 3);
-  const scales = new Float32Array(instanceCount);
-  const phases = new Float32Array(instanceCount);
-  geometry.setAttribute(
-    "instanceOffset",
-    new InstancedBufferAttribute(offsets, 3)
-  );
-  geometry.setAttribute(
-    "instanceScale",
-    new InstancedBufferAttribute(scales, 1)
-  );
-  geometry.setAttribute(
-    "instancePhase",
-    new InstancedBufferAttribute(phases, 1)
-  );
-  geometry.boundingBox = WORLD_BOUNDS.clone();
-  geometry.boundingSphere = new Sphere(
-    new Vector3(0, BLADE_HEIGHT_MAX * 0.5, 0),
-    Math.sqrt(2 * TILE_SIZE * TILE_SIZE) + BLADE_HEIGHT_MAX
-  );
-  return {
-    geometry,
-    offsets,
-    scales,
-    phases
-  };
-}
-function createGrassMaterial() {
-  const uniforms = {
-    uTime: { value: 0 },
-    uWindDir: { value: WIND_DIR.clone() },
-    uColor: { value: BASE_COLOR.clone() },
-    uNightFactor: { value: 0 }
-  };
-  const vertexShader = (
-    /* glsl */
-    `
-    attribute vec3 instanceOffset;
-    attribute float instanceScale;
-    attribute float instancePhase;
-
-    uniform float uTime;
-    uniform vec2 uWindDir;
-
-    varying float vTipFactor;
-    varying float vWorldY;
-
-    mat2 rotation2D(float angle) {
-      float s = sin(angle);
-      float c = cos(angle);
-      return mat2(c, -s, s, c);
-    }
-
-    void main() {
-      float phase = instancePhase * 6.28318530718;
-      float fastSway = sin(uTime * 7.0 + phase) * 0.05;
-      float slowSway = sin(uTime * 1.3 + phase * 1.7) * 0.02;
-      float sway = fastSway + slowSway;
-
-      vec3 transformed = position;
-      float tip = clamp(position.y, 0.0, 1.0);
-
-      transformed.y *= instanceScale;
-
-      vec2 rotated = rotation2D(phase) * vec2(transformed.x, transformed.z);
-      transformed.x = rotated.x;
-      transformed.z = rotated.y;
-
-      float bend = tip * tip;
-      vec2 windOffset = uWindDir * sway * bend;
-      transformed.x += windOffset.x;
-      transformed.z += windOffset.y;
-
-      vec3 worldPosition = transformed + instanceOffset;
-
-      vTipFactor = tip;
-      vWorldY = worldPosition.y;
-
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(worldPosition, 1.0);
-    }
-  `
-  );
-  const fragmentShader = (
-    /* glsl */
-    `
-    uniform vec3 uColor;
-    uniform float uNightFactor;
-
-    varying float vTipFactor;
-    varying float vWorldY;
-
-    // Avoid conflict with Three.js ShaderChunk-defined helpers
-    float luma3(vec3 color) {
-      return dot(color, vec3(0.299, 0.587, 0.114));
-    }
-
-    void main() {
-      float heightTint = mix(0.55, 1.08, clamp(vTipFactor, 0.0, 1.0));
-      float altitudeTint = clamp((vWorldY + 2.0) * 0.03, 0.85, 1.1);
-      vec3 color = uColor * heightTint * altitudeTint;
-
-      float desatAmount = uNightFactor * ${NIGHT_DESAT.toFixed(2)};
-      float darkenAmount = uNightFactor * ${NIGHT_DARKEN.toFixed(2)};
-
-      float lum = luma3(color);
-      color = mix(color, vec3(lum), desatAmount);
-      color *= mix(1.0, 0.6, darkenAmount);
-
-      gl_FragColor = vec4(color, 1.0);
-    }
-  `
-  );
-  const material = new ShaderMaterial({
-    uniforms,
-    vertexShader,
-    fragmentShader,
-    side: DoubleSide
-  });
-  return material;
-}
-function resolveHeightSampler(scene2) {
-  if (!scene2) return null;
-  const explicit = scene2.userData?.terrainHeightSampler;
-  if (typeof explicit === "function") return explicit;
-  const direct = scene2.userData?.getHeightAt;
-  if (typeof direct === "function") return direct;
-  const terrain = scene2.userData?.terrain;
-  const sampler = terrain?.userData?.getHeightAt;
-  return typeof sampler === "function" ? sampler : null;
-}
-function populateTile(tile, coordX, coordZ, state) {
-  const { geometry, offsets, scales, phases } = tile;
-  const sampler = state.heightSampler;
-  const baseSeed = state.seed;
-  const originX = (coordX + 0.5) * TILE_SIZE;
-  const originZ = (coordZ + 0.5) * TILE_SIZE;
-  const rng = mulberry32(hashSeed(coordX, coordZ, baseSeed));
-  let minX = Infinity, minY = Infinity, minZ = Infinity;
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-  for (let i = 0; i < BLADES_PER_TILE; i += 1) {
-    const dx = (rng() - 0.5) * TILE_SIZE;
-    const dz = (rng() - 0.5) * TILE_SIZE;
-    const worldX = originX + dx;
-    const worldZ = originZ + dz;
-    let worldY = 0;
-    if (sampler) {
-      const h = sampler(worldX, worldZ);
-      if (Number.isFinite(h)) {
-        worldY = h;
-      }
-    }
-    const offsetIndex = i * 3;
-    offsets[offsetIndex + 0] = worldX;
-    offsets[offsetIndex + 1] = worldY;
-    offsets[offsetIndex + 2] = worldZ;
-    const bladeScale = MathUtils.lerp(
-      BLADE_HEIGHT_MIN,
-      BLADE_HEIGHT_MAX,
-      rng()
-    );
-    scales[i] = bladeScale;
-    phases[i] = rng();
-    if (worldX < minX) minX = worldX;
-    if (worldX > maxX) maxX = worldX;
-    if (worldY < minY) minY = worldY;
-    if (worldY + bladeScale > maxY) maxY = worldY + bladeScale;
-    if (worldZ < minZ) minZ = worldZ;
-    if (worldZ > maxZ) maxZ = worldZ;
-  }
-  const padding = 0.5;
-  geometry.boundingBox.min.set(minX - padding, minY, minZ - padding);
-  geometry.boundingBox.max.set(maxX + padding, maxY, maxZ + padding);
-  if (!geometry.boundingSphere) {
-    geometry.boundingSphere = new Sphere();
-  }
-  geometry.boundingBox.getBoundingSphere(geometry.boundingSphere);
-  geometry.instanceCount = BLADES_PER_TILE;
-  geometry.attributes.instanceOffset.needsUpdate = true;
-  geometry.attributes.instanceScale.needsUpdate = true;
-  geometry.attributes.instancePhase.needsUpdate = true;
-  tile.coord.set(coordX, coordZ);
-}
-function createTile(state) {
-  const { geometry, offsets, scales, phases } = createBladeGeometry(
-    BLADES_PER_TILE
-  );
-  const tile = {
-    geometry,
-    mesh: new Mesh(geometry, state.material),
-    offsets,
-    scales,
-    phases,
-    coord: new Vector2(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY)
-  };
-  tile.mesh.frustumCulled = true;
-  tile.mesh.name = "GrassTile";
-  tile.mesh.userData.isGrassTile = true;
-  return tile;
-}
-function ensureState(scene2) {
-  if (!scene2) return null;
-  if (grassState) return grassState;
-  const material = createGrassMaterial();
-  const root = new Group();
-  root.name = "InstancedGrass";
-  scene2.add(root);
-  const state = {
-    root,
-    scene: scene2,
-    material,
-    tiles: [],
-    seed: 1013904223,
-    heightSampler: resolveHeightSampler(scene2),
-    time: 0,
-    lastCenter: new Vector2(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY)
-  };
-  for (let i = 0; i < MAX_TILE_COUNT; i += 1) {
-    const tile = createTile(state);
-    state.tiles.push(tile);
-    root.add(tile.mesh);
-  }
-  grassState = state;
-  return state;
-}
-function updateTileAssignments(state, centerX, centerZ) {
-  const desired = [];
-  for (let dz = -TILE_RADIUS; dz <= TILE_RADIUS; dz += 1) {
-    for (let dx = -TILE_RADIUS; dx <= TILE_RADIUS; dx += 1) {
-      desired.push({ x: centerX + dx, z: centerZ + dz });
-    }
-  }
-  const tiles = state.tiles;
-  const unmatched = new Set(desired.map((_, idx) => idx));
-  const freeTiles = [];
-  for (const tile of tiles) {
-    let matchedIndex = -1;
-    for (let i = 0; i < desired.length; i += 1) {
-      const coord = desired[i];
-      if (unmatched.has(i) && tile.coord.x === coord.x && tile.coord.y === coord.z) {
-        matchedIndex = i;
-        break;
-      }
-    }
-    if (matchedIndex !== -1) {
-      unmatched.delete(matchedIndex);
-    } else {
-      freeTiles.push(tile);
-    }
-  }
-  if (unmatched.size === 0) return;
-  const unmatchedList = Array.from(unmatched);
-  let freeIndex = 0;
-  for (const desiredIndex of unmatchedList) {
-    const coord = desired[desiredIndex];
-    const tile = freeTiles[freeIndex] ?? tiles[freeIndex % tiles.length];
-    freeIndex += 1;
-    populateTile(tile, coord.x, coord.z, state);
-  }
-}
-function mount$1(scene2) {
-  const state = ensureState(scene2);
-  if (!state) return null;
-  state.heightSampler = resolveHeightSampler(scene2);
-  for (const tile of state.tiles) {
-    tile.coord.set(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
-  }
-  return state.root;
-}
-function update(dt = 0, playerPosition = null) {
-  if (!grassState) return;
-  grassState.time += dt;
-  grassState.material.uniforms.uTime.value = grassState.time;
-  if (!playerPosition) return;
-  const px2 = playerPosition.x ?? 0;
-  const pz2 = playerPosition.z ?? 0;
-  const tileX = Math.floor(px2 / TILE_SIZE);
-  const tileZ = Math.floor(pz2 / TILE_SIZE);
-  if (grassState.lastCenter.x !== tileX || grassState.lastCenter.y !== tileZ) {
-    updateTileAssignments(grassState, tileX, tileZ);
-    grassState.lastCenter.set(tileX, tileZ);
-  }
-}
-function setNightFactor(value) {
-  if (!grassState) return;
-  grassState.material.uniforms.uNightFactor.value = MathUtils.clamp(
-    value ?? 0,
-    0,
-    1
-  );
-}
-function dispose() {
-  if (!grassState) return;
-  const { root, tiles, material } = grassState;
-  if (root && root.parent) {
-    root.parent.remove(root);
-  }
-  for (const tile of tiles) {
-    if (tile.mesh) {
-      tile.mesh.parent?.remove(tile.mesh);
-    }
-    tile.geometry?.dispose();
-    tile.mesh = void 0;
-    tile.geometry = void 0;
-  }
-  material.dispose();
-  grassState = null;
 }
 const CENTER = 0;
 const AVERAGE = 1;
@@ -63018,6 +60337,1171 @@ const UIManager = {
     return questHud;
   }
 };
+var MeshoptDecoder = (function() {
+  var wasm_base = "b9H79Tebbbe8Fv9Gbb9Gvuuuuueu9Giuuub9Geueu9Giuuueuikqbeeedddillviebeoweuec:q:Odkr;leDo9TW9T9VV95dbH9F9F939H79T9F9J9H229F9Jt9VV7bb8A9TW79O9V9Wt9F9KW9J9V9KW9wWVtW949c919M9MWVbeY9TW79O9V9Wt9F9KW9J9V9KW69U9KW949c919M9MWVbdE9TW79O9V9Wt9F9KW9J9V9KW69U9KW949tWG91W9U9JWbiL9TW79O9V9Wt9F9KW9J9V9KWS9P2tWV9p9JtblK9TW79O9V9Wt9F9KW9J9V9KWS9P2tWV9r919HtbvL9TW79O9V9Wt9F9KW9J9V9KWS9P2tWVT949Wbol79IV9Rbrq;w8Wqdbk;esezu8Jjjjjbcj;eb9Rgv8Kjjjjbc9:hodnadcefal0mbcuhoaiRbbc:Ge9hmbavaialfgrad9Radz1jjjbhwcj;abad9Uc;WFbGgocjdaocjd6EhDaicefhocbhqdnindndndnaeaq9nmbaDaeaq9RaqaDfae6Egkcsfglcl4cifcd4hxalc9WGgmTmecbhPawcjdfhsaohzinaraz9Rax6mvarazaxfgo9RcK6mvczhlcbhHinalgic9WfgOawcj;cbffhldndndndndnazaOco4fRbbaHcoG4ciGPlbedibkal9cb83ibalcwf9cb83ibxikalaoRblaoRbbgOco4gAaAciSgAE86bbawcj;cbfaifglcGfaoclfaAfgARbbaOcl4ciGgCaCciSgCE86bbalcVfaAaCfgARbbaOcd4ciGgCaCciSgCE86bbalc7faAaCfgARbbaOciGgOaOciSgOE86bbalctfaAaOfgARbbaoRbegOco4gCaCciSgCE86bbalc91faAaCfgARbbaOcl4ciGgCaCciSgCE86bbalc4faAaCfgARbbaOcd4ciGgCaCciSgCE86bbalc93faAaCfgARbbaOciGgOaOciSgOE86bbalc94faAaOfgARbbaoRbdgOco4gCaCciSgCE86bbalc95faAaCfgARbbaOcl4ciGgCaCciSgCE86bbalc96faAaCfgARbbaOcd4ciGgCaCciSgCE86bbalc97faAaCfgARbbaOciGgOaOciSgOE86bbalc98faAaOfgORbbaoRbigoco4gAaAciSgAE86bbalc99faOaAfgORbbaocl4ciGgAaAciSgAE86bbalc9:faOaAfgORbbaocd4ciGgAaAciSgAE86bbalcufaOaAfglRbbaociGgoaociSgoE86bbalaofhoxdkalaoRbwaoRbbgOcl4gAaAcsSgAE86bbawcj;cbfaifglcGfaocwfaAfgARbbaOcsGgOaOcsSgOE86bbalcVfaAaOfgORbbaoRbegAcl4gCaCcsSgCE86bbalc7faOaCfgORbbaAcsGgAaAcsSgAE86bbalctfaOaAfgORbbaoRbdgAcl4gCaCcsSgCE86bbalc91faOaCfgORbbaAcsGgAaAcsSgAE86bbalc4faOaAfgORbbaoRbigAcl4gCaCcsSgCE86bbalc93faOaCfgORbbaAcsGgAaAcsSgAE86bbalc94faOaAfgORbbaoRblgAcl4gCaCcsSgCE86bbalc95faOaCfgORbbaAcsGgAaAcsSgAE86bbalc96faOaAfgORbbaoRbvgAcl4gCaCcsSgCE86bbalc97faOaCfgORbbaAcsGgAaAcsSgAE86bbalc98faOaAfgORbbaoRbogAcl4gCaCcsSgCE86bbalc99faOaCfgORbbaAcsGgAaAcsSgAE86bbalc9:faOaAfgORbbaoRbrgocl4gAaAcsSgAE86bbalcufaOaAfglRbbaocsGgoaocsSgoE86bbalaofhoxekalao8Pbb83bbalcwfaocwf8Pbb83bbaoczfhokdnaiam9pmbaHcdfhHaiczfhlarao9RcL0mekkaiam6mvaoTmvdnakTmbawaPfRbbhHawcj;cbfhlashiakhOinaialRbbgzce4cbazceG9R7aHfgH86bbaiadfhialcefhlaOcufgOmbkkascefhsaohzaPcefgPad9hmbxikkcbc99arao9Radcaadca0ESEhoxlkaoaxad2fhCdnakmbadhlinaoTmlarao9Rax6mlaoaxfhoalcufglmbkaChoxekcbhmawcjdfhAinarao9Rax6miawamfRbbhHawcj;cbfhlaAhiakhOinaialRbbgzce4cbazceG9R7aHfgH86bbaiadfhialcefhlaOcufgOmbkaAcefhAaoaxfhoamcefgmad9hmbkaChokabaqad2fawcjdfakad2z1jjjb8Aawawcjdfakcufad2fadz1jjjb8Aakaqfhqaombkc9:hoxekc9:hokavcj;ebf8Kjjjjbaok;cseHu8Jjjjjbc;ae9Rgv8Kjjjjbc9:hodnaeci9UgrcHfal0mbcuhoaiRbbgwc;WeGc;Ge9hmbawcsGgwce0mbavc;abfcFecjez:jjjjb8AavcUf9cu83ibavc8Wf9cu83ibavcyf9cu83ibavcaf9cu83ibavcKf9cu83ibavczf9cu83ibav9cu83iwav9cu83ibaialfc9WfhDaicefgqarfhidnaeTmbcmcsawceSEhkcbhxcbhmcbhPcbhwcbhlindnaiaD9nmbc9:hoxikdndnaqRbbgoc;Ve0mbavc;abfalaocu7gscl4fcsGcitfgzydlhrazydbhzdnaocsGgHak9pmbavawasfcsGcdtfydbaxaHEhoaHThsdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkaxasfhxcdhHavawcdtfaoBdbawasfhwcehsalhOxdkdndnaHcsSmbaHc987aHamffcefhoxekaicefhoai8SbbgHcFeGhsdndnaHcu9mmbaohixekaicvfhiascFbGhscrhHdninao8SbbgOcFbGaHtasVhsaOcu9kmeaocefhoaHcrfgHc8J9hmbxdkkaocefhikasce4cbasceG9R7amfhokdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkcdhHavawcdtfaoBdbcehsawcefhwalhOaohmxekdnaocpe0mbaxcefgHavawaDaocsGfRbbgocl49RcsGcdtfydbaocz6gzEhravawao9RcsGcdtfydbaHazfgAaocsGgHEhoaHThCdndnadcd9hmbabaPcetfgHax87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHaxBdbaHcwfaoBdbaHclfarBdbkcdhsavawcdtfaxBdbavawcefgwcsGcdtfarBdbcihHavc;abfalcitfgOaxBdlaOarBdbavawazfgwcsGcdtfaoBdbalcefcsGhOawaCfhwaxhzaAaCfhxxekaxcbaiRbbgOEgzaoc;:eSgHfhraOcsGhCaOcl4hAdndnaOcs0mbarcefhoxekarhoavawaA9RcsGcdtfydbhrkdndnaCmbaocefhxxekaohxavawaO9RcsGcdtfydbhokdndnaHTmbaicefhHxekaicdfhHai8SbegscFeGhzdnascu9kmbaicofhXazcFbGhzcrhidninaH8SbbgscFbGaitazVhzascu9kmeaHcefhHaicrfgic8J9hmbkaXhHxekaHcefhHkazce4cbazceG9R7amfgmhzkdndnaAcsSmbaHhsxekaHcefhsaH8SbbgicFeGhrdnaicu9kmbaHcvfhXarcFbGhrcrhidninas8SbbgHcFbGaitarVhraHcu9kmeascefhsaicrfgic8J9hmbkaXhsxekascefhskarce4cbarceG9R7amfgmhrkdndnaCcsSmbashixekascefhias8SbbgocFeGhHdnaocu9kmbascvfhXaHcFbGhHcrhodninai8SbbgscFbGaotaHVhHascu9kmeaicefhiaocrfgoc8J9hmbkaXhixekaicefhikaHce4cbaHceG9R7amfgmhokdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkcdhsavawcdtfazBdbavawcefgwcsGcdtfarBdbcihHavc;abfalcitfgXazBdlaXarBdbavawaOcz6aAcsSVfgwcsGcdtfaoBdbawaCTaCcsSVfhwalcefcsGhOkaqcefhqavc;abfaOcitfgOarBdlaOaoBdbavc;abfalasfcsGcitfgraoBdlarazBdbawcsGhwalaHfcsGhlaPcifgPae6mbkkcbc99aiaDSEhokavc;aef8Kjjjjbaok:flevu8Jjjjjbcz9Rhvc9:hodnaecvfal0mbcuhoaiRbbc;:eGc;qe9hmbav9cb83iwaicefhraialfc98fhwdnaeTmbdnadcdSmbcbhDindnaraw6mbc9:skarcefhoar8SbbglcFeGhidndnalcu9mmbaohrxekarcvfhraicFbGhicrhldninao8SbbgdcFbGaltaiVhiadcu9kmeaocefhoalcrfglc8J9hmbxdkkaocefhrkabaDcdtfaic8Etc8F91aicd47avcwfaiceGcdtVgoydbfglBdbaoalBdbaDcefgDae9hmbxdkkcbhDindnaraw6mbc9:skarcefhoar8SbbglcFeGhidndnalcu9mmbaohrxekarcvfhraicFbGhicrhldninao8SbbgdcFbGaltaiVhiadcu9kmeaocefhoalcrfglc8J9hmbxdkkaocefhrkabaDcetfaic8Etc8F91aicd47avcwfaiceGcdtVgoydbfgl87ebaoalBdbaDcefgDae9hmbkkcbc99arawSEhokaok:Lvoeue99dud99eud99dndnadcl9hmbaeTmeindndnabcdfgd8Sbb:Yab8Sbbgi:Ygl:l:tabcefgv8Sbbgo:Ygr:l:tgwJbb;:9cawawNJbbbbawawJbbbb9GgDEgq:mgkaqaicb9iEalMgwawNakaqaocb9iEarMgqaqNMM:r:vglNJbbbZJbbb:;aDEMgr:lJbbb9p9DTmbar:Ohixekcjjjj94hikadai86bbdndnaqalNJbbbZJbbb:;aqJbbbb9GEMgq:lJbbb9p9DTmbaq:Ohdxekcjjjj94hdkavad86bbdndnawalNJbbbZJbbb:;awJbbbb9GEMgw:lJbbb9p9DTmbaw:Ohdxekcjjjj94hdkabad86bbabclfhbaecufgembxdkkaeTmbindndnabclfgd8Ueb:Yab8Uebgi:Ygl:l:tabcdfgv8Uebgo:Ygr:l:tgwJb;:FSawawNJbbbbawawJbbbb9GgDEgq:mgkaqaicb9iEalMgwawNakaqaocb9iEarMgqaqNMM:r:vglNJbbbZJbbb:;aDEMgr:lJbbb9p9DTmbar:Ohixekcjjjj94hikadai87ebdndnaqalNJbbbZJbbb:;aqJbbbb9GEMgq:lJbbb9p9DTmbaq:Ohdxekcjjjj94hdkavad87ebdndnawalNJbbbZJbbb:;awJbbbb9GEMgw:lJbbb9p9DTmbaw:Ohdxekcjjjj94hdkabad87ebabcwfhbaecufgembkkk;oiliui99iue99dnaeTmbcbhiabhlindndnJ;Zl81Zalcof8UebgvciV:Y:vgoal8Ueb:YNgrJb;:FSNJbbbZJbbb:;arJbbbb9GEMgw:lJbbb9p9DTmbaw:OhDxekcjjjj94hDkalclf8Uebhqalcdf8UebhkabaiavcefciGfcetfaD87ebdndnaoak:YNgwJb;:FSNJbbbZJbbb:;awJbbbb9GEMgx:lJbbb9p9DTmbax:OhDxekcjjjj94hDkabaiavciGfgkcd7cetfaD87ebdndnaoaq:YNgoJb;:FSNJbbbZJbbb:;aoJbbbb9GEMgx:lJbbb9p9DTmbax:OhDxekcjjjj94hDkabaiavcufciGfcetfaD87ebdndnJbbjZararN:tawawN:taoaoN:tgrJbbbbarJbbbb9GE:rJb;:FSNJbbbZMgr:lJbbb9p9DTmbar:Ohvxekcjjjj94hvkabakcetfav87ebalcwfhlaiclfhiaecufgembkkk9mbdnadcd4ae2gdTmbinababydbgecwtcw91:Yaece91cjjj98Gcjjj;8if::NUdbabclfhbadcufgdmbkkk9teiucbcbydj1jjbgeabcifc98GfgbBdj1jjbdndnabZbcztgd9nmbcuhiabad9RcFFifcz4nbcuSmekaehikaik;LeeeudndnaeabVciGTmbabhixekdndnadcz9pmbabhixekabhiinaiaeydbBdbaiclfaeclfydbBdbaicwfaecwfydbBdbaicxfaecxfydbBdbaeczfheaiczfhiadc9Wfgdcs0mbkkadcl6mbinaiaeydbBdbaeclfheaiclfhiadc98fgdci0mbkkdnadTmbinaiaeRbb86bbaicefhiaecefheadcufgdmbkkabk;aeedudndnabciGTmbabhixekaecFeGc:b:c:ew2hldndnadcz9pmbabhixekabhiinaialBdbaicxfalBdbaicwfalBdbaiclfalBdbaiczfhiadc9Wfgdcs0mbkkadcl6mbinaialBdbaiclfhiadc98fgdci0mbkkdnadTmbinaiae86bbaicefhiadcufgdmbkkabkkkebcjwklzNbb";
+  var wasm_simd = "b9H79TebbbeKl9Gbb9Gvuuuuueu9Giuuub9Geueuikqbbebeedddilve9Weeeviebeoweuec:q:6dkr;leDo9TW9T9VV95dbH9F9F939H79T9F9J9H229F9Jt9VV7bb8A9TW79O9V9Wt9F9KW9J9V9KW9wWVtW949c919M9MWVbdY9TW79O9V9Wt9F9KW9J9V9KW69U9KW949c919M9MWVblE9TW79O9V9Wt9F9KW9J9V9KW69U9KW949tWG91W9U9JWbvL9TW79O9V9Wt9F9KW9J9V9KWS9P2tWV9p9JtboK9TW79O9V9Wt9F9KW9J9V9KWS9P2tWV9r919HtbrL9TW79O9V9Wt9F9KW9J9V9KWS9P2tWVT949Wbwl79IV9RbDq:p9sqlbzik9:evu8Jjjjjbcz9Rhbcbheincbhdcbhiinabcwfadfaicjuaead4ceGglE86bbaialfhiadcefgdcw9hmbkaec:q:yjjbfai86bbaecitc:q1jjbfab8Piw83ibaecefgecjd9hmbkk:N8JlHud97euo978Jjjjjbcj;kb9Rgv8Kjjjjbc9:hodnadcefal0mbcuhoaiRbbc:Ge9hmbavaialfgrad9Rad;8qbbcj;abad9UhlaicefhodnaeTmbadTmbalc;WFbGglcjdalcjd6EhwcbhDinawaeaD9RaDawfae6Egqcsfglc9WGgkci2hxakcethmalcl4cifcd4hPabaDad2fhsakc;ab6hzcbhHincbhOaohAdndninaraA9RaP6meavcj;cbfaOak2fhCaAaPfhocbhidnazmbarao9Rc;Gb6mbcbhlinaCalfhidndndndndnaAalco4fRbbgXciGPlbedibkaipxbbbbbbbbbbbbbbbbpklbxikaiaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklbaoclfaYpQbfaKc:q:yjjbfRbbfhoxdkaiaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklbaocwfaYpQbfaKc:q:yjjbfRbbfhoxekaiaopbbbpklbaoczfhokdndndndndnaXcd4ciGPlbedibkaipxbbbbbbbbbbbbbbbbpklzxikaiaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklzaoclfaYpQbfaKc:q:yjjbfRbbfhoxdkaiaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklzaocwfaYpQbfaKc:q:yjjbfRbbfhoxekaiaopbbbpklzaoczfhokdndndndndnaXcl4ciGPlbedibkaipxbbbbbbbbbbbbbbbbpklaxikaiaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklaaoclfaYpQbfaKc:q:yjjbfRbbfhoxdkaiaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spklaaocwfaYpQbfaKc:q:yjjbfRbbfhoxekaiaopbbbpklaaoczfhokdndndndndnaXco4Plbedibkaipxbbbbbbbbbbbbbbbbpkl8WxikaiaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgXcitc:q1jjbfpbibaXc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgXcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spkl8WaoclfaYpQbfaXc:q:yjjbfRbbfhoxdkaiaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgXcitc:q1jjbfpbibaXc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgXcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spkl8WaocwfaYpQbfaXc:q:yjjbfRbbfhoxekaiaopbbbpkl8Waoczfhokalc;abfhialcjefak0meaihlarao9Rc;Fb0mbkkdnaiak9pmbaici4hlinarao9RcK6miaCaifhXdndndndndnaAaico4fRbbalcoG4ciGPlbedibkaXpxbbbbbbbbbbbbbbbbpkbbxikaXaopbblaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLgQcdp:meaQpmbzeHdOiAlCvXoQrLpxiiiiiiiiiiiiiiiip9ogLpxiiiiiiiiiiiiiiiip8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spkbbaoclfaYpQbfaKc:q:yjjbfRbbfhoxdkaXaopbbwaopbbbgQclp:meaQpmbzeHdOiAlCvXoQrLpxssssssssssssssssp9ogLpxssssssssssssssssp8JgQp5b9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibaKc:q:yjjbfpbbbgYaYpmbbbbbbbbbbbbbbbbaQp5e9cjF;8;4;W;G;ab9:9cU1:NgKcitc:q1jjbfpbibp9UpmbedilvorzHOACXQLpPaLaQp9spkbbaocwfaYpQbfaKc:q:yjjbfRbbfhoxekaXaopbbbpkbbaoczfhokalcdfhlaiczfgiak6mbkkaoTmeaohAaOcefgOclSmdxbkkc9:hoxlkdnakTmbavcjdfaHfhiavaHfpbdbhYcbhXinaiavcj;cbfaXfglpblbgLcep9TaLpxeeeeeeeeeeeeeeeegQp9op9Hp9rgLalakfpblbg8Acep9Ta8AaQp9op9Hp9rg8ApmbzeHdOiAlCvXoQrLgEalamfpblbg3cep9Ta3aQp9op9Hp9rg3alaxfpblbg5cep9Ta5aQp9op9Hp9rg5pmbzeHdOiAlCvXoQrLg8EpmbezHdiOAlvCXorQLgQaQpmbedibedibedibediaYp9UgYp9AdbbaiadfglaYaQaQpmlvorlvorlvorlvorp9UgYp9AdbbaladfglaYaQaQpmwDqkwDqkwDqkwDqkp9UgYp9AdbbaladfglaYaQaQpmxmPsxmPsxmPsxmPsp9UgYp9AdbbaladfglaYaEa8EpmwDKYqk8AExm35Ps8E8FgQaQpmbedibedibedibedip9UgYp9AdbbaladfglaYaQaQpmlvorlvorlvorlvorp9UgYp9AdbbaladfglaYaQaQpmwDqkwDqkwDqkwDqkp9UgYp9AdbbaladfglaYaQaQpmxmPsxmPsxmPsxmPsp9UgYp9AdbbaladfglaYaLa8ApmwKDYq8AkEx3m5P8Es8FgLa3a5pmwKDYq8AkEx3m5P8Es8Fg8ApmbezHdiOAlvCXorQLgQaQpmbedibedibedibedip9UgYp9AdbbaladfglaYaQaQpmlvorlvorlvorlvorp9UgYp9AdbbaladfglaYaQaQpmwDqkwDqkwDqkwDqkp9UgYp9AdbbaladfglaYaQaQpmxmPsxmPsxmPsxmPsp9UgYp9AdbbaladfglaYaLa8ApmwDKYqk8AExm35Ps8E8FgQaQpmbedibedibedibedip9UgYp9AdbbaladfglaYaQaQpmlvorlvorlvorlvorp9UgYp9AdbbaladfglaYaQaQpmwDqkwDqkwDqkwDqkp9UgYp9AdbbaladfglaYaQaQpmxmPsxmPsxmPsxmPsp9UgYp9AdbbaladfhiaXczfgXak6mbkkaHclfgHad6mbkasavcjdfaqad2;8qbbavavcjdfaqcufad2fad;8qbbaqaDfgDae6mbkkcbc99arao9Radcaadca0ESEhokavcj;kbf8Kjjjjbaokwbz:bjjjbk::seHu8Jjjjjbc;ae9Rgv8Kjjjjbc9:hodnaeci9UgrcHfal0mbcuhoaiRbbgwc;WeGc;Ge9hmbawcsGgwce0mbavc;abfcFecje;8kbavcUf9cu83ibavc8Wf9cu83ibavcyf9cu83ibavcaf9cu83ibavcKf9cu83ibavczf9cu83ibav9cu83iwav9cu83ibaialfc9WfhDaicefgqarfhidnaeTmbcmcsawceSEhkcbhxcbhmcbhPcbhwcbhlindnaiaD9nmbc9:hoxikdndnaqRbbgoc;Ve0mbavc;abfalaocu7gscl4fcsGcitfgzydlhrazydbhzdnaocsGgHak9pmbavawasfcsGcdtfydbaxaHEhoaHThsdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkaxasfhxcdhHavawcdtfaoBdbawasfhwcehsalhOxdkdndnaHcsSmbaHc987aHamffcefhoxekaicefhoai8SbbgHcFeGhsdndnaHcu9mmbaohixekaicvfhiascFbGhscrhHdninao8SbbgOcFbGaHtasVhsaOcu9kmeaocefhoaHcrfgHc8J9hmbxdkkaocefhikasce4cbasceG9R7amfhokdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkcdhHavawcdtfaoBdbcehsawcefhwalhOaohmxekdnaocpe0mbaxcefgHavawaDaocsGfRbbgocl49RcsGcdtfydbaocz6gzEhravawao9RcsGcdtfydbaHazfgAaocsGgHEhoaHThCdndnadcd9hmbabaPcetfgHax87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHaxBdbaHcwfaoBdbaHclfarBdbkcdhsavawcdtfaxBdbavawcefgwcsGcdtfarBdbcihHavc;abfalcitfgOaxBdlaOarBdbavawazfgwcsGcdtfaoBdbalcefcsGhOawaCfhwaxhzaAaCfhxxekaxcbaiRbbgOEgzaoc;:eSgHfhraOcsGhCaOcl4hAdndnaOcs0mbarcefhoxekarhoavawaA9RcsGcdtfydbhrkdndnaCmbaocefhxxekaohxavawaO9RcsGcdtfydbhokdndnaHTmbaicefhHxekaicdfhHai8SbegscFeGhzdnascu9kmbaicofhXazcFbGhzcrhidninaH8SbbgscFbGaitazVhzascu9kmeaHcefhHaicrfgic8J9hmbkaXhHxekaHcefhHkazce4cbazceG9R7amfgmhzkdndnaAcsSmbaHhsxekaHcefhsaH8SbbgicFeGhrdnaicu9kmbaHcvfhXarcFbGhrcrhidninas8SbbgHcFbGaitarVhraHcu9kmeascefhsaicrfgic8J9hmbkaXhsxekascefhskarce4cbarceG9R7amfgmhrkdndnaCcsSmbashixekascefhias8SbbgocFeGhHdnaocu9kmbascvfhXaHcFbGhHcrhodninai8SbbgscFbGaotaHVhHascu9kmeaicefhiaocrfgoc8J9hmbkaXhixekaicefhikaHce4cbaHceG9R7amfgmhokdndnadcd9hmbabaPcetfgHaz87ebaHclfao87ebaHcdfar87ebxekabaPcdtfgHazBdbaHcwfaoBdbaHclfarBdbkcdhsavawcdtfazBdbavawcefgwcsGcdtfarBdbcihHavc;abfalcitfgXazBdlaXarBdbavawaOcz6aAcsSVfgwcsGcdtfaoBdbawaCTaCcsSVfhwalcefcsGhOkaqcefhqavc;abfaOcitfgOarBdlaOaoBdbavc;abfalasfcsGcitfgraoBdlarazBdbawcsGhwalaHfcsGhlaPcifgPae6mbkkcbc99aiaDSEhokavc;aef8Kjjjjbaok:flevu8Jjjjjbcz9Rhvc9:hodnaecvfal0mbcuhoaiRbbc;:eGc;qe9hmbav9cb83iwaicefhraialfc98fhwdnaeTmbdnadcdSmbcbhDindnaraw6mbc9:skarcefhoar8SbbglcFeGhidndnalcu9mmbaohrxekarcvfhraicFbGhicrhldninao8SbbgdcFbGaltaiVhiadcu9kmeaocefhoalcrfglc8J9hmbxdkkaocefhrkabaDcdtfaic8Etc8F91aicd47avcwfaiceGcdtVgoydbfglBdbaoalBdbaDcefgDae9hmbxdkkcbhDindnaraw6mbc9:skarcefhoar8SbbglcFeGhidndnalcu9mmbaohrxekarcvfhraicFbGhicrhldninao8SbbgdcFbGaltaiVhiadcu9kmeaocefhoalcrfglc8J9hmbxdkkaocefhrkabaDcetfaic8Etc8F91aicd47avcwfaiceGcdtVgoydbfgl87ebaoalBdbaDcefgDae9hmbkkcbc99arawSEhokaok:wPliuo97eue978Jjjjjbca9Rhiaec98Ghldndnadcl9hmbdnalTmbcbhvabhdinadadpbbbgocKp:RecKp:Sep;6egraocwp:RecKp:Sep;6earp;Geaoczp:RecKp:Sep;6egwp;Gep;Kep;LegDpxbbbbbbbbbbbbbbbbp:2egqarpxbbbjbbbjbbbjbbbjgkp9op9rp;Kegrpxbb;:9cbb;:9cbb;:9cbb;:9cararp;MeaDaDp;Meawaqawakp9op9rp;Kegrarp;Mep;Kep;Kep;Jep;Negwp;Mepxbbn0bbn0bbn0bbn0gqp;KepxFbbbFbbbFbbbFbbbp9oaopxbbbFbbbFbbbFbbbFp9op9qarawp;Meaqp;Kecwp:RepxbFbbbFbbbFbbbFbbp9op9qaDawp;Meaqp;Keczp:RepxbbFbbbFbbbFbbbFbp9op9qpkbbadczfhdavclfgval6mbkkalaeSmeaipxbbbbbbbbbbbbbbbbgqpklbaiabalcdtfgdaeciGglcdtgv;8qbbdnalTmbaiaipblbgocKp:RecKp:Sep;6egraocwp:RecKp:Sep;6earp;Geaoczp:RecKp:Sep;6egwp;Gep;Kep;LegDaqp:2egqarpxbbbjbbbjbbbjbbbjgkp9op9rp;Kegrpxbb;:9cbb;:9cbb;:9cbb;:9cararp;MeaDaDp;Meawaqawakp9op9rp;Kegrarp;Mep;Kep;Kep;Jep;Negwp;Mepxbbn0bbn0bbn0bbn0gqp;KepxFbbbFbbbFbbbFbbbp9oaopxbbbFbbbFbbbFbbbFp9op9qarawp;Meaqp;Kecwp:RepxbFbbbFbbbFbbbFbbp9op9qaDawp;Meaqp;Keczp:RepxbbFbbbFbbbFbbbFbp9op9qpklbkadaiav;8qbbskdnalTmbcbhvabhdinadczfgxaxpbbbgopxbbbbbbFFbbbbbbFFgkp9oadpbbbgDaopmbediwDqkzHOAKY8AEgwczp:Reczp:Sep;6egraDaopmlvorxmPsCXQL358E8FpxFubbFubbFubbFubbp9op;6eawczp:Sep;6egwp;Gearp;Gep;Kep;Legopxbbbbbbbbbbbbbbbbp:2egqarpxbbbjbbbjbbbjbbbjgmp9op9rp;Kegrpxb;:FSb;:FSb;:FSb;:FSararp;Meaoaop;Meawaqawamp9op9rp;Kegrarp;Mep;Kep;Kep;Jep;Negwp;Mepxbbn0bbn0bbn0bbn0gqp;KepxFFbbFFbbFFbbFFbbp9oaoawp;Meaqp;Keczp:Rep9qgoarawp;Meaqp;KepxFFbbFFbbFFbbFFbbp9ogrpmwDKYqk8AExm35Ps8E8Fp9qpkbbadaDakp9oaoarpmbezHdiOAlvCXorQLp9qpkbbadcafhdavclfgval6mbkkalaeSmbaiaeciGgvcitgdfcbcaad9R;8kbaiabalcitfglad;8qbbdnavTmbaiaipblzgopxbbbbbbFFbbbbbbFFgkp9oaipblbgDaopmbediwDqkzHOAKY8AEgwczp:Reczp:Sep;6egraDaopmlvorxmPsCXQL358E8FpxFubbFubbFubbFubbp9op;6eawczp:Sep;6egwp;Gearp;Gep;Kep;Legopxbbbbbbbbbbbbbbbbp:2egqarpxbbbjbbbjbbbjbbbjgmp9op9rp;Kegrpxb;:FSb;:FSb;:FSb;:FSararp;Meaoaop;Meawaqawamp9op9rp;Kegrarp;Mep;Kep;Kep;Jep;Negwp;Mepxbbn0bbn0bbn0bbn0gqp;KepxFFbbFFbbFFbbFFbbp9oaoawp;Meaqp;Keczp:Rep9qgoarawp;Meaqp;KepxFFbbFFbbFFbbFFbbp9ogrpmwDKYqk8AExm35Ps8E8Fp9qpklzaiaDakp9oaoarpmbezHdiOAlvCXorQLp9qpklbkalaiad;8qbbkk;4wllue97euv978Jjjjjbc8W9Rhidnaec98GglTmbcbhvabhoinaiaopbbbgraoczfgwpbbbgDpmlvorxmPsCXQL358E8Fgqczp:Segkclp:RepklbaopxbbjZbbjZbbjZbbjZpx;Zl81Z;Zl81Z;Zl81Z;Zl81Zakpxibbbibbbibbbibbbp9qp;6ep;NegkaraDpmbediwDqkzHOAKY8AEgrczp:Reczp:Sep;6ep;MegDaDp;Meakarczp:Sep;6ep;Megxaxp;Meakaqczp:Reczp:Sep;6ep;Megqaqp;Mep;Kep;Kep;Lepxbbbbbbbbbbbbbbbbp:4ep;Jepxb;:FSb;:FSb;:FSb;:FSgkp;Mepxbbn0bbn0bbn0bbn0grp;KepxFFbbFFbbFFbbFFbbgmp9oaxakp;Mearp;Keczp:Rep9qgxaDakp;Mearp;Keamp9oaqakp;Mearp;Keczp:Rep9qgkpmbezHdiOAlvCXorQLgrp5baipblbpEb:T:j83ibaocwfarp5eaipblbpEe:T:j83ibawaxakpmwDKYqk8AExm35Ps8E8Fgkp5baipblbpEd:T:j83ibaocKfakp5eaipblbpEi:T:j83ibaocafhoavclfgval6mbkkdnalaeSmbaiaeciGgvcitgofcbcaao9R;8kbaiabalcitfgwao;8qbbdnavTmbaiaipblbgraipblzgDpmlvorxmPsCXQL358E8Fgqczp:Segkclp:RepklaaipxbbjZbbjZbbjZbbjZpx;Zl81Z;Zl81Z;Zl81Z;Zl81Zakpxibbbibbbibbbibbbp9qp;6ep;NegkaraDpmbediwDqkzHOAKY8AEgrczp:Reczp:Sep;6ep;MegDaDp;Meakarczp:Sep;6ep;Megxaxp;Meakaqczp:Reczp:Sep;6ep;Megqaqp;Mep;Kep;Kep;Lepxbbbbbbbbbbbbbbbbp:4ep;Jepxb;:FSb;:FSb;:FSb;:FSgkp;Mepxbbn0bbn0bbn0bbn0grp;KepxFFbbFFbbFFbbFFbbgmp9oaxakp;Mearp;Keczp:Rep9qgxaDakp;Mearp;Keamp9oaqakp;Mearp;Keczp:Rep9qgkpmbezHdiOAlvCXorQLgrp5baipblapEb:T:j83ibaiarp5eaipblapEe:T:j83iwaiaxakpmwDKYqk8AExm35Ps8E8Fgkp5baipblapEd:T:j83izaiakp5eaipblapEi:T:j83iKkawaiao;8qbbkk:Pddiue978Jjjjjbc;ab9Rhidnadcd4ae2glc98GgvTmbcbheabhdinadadpbbbgocwp:Recwp:Sep;6eaocep:SepxbbjFbbjFbbjFbbjFp9opxbbjZbbjZbbjZbbjZp:Uep;Mepkbbadczfhdaeclfgeav6mbkkdnavalSmbaialciGgecdtgdVcbc;abad9R;8kbaiabavcdtfgvad;8qbbdnaeTmbaiaipblbgocwp:Recwp:Sep;6eaocep:SepxbbjFbbjFbbjFbbjFp9opxbbjZbbjZbbjZbbjZp:Uep;Mepklbkavaiad;8qbbkk9teiucbcbydj1jjbgeabcifc98GfgbBdj1jjbdndnabZbcztgd9nmbcuhiabad9RcFFifcz4nbcuSmekaehikaikkkebcjwklz:Dbb";
+  var detector = new Uint8Array([
+    0,
+    97,
+    115,
+    109,
+    1,
+    0,
+    0,
+    0,
+    1,
+    4,
+    1,
+    96,
+    0,
+    0,
+    3,
+    3,
+    2,
+    0,
+    0,
+    5,
+    3,
+    1,
+    0,
+    1,
+    12,
+    1,
+    0,
+    10,
+    22,
+    2,
+    12,
+    0,
+    65,
+    0,
+    65,
+    0,
+    65,
+    0,
+    252,
+    10,
+    0,
+    0,
+    11,
+    7,
+    0,
+    65,
+    0,
+    253,
+    15,
+    26,
+    11
+  ]);
+  var wasmpack = new Uint8Array([
+    32,
+    0,
+    65,
+    2,
+    1,
+    106,
+    34,
+    33,
+    3,
+    128,
+    11,
+    4,
+    13,
+    64,
+    6,
+    253,
+    10,
+    7,
+    15,
+    116,
+    127,
+    5,
+    8,
+    12,
+    40,
+    16,
+    19,
+    54,
+    20,
+    9,
+    27,
+    255,
+    113,
+    17,
+    42,
+    67,
+    24,
+    23,
+    146,
+    148,
+    18,
+    14,
+    22,
+    45,
+    70,
+    69,
+    56,
+    114,
+    101,
+    21,
+    25,
+    63,
+    75,
+    136,
+    108,
+    28,
+    118,
+    29,
+    73,
+    115
+  ]);
+  if (typeof WebAssembly !== "object") {
+    return {
+      supported: false
+    };
+  }
+  var wasm = WebAssembly.validate(detector) ? unpack(wasm_simd) : unpack(wasm_base);
+  var instance;
+  var ready = WebAssembly.instantiate(wasm, {}).then(function(result) {
+    instance = result.instance;
+    instance.exports.__wasm_call_ctors();
+  });
+  function unpack(data) {
+    var result = new Uint8Array(data.length);
+    for (var i = 0; i < data.length; ++i) {
+      var ch3 = data.charCodeAt(i);
+      result[i] = ch3 > 96 ? ch3 - 97 : ch3 > 64 ? ch3 - 39 : ch3 + 4;
+    }
+    var write = 0;
+    for (var i = 0; i < data.length; ++i) {
+      result[write++] = result[i] < 60 ? wasmpack[result[i]] : (result[i] - 60) * 64 + result[++i];
+    }
+    return result.buffer.slice(0, write);
+  }
+  function decode(instance2, fun, target, count, size, source, filter) {
+    var sbrk = instance2.exports.sbrk;
+    var count4 = count + 3 & ~3;
+    var tp = sbrk(count4 * size);
+    var sp = sbrk(source.length);
+    var heap = new Uint8Array(instance2.exports.memory.buffer);
+    heap.set(source, sp);
+    var res = fun(tp, count, size, sp, source.length);
+    if (res == 0 && filter) {
+      filter(tp, count4, size);
+    }
+    target.set(heap.subarray(tp, tp + count * size));
+    sbrk(tp - sbrk(0));
+    if (res != 0) {
+      throw new Error("Malformed buffer data: " + res);
+    }
+  }
+  var filters = {
+    NONE: "",
+    OCTAHEDRAL: "meshopt_decodeFilterOct",
+    QUATERNION: "meshopt_decodeFilterQuat",
+    EXPONENTIAL: "meshopt_decodeFilterExp"
+  };
+  var decoders = {
+    ATTRIBUTES: "meshopt_decodeVertexBuffer",
+    TRIANGLES: "meshopt_decodeIndexBuffer",
+    INDICES: "meshopt_decodeIndexSequence"
+  };
+  var workers = [];
+  var requestId = 0;
+  function createWorker(url) {
+    var worker = {
+      object: new Worker(url),
+      pending: 0,
+      requests: {}
+    };
+    worker.object.onmessage = function(event) {
+      var data = event.data;
+      worker.pending -= data.count;
+      worker.requests[data.id][data.action](data.value);
+      delete worker.requests[data.id];
+    };
+    return worker;
+  }
+  function initWorkers(count) {
+    var source = "self.ready = WebAssembly.instantiate(new Uint8Array([" + new Uint8Array(wasm) + "]), {}).then(function(result) { result.instance.exports.__wasm_call_ctors(); return result.instance; });self.onmessage = " + workerProcess.name + ";" + decode.toString() + workerProcess.toString();
+    var blob = new Blob([source], { type: "text/javascript" });
+    var url = URL.createObjectURL(blob);
+    for (var i = workers.length; i < count; ++i) {
+      workers[i] = createWorker(url);
+    }
+    for (var i = count; i < workers.length; ++i) {
+      workers[i].object.postMessage({});
+    }
+    workers.length = count;
+    URL.revokeObjectURL(url);
+  }
+  function decodeWorker(count, size, source, mode, filter) {
+    var worker = workers[0];
+    for (var i = 1; i < workers.length; ++i) {
+      if (workers[i].pending < worker.pending) {
+        worker = workers[i];
+      }
+    }
+    return new Promise(function(resolve, reject) {
+      var data = new Uint8Array(source);
+      var id = ++requestId;
+      worker.pending += count;
+      worker.requests[id] = { resolve, reject };
+      worker.object.postMessage({ id, count, size, source: data, mode, filter }, [data.buffer]);
+    });
+  }
+  function workerProcess(event) {
+    var data = event.data;
+    if (!data.id) {
+      return self.close();
+    }
+    self.ready.then(function(instance2) {
+      try {
+        var target = new Uint8Array(data.count * data.size);
+        decode(instance2, instance2.exports[data.mode], target, data.count, data.size, data.source, instance2.exports[data.filter]);
+        self.postMessage({ id: data.id, count: data.count, action: "resolve", value: target }, [target.buffer]);
+      } catch (error) {
+        self.postMessage({ id: data.id, count: data.count, action: "reject", value: error });
+      }
+    });
+  }
+  return {
+    ready,
+    supported: true,
+    useWorkers: function(count) {
+      initWorkers(count);
+    },
+    decodeVertexBuffer: function(target, count, size, source, filter) {
+      decode(instance, instance.exports.meshopt_decodeVertexBuffer, target, count, size, source, instance.exports[filters[filter]]);
+    },
+    decodeIndexBuffer: function(target, count, size, source) {
+      decode(instance, instance.exports.meshopt_decodeIndexBuffer, target, count, size, source);
+    },
+    decodeIndexSequence: function(target, count, size, source) {
+      decode(instance, instance.exports.meshopt_decodeIndexSequence, target, count, size, source);
+    },
+    decodeGltfBuffer: function(target, count, size, source, mode, filter) {
+      decode(instance, instance.exports[decoders[mode]], target, count, size, source, instance.exports[filters[filter]]);
+    },
+    decodeGltfBufferAsync: function(count, size, source, mode, filter) {
+      if (workers.length > 0) {
+        return decodeWorker(count, size, source, decoders[mode], filters[filter]);
+      }
+      return ready.then(function() {
+        var target = new Uint8Array(count * size);
+        decode(instance, instance.exports[decoders[mode]], target, count, size, source, instance.exports[filters[filter]]);
+        return target;
+      });
+    }
+  };
+})();
+const __vite_import_meta_env__$2 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const DEFAULT_BASIS_TRANSCODER_PATH = "https://unpkg.com/three@0.180.0/examples/jsm/libs/basis/";
+const LOCAL_TRANSCODER_SUBPATH = "basis/";
+const ABSOLUTE_PROTOCOL_REGEX$1 = /^[a-z]+:\/\//i;
+const PROTOCOL_RELATIVE_REGEX$1 = /^\/\//;
+function ensureTrailingSlash$1(value) {
+  if (typeof value !== "string" || value.length === 0) {
+    return value;
+  }
+  return value.endsWith("/") ? value : `${value}/`;
+}
+function resolveBaseUrl$2() {
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$2 && true) {
+    return ensureTrailingSlash$1("/athens-game-starter/");
+  }
+  return "/";
+}
+function resolveProtocol$1() {
+  if (typeof window !== "undefined" && window.location?.protocol) {
+    return window.location.protocol;
+  }
+  return "https:";
+}
+function normaliseCandidate$1(candidate, baseUrl2) {
+  if (typeof candidate !== "string") {
+    return null;
+  }
+  const trimmed = candidate.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  if (PROTOCOL_RELATIVE_REGEX$1.test(trimmed)) {
+    const protocol = resolveProtocol$1();
+    return ensureTrailingSlash$1(`${protocol}${trimmed}`);
+  }
+  const safeBase = `https://example.com${baseUrl2}`;
+  try {
+    const resolved = new URL(trimmed, safeBase);
+    if (ABSOLUTE_PROTOCOL_REGEX$1.test(trimmed)) {
+      return ensureTrailingSlash$1(resolved.href);
+    }
+    if (resolved.origin !== "https://example.com") {
+      return ensureTrailingSlash$1(resolved.href);
+    }
+    return ensureTrailingSlash$1(resolved.pathname);
+  } catch {
+    return ensureTrailingSlash$1(trimmed);
+  }
+}
+function resolveKTX2TranscoderPath() {
+  const baseUrl2 = resolveBaseUrl$2();
+  const candidates = [];
+  const meta = typeof import.meta !== "undefined" ? import.meta : null;
+  const env = meta && meta.env ? meta.env : null;
+  if (env && typeof env.VITE_BASIS_TRANSCODER_PATH === "string") {
+    candidates.push(env.VITE_BASIS_TRANSCODER_PATH);
+  }
+  if (typeof window !== "undefined" && typeof window.__BASIS_TRANSCODER_PATH__ === "string") {
+    candidates.push(window.__BASIS_TRANSCODER_PATH__);
+  }
+  candidates.push(LOCAL_TRANSCODER_SUBPATH);
+  candidates.push(DEFAULT_BASIS_TRANSCODER_PATH);
+  for (const candidate of candidates) {
+    const normalised = normaliseCandidate$1(candidate, baseUrl2);
+    if (normalised) {
+      return normalised;
+    }
+  }
+  return DEFAULT_BASIS_TRANSCODER_PATH;
+}
+async function createKTX2Loader(renderer2) {
+  const { KTX2Loader } = await __vitePreload(async () => {
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dx-GP9hQ.js");
+    return { KTX2Loader: KTX2Loader2 };
+  }, true ? [] : void 0);
+  const loader = new KTX2Loader();
+  const path = resolveKTX2TranscoderPath();
+  loader.setTranscoderPath(path);
+  if (renderer2) {
+    try {
+      loader.detectSupport(renderer2);
+    } catch (error) {
+      console.warn("KTX2Loader.detectSupport failed; continuing without GPU compression", error);
+    }
+  }
+  return loader;
+}
+const _taskCache = /* @__PURE__ */ new WeakMap();
+class DRACOLoader extends Loader {
+  /**
+   * Constructs a new Draco loader.
+   *
+   * @param {LoadingManager} [manager] - The loading manager.
+   */
+  constructor(manager2) {
+    super(manager2);
+    this.decoderPath = "";
+    this.decoderConfig = {};
+    this.decoderBinary = null;
+    this.decoderPending = null;
+    this.workerLimit = 4;
+    this.workerPool = [];
+    this.workerNextTaskID = 1;
+    this.workerSourceURL = "";
+    this.defaultAttributeIDs = {
+      position: "POSITION",
+      normal: "NORMAL",
+      color: "COLOR",
+      uv: "TEX_COORD"
+    };
+    this.defaultAttributeTypes = {
+      position: "Float32Array",
+      normal: "Float32Array",
+      color: "Float32Array",
+      uv: "Float32Array"
+    };
+  }
+  /**
+   * Provides configuration for the decoder libraries. Configuration cannot be changed after decoding begins.
+   *
+   * @param {string} path - The decoder path.
+   * @return {DRACOLoader} A reference to this loader.
+   */
+  setDecoderPath(path) {
+    this.decoderPath = path;
+    return this;
+  }
+  /**
+   * Provides configuration for the decoder libraries. Configuration cannot be changed after decoding begins.
+   *
+   * @param {{type:('js'|'wasm')}} config - The decoder config.
+   * @return {DRACOLoader} A reference to this loader.
+   */
+  setDecoderConfig(config) {
+    this.decoderConfig = config;
+    return this;
+  }
+  /**
+   * Sets the maximum number of Web Workers to be used during decoding.
+   * A lower limit may be preferable if workers are also for other tasks in the application.
+   *
+   * @param {number} workerLimit - The worker limit.
+   * @return {DRACOLoader} A reference to this loader.
+   */
+  setWorkerLimit(workerLimit) {
+    this.workerLimit = workerLimit;
+    return this;
+  }
+  /**
+   * Starts loading from the given URL and passes the loaded Draco asset
+   * to the `onLoad()` callback.
+   *
+   * @param {string} url - The path/URL of the file to be loaded. This can also be a data URI.
+   * @param {function(BufferGeometry)} onLoad - Executed when the loading process has been finished.
+   * @param {onProgressCallback} onProgress - Executed while the loading is in progress.
+   * @param {onErrorCallback} onError - Executed when errors occur.
+   */
+  load(url, onLoad, onProgress, onError) {
+    const loader = new FileLoader(this.manager);
+    loader.setPath(this.path);
+    loader.setResponseType("arraybuffer");
+    loader.setRequestHeader(this.requestHeader);
+    loader.setWithCredentials(this.withCredentials);
+    loader.load(url, (buffer) => {
+      this.parse(buffer, onLoad, onError);
+    }, onProgress, onError);
+  }
+  /**
+   * Parses the given Draco data.
+   *
+   * @param {ArrayBuffer} buffer - The raw Draco data as an array buffer.
+   * @param {function(BufferGeometry)} onLoad - Executed when the loading/parsing process has been finished.
+   * @param {onErrorCallback} onError - Executed when errors occur.
+   */
+  parse(buffer, onLoad, onError = () => {
+  }) {
+    this.decodeDracoFile(buffer, onLoad, null, null, SRGBColorSpace, onError).catch(onError);
+  }
+  //
+  decodeDracoFile(buffer, callback, attributeIDs, attributeTypes, vertexColorSpace = LinearSRGBColorSpace, onError = () => {
+  }) {
+    const taskConfig = {
+      attributeIDs: attributeIDs || this.defaultAttributeIDs,
+      attributeTypes: attributeTypes || this.defaultAttributeTypes,
+      useUniqueIDs: !!attributeIDs,
+      vertexColorSpace
+    };
+    return this.decodeGeometry(buffer, taskConfig).then(callback).catch(onError);
+  }
+  decodeGeometry(buffer, taskConfig) {
+    const taskKey = JSON.stringify(taskConfig);
+    if (_taskCache.has(buffer)) {
+      const cachedTask = _taskCache.get(buffer);
+      if (cachedTask.key === taskKey) {
+        return cachedTask.promise;
+      } else if (buffer.byteLength === 0) {
+        throw new Error(
+          "THREE.DRACOLoader: Unable to re-decode a buffer with different settings. Buffer has already been transferred."
+        );
+      }
+    }
+    let worker;
+    const taskID = this.workerNextTaskID++;
+    const taskCost = buffer.byteLength;
+    const geometryPending = this._getWorker(taskID, taskCost).then((_worker) => {
+      worker = _worker;
+      return new Promise((resolve, reject) => {
+        worker._callbacks[taskID] = { resolve, reject };
+        worker.postMessage({ type: "decode", id: taskID, taskConfig, buffer }, [buffer]);
+      });
+    }).then((message) => this._createGeometry(message.geometry));
+    geometryPending.catch(() => true).then(() => {
+      if (worker && taskID) {
+        this._releaseTask(worker, taskID);
+      }
+    });
+    _taskCache.set(buffer, {
+      key: taskKey,
+      promise: geometryPending
+    });
+    return geometryPending;
+  }
+  _createGeometry(geometryData) {
+    const geometry = new BufferGeometry();
+    if (geometryData.index) {
+      geometry.setIndex(new BufferAttribute(geometryData.index.array, 1));
+    }
+    for (let i = 0; i < geometryData.attributes.length; i++) {
+      const result = geometryData.attributes[i];
+      const name = result.name;
+      const array = result.array;
+      const itemSize = result.itemSize;
+      const attribute = new BufferAttribute(array, itemSize);
+      if (name === "color") {
+        this._assignVertexColorSpace(attribute, result.vertexColorSpace);
+        attribute.normalized = array instanceof Float32Array === false;
+      }
+      geometry.setAttribute(name, attribute);
+    }
+    return geometry;
+  }
+  _assignVertexColorSpace(attribute, inputColorSpace) {
+    if (inputColorSpace !== SRGBColorSpace) return;
+    const _color3 = new Color();
+    for (let i = 0, il = attribute.count; i < il; i++) {
+      _color3.fromBufferAttribute(attribute, i);
+      ColorManagement.colorSpaceToWorking(_color3, SRGBColorSpace);
+      attribute.setXYZ(i, _color3.r, _color3.g, _color3.b);
+    }
+  }
+  _loadLibrary(url, responseType) {
+    const loader = new FileLoader(this.manager);
+    loader.setPath(this.decoderPath);
+    loader.setResponseType(responseType);
+    loader.setWithCredentials(this.withCredentials);
+    return new Promise((resolve, reject) => {
+      loader.load(url, resolve, void 0, reject);
+    });
+  }
+  preload() {
+    this._initDecoder();
+    return this;
+  }
+  _initDecoder() {
+    if (this.decoderPending) return this.decoderPending;
+    const useJS = typeof WebAssembly !== "object" || this.decoderConfig.type === "js";
+    const librariesPending = [];
+    if (useJS) {
+      librariesPending.push(this._loadLibrary("draco_decoder.js", "text"));
+    } else {
+      librariesPending.push(this._loadLibrary("draco_wasm_wrapper.js", "text"));
+      librariesPending.push(this._loadLibrary("draco_decoder.wasm", "arraybuffer"));
+    }
+    this.decoderPending = Promise.all(librariesPending).then((libraries) => {
+      const jsContent = libraries[0];
+      if (!useJS) {
+        this.decoderConfig.wasmBinary = libraries[1];
+      }
+      const fn = DRACOWorker.toString();
+      const body = [
+        "/* draco decoder */",
+        jsContent,
+        "",
+        "/* worker */",
+        fn.substring(fn.indexOf("{") + 1, fn.lastIndexOf("}"))
+      ].join("\n");
+      this.workerSourceURL = URL.createObjectURL(new Blob([body]));
+    });
+    return this.decoderPending;
+  }
+  _getWorker(taskID, taskCost) {
+    return this._initDecoder().then(() => {
+      if (this.workerPool.length < this.workerLimit) {
+        const worker2 = new Worker(this.workerSourceURL);
+        worker2._callbacks = {};
+        worker2._taskCosts = {};
+        worker2._taskLoad = 0;
+        worker2.postMessage({ type: "init", decoderConfig: this.decoderConfig });
+        worker2.onmessage = function(e) {
+          const message = e.data;
+          switch (message.type) {
+            case "decode":
+              worker2._callbacks[message.id].resolve(message);
+              break;
+            case "error":
+              worker2._callbacks[message.id].reject(message);
+              break;
+            default:
+              console.error('THREE.DRACOLoader: Unexpected message, "' + message.type + '"');
+          }
+        };
+        this.workerPool.push(worker2);
+      } else {
+        this.workerPool.sort(function(a, b) {
+          return a._taskLoad > b._taskLoad ? -1 : 1;
+        });
+      }
+      const worker = this.workerPool[this.workerPool.length - 1];
+      worker._taskCosts[taskID] = taskCost;
+      worker._taskLoad += taskCost;
+      return worker;
+    });
+  }
+  _releaseTask(worker, taskID) {
+    worker._taskLoad -= worker._taskCosts[taskID];
+    delete worker._callbacks[taskID];
+    delete worker._taskCosts[taskID];
+  }
+  debug() {
+    console.log("Task load: ", this.workerPool.map((worker) => worker._taskLoad));
+  }
+  dispose() {
+    for (let i = 0; i < this.workerPool.length; ++i) {
+      this.workerPool[i].terminate();
+    }
+    this.workerPool.length = 0;
+    if (this.workerSourceURL !== "") {
+      URL.revokeObjectURL(this.workerSourceURL);
+    }
+    return this;
+  }
+}
+function DRACOWorker() {
+  let decoderConfig;
+  let decoderPending;
+  onmessage = function(e) {
+    const message = e.data;
+    switch (message.type) {
+      case "init":
+        decoderConfig = message.decoderConfig;
+        decoderPending = new Promise(function(resolve) {
+          decoderConfig.onModuleLoaded = function(draco) {
+            resolve({ draco });
+          };
+          DracoDecoderModule(decoderConfig);
+        });
+        break;
+      case "decode":
+        const buffer = message.buffer;
+        const taskConfig = message.taskConfig;
+        decoderPending.then((module) => {
+          const draco = module.draco;
+          const decoder = new draco.Decoder();
+          try {
+            const geometry = decodeGeometry(draco, decoder, new Int8Array(buffer), taskConfig);
+            const buffers = geometry.attributes.map((attr) => attr.array.buffer);
+            if (geometry.index) buffers.push(geometry.index.array.buffer);
+            self.postMessage({ type: "decode", id: message.id, geometry }, buffers);
+          } catch (error) {
+            console.error(error);
+            self.postMessage({ type: "error", id: message.id, error: error.message });
+          } finally {
+            draco.destroy(decoder);
+          }
+        });
+        break;
+    }
+  };
+  function decodeGeometry(draco, decoder, array, taskConfig) {
+    const attributeIDs = taskConfig.attributeIDs;
+    const attributeTypes = taskConfig.attributeTypes;
+    let dracoGeometry;
+    let decodingStatus;
+    const geometryType = decoder.GetEncodedGeometryType(array);
+    if (geometryType === draco.TRIANGULAR_MESH) {
+      dracoGeometry = new draco.Mesh();
+      decodingStatus = decoder.DecodeArrayToMesh(array, array.byteLength, dracoGeometry);
+    } else if (geometryType === draco.POINT_CLOUD) {
+      dracoGeometry = new draco.PointCloud();
+      decodingStatus = decoder.DecodeArrayToPointCloud(array, array.byteLength, dracoGeometry);
+    } else {
+      throw new Error("THREE.DRACOLoader: Unexpected geometry type.");
+    }
+    if (!decodingStatus.ok() || dracoGeometry.ptr === 0) {
+      throw new Error("THREE.DRACOLoader: Decoding failed: " + decodingStatus.error_msg());
+    }
+    const geometry = { index: null, attributes: [] };
+    for (const attributeName in attributeIDs) {
+      const attributeType = self[attributeTypes[attributeName]];
+      let attribute;
+      let attributeID;
+      if (taskConfig.useUniqueIDs) {
+        attributeID = attributeIDs[attributeName];
+        attribute = decoder.GetAttributeByUniqueId(dracoGeometry, attributeID);
+      } else {
+        attributeID = decoder.GetAttributeId(dracoGeometry, draco[attributeIDs[attributeName]]);
+        if (attributeID === -1) continue;
+        attribute = decoder.GetAttribute(dracoGeometry, attributeID);
+      }
+      const attributeResult = decodeAttribute(draco, decoder, dracoGeometry, attributeName, attributeType, attribute);
+      if (attributeName === "color") {
+        attributeResult.vertexColorSpace = taskConfig.vertexColorSpace;
+      }
+      geometry.attributes.push(attributeResult);
+    }
+    if (geometryType === draco.TRIANGULAR_MESH) {
+      geometry.index = decodeIndex(draco, decoder, dracoGeometry);
+    }
+    draco.destroy(dracoGeometry);
+    return geometry;
+  }
+  function decodeIndex(draco, decoder, dracoGeometry) {
+    const numFaces = dracoGeometry.num_faces();
+    const numIndices = numFaces * 3;
+    const byteLength = numIndices * 4;
+    const ptr = draco._malloc(byteLength);
+    decoder.GetTrianglesUInt32Array(dracoGeometry, byteLength, ptr);
+    const index = new Uint32Array(draco.HEAPF32.buffer, ptr, numIndices).slice();
+    draco._free(ptr);
+    return { array: index, itemSize: 1 };
+  }
+  function decodeAttribute(draco, decoder, dracoGeometry, attributeName, attributeType, attribute) {
+    const numComponents = attribute.num_components();
+    const numPoints = dracoGeometry.num_points();
+    const numValues = numPoints * numComponents;
+    const byteLength = numValues * attributeType.BYTES_PER_ELEMENT;
+    const dataType = getDracoDataType(draco, attributeType);
+    const ptr = draco._malloc(byteLength);
+    decoder.GetAttributeDataArrayForAllPoints(dracoGeometry, attribute, dataType, byteLength, ptr);
+    const array = new attributeType(draco.HEAPF32.buffer, ptr, numValues).slice();
+    draco._free(ptr);
+    return {
+      name: attributeName,
+      array,
+      itemSize: numComponents
+    };
+  }
+  function getDracoDataType(draco, attributeType) {
+    switch (attributeType) {
+      case Float32Array:
+        return draco.DT_FLOAT32;
+      case Int8Array:
+        return draco.DT_INT8;
+      case Int16Array:
+        return draco.DT_INT16;
+      case Int32Array:
+        return draco.DT_INT32;
+      case Uint8Array:
+        return draco.DT_UINT8;
+      case Uint16Array:
+        return draco.DT_UINT16;
+      case Uint32Array:
+        return draco.DT_UINT32;
+    }
+  }
+}
+const __vite_import_meta_env__$1 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const DEFAULT_DRACO_DECODER_PATH = "https://www.gstatic.com/draco/versioned/decoders/1.5.6/";
+const LOCAL_DECODER_SUBPATH = "draco/";
+const ABSOLUTE_PROTOCOL_REGEX = /^[a-z]+:\/\//i;
+const PROTOCOL_RELATIVE_REGEX = /^\/\//;
+function ensureTrailingSlash(value) {
+  if (typeof value !== "string" || value.length === 0) {
+    return value;
+  }
+  return value.endsWith("/") ? value : `${value}/`;
+}
+function resolveBaseUrl$1() {
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$1 && true) {
+    return ensureTrailingSlash("/athens-game-starter/");
+  }
+  return "/";
+}
+function resolveProtocol() {
+  if (typeof window !== "undefined" && window.location?.protocol) {
+    return window.location.protocol;
+  }
+  return "https:";
+}
+function normaliseCandidate(candidate, baseUrl2) {
+  if (typeof candidate !== "string") {
+    return null;
+  }
+  const trimmed = candidate.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  if (PROTOCOL_RELATIVE_REGEX.test(trimmed)) {
+    const protocol = resolveProtocol();
+    return ensureTrailingSlash(`${protocol}${trimmed}`);
+  }
+  const safeBase = `https://example.com${baseUrl2}`;
+  try {
+    const resolved = new URL(trimmed, safeBase);
+    if (ABSOLUTE_PROTOCOL_REGEX.test(trimmed)) {
+      return ensureTrailingSlash(resolved.href);
+    }
+    if (resolved.origin !== "https://example.com") {
+      return ensureTrailingSlash(resolved.href);
+    }
+    return ensureTrailingSlash(resolved.pathname);
+  } catch {
+    return ensureTrailingSlash(trimmed);
+  }
+}
+function resolveDracoDecoderPath() {
+  const baseUrl2 = resolveBaseUrl$1();
+  const candidates = [];
+  const meta = typeof import.meta !== "undefined" ? import.meta : null;
+  const env = meta && meta.env ? meta.env : null;
+  if (env && typeof env.VITE_DRACO_DECODER_PATH === "string") {
+    candidates.push(env.VITE_DRACO_DECODER_PATH);
+  }
+  if (typeof window !== "undefined" && typeof window.__DRACO_DECODER_PATH__ === "string") {
+    candidates.push(window.__DRACO_DECODER_PATH__);
+  }
+  candidates.push(LOCAL_DECODER_SUBPATH);
+  candidates.push(DEFAULT_DRACO_DECODER_PATH);
+  for (const candidate of candidates) {
+    const normalised = normaliseCandidate(candidate, baseUrl2);
+    if (normalised) {
+      return normalised;
+    }
+  }
+  return DEFAULT_DRACO_DECODER_PATH;
+}
+let sharedDracoLoader = null;
+let currentDecoderPath = null;
+function createDracoLoader() {
+  if (!sharedDracoLoader) {
+    sharedDracoLoader = new DRACOLoader();
+  }
+  const decoderPath = resolveDracoDecoderPath();
+  if (decoderPath && decoderPath !== currentDecoderPath) {
+    sharedDracoLoader.setDecoderPath(decoderPath);
+    try {
+      sharedDracoLoader.preload();
+    } catch (error) {
+      console.warn("DRACOLoader.preload failed; continuing with lazy decoding", error);
+    }
+    currentDecoderPath = decoderPath;
+  }
+  return sharedDracoLoader;
+}
+const ENABLE_GLB_MODE$2 = true;
+function sanitizeRelativePath$1(value) {
+  if (typeof value !== "string") return "";
+  return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
+}
+class GLTFMeshStandardSGMaterial extends MeshStandardMaterial {
+  constructor(params) {
+    super();
+    this.isGLTFSpecularGlossinessMaterial = true;
+    const specularMapParsFragmentChunk = [
+      "#ifdef USE_SPECULARMAP",
+      "	uniform sampler2D specularMap;",
+      "#endif"
+    ].join("\n");
+    const glossinessMapParsFragmentChunk = [
+      "#ifdef USE_GLOSSINESSMAP",
+      "	uniform sampler2D glossinessMap;",
+      "#endif"
+    ].join("\n");
+    const specularMapFragmentChunk = [
+      "vec3 specularFactor = specular;",
+      "#ifdef USE_SPECULARMAP",
+      "	vec4 texelSpecular = texture2D( specularMap, vUv );",
+      "	texelSpecular = sRGBToLinear( texelSpecular );",
+      "	// reads channel RGB, compatible with a glTF Specular-Glossiness (RGBA) texture",
+      "	specularFactor *= texelSpecular.rgb;",
+      "#endif"
+    ].join("\n");
+    const glossinessMapFragmentChunk = [
+      "float glossinessFactor = glossiness;",
+      "#ifdef USE_GLOSSINESSMAP",
+      "	vec4 texelGlossiness = texture2D( glossinessMap, vUv );",
+      "	// reads channel A, compatible with a glTF Specular-Glossiness (RGBA) texture",
+      "	glossinessFactor *= texelGlossiness.a;",
+      "#endif"
+    ].join("\n");
+    const lightPhysicalFragmentChunk = [
+      "PhysicalMaterial material;",
+      "material.diffuseColor = diffuseColor.rgb * ( 1. - max( specularFactor.r, max( specularFactor.g, specularFactor.b ) ) );",
+      "vec3 dxy = max( abs( dFdx( geometryNormal ) ), abs( dFdy( geometryNormal ) ) );",
+      "float geometryRoughness = max( max( dxy.x, dxy.y ), dxy.z );",
+      "material.specularRoughness = max( 1.0 - glossinessFactor, 0.0525 ); // 0.0525 corresponds to the base mip of a 256 cubemap.",
+      "material.specularRoughness += geometryRoughness;",
+      "material.specularRoughness = min( material.specularRoughness, 1.0 );",
+      "material.specularColor = specularFactor;"
+    ].join("\n");
+    const uniforms = {
+      specular: { value: new Color().setHex(16777215) },
+      glossiness: { value: 1 },
+      specularMap: { value: null },
+      glossinessMap: { value: null }
+    };
+    this._extraUniforms = uniforms;
+    this.onBeforeCompile = (shader) => {
+      for (const uniformName of Object.keys(uniforms)) {
+        shader.uniforms[uniformName] = uniforms[uniformName];
+      }
+      shader.fragmentShader = shader.fragmentShader.replace("uniform float roughness;", "uniform vec3 specular;").replace("uniform float metalness;", "uniform float glossiness;").replace(
+        "#include <roughnessmap_pars_fragment>",
+        specularMapParsFragmentChunk
+      ).replace(
+        "#include <metalnessmap_pars_fragment>",
+        glossinessMapParsFragmentChunk
+      ).replace("#include <roughnessmap_fragment>", specularMapFragmentChunk).replace("#include <metalnessmap_fragment>", glossinessMapFragmentChunk).replace(
+        "#include <lights_physical_fragment>",
+        lightPhysicalFragmentChunk
+      );
+    };
+    Object.defineProperties(this, {
+      specular: {
+        get() {
+          return uniforms.specular.value;
+        },
+        set(value) {
+          uniforms.specular.value = value;
+        }
+      },
+      specularMap: {
+        get() {
+          return uniforms.specularMap.value;
+        },
+        set(value) {
+          uniforms.specularMap.value = value;
+          if (value) {
+            this.defines.USE_SPECULARMAP = "";
+          } else {
+            delete this.defines.USE_SPECULARMAP;
+          }
+        }
+      },
+      glossiness: {
+        get() {
+          return uniforms.glossiness.value;
+        },
+        set(value) {
+          uniforms.glossiness.value = value;
+        }
+      },
+      glossinessMap: {
+        get() {
+          return uniforms.glossinessMap.value;
+        },
+        set(value) {
+          uniforms.glossinessMap.value = value;
+          if (value) {
+            this.defines.USE_GLOSSINESSMAP = "";
+            this.defines.USE_UV = "";
+          } else {
+            delete this.defines.USE_GLOSSINESSMAP;
+            delete this.defines.USE_UV;
+          }
+        }
+      }
+    });
+    delete this.metalness;
+    delete this.roughness;
+    delete this.metalnessMap;
+    delete this.roughnessMap;
+    this.setValues(params);
+  }
+  copy(source) {
+    super.copy(source);
+    this.specularMap = source.specularMap;
+    this.specular.copy(source.specular);
+    this.glossinessMap = source.glossinessMap;
+    this.glossiness = source.glossiness;
+    delete this.metalness;
+    delete this.roughness;
+    delete this.metalnessMap;
+    delete this.roughnessMap;
+    return this;
+  }
+}
+class GLTFMaterialsPbrSpecularGlossinessExtension {
+  constructor(parser) {
+    this.parser = parser;
+    this.name = "KHR_materials_pbrSpecularGlossiness";
+  }
+  getMaterialType() {
+    return GLTFMeshStandardSGMaterial;
+  }
+  extendParams(materialParams, materialDef, parser) {
+    const pbrSpecularGlossiness = materialDef.extensions[this.name];
+    materialParams.color = new Color(1, 1, 1);
+    materialParams.opacity = 1;
+    const pending = [];
+    if (Array.isArray(pbrSpecularGlossiness.diffuseFactor)) {
+      const array = pbrSpecularGlossiness.diffuseFactor;
+      materialParams.color.fromArray(array);
+      materialParams.opacity = array[3];
+    }
+    if (pbrSpecularGlossiness.diffuseTexture !== void 0) {
+      pending.push(
+        parser.assignTexture(
+          materialParams,
+          "map",
+          pbrSpecularGlossiness.diffuseTexture,
+          SRGBColorSpace
+        )
+      );
+    }
+    materialParams.emissive = new Color(0, 0, 0);
+    materialParams.glossiness = pbrSpecularGlossiness.glossinessFactor !== void 0 ? pbrSpecularGlossiness.glossinessFactor : 1;
+    materialParams.specular = new Color(1, 1, 1);
+    if (Array.isArray(pbrSpecularGlossiness.specularFactor)) {
+      materialParams.specular.fromArray(pbrSpecularGlossiness.specularFactor);
+    }
+    if (pbrSpecularGlossiness.specularGlossinessTexture !== void 0) {
+      const specGlossMapDef = pbrSpecularGlossiness.specularGlossinessTexture;
+      pending.push(
+        parser.assignTexture(materialParams, "glossinessMap", specGlossMapDef)
+      );
+      pending.push(
+        parser.assignTexture(
+          materialParams,
+          "specularMap",
+          specGlossMapDef,
+          SRGBColorSpace
+        )
+      );
+    }
+    return Promise.all(pending);
+  }
+  createMaterial(materialParams) {
+    const material = new GLTFMeshStandardSGMaterial(materialParams);
+    material.fog = true;
+    material.color = materialParams.color;
+    material.map = materialParams.map === void 0 ? null : materialParams.map;
+    material.lightMap = null;
+    material.lightMapIntensity = 1;
+    material.aoMap = materialParams.aoMap === void 0 ? null : materialParams.aoMap;
+    material.aoMapIntensity = 1;
+    material.emissive = materialParams.emissive;
+    material.emissiveIntensity = 1;
+    material.emissiveMap = materialParams.emissiveMap === void 0 ? null : materialParams.emissiveMap;
+    material.bumpMap = materialParams.bumpMap === void 0 ? null : materialParams.bumpMap;
+    material.bumpScale = 1;
+    material.normalMap = materialParams.normalMap === void 0 ? null : materialParams.normalMap;
+    material.normalMapType = TangentSpaceNormalMap;
+    if (materialParams.normalScale) {
+      material.normalScale = materialParams.normalScale;
+    }
+    material.displacementMap = null;
+    material.displacementScale = 1;
+    material.displacementBias = 0;
+    material.specularMap = materialParams.specularMap === void 0 ? null : materialParams.specularMap;
+    material.specular = materialParams.specular;
+    material.glossinessMap = materialParams.glossinessMap === void 0 ? null : materialParams.glossinessMap;
+    material.glossiness = materialParams.glossiness;
+    material.alphaMap = null;
+    material.envMap = materialParams.envMap === void 0 ? null : materialParams.envMap;
+    material.envMapIntensity = 1;
+    material.refractionRatio = 0.98;
+    return material;
+  }
+}
+async function createGLTFLoader(renderer2) {
+  const { GLTFLoader } = await __vitePreload(async () => {
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DO2x9UbQ.js");
+    return { GLTFLoader: GLTFLoader2 };
+  }, true ? [] : void 0);
+  const loader = new GLTFLoader();
+  loader.register((parser) => new GLTFMaterialsPbrSpecularGlossinessExtension(parser));
+  if (renderer2) {
+    try {
+      const ktx2 = await createKTX2Loader(renderer2);
+      if (ktx2) {
+        loader.setKTX2Loader(ktx2);
+      }
+    } catch {
+    }
+  }
+  try {
+    const draco = createDracoLoader();
+    if (draco) {
+      loader.setDRACOLoader(draco);
+    }
+  } catch {
+  }
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  return loader;
+}
+async function headOk$1(url) {
+  if (!url) return false;
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    if (!res.ok) {
+      if (res.status === 405 || res.status === 501) {
+        return await probeWithGet(url);
+      }
+      return false;
+    }
+    const contentType = res.headers?.get?.("content-type") || "";
+    return !contentType.toLowerCase().includes("text/html");
+  } catch {
+    return await probeWithGet(url);
+  }
+}
+async function probeWithGet(url) {
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { Range: "bytes=0-0" }
+    });
+    if (!res.ok) return false;
+    const contentType = res.headers?.get?.("content-type") || "";
+    return !contentType.toLowerCase().includes("text/html");
+  } catch {
+    return false;
+  }
+}
+const LANDMARK_GLB_PATH = /(?:^|\/)models\/landmarks\/.+\.glb(?:$|[?#])/i;
+async function loadGLBWithFallbacks(loader, urls, options = {}) {
+  if (!loader || typeof loader.loadAsync !== "function") {
+    return null;
+  }
+  if (!Array.isArray(urls) || urls.length === 0) {
+    return null;
+  }
+  const {
+    targetHeight = null,
+    renderer: renderer2 = null,
+    onLoaded = null,
+    forceProcedural = false
+  } = options;
+  if (forceProcedural) {
+    return null;
+  }
+  if (!ENABLE_GLB_MODE$2 && !options.allowSingleModel) {
+    return null;
+  }
+  const baseUrl2 = resolveBaseUrl$5();
+  const seen2 = /* @__PURE__ */ new Set();
+  try {
+    for (const candidate of urls) {
+      const raw = typeof candidate === "string" ? candidate.trim() : "";
+      if (!raw) {
+        continue;
+      }
+      const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
+      const relative = sanitizeRelativePath$1(raw);
+      if (!relative && !isAbsolute) {
+        continue;
+      }
+      const candidatesToTry = Array.from(
+        new Set(
+          isAbsolute ? [raw] : [joinPath(baseUrl2, relative), relative]
+        )
+      );
+      for (const url of candidatesToTry) {
+        if (!url) continue;
+        if (seen2.has(url)) {
+          continue;
+        }
+        seen2.add(url);
+        if (!LANDMARK_GLB_PATH.test(url) && !await headOk$1(url)) {
+          continue;
+        }
+        try {
+          const gltf = await loader.loadAsync(url);
+          const { scene: scene2, scenes } = gltf || {};
+          const bufferScene = scene2 || (Array.isArray(scenes) ? scenes[0] : null);
+          const root = bufferScene || null;
+          if (!root) throw new Error(`No scene in GLB: ${url}`);
+          if (targetHeight && targetHeight > 0) {
+            root.updateMatrixWorld(true);
+            const box = new Box3().setFromObject(root);
+            const size = new Vector3();
+            box.getSize(size);
+            const currentH = size.y || 1;
+            const scaleFactor = currentH !== 0 ? targetHeight / currentH : 1;
+            if (Number.isFinite(scaleFactor) && scaleFactor > 0) {
+              root.scale.multiplyScalar(scaleFactor);
+            }
+          }
+          applyTextureBudgetToObject(root, { renderer: renderer2 });
+          if (typeof onLoaded === "function") {
+            try {
+              onLoaded({ url, gltf, root });
+            } catch {
+            }
+          }
+          return { url, gltf, root };
+        } catch {
+        }
+      }
+    }
+  } finally {
+    console.warn = originalWarn;
+    console.error = originalError;
+  }
+  return null;
+}
 const ENABLE_GLB_MODE$1 = true;
 class Character extends Object3D {
   constructor() {
@@ -63034,8 +61518,8 @@ class Character extends Object3D {
   async load(url, renderer2, { targetHeight = 1.8 } = {}) {
     if (!ENABLE_GLB_MODE$1) return null;
     const urls = Array.isArray(url) ? url : [url];
-    const loader2 = await createGLTFLoader(renderer2);
-    const loaded2 = await loadGLBWithFallbacks(loader2, urls, {
+    const loader = await createGLTFLoader(renderer2);
+    const loaded2 = await loadGLBWithFallbacks(loader, urls, {
       renderer: renderer2,
       targetHeight
     });
@@ -63832,8 +62316,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T13:11:49.880Z" : "",
-      sha: true ? "e3695d7aeac7c2930a532044e09dcc104af99bda" : ""
+      time: true ? "2025-12-29T22:04:49.892Z" : "",
+      sha: true ? "732ce3188173f65845a3be9668c963d15979df01" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -66407,7 +64891,7 @@ function createSceneContext({
       }
     }
   };
-  const disposeObject2 = (object) => {
+  const disposeObject = (object) => {
     if (!object) return;
     object.traverse((child) => {
       if (child.isMesh) {
@@ -66422,7 +64906,7 @@ function createSceneContext({
     if (!group) return;
     const children = [...group.children];
     for (const child of children) {
-      disposeObject2(child);
+      disposeObject(child);
       group.remove(child);
     }
   };
@@ -66870,13 +65354,6 @@ function initPropCulling(scene2, camera2, options = {}) {
   const cameraPos = camera2.getWorldPosition(new Vector3());
   markImportantProps(scene2, (obj) => {
     if (obj.name && obj.name.toLowerCase().includes("important")) return true;
-    let parent = obj.parent;
-    while (parent) {
-      if (parent.name && (parent.name.includes("Landmark") || parent.name.includes("Temple") || parent.name.includes("Monument"))) {
-        return true;
-      }
-      parent = parent.parent;
-    }
     return false;
   });
   const result = cullOverlappingProps(scene2, {
@@ -67024,29 +65501,6 @@ function initBuildingCulling(scene2, camera2, options = {}) {
   console.log(`[BuildingCulling] Initial culling: ${result.culled} culled, ${result.visible} visible`);
   return result;
 }
-function protectLandmarks(scene2) {
-  const landmarks = [
-    "Parthenon",
-    "Temple",
-    "Monument",
-    "Athena",
-    "Zeus",
-    "Theater",
-    "Acropolis"
-  ];
-  let protectedCount = 0;
-  scene2.traverse((obj) => {
-    if (obj.isMesh) {
-      const name = obj.name || "";
-      if (landmarks.some((landmark) => name.includes(landmark))) {
-        obj.userData.noCull = true;
-        protectedCount++;
-      }
-    }
-  });
-  console.log(`[BuildingCulling] Protected ${protectedCount} landmark meshes from culling`);
-  return protectedCount;
-}
 const ROCK_GEOMETRY = new DodecahedronGeometry(0.25, 0);
 const GRASS_GEOMETRY = new ConeGeometry(0.15, 0.6, 6);
 const BUSH_GEOMETRY = new IcosahedronGeometry(0.35, 0);
@@ -67168,8 +65622,8 @@ function scatterGroundProps(scene2, terrain, options = {}) {
 }
 async function loadEquirectangularSkybox(renderer2, scene2, url) {
   if (!scene2 || !url) return null;
-  const loader2 = new TextureLoader();
-  const texture = await loader2.loadAsync(url);
+  const loader = new TextureLoader();
+  const texture = await loader.loadAsync(url);
   texture.mapping = EquirectangularReflectionMapping;
   texture.colorSpace = SRGBColorSpace;
   let pmremTarget = null;
@@ -72188,8 +70642,8 @@ async function loadHdriEnvironment({ renderer: renderer2, scene: scene2, path, o
   const pmremGenerator = new PMREMGenerator(renderer2);
   pmremGenerator.compileEquirectangularShader();
   return new Promise((resolve) => {
-    const loader2 = new EXRLoader();
-    loader2.setCrossOrigin("anonymous").setDataType(FloatType).load(
+    const loader = new EXRLoader();
+    loader.setCrossOrigin("anonymous").setDataType(FloatType).load(
       path,
       (exrTexture) => {
         if (!exrTexture || !exrTexture.image) {
@@ -73728,9 +72182,6 @@ class Application {
     renderer2.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer2.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer2.domElement);
-    if (ENABLE_GLB_MODE) {
-      initializeAssetTranscoders(renderer2);
-    }
     attachCrosshair();
     advanceLoadingStage("Listening for the bustle of ancient Athens...");
     let devHud2 = this.devHud = null;
@@ -74045,7 +72496,6 @@ class Application {
     if (grassEnabled) {
       grassRoot = mount$1(scene2);
     }
-    let landmarkLoadPromise = Promise.resolve();
     const { city: harborCity, roadCurves } = await createCity(
       worldRoot,
       this.terrain,
@@ -74204,7 +72654,6 @@ class Application {
     };
     loop.onUpdate(onFrame);
     loop.start();
-    await landmarkLoadPromise;
     advanceLoadingStage("Opening the gates to ancient Athens...");
     hideLoadingScreen();
     try {
@@ -74212,7 +72661,6 @@ class Application {
     } catch {
     }
     try {
-      protectLandmarks(scene2);
       initBuildingCulling(scene2, camera2, {
         cullDistance: 400,
         enableHorizon: true,
@@ -74528,107 +72976,107 @@ const bootApplication = bootApplication$1;
 void bootApplication();
 void _bootOptions;
 export {
-  Matrix4 as $,
-  RGBA_S3TC_DXT3_Format as A,
-  RGB_S3TC_DXT1_Format as B,
-  ColorManagement as C,
-  RGBA_ASTC_6x6_Format as D,
-  UnsignedInt101111Type as E,
+  Group as $,
+  DoubleSide as A,
+  BufferAttribute as B,
+  Color as C,
+  DirectionalLight as D,
+  PropertyBinding as E,
   FileLoader as F,
-  UnsignedInt5999Type as G,
-  HalfFloatType as H,
-  DataTexture as I,
-  Data3DTexture as J,
-  NearestFilter as K,
-  LinearTransfer as L,
-  Matrix3 as M,
-  NearestMipmapNearestFilter as N,
-  LinearSRGBColorSpace as O,
-  NoColorSpace as P,
-  LoaderUtils as Q,
-  RGBA_S3TC_DXT1_Format as R,
-  SRGBTransfer as S,
-  Color as T,
-  UnsignedByteType as U,
-  SpotLight as V,
-  PointLight as W,
-  DirectionalLight as X,
-  MeshBasicMaterial as Y,
-  MeshPhysicalMaterial as Z,
-  Vector2 as _,
-  SRGBColorSpace as a,
-  Vector3 as a0,
-  Quaternion as a1,
-  InstancedMesh as a2,
-  InstancedBufferAttribute as a3,
-  Object3D as a4,
-  Interpolant as a5,
-  NearestMipmapLinearFilter as a6,
-  LinearMipmapNearestFilter as a7,
-  RepeatWrapping as a8,
-  MirroredRepeatWrapping as a9,
-  Group as aA,
-  PerspectiveCamera as aB,
-  MathUtils as aC,
-  OrthographicCamera as aD,
-  Skeleton as aE,
-  AnimationClip as aF,
-  Bone as aG,
-  VectorKeyframeTrack as aH,
-  NumberKeyframeTrack as aI,
-  QuaternionKeyframeTrack as aJ,
-  Box3 as aK,
-  Sphere as aL,
-  ClampToEdgeWrapping as aa,
-  InterpolateDiscrete as ab,
-  InterpolateLinear as ac,
-  MeshStandardMaterial as ad,
-  FrontSide as ae,
-  TextureLoader as af,
-  ImageBitmapLoader as ag,
-  BufferAttribute as ah,
-  InterleavedBuffer as ai,
-  InterleavedBufferAttribute as aj,
-  Texture as ak,
-  PointsMaterial as al,
-  Material as am,
-  LineBasicMaterial as an,
-  DoubleSide as ao,
-  PropertyBinding as ap,
-  BufferGeometry as aq,
-  SkinnedMesh as ar,
-  Mesh as as,
-  toTrianglesDrawMode as at,
-  TriangleStripDrawMode as au,
-  TriangleFanDrawMode as av,
-  LineSegments as aw,
-  Line as ax,
-  LineLoop as ay,
-  Points as az,
-  Loader as b,
-  CompressedCubeTexture as c,
-  CompressedArrayTexture as d,
-  CompressedTexture as e,
-  LinearFilter as f,
-  LinearMipmapLinearFilter as g,
-  RGB_PVRTC_4BPPV1_Format as h,
-  RGB_ETC2_Format as i,
-  RGB_ETC1_Format as j,
-  RGBA_S3TC_DXT5_Format as k,
-  RGBA_PVRTC_4BPPV1_Format as l,
-  RGBA_ETC2_EAC_Format as m,
-  RGBA_BPTC_Format as n,
-  RGB_BPTC_UNSIGNED_Format as o,
-  RGBA_ASTC_4x4_Format as p,
-  RGBAFormat as q,
-  FloatType as r,
-  RGBFormat as s,
-  RGFormat as t,
-  RedFormat as u,
-  RGBA_PVRTC_2BPPV1_Format as v,
-  RED_GREEN_RGTC2_Format as w,
-  SIGNED_RED_GREEN_RGTC2_Format as x,
-  RED_RGTC1_Format as y,
-  SIGNED_RED_RGTC1_Format as z
+  BufferGeometry as G,
+  SkinnedMesh as H,
+  InstancedMesh as I,
+  Mesh as J,
+  toTrianglesDrawMode as K,
+  Loader as L,
+  MeshBasicMaterial as M,
+  NearestMipmapLinearFilter as N,
+  Object3D as O,
+  PointLight as P,
+  Quaternion as Q,
+  RepeatWrapping as R,
+  SpotLight as S,
+  TextureLoader as T,
+  TriangleStripDrawMode as U,
+  Vector2 as V,
+  TriangleFanDrawMode as W,
+  LineSegments as X,
+  Line as Y,
+  LineLoop as Z,
+  Points as _,
+  LoaderUtils as a,
+  PerspectiveCamera as a0,
+  MathUtils as a1,
+  OrthographicCamera as a2,
+  Skeleton as a3,
+  AnimationClip as a4,
+  Bone as a5,
+  VectorKeyframeTrack as a6,
+  NumberKeyframeTrack as a7,
+  QuaternionKeyframeTrack as a8,
+  Box3 as a9,
+  RED_GREEN_RGTC2_Format as aA,
+  SIGNED_RED_GREEN_RGTC2_Format as aB,
+  RED_RGTC1_Format as aC,
+  SIGNED_RED_RGTC1_Format as aD,
+  RGBA_S3TC_DXT3_Format as aE,
+  RGB_S3TC_DXT1_Format as aF,
+  RGBA_ASTC_6x6_Format as aG,
+  UnsignedInt101111Type as aH,
+  UnsignedInt5999Type as aI,
+  DataTexture as aJ,
+  Data3DTexture as aK,
+  NoColorSpace as aL,
+  Sphere as aa,
+  ColorManagement as ab,
+  Matrix3 as ac,
+  SRGBTransfer as ad,
+  LinearTransfer as ae,
+  CompressedCubeTexture as af,
+  CompressedArrayTexture as ag,
+  CompressedTexture as ah,
+  RGBA_S3TC_DXT1_Format as ai,
+  RGB_PVRTC_4BPPV1_Format as aj,
+  RGB_ETC2_Format as ak,
+  RGB_ETC1_Format as al,
+  RGBA_S3TC_DXT5_Format as am,
+  RGBA_PVRTC_4BPPV1_Format as an,
+  RGBA_ETC2_EAC_Format as ao,
+  RGBA_BPTC_Format as ap,
+  RGB_BPTC_UNSIGNED_Format as aq,
+  RGBA_ASTC_4x4_Format as ar,
+  RGBAFormat as as,
+  FloatType as at,
+  HalfFloatType as au,
+  UnsignedByteType as av,
+  RGBFormat as aw,
+  RGFormat as ax,
+  RedFormat as ay,
+  RGBA_PVRTC_2BPPV1_Format as az,
+  LinearSRGBColorSpace as b,
+  SRGBColorSpace as c,
+  MeshPhysicalMaterial as d,
+  Matrix4 as e,
+  Vector3 as f,
+  InstancedBufferAttribute as g,
+  Interpolant as h,
+  LinearMipmapLinearFilter as i,
+  LinearMipmapNearestFilter as j,
+  NearestMipmapNearestFilter as k,
+  LinearFilter as l,
+  NearestFilter as m,
+  MirroredRepeatWrapping as n,
+  ClampToEdgeWrapping as o,
+  InterpolateDiscrete as p,
+  InterpolateLinear as q,
+  MeshStandardMaterial as r,
+  FrontSide as s,
+  ImageBitmapLoader as t,
+  InterleavedBuffer as u,
+  InterleavedBufferAttribute as v,
+  Texture as w,
+  PointsMaterial as x,
+  Material as y,
+  LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BQoIJl3-.js.map
+//# sourceMappingURL=index-jHrRVwNZ.js.map
