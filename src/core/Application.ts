@@ -883,9 +883,7 @@ export class Application {
         });
       } catch {}
 
-      try {
-        initCityDebugMode(scene, terrain);
-      } catch {}
+      // Debug mode is intentionally manual-only; call initCityDebugMode(scene, terrain) when needed.
 
       const getPosition = () => {
         try {
