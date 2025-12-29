@@ -50273,7 +50273,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BIdReJT1.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DSC6vPvn.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50973,7 +50973,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-AsIi2iAV.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BZRbxoXJ.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51772,7 +51772,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BIdReJT1.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DSC6vPvn.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63946,8 +63946,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T12:42:56.769Z" : "",
-      sha: true ? "5deae28a40d93cf0b75a2e9211f2292b6f12e230" : ""
+      time: true ? "2025-12-29T12:45:31.198Z" : "",
+      sha: true ? "e3886eaca2ee949bef90ea4caa22364125686f64" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -67279,363 +67279,6 @@ function scatterGroundProps(scene2, terrain, options = {}) {
   }
   applyForegroundFogPolicy(group);
   return group;
-}
-function analyzeWalkability(scene2) {
-  const civicDistrict = scene2.getObjectByName("CivicDistrict");
-  if (!civicDistrict || !civicDistrict.userData.plan) {
-    console.warn("[Debug] CivicDistrict or plan not found");
-    return null;
-  }
-  const { grid, pathTiles, reachability } = civicDistrict.userData.plan;
-  const stats = {
-    totalGridCells: grid?.length || 0,
-    totalPathTiles: pathTiles?.length || 0,
-    pathTypes: {},
-    reachability: reachability || {},
-    footpathCount: 0,
-    connectorCount: 0,
-    roadCount: 0
-  };
-  if (pathTiles) {
-    for (const path of pathTiles) {
-      stats.pathTypes[path.type] = (stats.pathTypes[path.type] || 0) + 1;
-      if (path.type === "footpath") stats.footpathCount++;
-      else if (path.type === "connector") stats.connectorCount++;
-      else if (path.type === "road") stats.roadCount++;
-    }
-  }
-  return stats;
-}
-function analyzeBuildingsByDistrict(scene2) {
-  const stats = {
-    districts: {},
-    total: 0,
-    byType: {},
-    slopeData: []
-  };
-  scene2.traverse((obj) => {
-    if (obj.userData && obj.userData.isBuilding) {
-      stats.total++;
-      const district = obj.userData.district || "unknown";
-      if (!stats.districts[district]) {
-        stats.districts[district] = {
-          count: 0,
-          types: {},
-          avgHeight: 0,
-          heights: [],
-          slopes: []
-        };
-      }
-      stats.districts[district].count++;
-      stats.districts[district].heights.push(obj.position.y);
-      if (obj.userData.slope !== void 0) {
-        stats.districts[district].slopes.push(obj.userData.slope);
-        stats.slopeData.push({
-          district,
-          slope: obj.userData.slope,
-          elevation: obj.position.y
-        });
-      }
-      const buildingType = obj.userData.buildingType || "generic";
-      stats.districts[district].types[buildingType] = (stats.districts[district].types[buildingType] || 0) + 1;
-      stats.byType[buildingType] = (stats.byType[buildingType] || 0) + 1;
-    }
-  });
-  Object.keys(stats.districts).forEach((district) => {
-    const heights = stats.districts[district].heights;
-    if (heights.length > 0) {
-      stats.districts[district].avgHeight = heights.reduce((a, b) => a + b, 0) / heights.length;
-    }
-    const slopes = stats.districts[district].slopes;
-    if (slopes.length > 0) {
-      stats.districts[district].avgSlope = slopes.reduce((a, b) => a + b, 0) / slopes.length;
-    }
-  });
-  return stats;
-}
-function analyzeTerrainHeights(terrain, samplePoints = 100) {
-  if (!terrain || !terrain.userData.getHeightAt) {
-    console.warn("[Debug] Terrain sampler not available");
-    return null;
-  }
-  const sampler = terrain.userData.getHeightAt;
-  const size = terrain.geometry.userData.size || 2400;
-  const halfSize = size / 2;
-  const heights = [];
-  const step = size / samplePoints;
-  for (let x = -halfSize; x <= halfSize; x += step) {
-    for (let z = -halfSize; z <= halfSize; z += step) {
-      const h = sampler(x, z);
-      if (h !== null && Number.isFinite(h)) {
-        heights.push(h);
-      }
-    }
-  }
-  if (heights.length === 0) {
-    return null;
-  }
-  heights.sort((a, b) => a - b);
-  const min = heights[0];
-  const max2 = heights[heights.length - 1];
-  const mean = heights.reduce((a, b) => a + b, 0) / heights.length;
-  const median = heights[Math.floor(heights.length / 2)];
-  const variance = heights.reduce((sum, h) => sum + Math.pow(h - mean, 2), 0) / heights.length;
-  const stdDev = Math.sqrt(variance);
-  const underwater = heights.filter((h) => h < 0).length;
-  const shore = heights.filter((h) => h >= 0 && h < 3).length;
-  const land = heights.filter((h) => h >= 3).length;
-  return {
-    min,
-    max: max2,
-    mean,
-    median,
-    variance,
-    stdDev,
-    range: max2 - min,
-    sampleCount: heights.length,
-    distribution: {
-      underwater,
-      shore,
-      land
-    }
-  };
-}
-function analyzeLandmarkSpacing(scene2) {
-  const landmarks = [];
-  const violations = [];
-  scene2.traverse((obj) => {
-    if (obj.userData && obj.userData.category === "landmark") {
-      landmarks.push({
-        name: obj.name || "unnamed",
-        position: obj.position.clone(),
-        type: obj.userData.landmarkType || "unknown"
-      });
-    }
-  });
-  for (let i = 0; i < landmarks.length; i++) {
-    for (let j = i + 1; j < landmarks.length; j++) {
-      const lm1 = landmarks[i];
-      const lm2 = landmarks[j];
-      const distance = lm1.position.distanceTo(lm2.position);
-      const minSpacing = SPACING_RULES.LANDMARK_MIN_SPACING;
-      if (distance < minSpacing) {
-        violations.push({
-          landmark1: lm1.name,
-          landmark2: lm2.name,
-          distance,
-          minRequired: minSpacing,
-          deficit: minSpacing - distance
-        });
-      }
-    }
-  }
-  return {
-    totalLandmarks: landmarks.length,
-    landmarks,
-    violations,
-    spacingRule: SPACING_RULES.LANDMARK_MIN_SPACING
-  };
-}
-function detectBuildingOverlaps(scene2, threshold = 2) {
-  const buildings = [];
-  scene2.traverse((obj) => {
-    if (obj.userData && obj.userData.isBuilding) {
-      buildings.push({
-        object: obj,
-        pos: obj.getWorldPosition(new Vector3()),
-        district: obj.userData.district || "unknown"
-      });
-    }
-  });
-  const overlaps = [];
-  for (let i = 0; i < buildings.length; i++) {
-    for (let j = i + 1; j < buildings.length; j++) {
-      const distance = buildings[i].pos.distanceTo(buildings[j].pos);
-      if (distance < threshold) {
-        overlaps.push({
-          building1: buildings[i].object.name || "unnamed",
-          building2: buildings[j].object.name || "unnamed",
-          distance,
-          district1: buildings[i].district,
-          district2: buildings[j].district
-        });
-      }
-    }
-  }
-  return overlaps;
-}
-function detectFloatingBuildings(scene2, seaLevel = 0) {
-  const floating = [];
-  scene2.traverse((obj) => {
-    if (obj.userData && obj.userData.isBuilding) {
-      const worldPos = obj.getWorldPosition(new Vector3());
-      if (worldPos.y < seaLevel + 0.5) {
-        floating.push({
-          name: obj.name || "unnamed",
-          position: worldPos.clone(),
-          height: worldPos.y,
-          district: obj.userData.district || "unknown"
-        });
-      }
-    }
-  });
-  return floating;
-}
-function printCityDebugReport(scene2, terrain, options = {}) {
-  console.log("\n=== CITY LAYOUT DEBUG REPORT ===\n");
-  console.log("📊 BUILDING ANALYSIS:");
-  const buildingStats = analyzeBuildingsByDistrict(scene2);
-  console.log(`  Total Buildings: ${buildingStats.total}`);
-  console.log("\n  By District:");
-  Object.entries(buildingStats.districts).sort((a, b) => b[1].count - a[1].count).forEach(([district, data]) => {
-    console.log(`    ${district}:`);
-    console.log(`      Count: ${data.count}`);
-    console.log(`      Avg Height: ${data.avgHeight.toFixed(2)}m`);
-    if (data.avgSlope !== void 0) {
-      console.log(`      Avg Slope: ${data.avgSlope.toFixed(3)}`);
-    }
-    console.log(`      Types:`, data.types);
-  });
-  console.log("\n  By Type:");
-  Object.entries(buildingStats.byType).sort((a, b) => b[1] - a[1]).forEach(([type, count]) => {
-    console.log(`    ${type}: ${count}`);
-  });
-  if (terrain) {
-    console.log("\n🗺️  TERRAIN ANALYSIS:");
-    const terrainStats = analyzeTerrainHeights(terrain, options.samplePoints || 100);
-    if (terrainStats) {
-      console.log(`  Height Range: ${terrainStats.min.toFixed(2)}m to ${terrainStats.max.toFixed(2)}m`);
-      console.log(`  Mean: ${terrainStats.mean.toFixed(2)}m`);
-      console.log(`  Median: ${terrainStats.median.toFixed(2)}m`);
-      console.log(`  Std Dev: ${terrainStats.stdDev.toFixed(2)}m`);
-      console.log(`  Variance: ${terrainStats.variance.toFixed(2)}`);
-      console.log("\n  Distribution:");
-      console.log(`    Underwater (< 0m): ${terrainStats.distribution.underwater} samples`);
-      console.log(`    Shore (0-3m): ${terrainStats.distribution.shore} samples`);
-      console.log(`    Land (> 3m): ${terrainStats.distribution.land} samples`);
-    }
-  }
-  console.log("\n🚶 WALKABILITY ANALYSIS:");
-  const walkStats = analyzeWalkability(scene2);
-  if (walkStats) {
-    console.log(`  Total Grid Cells: ${walkStats.totalGridCells}`);
-    console.log(`  Total Path Tiles: ${walkStats.totalPathTiles}`);
-    console.log(`  Path Coverage: ${(walkStats.totalPathTiles / walkStats.totalGridCells * 100).toFixed(1)}%`);
-    console.log("\n  Path Types:");
-    console.log(`    Roads: ${walkStats.roadCount}`);
-    console.log(`    Footpaths: ${walkStats.footpathCount} (${WALKABILITY_CONFIG.PATH_SPACING}-tile spacing)`);
-    console.log(`    Connectors: ${walkStats.connectorCount} (to key buildings)`);
-    if (walkStats.reachability) {
-      console.log("\n  Reachability (max ${WALKABILITY_CONFIG.MAX_REACHABILITY_DISTANCE} tiles):");
-      if (walkStats.reachability.allReachable) {
-        console.log(`    ✅ All ${walkStats.reachability.totalLocations} key locations reachable`);
-      } else {
-        console.log(`    ⚠️  ${walkStats.reachability.unreachable.length} locations unreachable`);
-      }
-      console.log("\n  Distances to Key Buildings:");
-      Object.entries(walkStats.reachability.distances).forEach(([name, dist]) => {
-        const status = dist === Infinity ? "❌" : dist <= WALKABILITY_CONFIG.MAX_REACHABILITY_DISTANCE ? "✅" : "⚠️";
-        const distStr = dist === Infinity ? "unreachable" : `${dist} tiles`;
-        console.log(`    ${status} ${name}: ${distStr}`);
-      });
-    }
-  } else {
-    console.log("  ⚠️  Walkability data not available");
-  }
-  console.log("\n⚠️  COLLISION DETECTION:");
-  const overlaps = detectBuildingOverlaps(scene2, options.overlapThreshold || 2);
-  if (overlaps.length > 0) {
-    console.log(`  Found ${overlaps.length} potential overlaps:`);
-    overlaps.slice(0, 10).forEach((overlap) => {
-      console.log(
-        `    ${overlap.building1} ↔ ${overlap.building2}: ${overlap.distance.toFixed(2)}m apart`
-      );
-    });
-    if (overlaps.length > 10) {
-      console.log(`    ... and ${overlaps.length - 10} more`);
-    }
-  } else {
-    console.log("  ✅ No building overlaps detected");
-  }
-  console.log("\n🏛️  LANDMARK SPACING:");
-  const landmarkStats = analyzeLandmarkSpacing(scene2);
-  console.log(`  Total Landmarks: ${landmarkStats.totalLandmarks}`);
-  console.log(`  Required Spacing: ${landmarkStats.spacingRule.toFixed(0)}m (8 tiles)`);
-  if (landmarkStats.violations.length > 0) {
-    console.log(`  ⚠️  Found ${landmarkStats.violations.length} spacing violations:`);
-    landmarkStats.violations.forEach((violation) => {
-      console.log(
-        `    ${violation.landmark1} ↔ ${violation.landmark2}: ${violation.distance.toFixed(1)}m (needs ${violation.minRequired.toFixed(0)}m, deficit: ${violation.deficit.toFixed(1)}m)`
-      );
-    });
-  } else {
-    console.log("  ✅ All landmarks properly spaced");
-  }
-  if (landmarkStats.totalLandmarks > 0) {
-    console.log("\n  Landmark Locations:");
-    landmarkStats.landmarks.forEach((lm) => {
-      console.log(`    ${lm.name} (${lm.type}): (${lm.position.x.toFixed(1)}, ${lm.position.y.toFixed(1)}, ${lm.position.z.toFixed(1)})`);
-    });
-  }
-  const seaLevel = options.seaLevel || 0;
-  console.log("\n🌊 WATER LEVEL CHECK:");
-  const floating = detectFloatingBuildings(scene2, seaLevel);
-  if (floating.length > 0) {
-    console.log(`  ⚠️  Found ${floating.length} buildings near/below water level:`);
-    floating.slice(0, 10).forEach((building) => {
-      console.log(
-        `    ${building.name} at Y=${building.height.toFixed(2)}m (${building.district})`
-      );
-    });
-    if (floating.length > 10) {
-      console.log(`    ... and ${floating.length - 10} more`);
-    }
-  } else {
-    console.log("  ✅ No floating buildings detected");
-  }
-  console.log("\n=== END REPORT ===\n");
-  return {
-    buildings: buildingStats,
-    terrain: terrain ? analyzeTerrainHeights(terrain) : null,
-    walkability: walkStats,
-    landmarks: landmarkStats,
-    overlaps,
-    floating
-  };
-}
-function initCityDebugMode(scene2, terrain) {
-  if (typeof window === "undefined") return;
-  const params = new URLSearchParams(window.location.search);
-  const debugMode = params.get("citydebug") === "1" || params.get("debug") === "city";
-  if (debugMode) {
-    console.log("[CityDebug] Debug mode enabled");
-    setTimeout(() => {
-      printCityDebugReport(scene2, terrain, {
-        samplePoints: 150,
-        overlapThreshold: 3,
-        seaLevel: 0
-      });
-    }, 2e3);
-    if (window) {
-      window.cityDebug = {
-        printReport: () => printCityDebugReport(scene2, terrain),
-        analyzeTerrain: () => analyzeTerrainHeights(terrain),
-        analyzeBuildings: () => analyzeBuildingsByDistrict(scene2),
-        analyzeWalkability: () => analyzeWalkability(scene2),
-        analyzeLandmarks: () => analyzeLandmarkSpacing(scene2),
-        detectOverlaps: () => detectBuildingOverlaps(scene2),
-        detectFloating: () => detectFloatingBuildings(scene2)
-      };
-      console.log("[CityDebug] Available commands:");
-      console.log("  window.cityDebug.printReport()");
-      console.log("  window.cityDebug.analyzeTerrain()");
-      console.log("  window.cityDebug.analyzeBuildings()");
-      console.log("  window.cityDebug.analyzeWalkability()");
-      console.log("  window.cityDebug.analyzeLandmarks()");
-      console.log("  window.cityDebug.detectOverlaps()");
-      console.log("  window.cityDebug.detectFloating()");
-    }
-  }
 }
 async function loadEquirectangularSkybox(renderer2, scene2, url) {
   if (!scene2 || !url) return null;
@@ -74704,10 +74347,6 @@ class Application {
       });
     } catch {
     }
-    try {
-      initCityDebugMode(scene2, terrain);
-    } catch {
-    }
     const getPosition = () => {
       try {
         if (playerSystem.player && playerSystem.player.position && Number.isFinite(playerSystem.player.position.x)) {
@@ -75119,4 +74758,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BR5OolfX.js.map
+//# sourceMappingURL=index-BK64gidR.js.map
