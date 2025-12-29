@@ -46363,13 +46363,13 @@ function generateNormalComponent(x, y, octave) {
   return Math.sin(angle * 1.7 + octave * 1.1) * 0.6;
 }
 const textureLoader = new TextureLoader();
-function sanitizeRelativePath$5(value) {
+function sanitizeRelativePath$4(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
 function getDefaultWaterNormalCandidates(base = resolveBaseUrl$5()) {
   return HARBOR_WATER_NORMAL_CANDIDATES.map((relative) => {
-    const sanitized = sanitizeRelativePath$5(relative);
+    const sanitized = sanitizeRelativePath$4(relative);
     if (!sanitized) {
       return null;
     }
@@ -46484,7 +46484,7 @@ async function resolveWaterNormalsTexture(options) {
     const normalized = candidate.trim();
     if (!normalized) continue;
     const isAbsolute = /^(?:[a-z]+:)?\/\//i.test(normalized) || normalized.startsWith("data:");
-    const resolved = isAbsolute ? normalized : joinPath(base, sanitizeRelativePath$5(normalized));
+    const resolved = isAbsolute ? normalized : joinPath(base, sanitizeRelativePath$4(normalized));
     if (!resolved || tried.has(resolved)) continue;
     tried.add(resolved);
     if (cachedWaterNormalsTexture && cachedWaterNormalsKey === resolved) {
@@ -47774,7 +47774,7 @@ let AKROPOL_CANDIDATES = getAssetCandidates("akropol");
 function isHtmlResponse(res) {
   return HTML_CONTENT_TYPE.test(res.headers.get("content-type") || "");
 }
-function sanitizeRelativePath$4(value) {
+function sanitizeRelativePath$3(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
@@ -47938,7 +47938,7 @@ class AssetLoader {
         seen2.add(trimmed);
         continue;
       }
-      const relative = sanitizeRelativePath$4(trimmed);
+      const relative = sanitizeRelativePath$3(trimmed);
       if (!relative) {
         continue;
       }
@@ -50280,7 +50280,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bd7wSiyO.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BtDavdAr.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50763,7 +50763,7 @@ function createDracoLoader() {
   return sharedDracoLoader;
 }
 const ENABLE_GLB_MODE$3 = true;
-function sanitizeRelativePath$3(value) {
+function sanitizeRelativePath$2(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
@@ -50980,7 +50980,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CwDsJfPE.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-AL-l14s1.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51061,7 +51061,7 @@ async function loadGLBWithFallbacks(loader2, urls, options = {}) {
         continue;
       }
       const isAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(raw) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(raw);
-      const relative = sanitizeRelativePath$3(raw);
+      const relative = sanitizeRelativePath$2(raw);
       if (!relative && !isAbsolute) {
         continue;
       }
@@ -51706,7 +51706,7 @@ function alignToGround(object, terrain, x, z, surfaceOffset = 0) {
   object.position.y = height + offset;
 }
 const ENABLE_GLB_MODE$2 = true;
-function sanitizeRelativePath$2(value) {
+function sanitizeRelativePath$1(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
@@ -51779,7 +51779,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bd7wSiyO.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BtDavdAr.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -52178,7 +52178,7 @@ async function loadLandmark(scene2, url, options = {}) {
       return null;
     }
     const isProtocolAbsolute = /^(?:[a-zA-Z][a-zA-Z\d+.-]*:)?\/\//.test(sanitizedUrl) || /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(sanitizedUrl);
-    const normalized = sanitizeRelativePath$2(sanitizedUrl);
+    const normalized = sanitizeRelativePath$1(sanitizedUrl);
     const urlSet = /* @__PURE__ */ new Set();
     if (isProtocolAbsolute) {
       urlSet.add(sanitizedUrl);
@@ -63240,7 +63240,7 @@ class Character extends Object3D {
     this.current = next;
   }
 }
-function sanitizeRelativePath$1(value) {
+function sanitizeRelativePath(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\/+/, "").replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "");
 }
@@ -63404,7 +63404,7 @@ async function spawnGLBNPCs(scene2, pathCurve, options = {}) {
   if (!entries2.length) {
     return { npcs: [], updaters: [] };
   }
-  const fileNames = entries2.map((value) => typeof value === "string" ? sanitizeRelativePath$1(value) : "").filter((value) => value.length > 0);
+  const fileNames = entries2.map((value) => typeof value === "string" ? sanitizeRelativePath(value) : "").filter((value) => value.length > 0);
   if (!fileNames.length) {
     return { npcs: [], updaters: [] };
   }
@@ -63953,8 +63953,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T12:37:50.364Z" : "",
-      sha: true ? "49fe65d33eae0c7eef76d3928fdac7705131eda6" : ""
+      time: true ? "2025-12-29T12:40:55.983Z" : "",
+      sha: true ? "16dfddb3109bfb06bcaa447e21ae59ec6bc25e49" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -64269,56 +64269,6 @@ class InteractionSystem {
     if (!this.interactables) this.interactables = [];
     return this.interactables;
   }
-}
-function sanitizeRelativePath(value) {
-  if (typeof value !== "string") return "";
-  return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^\/+/, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
-}
-async function attachAristotleMarblePBR(options) {
-  const {
-    obj = null,
-    // the GLB root if you have it
-    scene: scene2,
-    // THREE.Scene (required for fallback)
-    renderer: renderer2,
-    // THREE.WebGLRenderer (optional: for colour mgmt)
-    BASE_URL: BASE_URL2 = "",
-    // legacy support for callers passing BASE_URL
-    baseUrl: baseUrl2 = BASE_URL2,
-    textureSubdir = "textures/aristotle_tomb",
-    approxPosition = new Vector3(-40, 14, 10)
-    // Acropolis peak default
-  } = options || {};
-  if (renderer2) {
-    if (!renderer2.outputColorSpace) renderer2.outputColorSpace = SRGBColorSpace;
-    if (renderer2.toneMapping === void 0 || renderer2.toneMapping === NoToneMapping) {
-      renderer2.toneMapping = ACESFilmicToneMapping;
-      renderer2.toneMappingExposure = renderer2.toneMappingExposure ?? 1;
-    }
-  }
-  const resolvedBase = typeof baseUrl2 === "string" && baseUrl2.length > 0 ? baseUrl2 : resolveBaseUrl$5();
-  const basePath = joinPath(resolvedBase, sanitizeRelativePath(textureSubdir));
-  const material = await makeMarblePBR(basePath);
-  if (!material) return;
-  let target = obj;
-  if (!target && scene2) {
-    let best = null, bestScore = Infinity;
-    const tmp2 = new Vector3();
-    scene2.traverse((node) => {
-      if (!node?.isObject3D) return;
-      if (node.isMesh || node.isGroup) {
-        node.getWorldPosition(tmp2);
-        const d2 = tmp2.distanceToSquared(approxPosition);
-        if (d2 < bestScore) {
-          bestScore = d2;
-          best = node;
-        }
-      }
-    });
-    target = best || null;
-  }
-  if (!target) return;
-  applyMaterialToTree(target, material);
 }
 async function applyGravelToRoads({ scene: scene2 } = {}) {
   return new Promise((resolve) => {
@@ -74587,58 +74537,6 @@ class Application {
       grassRoot = mount$1(scene2);
     }
     let landmarkLoadPromise = Promise.resolve();
-    if (ENABLE_GLB_MODE && !FORCE_PROC) {
-      const landmarkTasks = [
-        (async () => {
-          try {
-            const aristotleUrl = await assetLoader.resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES2);
-            if (aristotleUrl) {
-              const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
-                position: ACROPOLIS_PEAK_3D,
-                scale: 3,
-                materialPreset: "marble"
-              });
-              try {
-                await attachAristotleMarblePBR({
-                  obj: aristotle ?? null,
-                  scene: scene2,
-                  renderer: renderer2,
-                  BASE_URL: BASE_URL2
-                });
-              } catch {
-              }
-            }
-          } catch {
-          }
-        })(),
-        (async () => {
-          try {
-            const url = await assetLoader.resolveFirstAvailableAsset(POSEIDON_CANDIDATES2);
-            if (url)
-              await loadLandmark(worldRoot, url, {
-                position: new Vector3(90, 0, -60),
-                scale: 2.6,
-                materialPreset: "marble"
-              });
-          } catch {
-          }
-        })(),
-        (async () => {
-          try {
-            const url = await assetLoader.resolveFirstAvailableAsset(AKROPOL_CANDIDATES2);
-            if (url)
-              await loadLandmark(worldRoot, url, {
-                position: new Vector3(130, 0, 40),
-                scale: 2.2,
-                materialPreset: "marble"
-              });
-          } catch {
-          }
-        })()
-      ];
-      landmarkLoadPromise = Promise.all(landmarkTasks).catch(() => {
-      });
-    }
     const { city: harborCity, roadCurves } = await createCity(
       worldRoot,
       this.terrain,
@@ -75228,4 +75126,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-THIeHsjG.js.map
+//# sourceMappingURL=index-DDY7RHn0.js.map
