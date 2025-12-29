@@ -237,6 +237,9 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
   }
 
   createMaterial(materialParams) {
+    if (materialParams instanceof THREE.MeshStandardMaterial) {
+      return materialParams;
+    }
     const material = new GLTFMeshStandardSGMaterial(materialParams);
     material.fog = true;
 
