@@ -359,6 +359,8 @@ async function probeWithGet(url) {
   }
 }
 
+const LANDMARK_GLB_PATH = /(?:^|\/)models\/landmarks\/.+\.glb(?:$|[?#])/i;
+
 export async function loadGLBWithFallbacks(loader, urls, options = {}) {
   if (!loader || typeof loader.loadAsync !== "function") {
     return null;
@@ -415,7 +417,7 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
         }
         seen.add(url);
 
-        if (!(await headOk(url))) {
+        if (!LANDMARK_GLB_PATH.test(url) && !(await headOk(url))) {
           continue;
         }
         try {
