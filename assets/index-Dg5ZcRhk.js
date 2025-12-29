@@ -50236,7 +50236,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B8603kSk.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CfaI7Jfy.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50725,7 +50725,7 @@ function sanitizeRelativePath$3(value) {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cbc2vnV4.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-kvU25fSm.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51544,7 +51544,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B8603kSk.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CfaI7Jfy.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63717,8 +63717,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-28T23:29:53.038Z" : "",
-      sha: true ? "f775ea4b350ac05eedd3dbc73fa295e67f9a8f5c" : ""
+      time: true ? "2025-12-29T03:40:25.470Z" : "",
+      sha: true ? "1c646be11ac2e9fde0395e33da76ac8a2f7099e3" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74783,6 +74783,17 @@ async function runTextureAssetCheck({ debugAssets = false } = {}) {
   console.info("[assets] texture availability check");
   console.table(table);
 }
+const _consoleWarn = console.warn;
+console.warn = (...args) => {
+  try {
+    const msg = String(args[0] ?? "");
+    if (msg.includes("KHR_materials_pbrSpecularGlossiness") || msg.includes("Unknown extension")) {
+      return;
+    }
+  } catch (_) {
+  }
+  return _consoleWarn.apply(console, args);
+};
 function toUrlSearchParams(value) {
   if (value instanceof URLSearchParams) {
     return value;
@@ -74976,4 +74987,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index--MVjD971.js.map
+//# sourceMappingURL=index-Dg5ZcRhk.js.map
