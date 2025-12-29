@@ -6,6 +6,21 @@ import { runTextureAssetCheck } from "./debug/assetChecks.js";
 import { showLoadingError } from "./ui/loadingScreen.js";
 import { IS_DEV } from "./utils/env.js";
 
+// Globally silence the specific GLTFLoader warning about the legacy
+// KHR_materials_pbrSpecularGlossiness extension which is benign for our
+// runtime and causes noisy console output. This is intentionally narrow
+// and only filters messages that match the exact extension warning.
+const _consoleWarn = console.warn;
+console.warn = (...args) => {
+  try {
+    const msg = String(args[0] ?? "");
+    if (msg.includes("KHR_materials_pbrSpecularGlossiness") || msg.includes("Unknown extension")) {
+      return;
+    }
+  } catch (_) {}
+  return _consoleWarn.apply(console, args);
+};
+
 function toUrlSearchParams(value) {
   if (value instanceof URLSearchParams) {
     return value;
