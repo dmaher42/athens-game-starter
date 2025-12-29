@@ -209,7 +209,8 @@ export async function buildTemple(options = {}) {
     group.scale.set(scale[0], scale[1], scale[2]);
   }
 
-  applyTextureBudgetToObject(group, { safeMode: true });
+  // Safe mode intentionally disabled so normal gameplay always uses full textures.
+  // applyTextureBudgetToObject(group, { safeMode: true });
 
   return group;
 }
