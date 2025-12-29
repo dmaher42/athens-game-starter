@@ -835,9 +835,9 @@ export class Application {
       let interactor: any = createInteractor(renderer, camera, scene);
 
       const safeModeFlag = engineConfig.featureFlags?.safeMode === true;
-      const maxTextures = renderer.capabilities?.maxTextures;
-      const lowTierDevice = Number.isFinite(maxTextures) ? maxTextures < 10 : false;
-      const enableSafeMode = safeModeFlag || lowTierDevice;
+      const safeModeParam = new URLSearchParams(window.location.search).get("safeMode");
+      // Safe mode is optional and only enabled explicitly (not the default render path).
+      const enableSafeMode = safeModeFlag || safeModeParam === "1" || safeModeParam === "true";
 
       applyTextureBudgetToObject(scene, { safeMode: enableSafeMode });
 
