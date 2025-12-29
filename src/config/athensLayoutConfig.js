@@ -10,6 +10,7 @@
 //   - collision / placeholder behaviour and helper text for missing assets
 // The LandmarkManager reads this structure and takes care of instancing models,
 // logging fallback usage, and spawning placeholders when an asset is absent.
+// Landmarks are intentionally disabled in this solo project.
 //
 // Because the in-game coordinate system is rooted around a handful of historic
 // anchors we derive most positions as offsets from those shared reference

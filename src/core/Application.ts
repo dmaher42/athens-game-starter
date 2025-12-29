@@ -628,8 +628,6 @@ export class Application {
         grassRoot = mountGrass(scene);
       }
 
-      // Landmarks are intentionally disabled in this solo project.
-
       const { city: harborCity, roadCurves } = await createCity(
         worldRoot,
         this.terrain,
