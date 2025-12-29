@@ -44,8 +44,6 @@ import {
 } from "../world/locations.js";
 import {
   initializeAssetTranscoders,
-  loadLandmark,
-  disposeLandmarks,
 } from "../world/landmarks.js";
 import { createCivicDistrict } from "../world/cityPlan.js";
 import { EnvironmentCollider } from "../env/EnvironmentCollider.js";
@@ -67,10 +65,8 @@ import { addDepthOccluderRibbon } from "../world/occluders.js";
 import { snapAboveGround } from "../world/ground.js";
 import { findSafePlayerSpawn } from "../world/spawn.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
-import { LandmarkManager } from "../world/LandmarkManager.js";
 import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 import { LIGHTING_PRESETS } from "../config/LookProfiles.js";
-import { getAssetCandidates } from "../config/AssetConfig.js";
 import {
   engineConfig,
   resolveFeatureToggle,
@@ -231,16 +227,6 @@ export class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
-    const ARISTOTLE_CANDIDATES = ENABLE_GLB_MODE
-      ? getAssetCandidates("aristotle")
-      : [];
-    const POSEIDON_CANDIDATES = ENABLE_GLB_MODE
-      ? getAssetCandidates("poseidon")
-      : [];
-    const AKROPOL_CANDIDATES = ENABLE_GLB_MODE
-      ? getAssetCandidates("akropol")
-      : [];
-
     showLoadingScreen({
       initialStatus: "Preparing the experience...",
     });
@@ -278,18 +264,6 @@ export class Application {
       );
       return;
     }
-    if (ENABLE_GLB_MODE) {
-      assetLoader
-        .probeInitialAssets({
-          glbCandidates: [
-            "models/landmarks/poseidon_temple.glb",
-            "models/landmarks/akropol.glb",
-          ],
-          includeGlbCandidates: !FORCE_PROC,
-        })
-        .catch(() => {});
-    }
-
     this.renderer = createRenderer();
     const renderer = this.renderer;
 
