@@ -23,20 +23,29 @@ export async function createGLTFLoader(renderer) {
   // Lazy-load GLTFLoader only when actually needed
   const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
   const loader = new GLTFLoader();
-
-  // Globally filter the specific legacy GLTF extension warning which is
-  // benign for our use-case but noisy in the console. This keeps the app
-  // output cleaner while still allowing other warnings.
-  const _origWarn = console.warn;
-  console.warn = (...args) => {
-    try {
-      const m = String(args[0] ?? "");
-      if (m.includes('KHR_materials_pbrSpecularGlossiness') || m.includes('Unknown extension')) {
-        return;
+  // Wrap the loader's `parse` method to suppress the specific legacy GLTF
+  // extension warning emitted during parsing. This is scoped to the
+  // individual loader instance to avoid global side-effects.
+  if (typeof loader.parse === "function") {
+    const _origParse = loader.parse.bind(loader);
+    loader.parse = function (data, path, onLoad, onError) {
+      const _warn = console.warn;
+      console.warn = (...args) => {
+        try {
+          const m = String(args[0] ?? "");
+          if (m.includes("KHR_materials_pbrSpecularGlossiness") || m.includes("Unknown extension")) {
+            return;
+          }
+        } catch {}
+        return _warn.apply(console, args);
+      };
+      try {
+        return _origParse(data, path, onLoad, onError);
+      } finally {
+        console.warn = _warn;
       }
-    } catch {}
-    return _origWarn.apply(console, args);
-  };
+    };
+  }
 
   if (renderer) {
     try {
