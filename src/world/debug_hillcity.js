@@ -1,8 +1,6 @@
 import * as THREE from "three";
-import { isDebugRenderEnabled } from "../config/debugFlags.js";
 
 export function mountHillCityDebug(scene, curve) {
-  if (!isDebugRenderEnabled()) return null;
   const group = new THREE.Group();
   group.name = "HillCityDebug";
   if (curve) {

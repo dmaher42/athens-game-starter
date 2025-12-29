@@ -15,7 +15,6 @@ import {
   ISLAND_RADIUS,
 } from "./locations.js";
 import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
-import { isDebugRenderEnabled } from "../config/debugFlags.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 
 function generateNormalComponent(x, y, octave) {
@@ -515,8 +514,6 @@ export function mountWaterClipDebug(
   clipBounds,
   seaLevel = getSeaLevelY(),
 ) {
-  if (!isDebugRenderEnabled()) return null;
-
   const group = new THREE.Group();
   group.name = "WaterClipDebug";
 
