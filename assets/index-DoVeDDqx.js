@@ -50273,7 +50273,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DSC6vPvn.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-dGOuAy6X.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50973,7 +50973,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BZRbxoXJ.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BC-TxDDA.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51772,7 +51772,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DSC6vPvn.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-dGOuAy6X.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63946,8 +63946,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T12:45:31.198Z" : "",
-      sha: true ? "e3886eaca2ee949bef90ea4caa22364125686f64" : ""
+      time: true ? "2025-12-29T12:55:22.745Z" : "",
+      sha: true ? "c65fbb29ebcb35ff5264d833d555cb0fdf1dacd2" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -73809,9 +73809,6 @@ class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
-    const ARISTOTLE_CANDIDATES2 = ENABLE_GLB_MODE ? getAssetCandidates("aristotle") : [];
-    const POSEIDON_CANDIDATES2 = ENABLE_GLB_MODE ? getAssetCandidates("poseidon") : [];
-    const AKROPOL_CANDIDATES2 = ENABLE_GLB_MODE ? getAssetCandidates("akropol") : [];
     showLoadingScreen({
       initialStatus: "Preparing the experience..."
     });
@@ -73839,16 +73836,6 @@ class Application {
         [criticalSummary, repeatedSummary, "Please verify the asset bundle and refresh."].filter(Boolean).join(" ")
       );
       return;
-    }
-    if (ENABLE_GLB_MODE) {
-      assetLoader.probeInitialAssets({
-        glbCandidates: [
-          "models/landmarks/poseidon_temple.glb",
-          "models/landmarks/akropol.glb"
-        ],
-        includeGlbCandidates: !FORCE_PROC
-      }).catch(() => {
-      });
     }
     this.renderer = createRenderer();
     const renderer2 = this.renderer;
@@ -74758,4 +74745,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-BK64gidR.js.map
+//# sourceMappingURL=index-DoVeDDqx.js.map
