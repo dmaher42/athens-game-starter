@@ -30,19 +30,35 @@ export async function createGLTFLoader(renderer) {
     const _origParse = loader.parse.bind(loader);
     loader.parse = function (data, path, onLoad, onError) {
       const _warn = console.warn;
-      console.warn = (...args) => {
+      const _err = console.error;
+      const filter = (...args) => {
         try {
           const m = String(args[0] ?? "");
           if (m.includes("KHR_materials_pbrSpecularGlossiness") || m.includes("Unknown extension")) {
             return;
           }
         } catch {}
-        return _warn.apply(console, args);
+        return null;
+      };
+      console.warn = (...args) => {
+        const r = filter(...args);
+        if (r === null) return _warn.apply(console, args);
+        return r;
+      };
+      console.error = (...args) => {
+        try {
+          const m = String(args[0] ?? "");
+          if (m.includes("KHR_materials_pbrSpecularGlossiness") || m.includes("Unknown extension")) {
+            return;
+          }
+        } catch {}
+        return _err.apply(console, args);
       };
       try {
         return _origParse(data, path, onLoad, onError);
       } finally {
         console.warn = _warn;
+        console.error = _err;
       }
     };
   }
@@ -132,6 +148,7 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
   // we attempt loading multiple candidate URLs. Restore `console.warn`
   // afterward to avoid hiding unrelated warnings.
   const originalWarn = console.warn;
+  const originalError = console.error;
   console.warn = (...args) => {
     try {
       const msg = String(args[0] ?? "");
@@ -140,6 +157,15 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
       }
     } catch {}
     return originalWarn.apply(console, args);
+  };
+  console.error = (...args) => {
+    try {
+      const msg = String(args[0] ?? "");
+      if (msg.includes('KHR_materials_pbrSpecularGlossiness') || msg.includes('Unknown extension')) {
+        return;
+      }
+    } catch {}
+    return originalError.apply(console, args);
   };
 
   try {
@@ -211,6 +237,7 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
     }
   } finally {
     console.warn = originalWarn;
+    console.error = originalError;
   }
 
   return null;
