@@ -50273,7 +50273,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BZuj_eUU.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BuSXMFtG.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50973,7 +50973,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D6v9MKR9.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cr1NpM9y.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51684,7 +51684,6 @@ async function buildTemple(options = {}) {
   } else if (Array.isArray(scale) && scale.length >= 3) {
     group.scale.set(scale[0], scale[1], scale[2]);
   }
-  applyTextureBudgetToObject(group, { safeMode: true });
   return group;
 }
 function alignToGround(object, terrain, x, z, surfaceOffset = 0) {
@@ -51730,7 +51729,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BZuj_eUU.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BuSXMFtG.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63878,8 +63877,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T13:00:49.386Z" : "",
-      sha: true ? "bc42a6745f4b5aa8d16a46c0fb13db0f1360ed6d" : ""
+      time: true ? "2025-12-29T13:02:53.764Z" : "",
+      sha: true ? "dc4473da1a4bd5ffe9ba2e7dcd29774d69c2c1ef" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74677,4 +74676,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-Dzd0GM6a.js.map
+//# sourceMappingURL=index-DntQVh5o.js.map
