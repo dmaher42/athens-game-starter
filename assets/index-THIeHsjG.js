@@ -50280,7 +50280,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CfgMgk8s.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bd7wSiyO.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader2 = new KTX2Loader();
@@ -50980,7 +50980,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DPxkDBLf.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CwDsJfPE.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader2 = new GLTFLoader();
@@ -51779,7 +51779,7 @@ async function initializeAssetTranscoders(renderer2) {
   const transcoderPath = resolveKTX2TranscoderPath();
   if (!ktx2Loader) {
     const { KTX2Loader } = await __vitePreload(async () => {
-      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CfgMgk8s.js");
+      const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bd7wSiyO.js");
       return { KTX2Loader: KTX2Loader2 };
     }, true ? [] : void 0);
     ktx2Loader = new KTX2Loader();
@@ -63953,8 +63953,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-29T12:34:35.464Z" : "",
-      sha: true ? "94cee9043d67da595d978def08c6ec39060e91f0" : ""
+      time: true ? "2025-12-29T12:37:50.364Z" : "",
+      sha: true ? "49fe65d33eae0c7eef76d3928fdac7705131eda6" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -74734,10 +74734,6 @@ class Application {
     const interactionHud2 = new InteractionHud();
     const interactionSystem = new InteractionSystem(playerSystem.player?.input, camera2, scene2, interactionHud2);
     let interactor = createInteractor(renderer2, camera2, scene2);
-    const safeModeFlag = engineConfig.featureFlags?.["safeMode"] === true;
-    const safeModeParam = new URLSearchParams(window.location.search).get("safeMode");
-    const enableSafeMode = safeModeFlag || safeModeParam === "1" || safeModeParam === "true";
-    applyTextureBudgetToObject(scene2, { safeMode: enableSafeMode });
     const loop = this.gameLoop;
     if (civicDistrict.walkingLoop) {
       const crowd = spawnCitizenCrowd(worldRoot, civicDistrict.walkingLoop, {
@@ -75232,4 +75228,4 @@ export {
   RED_RGTC1_Format as y,
   SIGNED_RED_RGTC1_Format as z
 };
-//# sourceMappingURL=index-CsD5pyPr.js.map
+//# sourceMappingURL=index-THIeHsjG.js.map
