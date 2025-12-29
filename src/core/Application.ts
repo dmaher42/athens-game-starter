@@ -834,7 +834,12 @@ export class Application {
 
       let interactor: any = createInteractor(renderer, camera, scene);
 
-      applyTextureBudgetToObject(scene, { safeMode: true });
+      const safeModeFlag = engineConfig.featureFlags?.safeMode === true;
+      const maxTextures = renderer.capabilities?.maxTextures;
+      const lowTierDevice = Number.isFinite(maxTextures) ? maxTextures < 10 : false;
+      const enableSafeMode = safeModeFlag || lowTierDevice;
+
+      applyTextureBudgetToObject(scene, { safeMode: enableSafeMode });
 
       const loop = this.gameLoop;
 
