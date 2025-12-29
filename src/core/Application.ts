@@ -42,9 +42,6 @@ import {
   getSeaLevelY,
   setSeaLevelY,
 } from "../world/locations.js";
-import {
-  initializeAssetTranscoders,
-} from "../world/landmarks.js";
 import { createCivicDistrict } from "../world/cityPlan.js";
 import { EnvironmentCollider } from "../env/EnvironmentCollider.js";
 import { BuildingManager } from "../buildings/BuildingManager.js";
@@ -65,7 +62,6 @@ import { addDepthOccluderRibbon } from "../world/occluders.js";
 import { snapAboveGround } from "../world/ground.js";
 import { findSafePlayerSpawn } from "../world/spawn.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
-import { athensLayoutConfig } from "../config/athensLayoutConfig.js";
 import { LIGHTING_PRESETS } from "../config/LookProfiles.js";
 import {
   engineConfig,
@@ -91,7 +87,7 @@ import { GameLoop } from "./GameLoop.js";
 import { VillagerSystem } from "../world/traffic.js";
 import { createAtmosphericParticles } from "../world/particles.js";
 import { initPropCulling, updateDistanceCulling } from "../utils/propCulling.js";
-import { initBuildingCulling, updateBuildingCulling, protectLandmarks } from "../utils/buildingCulling.js";
+import { initBuildingCulling, updateBuildingCulling } from "../utils/buildingCulling.js";
 import { scatterGroundProps } from "../world/groundProps.js";
 import { initCityDebugMode } from "../debug/cityDebug.js";
 import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
@@ -271,9 +267,6 @@ export class Application {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     
-    if (ENABLE_GLB_MODE) {
-      initializeAssetTranscoders(renderer);
-    }
     attachCrosshair();
     advanceLoadingStage("Listening for the bustle of ancient Athens...");
 
@@ -639,8 +632,7 @@ export class Application {
         grassRoot = mountGrass(scene);
       }
 
-      // Landmark GLB loading is intentionally disabled.
-      let landmarkLoadPromise: Promise<any> = Promise.resolve();
+      // Landmarks are intentionally disabled in this solo project.
 
       const { city: harborCity, roadCurves } = await createCity(
         worldRoot,
@@ -840,7 +832,6 @@ export class Application {
 
       loop.onUpdate(onFrame);
       loop.start();
-      await landmarkLoadPromise;
       advanceLoadingStage("Opening the gates to ancient Athens...");
       hideLoadingScreen();
 
@@ -849,7 +840,6 @@ export class Application {
       } catch {}
 
       try {
-        protectLandmarks(scene);
         initBuildingCulling(scene, camera, {
           cullDistance: 400,
           enableHorizon: true,

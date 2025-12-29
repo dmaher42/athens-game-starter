@@ -4,7 +4,6 @@ import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { IS_DEV } from '../utils/env.js';
 import { Prefabs, spawnBuilding } from './buildingSpawner.js';
-import { buildTemple } from '../features/temples.js';
 import { loadDistrictRules } from './districtRules.js';
 import { 
   getSlope, 
@@ -25,9 +24,7 @@ const BLOCK_SIZE = 48; // Increased from 40 for better district spacing (~20% in
 
 // District Spacing Rules
 export const SPACING_RULES = {
-  LANDMARK_MIN_SPACING: 12 * BLOCK_SIZE, // 12-tile radius between landmarks (576m)
   CIVIC_CLUSTER_MAX_DISTANCE: 30 * BLOCK_SIZE, // 30 tiles from starting point (1440m)
-  LANDMARK_TYPES: ['parthenon', 'temple', 'monument', 'tholos', 'stoa'],
 };
 
 // Walkability Grid Constants
@@ -42,9 +39,6 @@ export const WALKABILITY_CONFIG = {
   },
 };
 
-// Track placed landmarks for spacing validation
-const placedLandmarks = [];
-
 export function inHarborBand(
   pos,
   shorelineCenter = { x: HARBOR_CENTER_3D.x, z: HARBOR_CENTER_3D.z }
@@ -54,38 +48,6 @@ export function inHarborBand(
   // Treat tiles east of the harbor center (minus a small setback) as harbor frontage.
   const harborStartX = shorelineCenter.x - HARBOR_ZONE.bandWidth;
   return pos.x >= harborStartX;
-}
-
-/**
- * Check if a landmark can be placed at given position
- * Enforces 8-tile radius spacing between landmarks
- */
-export function canPlaceLandmark(x, z, type = 'landmark') {
-  const isLandmark = SPACING_RULES.LANDMARK_TYPES.includes(type);
-  
-  if (!isLandmark) {
-    return true; // Not a landmark, no spacing restriction
-  }
-
-  // Check distance to all existing landmarks
-  for (const existing of placedLandmarks) {
-    const distance = Math.sqrt(
-      Math.pow(x - existing.x, 2) + Math.pow(z - existing.z, 2)
-    );
-    
-    if (distance < SPACING_RULES.LANDMARK_MIN_SPACING) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-/**
- * Register a landmark after placement
- */
-export function registerLandmark(x, z, type) {
-  placedLandmarks.push({ x, z, type });
 }
 
 /**
@@ -101,13 +63,6 @@ export function isWithinCivicClusterRange(x, z) {
   );
   
   return distance <= SPACING_RULES.CIVIC_CLUSTER_MAX_DISTANCE;
-}
-
-/**
- * Clear landmark registry (useful for regeneration)
- */
-export function clearLandmarkRegistry() {
-  placedLandmarks.length = 0;
 }
 
 /**
@@ -423,22 +378,7 @@ function generateCityGrid(terrainSampler) {
         cell.type = 'road'; // Central N-S boulevard
         cell.buildable = true;
       } else if (cell.district === 'sacred') {
-        if (gridX === 0 && gridZ === 0) {
-          cell.type = 'parthenon';
-          // Parthenon requires very flat land
-          if (terrainSampler && cell.slope > SLOPE_THRESHOLDS.FLAT * 0.5) {
-            cell.buildable = false;
-          }
-          // Validate landmark spacing
-          if (!canPlaceLandmark(worldX, worldZ, 'parthenon')) {
-            cell.buildable = false;
-            console.log(`[CityPlan] Parthenon rejected at (${gridX}, ${gridZ}) - too close to other landmarks`);
-          } else {
-            registerLandmark(worldX, worldZ, 'parthenon');
-          }
-        } else {
-          cell.type = 'building';
-        }
+        cell.type = 'building';
       } else if (cell.district === 'commercial') {
         if (gridX % 3 === 0 || gridZ % 3 === 0) {
           cell.type = 'road';
@@ -592,17 +532,6 @@ export async function createCivicDistrict(scene, options = {}) {
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0x887766 : 0x666666);
       roadMesh.position.set(localX, localY, localZ);
       group.add(roadMesh);
-    } else if (cell.type === 'parthenon') {
-      const temple = await buildTemple({
-          width: 30,
-          depth: 60,
-          scale: 1.5,
-          order: 'doric',
-          materialPreset: 'marble'
-      });
-      temple.position.set(localX, localY, localZ);
-      // Rotate if needed? Default is probably aligned to Z.
-      group.add(temple);
     } else if (cell.type === 'plaza') {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xaaaaaa);
       plazaMesh.position.set(localX, localY, localZ);

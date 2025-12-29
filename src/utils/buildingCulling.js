@@ -235,28 +235,3 @@ export function initBuildingCulling(scene, camera, options = {}) {
 /**
  * Mark important buildings that should never be culled
  */
-export function protectLandmarks(scene) {
-  const landmarks = [
-    'Parthenon',
-    'Temple',
-    'Monument',
-    'Athena',
-    'Zeus',
-    'Theater',
-    'Acropolis'
-  ];
-  
-  let protectedCount = 0;
-  scene.traverse((obj) => {
-    if (obj.isMesh) {
-      const name = obj.name || '';
-      if (landmarks.some(landmark => name.includes(landmark))) {
-        obj.userData.noCull = true;
-        protectedCount++;
-      }
-    }
-  });
-  
-  console.log(`[BuildingCulling] Protected ${protectedCount} landmark meshes from culling`);
-  return protectedCount;
-}
