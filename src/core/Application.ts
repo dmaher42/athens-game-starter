@@ -665,58 +665,8 @@ export class Application {
         grassRoot = mountGrass(scene);
       }
 
+      // Landmark GLB loading is intentionally disabled.
       let landmarkLoadPromise: Promise<any> = Promise.resolve();
-      if (ENABLE_GLB_MODE && !FORCE_PROC) {
-        const landmarkTasks = [
-          (async () => {
-            try {
-              const aristotleUrl =
-                await assetLoader.resolveFirstAvailableAsset(ARISTOTLE_CANDIDATES);
-              if (aristotleUrl) {
-                const aristotle = await loadLandmark(worldRoot, aristotleUrl, {
-                  position: ACROPOLIS_PEAK_3D,
-                  scale: 3.0,
-                  materialPreset: "marble",
-                });
-                try {
-                  await attachAristotleMarblePBR({
-                    obj: aristotle ?? null,
-                    scene,
-                    renderer,
-                    BASE_URL,
-                  });
-                } catch {}
-              }
-            } catch {}
-          })(),
-          (async () => {
-            try {
-              const url =
-                await assetLoader.resolveFirstAvailableAsset(POSEIDON_CANDIDATES);
-              if (url)
-                await loadLandmark(worldRoot, url, {
-                  position: new THREE.Vector3(90, 0, -60),
-                  scale: 2.6,
-                  materialPreset: "marble",
-                });
-            } catch {}
-          })(),
-          (async () => {
-            try {
-              const url =
-                await assetLoader.resolveFirstAvailableAsset(AKROPOL_CANDIDATES);
-              if (url)
-                await loadLandmark(worldRoot, url, {
-                  position: new THREE.Vector3(130, 0, 40),
-                  scale: 2.2,
-                  materialPreset: "marble",
-                });
-            } catch {}
-          })(),
-        ];
-
-        landmarkLoadPromise = Promise.all(landmarkTasks).catch(() => {});
-      }
 
       const { city: harborCity, roadCurves } = await createCity(
         worldRoot,
