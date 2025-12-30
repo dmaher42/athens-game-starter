@@ -43526,6 +43526,21 @@ const RENDER_LAYERS = Object.freeze({
   TERRAIN: 1,
   DETAIL: 2
 });
+const CityGroundMaterial = new MeshStandardMaterial({
+  color: 13219740,
+  roughness: 0.6,
+  metalness: 0
+});
+const InlandGroundMaterial = new MeshStandardMaterial({
+  color: 9072462,
+  roughness: 0.85,
+  metalness: 0
+});
+const CoastalGroundMaterial = new MeshStandardMaterial({
+  color: 15127459,
+  roughness: 0.75,
+  metalness: 0
+});
 const SEA_SIDE = "east";
 const COAST_WIDTH = 120;
 const INLAND_RISE = 220;
@@ -43571,21 +43586,6 @@ const MAINLAND_EDGE_BUFFER = 0.8;
 const SAND_COLOR = new Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new Color(2051929);
-const CITY_GROUND_MATERIAL = new MeshStandardMaterial({
-  color: 13154458,
-  roughness: 0.6,
-  metalness: 0
-});
-const INLAND_GROUND_MATERIAL = new MeshStandardMaterial({
-  color: 7297594,
-  roughness: 0.9,
-  metalness: 0
-});
-const COASTAL_GROUND_MATERIAL = new MeshStandardMaterial({
-  color: 15127459,
-  roughness: 0.8,
-  metalness: 0
-});
 const HARBOUR_RADIUS = 70;
 const HARBOUR_TARGET_DEPTH = 2;
 const EAST_HARBOR_CENTER = new Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z);
@@ -43884,9 +43884,9 @@ function createTerrain(scene2) {
   addGroup(inlandIndices, 2);
   geometry.setIndex(new BufferAttribute(reorderedIndices, 1));
   const terrainMaterials = [
-    COASTAL_GROUND_MATERIAL,
-    CITY_GROUND_MATERIAL,
-    INLAND_GROUND_MATERIAL
+    CoastalGroundMaterial,
+    CityGroundMaterial,
+    InlandGroundMaterial
   ];
   const terrain = new Mesh(geometry, terrainMaterials);
   terrain.rotation.x = -Math.PI / 2;
@@ -59120,7 +59120,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-E-P8FNoy.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-RWP3K83W.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59855,7 +59855,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dqa9oBFe.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BFngcMRe.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60803,8 +60803,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T23:33:16.776Z" : "",
-      sha: true ? "a2712bc20a37c7e30480bce5129605af2d617559" : ""
+      time: true ? "2025-12-30T23:36:31.361Z" : "",
+      sha: true ? "34c748cd89228e687118c3e5f4a9559247fd0864" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71428,4 +71428,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-C76nIdUd.js.map
+//# sourceMappingURL=index-B-ZFlHrZ.js.map
