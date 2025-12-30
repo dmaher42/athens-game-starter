@@ -60156,7 +60156,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BMjux1jV.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BuFfUWMK.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60875,7 +60875,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B1un4vES.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-cG_hc2cK.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61823,8 +61823,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T05:28:32.344Z" : "",
-      sha: true ? "8582a75a5c2969ba1c1eca2a387cc788cf5ea8a7" : ""
+      time: true ? "2025-12-30T05:55:20.788Z" : "",
+      sha: true ? "4ab4f7c2d321121bd78d281c40d9c6e374f0a178" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -70487,14 +70487,7 @@ class LightingSystem {
         this.applyLookProfile(name, { forceReapply: true, source: "debug" });
       };
       debugWindow.cycleLightingPreset = () => {
-        const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
-          (preset) => !!LIGHTING_PRESETS$1[preset]
-        );
-        if (!presets.length) return;
-        const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
-        const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % presets.length : 0;
-        const nextPreset = presets[nextIndex];
-        this.applyLookProfile(nextPreset, { forceReapply: true, source: "debug" });
+        this.cycleLightingPreset();
       };
     }
     const initialPreset = "Bright Noon";
@@ -70762,6 +70755,16 @@ class LightingSystem {
       this._setMoonState({ azimuthDeg: this._mirroredMoonAzimuth() });
       this.sceneContext.renderFrame();
     }
+  };
+  cycleLightingPreset = () => {
+    const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
+      (preset) => !!LIGHTING_PRESETS$1[preset]
+    );
+    if (!presets.length) return;
+    const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % presets.length : 0;
+    const nextPreset = presets[nextIndex];
+    this.applyLookProfile(nextPreset, { forceReapply: true, source: "debug" });
   };
   applyLookProfile = (profileName, options = {}) => {
     const { immediate = false, forceReapply = false, source = "manual" } = options;
@@ -72575,4 +72578,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BjGiQoBP.js.map
+//# sourceMappingURL=index-CkPrzefd.js.map
