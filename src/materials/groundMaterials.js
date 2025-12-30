@@ -8,21 +8,24 @@ const BASE_URL =
     ? import.meta.env.BASE_URL
     : "/";
 const RESOLVED_BASE_URL = BASE_URL.endsWith("/") ? BASE_URL : `${BASE_URL}/`;
-const GROUND_SHADER_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
+const CITY_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
+const INLAND_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
+const COASTAL_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 
 function loadGroundTexture(url, repeat) {
   const texture = textureLoader.load(url);
+  texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(repeat, repeat);
   return texture;
 }
 
 // City ground texture
-const cityGroundTexture = loadGroundTexture(GROUND_SHADER_URL, 20);
+const cityGroundTexture = loadGroundTexture(CITY_GROUND_PNG_URL, 20);
 // Inland ground texture
-const inlandGroundTexture = loadGroundTexture(GROUND_SHADER_URL, 32);
+const inlandGroundTexture = loadGroundTexture(INLAND_GROUND_PNG_URL, 32);
 // Coastal ground texture
-const coastalGroundTexture = loadGroundTexture(GROUND_SHADER_URL, 16);
+const coastalGroundTexture = loadGroundTexture(COASTAL_GROUND_PNG_URL, 16);
 
 export const CityGroundMaterial = new THREE.MeshStandardMaterial({
   color: 0xc9b79c,
