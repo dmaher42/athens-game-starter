@@ -12,6 +12,11 @@ import {
 } from "../config/terrainMaterials.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 import {
+  CityGroundMaterial,
+  CoastalGroundMaterial,
+  InlandGroundMaterial,
+} from "../materials/groundMaterials.js";
+import {
   SEA_SIDE,
   COAST_WIDTH,
   INLAND_RISE,
@@ -62,23 +67,6 @@ const MAINLAND_EDGE_BUFFER = 0.8;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
-
-// --- 3 GROUND MATERIALS (No Textures) ---
-const CITY_GROUND_MATERIAL = new THREE.MeshStandardMaterial({
-  color: 0xc8b89a,
-  roughness: 0.6,
-  metalness: 0.0,
-});
-const INLAND_GROUND_MATERIAL = new THREE.MeshStandardMaterial({
-  color: 0x6f5a3a,
-  roughness: 0.9,
-  metalness: 0.0,
-});
-const COASTAL_GROUND_MATERIAL = new THREE.MeshStandardMaterial({
-  color: 0xe6d3a3,
-  roughness: 0.8,
-  metalness: 0.0,
-});
 
 // Harbor configuration (East Facing)
 // HARBOR_GROUND_HEIGHT imported from locations.js at line 6
@@ -501,9 +489,9 @@ export function createTerrain(scene) {
   geometry.setIndex(new THREE.BufferAttribute(reorderedIndices, 1));
 
   const terrainMaterials = [
-    COASTAL_GROUND_MATERIAL,
-    CITY_GROUND_MATERIAL,
-    INLAND_GROUND_MATERIAL,
+    CoastalGroundMaterial,
+    CityGroundMaterial,
+    InlandGroundMaterial,
   ];
 
   const terrain = new THREE.Mesh(geometry, terrainMaterials);
