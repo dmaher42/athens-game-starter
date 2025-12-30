@@ -39,6 +39,7 @@ function bindGroundTexture(material, label, url, repeat) {
 export const CityGroundMaterial = new THREE.MeshStandardMaterial({
   name: "CityGroundMaterial",
   color: 0xc9b79c,
+  map: cityGroundTexture,
   roughness: 0.6,
   metalness: 0,
 });
@@ -53,6 +54,7 @@ CityGroundMaterial.map = bindGroundTexture(
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 0x8a6f4e,
+  map: inlandGroundTexture,
   roughness: 0.85,
   metalness: 0,
 });
@@ -67,6 +69,7 @@ InlandGroundMaterial.map = bindGroundTexture(
 export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
   name: "CoastalGroundMaterial",
   color: 0xe6d3a3,
+  map: coastalGroundTexture,
   roughness: 0.75,
   metalness: 0,
 });
