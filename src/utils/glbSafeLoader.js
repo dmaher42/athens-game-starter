@@ -160,7 +160,14 @@ class GLTFMeshStandardSGMaterial extends THREE.MeshStandardMaterial {
     delete this.metalnessMap;
     delete this.roughnessMap;
 
-    this.setValues(params);
+    const {
+      metalness,
+      roughness,
+      metalnessMap,
+      roughnessMap,
+      ...safeParams
+    } = params || {};
+    this.setValues(safeParams);
   }
 
   copy(source) {
