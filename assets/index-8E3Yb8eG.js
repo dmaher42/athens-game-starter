@@ -43882,6 +43882,18 @@ function createTerrain(scene2) {
   addGroup(coastalIndices, 0);
   addGroup(cityIndices, 1);
   addGroup(inlandIndices, 2);
+  const coastalTriangles = coastalIndices.length / 3;
+  const cityTriangles = cityIndices.length / 3;
+  const inlandTriangles = inlandIndices.length / 3;
+  console.log(
+    `[Ground][Temp] Coastal ground material applied to ${coastalTriangles} triangles`
+  );
+  console.log(
+    `[Ground][Temp] City ground material applied to ${cityTriangles} triangles`
+  );
+  console.log(
+    `[Ground][Temp] Inland ground material applied to ${inlandTriangles} triangles`
+  );
   geometry.setIndex(new BufferAttribute(reorderedIndices, 1));
   const terrainMaterials = [
     CoastalGroundMaterial,
@@ -59120,7 +59132,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-RWP3K83W.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CvDJmrsO.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59855,7 +59867,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BFngcMRe.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-0Pfj4wiM.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60803,8 +60815,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T23:36:31.361Z" : "",
-      sha: true ? "34c748cd89228e687118c3e5f4a9559247fd0864" : ""
+      time: true ? "2025-12-30T23:40:03.878Z" : "",
+      sha: true ? "f0a6792b76fd69362d505f529e33ef1eddb37ea5" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71428,4 +71440,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-B-ZFlHrZ.js.map
+//# sourceMappingURL=index-8E3Yb8eG.js.map
