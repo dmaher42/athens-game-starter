@@ -50434,7 +50434,7 @@ function createHillCity(scene2, terrain, curve, opts = {}) {
 }
 const TILE_SIZE = 40;
 const TILE_RADIUS = 1;
-const BLADES_PER_TILE = 1800;
+const BLADES_PER_TILE = 200;
 const MAX_TILE_COUNT = (TILE_RADIUS * 2 + 1) ** 2;
 const BLADE_HEIGHT_MIN = 0.75;
 const BLADE_HEIGHT_MAX = 1.6;
@@ -60284,7 +60284,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-So-OMWBF.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C3uMGDyi.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -61019,7 +61019,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BHzXEBD4.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BZIym84r.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61967,8 +61967,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T23:01:13.416Z" : "",
-      sha: true ? "0a58581a2f18be59e3b08114663d8e01dd769df3" : ""
+      time: true ? "2025-12-30T23:19:16.160Z" : "",
+      sha: true ? "9367ae9c1b5e988b922242068bdca8cdbc0ad899" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -65103,7 +65103,7 @@ function isInsideBuilding(x, z, placements, padding = 1.2) {
 }
 function scatterGroundProps(scene2, terrain, options = {}) {
   if (!scene2 || !terrain) return null;
-  const count = options.count ?? 520;
+  const count = options.count ?? 50;
   const seaLevel = Number.isFinite(options?.seaLevel) ? options.seaLevel : getSeaLevelY();
   const placements = options.buildingPlacements || [];
   const roadCurves = Array.isArray(options.roadCurves) ? options.roadCurves : [];
@@ -72592,4 +72592,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CUvjkUur.js.map
+//# sourceMappingURL=index-BoZZfopX.js.map
