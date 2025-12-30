@@ -170,6 +170,23 @@ class GLTFMeshStandardSGMaterial extends THREE.MeshStandardMaterial {
     this.setValues(safeParams);
   }
 
+  setValues(values) {
+    if (values && typeof values === "object") {
+      const {
+        metalness,
+        roughness,
+        metalnessMap,
+        roughnessMap,
+        ...safeValues
+      } = values;
+      return THREE.MeshStandardMaterial.prototype.setValues.call(
+        this,
+        safeValues
+      );
+    }
+    return THREE.MeshStandardMaterial.prototype.setValues.call(this, values);
+  }
+
   copy(source) {
     super.copy(source);
     this.specularMap = source.specularMap;
