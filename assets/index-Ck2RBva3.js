@@ -41966,6 +41966,10 @@ function installAmbientOcclusionPatch() {
       for (const [k, v] of Object.entries(values)) {
         if (v !== void 0) cleaned[k] = v;
       }
+      if (!("metalness" in this)) delete cleaned.metalness;
+      if (!("roughness" in this)) delete cleaned.roughness;
+      if (!("metalnessMap" in this)) delete cleaned.metalnessMap;
+      if (!("roughnessMap" in this)) delete cleaned.roughnessMap;
       originalSetValues.call(this, cleaned);
     } else {
       originalSetValues.call(this, values);
@@ -60156,7 +60160,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-b5yq51bZ.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BAKLSTJa.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60891,7 +60895,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-E-JXGtAy.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D4JrM5bL.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61839,8 +61843,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T06:04:27.569Z" : "",
-      sha: true ? "0af8440b35c4a635adeaeae4c509822fe8948d97" : ""
+      time: true ? "2025-12-30T06:07:09.021Z" : "",
+      sha: true ? "e05d1ee6eab9f9b1b0e424089072ad1f48eb41d2" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72594,4 +72598,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CHVm59V0.js.map
+//# sourceMappingURL=index-Ck2RBva3.js.map
