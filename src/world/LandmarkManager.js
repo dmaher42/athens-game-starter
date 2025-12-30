@@ -7,7 +7,7 @@
 
 export class LandmarkManager {
   constructor(options = {}) {
-    // Intentionally empty. Landmarks are disabled.
+    throw new Error("Landmarks are disabled in this project");
   }
 
   setTerrain(terrain) {}
