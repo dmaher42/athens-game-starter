@@ -243,14 +243,7 @@ export class LightingSystem {
                 this.applyLookProfile(name, { forceReapply: true, source: "debug" });
             };
             debugWindow.cycleLightingPreset = () => {
-                const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
-                    (preset) => !!LOOK_PROFILES[preset],
-                );
-                if (!presets.length) return;
-                const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
-                const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % presets.length : 0;
-                const nextPreset = presets[nextIndex];
-                this.applyLookProfile(nextPreset, { forceReapply: true, source: "debug" });
+                this.cycleLightingPreset();
             };
         }
 
@@ -560,6 +553,17 @@ export class LightingSystem {
             this._setMoonState({ azimuthDeg: this._mirroredMoonAzimuth() });
             this.sceneContext.renderFrame();
         }
+    };
+
+    cycleLightingPreset = () => {
+        const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
+            (preset) => !!LOOK_PROFILES[preset],
+        );
+        if (!presets.length) return;
+        const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
+        const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % presets.length : 0;
+        const nextPreset = presets[nextIndex];
+        this.applyLookProfile(nextPreset, { forceReapply: true, source: "debug" });
     };
 
     applyLookProfile = (profileName, options = {}) => {
