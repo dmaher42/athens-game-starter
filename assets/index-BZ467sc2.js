@@ -43533,34 +43533,67 @@ const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}
 const CITY_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 const INLAND_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 const COASTAL_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-function loadGroundTexture(url, repeat) {
-  const texture = textureLoader$1.load(url);
+let warnedTextureFailure = false;
+function bindGroundTexture(material, label, url, repeat) {
+  const texture = textureLoader$1.load(
+    url,
+    () => {
+      console.log(`[Ground] ${label} texture bound to ${material.name}`);
+    },
+    void 0,
+    () => {
+      if (!warnedTextureFailure) {
+        warnedTextureFailure = true;
+        console.warn("[Ground] Failed to load ground texture; using flat color.");
+      }
+      material.map = null;
+      material.needsUpdate = true;
+    }
+  );
   texture.colorSpace = SRGBColorSpace;
   texture.wrapS = texture.wrapT = RepeatWrapping;
   texture.repeat.set(repeat, repeat);
   return texture;
 }
-const cityGroundTexture = loadGroundTexture(CITY_GROUND_PNG_URL, 20);
-const inlandGroundTexture = loadGroundTexture(INLAND_GROUND_PNG_URL, 32);
-const coastalGroundTexture = loadGroundTexture(COASTAL_GROUND_PNG_URL, 16);
 const CityGroundMaterial = new MeshStandardMaterial({
+  name: "CityGroundMaterial",
   color: 13219740,
   map: cityGroundTexture,
   roughness: 0.6,
   metalness: 0
 });
+CityGroundMaterial.map = bindGroundTexture(
+  CityGroundMaterial,
+  "City",
+  CITY_GROUND_PNG_URL,
+  20
+);
 const InlandGroundMaterial = new MeshStandardMaterial({
+  name: "InlandGroundMaterial",
   color: 9072462,
   map: inlandGroundTexture,
   roughness: 0.85,
   metalness: 0
 });
+InlandGroundMaterial.map = bindGroundTexture(
+  InlandGroundMaterial,
+  "Inland",
+  INLAND_GROUND_PNG_URL,
+  32
+);
 const CoastalGroundMaterial = new MeshStandardMaterial({
+  name: "CoastalGroundMaterial",
   color: 15127459,
   map: coastalGroundTexture,
   roughness: 0.75,
   metalness: 0
 });
+CoastalGroundMaterial.map = bindGroundTexture(
+  CoastalGroundMaterial,
+  "Coastal",
+  COASTAL_GROUND_PNG_URL,
+  16
+);
 const SEA_SIDE = "east";
 const COAST_WIDTH = 120;
 const INLAND_RISE = 220;
@@ -59152,7 +59185,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BFlNmhSF.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-iXcB-ouZ.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59887,7 +59920,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CsKZjbEm.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DYN9fFMB.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60835,8 +60868,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T23:53:48.918Z" : "",
-      sha: true ? "101c30c8566d7a6b59b87430dcdc104e62ee4747" : ""
+      time: true ? "2025-12-30T23:55:25.481Z" : "",
+      sha: true ? "af21c533637c114ee59ccadb2b2745d0addc65ab" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71460,4 +71493,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-ChK4za_a.js.map
+//# sourceMappingURL=index-BZ467sc2.js.map
