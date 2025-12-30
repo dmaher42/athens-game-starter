@@ -6,7 +6,7 @@ import * as THREE from "three";
 
 const TILE_SIZE = 40;
 const TILE_RADIUS = 1; // results in a 3x3 ring
-const BLADES_PER_TILE = 1800;
+const BLADES_PER_TILE = 200;
 const MAX_TILE_COUNT = (TILE_RADIUS * 2 + 1) ** 2;
 const BLADE_HEIGHT_MIN = 0.75;
 const BLADE_HEIGHT_MAX = 1.6;
