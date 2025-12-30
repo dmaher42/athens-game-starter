@@ -41924,6 +41924,9 @@ function ensureStandardMaterial(material) {
   if (material instanceof MeshStandardMaterial) {
     return material;
   }
+  if (material && material.isMeshStandardMaterial) {
+    return material;
+  }
   const wrapped = new MeshStandardMaterial();
   if (material && typeof material === "object") {
     wrapped.setValues(material);
@@ -60153,7 +60156,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CI3__hes.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C1XSJkoG.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60645,6 +60648,9 @@ class GLTFMeshStandardSGMaterial extends MeshStandardMaterial {
     if (params instanceof MeshStandardMaterial) {
       return params;
     }
+    if (params && params.isMeshStandardMaterial) {
+      return params;
+    }
     super();
     this.isGLTFSpecularGlossinessMaterial = true;
     const specularMapParsFragmentChunk = [
@@ -60862,7 +60868,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-fQm_SWyp.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-NCN2HK7-.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61810,8 +61816,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T05:18:17.320Z" : "",
-      sha: true ? "1c735df01133eac85f79c95c15d5ce7a7ef84afb" : ""
+      time: true ? "2025-12-30T05:19:45.754Z" : "",
+      sha: true ? "f17a2136204c3950c8c26d42a2ddcf41b608bfb4" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72562,4 +72568,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-bxOg6uSz.js.map
+//# sourceMappingURL=index-Dpmu5OB-.js.map
