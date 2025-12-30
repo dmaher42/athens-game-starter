@@ -42158,7 +42158,7 @@ const __vitePreload = function preload(baseModule, deps, importerUrl) {
     return baseModule().catch(handlePreloadError);
   });
 };
-const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$5 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const REPO_SEGMENT$1 = "athens-game-starter";
 function normalizeAbsoluteBaseUrl(value) {
   if (typeof value !== "string") return value;
@@ -42184,7 +42184,7 @@ function normalizeRelativeBaseUrl(value) {
 }
 function resolveBaseUrl$4() {
   let base = "/";
-  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true) {
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$5 && true) {
     base = "/athens-game-starter/";
   }
   if (/^(?:[a-z]+:)?\/\//i.test(base)) {
@@ -43526,18 +43526,35 @@ const RENDER_LAYERS = Object.freeze({
   TERRAIN: 1,
   DETAIL: 2
 });
+const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const textureLoader$1 = new TextureLoader();
+const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
+const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
+const GROUND_SHADER_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
+function loadGroundTexture(url, repeat) {
+  const texture = textureLoader$1.load(url);
+  texture.wrapS = texture.wrapT = RepeatWrapping;
+  texture.repeat.set(repeat, repeat);
+  return texture;
+}
+const cityGroundTexture = loadGroundTexture(GROUND_SHADER_URL, 20);
+const inlandGroundTexture = loadGroundTexture(GROUND_SHADER_URL, 32);
+const coastalGroundTexture = loadGroundTexture(GROUND_SHADER_URL, 16);
 const CityGroundMaterial = new MeshStandardMaterial({
   color: 13219740,
+  map: cityGroundTexture,
   roughness: 0.6,
   metalness: 0
 });
 const InlandGroundMaterial = new MeshStandardMaterial({
   color: 9072462,
+  map: inlandGroundTexture,
   roughness: 0.85,
   metalness: 0
 });
 const CoastalGroundMaterial = new MeshStandardMaterial({
   color: 15127459,
+  map: coastalGroundTexture,
   roughness: 0.75,
   metalness: 0
 });
@@ -59132,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CvDJmrsO.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DbsLWlAX.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59867,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-0Pfj4wiM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Db84I1cf.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60815,8 +60832,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T23:40:03.878Z" : "",
-      sha: true ? "f0a6792b76fd69362d505f529e33ef1eddb37ea5" : ""
+      time: true ? "2025-12-30T23:49:32.613Z" : "",
+      sha: true ? "1f154bb2d81e5409d679d8a76a22df4bdce03e92" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71440,4 +71457,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-8E3Yb8eG.js.map
+//# sourceMappingURL=index-CnMPkWTP.js.map
