@@ -70,6 +70,10 @@ function installAmbientOcclusionPatch() {
       for (const [k, v] of Object.entries(values)) {
         if (v !== undefined) cleaned[k] = v;
       }
+      if (!("metalness" in this)) delete cleaned.metalness;
+      if (!("roughness" in this)) delete cleaned.roughness;
+      if (!("metalnessMap" in this)) delete cleaned.metalnessMap;
+      if (!("roughnessMap" in this)) delete cleaned.roughnessMap;
       originalSetValues.call(this, cleaned);
     } else {
       originalSetValues.call(this, values);
