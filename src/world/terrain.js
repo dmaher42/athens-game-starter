@@ -486,6 +486,20 @@ export function createTerrain(scene) {
   addGroup(cityIndices, 1);
   addGroup(inlandIndices, 2);
 
+  const coastalTriangles = coastalIndices.length / 3;
+  const cityTriangles = cityIndices.length / 3;
+  const inlandTriangles = inlandIndices.length / 3;
+
+  console.log(
+    `[Ground][Temp] Coastal ground material applied to ${coastalTriangles} triangles`,
+  );
+  console.log(
+    `[Ground][Temp] City ground material applied to ${cityTriangles} triangles`,
+  );
+  console.log(
+    `[Ground][Temp] Inland ground material applied to ${inlandTriangles} triangles`,
+  );
+
   geometry.setIndex(new THREE.BufferAttribute(reorderedIndices, 1));
 
   const terrainMaterials = [
