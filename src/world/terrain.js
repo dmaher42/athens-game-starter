@@ -10,8 +10,6 @@ import {
   injectGroundTextureShader,
 } from "./groundTextures.js";
 import { getDistanceToCoast, isInHarborZone } from './coastalZones.js';
-import { GROUND_TEXTURE_CONFIG } from "./groundTextureConfig.js";
-import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 import { applyTextureBudgetToMaterial } from "../utils/textureBudget.js";
 import {
   GRASS_MIN_ELEV,
@@ -130,6 +128,21 @@ const MAINLAND_EDGE_BUFFER = 0.8;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
+const CITY_GROUND_MATERIAL = new THREE.MeshStandardMaterial({
+  color: 0xc8b89a,
+  roughness: 0.6,
+  metalness: 0.0,
+});
+const INLAND_GROUND_MATERIAL = new THREE.MeshStandardMaterial({
+  color: 0x6f5a3a,
+  roughness: 0.9,
+  metalness: 0.0,
+});
+const COASTAL_GROUND_MATERIAL = new THREE.MeshStandardMaterial({
+  color: 0xe6d3a3,
+  roughness: 0.8,
+  metalness: 0.0,
+});
 
 // Harbor configuration (East Facing)
 // HARBOR_GROUND_HEIGHT imported from locations.js at line 6
@@ -427,6 +440,9 @@ export function createTerrain(scene) {
   const colors = new Float32Array(vertexCount * 3);
   const colorAttribute = new THREE.BufferAttribute(colors, 3);
   geometry.setAttribute("color", colorAttribute);
+  const dSeaValues = new Float32Array(vertexCount);
+  const dSeaAttribute = new THREE.BufferAttribute(dSeaValues, 1);
+  geometry.setAttribute("dSea", dSeaAttribute);
 
   const seaLevel = getSeaLevelY();
   const color = new THREE.Color();
@@ -441,6 +457,7 @@ export function createTerrain(scene) {
       const height = getElevation(x, z, seaLevel, coastData, noiseOffset);
       positionAttribute.setZ(i, height);
       baseHeights[i] = height;
+      dSeaValues[i] = coastData.dSea;
 
       // Shoreline/Beach Band Logic
       const beachHeight = SAND_MAX_ELEV;
@@ -492,6 +509,7 @@ export function createTerrain(scene) {
 
   positionAttribute.needsUpdate = true;
   colorAttribute.needsUpdate = true;
+  dSeaAttribute.needsUpdate = true;
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
 
@@ -509,51 +527,111 @@ export function createTerrain(scene) {
 
     // Skirt disabled: avoid overlapping secondary ground layer near harbor/ocean.
 
-  // Load sand texture maps
-  const baseUrl = resolveBaseUrl();
-  const textureOptions = {
-    repeat: [28, 24],
-    colorSpace: THREE.NoColorSpace,
-    anisotropy: 8,
-  };
-
-  const sandNormal = loadTextureWithFallback(
-    joinPath(baseUrl, "textures/sand/normal_gl.jpg"),
-    textureOptions,
-    () => createFallbackDataTexture([128, 128, 255], textureOptions),
-  );
-
-  const sandARM = loadTextureWithFallback(
-    joinPath(baseUrl, "textures/sand/arm.jpg"),
-    textureOptions,
-    () => createFallbackDataTexture([255, 255, 0], textureOptions),
-  );
-
   let terrainMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
-    roughness: 0.8,
+    roughness: INLAND_GROUND_MATERIAL.roughness,
     metalness: 0.0,
     vertexColors: true,
     side: THREE.FrontSide,
-    normalMap: sandNormal,
-    normalScale: new THREE.Vector2(0.5, 0.5),
-    aoMap: sandARM,
-    roughnessMap: sandARM,
-    aoMapIntensity: 0.6,
   });
 
   terrainMaterial.userData.textureBudget = "skip";
 
   const groundTextureState = createGroundTextureState(
     terrainMaterial,
-    GROUND_TEXTURE_CONFIG,
+    {
+      base: {
+        roughness: INLAND_GROUND_MATERIAL.roughness,
+        metalness: 0.0,
+      },
+      blend: { enabled: false },
+      details: [],
+    },
   );
 
   terrainMaterial.onBeforeCompile = (shader) => {
     injectGroundTextureShader(shader, groundTextureState);
-    if (shader.uniforms.uSeaLevel) {
-      shader.uniforms.uSeaLevel.value = getSeaLevelY();
+    shader.uniforms.uSeaLevel = shader.uniforms.uSeaLevel ?? {
+      value: getSeaLevelY(),
+    };
+    shader.uniforms.uCityGroundColor = {
+      value: CITY_GROUND_MATERIAL.color.clone(),
+    };
+    shader.uniforms.uInlandGroundColor = {
+      value: INLAND_GROUND_MATERIAL.color.clone(),
+    };
+    shader.uniforms.uCoastalGroundColor = {
+      value: COASTAL_GROUND_MATERIAL.color.clone(),
+    };
+    shader.uniforms.uCityGroundRoughness = {
+      value: CITY_GROUND_MATERIAL.roughness,
+    };
+    shader.uniforms.uInlandGroundRoughness = {
+      value: INLAND_GROUND_MATERIAL.roughness,
+    };
+    shader.uniforms.uCoastalGroundRoughness = {
+      value: COASTAL_GROUND_MATERIAL.roughness,
+    };
+
+    if (!shader.vertexShader.includes("varying float vDSea;")) {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <common>",
+        `#include <common>
+attribute float dSea;
+varying float vDSea;
+varying float vGroundHeight;`,
+      );
     }
+
+    if (!shader.vertexShader.includes("vDSea = dSea;")) {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+  vDSea = dSea;
+  vGroundHeight = position.z;`,
+      );
+    }
+
+    if (!shader.fragmentShader.includes("varying float vDSea;")) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <common>",
+        `#include <common>
+varying float vDSea;
+varying float vGroundHeight;
+uniform float uSeaLevel;
+uniform vec3 uCityGroundColor;
+uniform vec3 uInlandGroundColor;
+uniform vec3 uCoastalGroundColor;
+uniform float uCityGroundRoughness;
+uniform float uInlandGroundRoughness;
+uniform float uCoastalGroundRoughness;`,
+      );
+    }
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <color_fragment>",
+      `#include <color_fragment>
+  vec3 groundColor = uInlandGroundColor;
+  float groundRoughness = uInlandGroundRoughness;
+  if (vGroundHeight < uSeaLevel) {
+    #ifdef USE_COLOR
+      groundColor = vColor;
+    #endif
+  } else if (vDSea < 0.15) {
+    groundColor = uCoastalGroundColor;
+    groundRoughness = uCoastalGroundRoughness;
+  } else if (vDSea <= 0.55) {
+    groundColor = uCityGroundColor;
+    groundRoughness = uCityGroundRoughness;
+  }
+  diffuseColor.rgb = groundColor;`,
+    );
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <roughnessmap_fragment>",
+      `#include <roughnessmap_fragment>
+  roughnessFactor = groundRoughness;`,
+    );
   };
 
   terrainMaterial = applyTextureBudgetToMaterial(terrainMaterial, {
