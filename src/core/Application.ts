@@ -87,7 +87,7 @@ import { GameLoop } from "./GameLoop.js";
 import { VillagerSystem } from "../world/traffic.js";
 import { createAtmosphericParticles } from "../world/particles.js";
 import { initPropCulling, updateDistanceCulling } from "../utils/propCulling.js";
-import { initBuildingCulling, updateBuildingCulling } from "../utils/buildingCulling.js";
+import { cullDistantBuildings } from "../utils/buildingCulling.js";
 import { scatterGroundProps } from "../world/groundProps.js";
 import { initCityDebugMode } from "../debug/cityDebug.js";
 import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
@@ -815,10 +815,7 @@ export class Application {
         }
 
         if (Math.floor(elapsed * 60) % 20 === 0) {
-          updateBuildingCulling(scene, camera, {
-            cullDistance: 400,
-            enableHorizon: true
-          });
+          cullDistantBuildings(scene, camera, 400);
         }
 
         renderFrame();
@@ -833,13 +830,6 @@ export class Application {
         initPropCulling(scene, camera, { dryRun: false });
       } catch {}
 
-      try {
-        initBuildingCulling(scene, camera, {
-          cullDistance: 400,
-          enableHorizon: true,
-          enableLOD: false
-        });
-      } catch {}
 
       // Debug mode is intentionally manual-only; call initCityDebugMode(scene, terrain) when needed.
 
