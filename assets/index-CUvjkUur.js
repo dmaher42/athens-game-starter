@@ -43351,26 +43351,26 @@ function joinBase$1(base, relativePath) {
   const safePath = relativePath.replace(/^\/+/, "");
   return `${safeBase}${safePath}`;
 }
-const BASE_URL$1 = resolveBaseUrl$4();
+const BASE_URL$2 = resolveBaseUrl$4();
 const MATERIALS = {
   sand: {
-    albedo: joinBase$1(BASE_URL$1, "textures/sand/albedo.jpg"),
-    normal: joinBase$1(BASE_URL$1, "textures/sand/normal_gl.jpg"),
-    arm: joinBase$1(BASE_URL$1, "textures/sand/arm.jpg")
+    albedo: joinBase$1(BASE_URL$2, "textures/sand/albedo.jpg"),
+    normal: joinBase$1(BASE_URL$2, "textures/sand/normal_gl.jpg"),
+    arm: joinBase$1(BASE_URL$2, "textures/sand/arm.jpg")
   },
   grass: {
-    albedo: joinBase$1(BASE_URL$1, "textures/grass/albedo.jpg"),
-    normal: joinBase$1(BASE_URL$1, "textures/grass/normal_dx.jpg"),
-    roughness: joinBase$1(BASE_URL$1, "textures/grass/roughness.jpg"),
-    metallic: joinBase$1(BASE_URL$1, "textures/grass/metallic.jpg"),
-    ao: joinBase$1(BASE_URL$1, "textures/grass/ao.jpg"),
-    height: joinBase$1(BASE_URL$1, "textures/grass/height.jpg")
+    albedo: joinBase$1(BASE_URL$2, "textures/grass/albedo.jpg"),
+    normal: joinBase$1(BASE_URL$2, "textures/grass/normal_dx.jpg"),
+    roughness: joinBase$1(BASE_URL$2, "textures/grass/roughness.jpg"),
+    metallic: joinBase$1(BASE_URL$2, "textures/grass/metallic.jpg"),
+    ao: joinBase$1(BASE_URL$2, "textures/grass/ao.jpg"),
+    height: joinBase$1(BASE_URL$2, "textures/grass/height.jpg")
   },
   stoneFallback: {
-    albedo: joinBase$1(BASE_URL$1, "textures/marble_base.jpg")
+    albedo: joinBase$1(BASE_URL$2, "textures/marble_base.jpg")
   },
   dirt: {
-    albedo: joinBase$1(BASE_URL$1, "textures/ground/dirt-albedo.jpg")
+    albedo: joinBase$1(BASE_URL$2, "textures/ground/dirt-albedo.jpg")
   }
 };
 const SAND_MAX_ELEV = 3;
@@ -43381,13 +43381,13 @@ function resolveBaseUrl$3() {
   const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$3 && true ? "/athens-game-starter/" : "/";
   return base.endsWith("/") ? base : `${base}/`;
 }
-const BASE_URL = resolveBaseUrl$3();
+const BASE_URL$1 = resolveBaseUrl$3();
 const resolveTexturePath = (relativePath) => {
-  if (relativePath.startsWith(BASE_URL)) {
+  if (relativePath.startsWith(BASE_URL$1)) {
     return relativePath;
   }
   const safePath = relativePath.replace(/^\/+/, "");
-  return `${BASE_URL}${safePath}`;
+  return `${BASE_URL$1}${safePath}`;
 };
 const SAND_ALBEDO_URL = resolveTexturePath(
   MATERIALS?.sand?.albedo ?? "textures/sand/albedo.jpg"
@@ -45053,6 +45053,8 @@ function validateTerrain(options) {
   return { valid: true };
 }
 const textureLoader$1 = new TextureLoader();
+const BASE_URL = resolveBaseUrl$5();
+const WHITE_PIXEL_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 function configureMapTexture(texture, options = {}) {
   texture.wrapS = texture.wrapT = RepeatWrapping;
   if (options.repeat) {
@@ -45064,47 +45066,44 @@ function configureMapTexture(texture, options = {}) {
   if (typeof options.anisotropy === "number") {
     texture.anisotropy = options.anisotropy;
   }
-  texture.magFilter = LinearFilter;
-  texture.minFilter = LinearMipMapLinearFilter;
+  if (!options.skipFilters) {
+    texture.magFilter = LinearFilter;
+    texture.minFilter = LinearMipMapLinearFilter;
+  }
   texture.needsUpdate = true;
 }
-function createFallbackDataTexture(color, options) {
-  const data = new Uint8Array(color);
-  const texture = new DataTexture(
-    data,
-    1,
-    1,
-    RGBFormat,
-    UnsignedByteType
-  );
-  configureMapTexture(texture, options);
+function loadTextureWithFallback(url, options) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, 1, 1);
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.minFilter = NearestFilter;
+  texture.magFilter = NearestFilter;
+  texture.generateMipmaps = false;
+  configureMapTexture(texture, { ...options, skipFilters: true });
+  if (!url) return texture;
+  const fullUrl = joinPath(BASE_URL, url);
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => {
+    canvas.width = image.width;
+    canvas.height = image.height;
+    ctx.drawImage(image, 0, 0);
+    texture.generateMipmaps = true;
+    configureMapTexture(texture, options);
+    texture.minFilter = LinearMipMapLinearFilter;
+    texture.magFilter = LinearFilter;
+    texture.needsUpdate = true;
+  };
+  image.onerror = (err2) => {
+    console.warn(`Failed to load ground texture: ${fullUrl}`, err2);
+  };
+  image.src = fullUrl;
   return texture;
-}
-function loadTextureWithFallback(url, options, fallbackFactory) {
-  const fallbackTexture = fallbackFactory();
-  configureMapTexture(fallbackTexture, options);
-  try {
-    textureLoader$1.load(
-      url,
-      (loadedTexture) => {
-        if (!loadedTexture) return;
-        configureMapTexture(loadedTexture, options);
-        fallbackTexture.image = loadedTexture.image;
-        fallbackTexture.format = loadedTexture.format;
-        fallbackTexture.type = loadedTexture.type;
-        fallbackTexture.colorSpace = loadedTexture.colorSpace;
-        fallbackTexture.isDataTexture = false;
-        fallbackTexture.needsUpdate = true;
-      },
-      void 0,
-      (event) => {
-        console.warn(`Failed to load ground texture: ${url}`, event);
-      }
-    );
-  } catch (error) {
-    console.warn(`Failed to load ground texture: ${url}`, error);
-  }
-  return fallbackTexture;
 }
 function gradientNoise(x, z) {
   const x0 = Math.floor(x);
@@ -45145,17 +45144,20 @@ const SHALLOW_WATER_COLOR = new Color(2051929);
 const CITY_GROUND_MATERIAL = new MeshStandardMaterial({
   color: 13154458,
   roughness: 0.6,
-  metalness: 0
+  metalness: 0,
+  map: loadTextureWithFallback("textures/marble_base.jpg", { repeat: [12, 12] })
 });
 const INLAND_GROUND_MATERIAL = new MeshStandardMaterial({
   color: 7297594,
   roughness: 0.9,
-  metalness: 0
+  metalness: 0,
+  map: loadTextureWithFallback("textures/ground/dirt-albedo.jpg", { repeat: [4, 4] })
 });
 const COASTAL_GROUND_MATERIAL = new MeshStandardMaterial({
   color: 15127459,
   roughness: 0.8,
-  metalness: 0
+  metalness: 0,
+  map: loadTextureWithFallback("textures/sand/albedo.jpg", { repeat: [8, 8] })
 });
 const HARBOUR_RADIUS = 70;
 const HARBOUR_TARGET_DEPTH = 2;
@@ -45422,12 +45424,19 @@ function createTerrain(scene2) {
     );
     geometry.setAttribute("basePos", basePos);
   }
+  const dummyMap = loadTextureWithFallback("", { repeat: [1, 1] });
   let terrainMaterial = new MeshStandardMaterial({
     color: 16777215,
     roughness: INLAND_GROUND_MATERIAL.roughness,
     metalness: 0,
     vertexColors: true,
-    side: FrontSide
+    side: FrontSide,
+    map: dummyMap,
+    // Vital for shader compilation stability
+    defines: {
+      USE_UV: ""
+      // Reinforce UV usage
+    }
   });
   terrainMaterial.userData.textureBudget = "skip";
   const groundTextureState = createGroundTextureState(
@@ -45446,24 +45455,15 @@ function createTerrain(scene2) {
     shader.uniforms.uSeaLevel = shader.uniforms.uSeaLevel ?? {
       value: getSeaLevelY()
     };
-    shader.uniforms.uCityGroundColor = {
-      value: CITY_GROUND_MATERIAL.color.clone()
-    };
-    shader.uniforms.uInlandGroundColor = {
-      value: INLAND_GROUND_MATERIAL.color.clone()
-    };
-    shader.uniforms.uCoastalGroundColor = {
-      value: COASTAL_GROUND_MATERIAL.color.clone()
-    };
-    shader.uniforms.uCityGroundRoughness = {
-      value: CITY_GROUND_MATERIAL.roughness
-    };
-    shader.uniforms.uInlandGroundRoughness = {
-      value: INLAND_GROUND_MATERIAL.roughness
-    };
-    shader.uniforms.uCoastalGroundRoughness = {
-      value: COASTAL_GROUND_MATERIAL.roughness
-    };
+    shader.uniforms.uCityGroundColor = { value: CITY_GROUND_MATERIAL.color.clone() };
+    shader.uniforms.uInlandGroundColor = { value: INLAND_GROUND_MATERIAL.color.clone() };
+    shader.uniforms.uCoastalGroundColor = { value: COASTAL_GROUND_MATERIAL.color.clone() };
+    shader.uniforms.uCityGroundRoughness = { value: CITY_GROUND_MATERIAL.roughness };
+    shader.uniforms.uInlandGroundRoughness = { value: INLAND_GROUND_MATERIAL.roughness };
+    shader.uniforms.uCoastalGroundRoughness = { value: COASTAL_GROUND_MATERIAL.roughness };
+    shader.uniforms.uCityGroundMap = { value: CITY_GROUND_MATERIAL.map };
+    shader.uniforms.uInlandGroundMap = { value: INLAND_GROUND_MATERIAL.map };
+    shader.uniforms.uCoastalGroundMap = { value: COASTAL_GROUND_MATERIAL.map };
     if (!shader.vertexShader.includes("varying float vDSea;")) {
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
@@ -45472,12 +45472,26 @@ attribute float dSea;
 varying float vDSea;
 varying float vGroundHeight;`
       );
+    } else {
+      if (!shader.vertexShader.includes("varying float vGroundHeight;")) {
+        shader.vertexShader = shader.vertexShader.replace(
+          "varying float vDSea;",
+          `varying float vDSea;
+varying float vGroundHeight;`
+        );
+      }
     }
     if (!shader.vertexShader.includes("vDSea = dSea;")) {
       shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
   vDSea = dSea;
+  vGroundHeight = position.z;`
+      );
+    } else if (!shader.vertexShader.includes("vGroundHeight = position.z;")) {
+      shader.vertexShader = shader.vertexShader.replace(
+        "vDSea = dSea;",
+        `vDSea = dSea;
   vGroundHeight = position.z;`
       );
     }
@@ -45493,23 +45507,54 @@ uniform vec3 uInlandGroundColor;
 uniform vec3 uCoastalGroundColor;
 uniform float uCityGroundRoughness;
 uniform float uInlandGroundRoughness;
-uniform float uCoastalGroundRoughness;`
+uniform float uCoastalGroundRoughness;
+uniform sampler2D uCityGroundMap;
+uniform sampler2D uInlandGroundMap;
+uniform sampler2D uCoastalGroundMap;`
       );
+    } else {
+      if (!shader.fragmentShader.includes("varying float vGroundHeight;")) {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "varying float vDSea;",
+          `varying float vDSea;
+varying float vGroundHeight;`
+        );
+      }
+      if (!shader.fragmentShader.includes("uniform sampler2D uCityGroundMap;")) {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          "#include <common>",
+          `#include <common>
+uniform float uSeaLevel;
+uniform vec3 uCityGroundColor;
+uniform vec3 uInlandGroundColor;
+uniform vec3 uCoastalGroundColor;
+uniform float uCityGroundRoughness;
+uniform float uInlandGroundRoughness;
+uniform float uCoastalGroundRoughness;
+uniform sampler2D uCityGroundMap;
+uniform sampler2D uInlandGroundMap;
+uniform sampler2D uCoastalGroundMap;`
+        );
+      }
     }
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <color_fragment>",
       `#include <color_fragment>
-  vec3 groundColor = uInlandGroundColor;
+  // Inland (dirt)
+  vec3 groundColor = uInlandGroundColor * texture2D(uInlandGroundMap, vUv * 4.0).rgb;
   float groundRoughness = uInlandGroundRoughness;
+
   if (vGroundHeight < uSeaLevel) {
     #ifdef USE_COLOR
       groundColor = vColor;
     #endif
   } else if (vDSea < 0.15) {
-    groundColor = uCoastalGroundColor;
+    // Coastal (sand)
+    groundColor = uCoastalGroundColor * texture2D(uCoastalGroundMap, vUv * 8.0).rgb;
     groundRoughness = uCoastalGroundRoughness;
   } else if (vDSea <= 0.55) {
-    groundColor = uCityGroundColor;
+    // City (paved/marble)
+    groundColor = uCityGroundColor * texture2D(uCityGroundMap, vUv * 12.0).rgb;
     groundRoughness = uCityGroundRoughness;
   }
   diffuseColor.rgb = groundColor;`
@@ -60239,7 +60284,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dc56RRlp.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-So-OMWBF.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60974,7 +61019,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-oHc9Kgml.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BHzXEBD4.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61922,8 +61967,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T08:09:12.887Z" : "",
-      sha: true ? "fda5f8ca51fd58e1ef1681d3912c83f16b9b3671" : ""
+      time: true ? "2025-12-30T23:01:13.416Z" : "",
+      sha: true ? "0a58581a2f18be59e3b08114663d8e01dd769df3" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72547,4 +72592,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CSnqQtZp.js.map
+//# sourceMappingURL=index-CUvjkUur.js.map
