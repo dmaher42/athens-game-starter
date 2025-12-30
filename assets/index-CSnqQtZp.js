@@ -45142,6 +45142,21 @@ const MAINLAND_EDGE_BUFFER = 0.8;
 const SAND_COLOR = new Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new Color(2051929);
+const CITY_GROUND_MATERIAL = new MeshStandardMaterial({
+  color: 13154458,
+  roughness: 0.6,
+  metalness: 0
+});
+const INLAND_GROUND_MATERIAL = new MeshStandardMaterial({
+  color: 7297594,
+  roughness: 0.9,
+  metalness: 0
+});
+const COASTAL_GROUND_MATERIAL = new MeshStandardMaterial({
+  color: 15127459,
+  roughness: 0.8,
+  metalness: 0
+});
 const HARBOUR_RADIUS = 70;
 const HARBOUR_TARGET_DEPTH = 2;
 const EAST_HARBOR_CENTER = new Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z);
@@ -45340,6 +45355,9 @@ function createTerrain(scene2) {
   const colors = new Float32Array(vertexCount * 3);
   const colorAttribute = new BufferAttribute(colors, 3);
   geometry.setAttribute("color", colorAttribute);
+  const dSeaValues = new Float32Array(vertexCount);
+  const dSeaAttribute = new BufferAttribute(dSeaValues, 1);
+  geometry.setAttribute("dSea", dSeaAttribute);
   const seaLevel = getSeaLevelY();
   const color = new Color();
   const white = new Color(1, 1, 1);
@@ -45351,6 +45369,7 @@ function createTerrain(scene2) {
       const height = getElevation$1(x, z, seaLevel, coastData, noiseOffset);
       positionAttribute.setZ(i, height);
       baseHeights[i] = height;
+      dSeaValues[i] = coastData.dSea;
       const beachHeight = SAND_MAX_ELEV;
       const beachFade = Math.max(0.1, GRASS_MIN_ELEV - SAND_MAX_ELEV);
       const beachLimit = seaLevel + beachHeight;
@@ -45390,6 +45409,7 @@ function createTerrain(scene2) {
   }
   positionAttribute.needsUpdate = true;
   colorAttribute.needsUpdate = true;
+  dSeaAttribute.needsUpdate = true;
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
   geometry.userData.baseHeights = baseHeights;
@@ -45402,44 +45422,103 @@ function createTerrain(scene2) {
     );
     geometry.setAttribute("basePos", basePos);
   }
-  const baseUrl2 = resolveBaseUrl$5();
-  const textureOptions = {
-    repeat: [28, 24],
-    colorSpace: NoColorSpace,
-    anisotropy: 8
-  };
-  const sandNormal = loadTextureWithFallback(
-    joinPath(baseUrl2, "textures/sand/normal_gl.jpg"),
-    textureOptions,
-    () => createFallbackDataTexture([128, 128, 255], textureOptions)
-  );
-  const sandARM = loadTextureWithFallback(
-    joinPath(baseUrl2, "textures/sand/arm.jpg"),
-    textureOptions,
-    () => createFallbackDataTexture([255, 255, 0], textureOptions)
-  );
   let terrainMaterial = new MeshStandardMaterial({
     color: 16777215,
-    roughness: 0.8,
+    roughness: INLAND_GROUND_MATERIAL.roughness,
     metalness: 0,
     vertexColors: true,
-    side: FrontSide,
-    normalMap: sandNormal,
-    normalScale: new Vector2(0.5, 0.5),
-    aoMap: sandARM,
-    roughnessMap: sandARM,
-    aoMapIntensity: 0.6
+    side: FrontSide
   });
   terrainMaterial.userData.textureBudget = "skip";
   const groundTextureState = createGroundTextureState(
     terrainMaterial,
-    GROUND_TEXTURE_CONFIG
+    {
+      base: {
+        roughness: INLAND_GROUND_MATERIAL.roughness,
+        metalness: 0
+      },
+      blend: { enabled: false },
+      details: []
+    }
   );
   terrainMaterial.onBeforeCompile = (shader) => {
     injectGroundTextureShader(shader, groundTextureState);
-    if (shader.uniforms.uSeaLevel) {
-      shader.uniforms.uSeaLevel.value = getSeaLevelY();
+    shader.uniforms.uSeaLevel = shader.uniforms.uSeaLevel ?? {
+      value: getSeaLevelY()
+    };
+    shader.uniforms.uCityGroundColor = {
+      value: CITY_GROUND_MATERIAL.color.clone()
+    };
+    shader.uniforms.uInlandGroundColor = {
+      value: INLAND_GROUND_MATERIAL.color.clone()
+    };
+    shader.uniforms.uCoastalGroundColor = {
+      value: COASTAL_GROUND_MATERIAL.color.clone()
+    };
+    shader.uniforms.uCityGroundRoughness = {
+      value: CITY_GROUND_MATERIAL.roughness
+    };
+    shader.uniforms.uInlandGroundRoughness = {
+      value: INLAND_GROUND_MATERIAL.roughness
+    };
+    shader.uniforms.uCoastalGroundRoughness = {
+      value: COASTAL_GROUND_MATERIAL.roughness
+    };
+    if (!shader.vertexShader.includes("varying float vDSea;")) {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <common>",
+        `#include <common>
+attribute float dSea;
+varying float vDSea;
+varying float vGroundHeight;`
+      );
     }
+    if (!shader.vertexShader.includes("vDSea = dSea;")) {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+  vDSea = dSea;
+  vGroundHeight = position.z;`
+      );
+    }
+    if (!shader.fragmentShader.includes("varying float vDSea;")) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <common>",
+        `#include <common>
+varying float vDSea;
+varying float vGroundHeight;
+uniform float uSeaLevel;
+uniform vec3 uCityGroundColor;
+uniform vec3 uInlandGroundColor;
+uniform vec3 uCoastalGroundColor;
+uniform float uCityGroundRoughness;
+uniform float uInlandGroundRoughness;
+uniform float uCoastalGroundRoughness;`
+      );
+    }
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <color_fragment>",
+      `#include <color_fragment>
+  vec3 groundColor = uInlandGroundColor;
+  float groundRoughness = uInlandGroundRoughness;
+  if (vGroundHeight < uSeaLevel) {
+    #ifdef USE_COLOR
+      groundColor = vColor;
+    #endif
+  } else if (vDSea < 0.15) {
+    groundColor = uCoastalGroundColor;
+    groundRoughness = uCoastalGroundRoughness;
+  } else if (vDSea <= 0.55) {
+    groundColor = uCityGroundColor;
+    groundRoughness = uCityGroundRoughness;
+  }
+  diffuseColor.rgb = groundColor;`
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <roughnessmap_fragment>",
+      `#include <roughnessmap_fragment>
+  roughnessFactor = groundRoughness;`
+    );
   };
   terrainMaterial = applyTextureBudgetToMaterial(terrainMaterial, {
     renderer: scene2?.userData?.renderer ?? null
@@ -60160,7 +60239,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CrAtHCbk.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dc56RRlp.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60895,7 +60974,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B0brtuua.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-oHc9Kgml.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61843,8 +61922,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T06:08:12.437Z" : "",
-      sha: true ? "d387b04f7835021765cbb1fc277b1e0aad909633" : ""
+      time: true ? "2025-12-30T08:09:12.887Z" : "",
+      sha: true ? "fda5f8ca51fd58e1ef1681d3912c83f16b9b3671" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72468,4 +72547,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-D3GV1w3U.js.map
+//# sourceMappingURL=index-CSnqQtZp.js.map
