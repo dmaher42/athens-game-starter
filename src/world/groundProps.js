@@ -82,7 +82,7 @@ function isInsideBuilding(x, z, placements, padding = 1.2) {
 export function scatterGroundProps(scene, terrain, options = {}) {
   if (!scene || !terrain) return null;
 
-  const count = options.count ?? 520;
+  const count = options.count ?? 50;
   const seaLevel = Number.isFinite(options?.seaLevel)
     ? options.seaLevel
     : getSeaLevelY();
