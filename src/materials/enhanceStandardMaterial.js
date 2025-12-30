@@ -21,6 +21,9 @@ function ensureStandardMaterial(material) {
   if (material instanceof MeshStandardMaterial) {
     return material;
   }
+  if (material && material.isMeshStandardMaterial) {
+    return material;
+  }
   const wrapped = new MeshStandardMaterial();
   if (material && typeof material === "object") {
     wrapped.setValues(material);

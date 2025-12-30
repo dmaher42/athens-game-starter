@@ -24,6 +24,9 @@ class GLTFMeshStandardSGMaterial extends THREE.MeshStandardMaterial {
     if (params instanceof THREE.MeshStandardMaterial) {
       return params;
     }
+    if (params && params.isMeshStandardMaterial) {
+      return params;
+    }
     super();
 
     this.isGLTFSpecularGlossinessMaterial = true;
