@@ -24,8 +24,12 @@ import {
   RIDGE_HEIGHT,
 } from "../config/terrainShape";
 import { validateTerrain } from "./terrainValidation.js";
+import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 
 const textureLoader = new THREE.TextureLoader();
+const BASE_URL = resolveBaseUrl();
+// 1x1 White Pixel Base64 for dummy map
+const WHITE_PIXEL_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 function configureMapTexture(texture, options = {}) {
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
@@ -38,52 +42,74 @@ function configureMapTexture(texture, options = {}) {
   if (typeof options.anisotropy === "number") {
     texture.anisotropy = options.anisotropy;
   }
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearMipMapLinearFilter;
+
+  // Only set filters if NOT explicitly skipped.
+  // This allows the fallback texture to use NearestFilter (set by caller)
+  // to avoid "black texture" issues with non-mipmapped 1x1 textures.
+  if (!options.skipFilters) {
+    texture.magFilter = THREE.LinearFilter;
+    texture.minFilter = THREE.LinearMipMapLinearFilter;
+  }
+
   texture.needsUpdate = true;
 }
 
-function createFallbackDataTexture(color, options) {
-  const data = new Uint8Array(color);
-  const texture = new THREE.DataTexture(
-    data,
-    1,
-    1,
-    THREE.RGBFormat,
-    THREE.UnsignedByteType,
-  );
-  configureMapTexture(texture, options);
+function loadTextureWithFallback(url, options) {
+  // Use standard TextureLoader directly.
+  // This avoids unsafe manual mutation of texture properties which can cause WebGL errors.
+  // The texture will be valid immediately (though empty) and update automatically when loaded.
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, 1, 1);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+
+  // Set initial filters for 1x1 pixel to avoid mipmap warnings/blackness
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+
+  // Pass skipFilters: true so configureMapTexture doesn't override our safe filters
+  configureMapTexture(texture, { ...options, skipFilters: true });
+
+  if (!url) return texture;
+
+  const fullUrl = joinPath(BASE_URL, url);
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => {
+    // Resize canvas to match image
+    canvas.width = image.width;
+    canvas.height = image.height;
+
+    // Draw image
+    ctx.drawImage(image, 0, 0);
+
+    // Enable mipmaps and high-quality filtering for the real texture
+    texture.generateMipmaps = true;
+
+    // Re-configure without skipping filters to apply high-quality settings
+    configureMapTexture(texture, options);
+
+    // Ensure we specifically set the filters we want for the real texture
+    texture.minFilter = THREE.LinearMipMapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+
+    texture.needsUpdate = true;
+  };
+
+  image.onerror = (err) => {
+    console.warn(`Failed to load ground texture: ${fullUrl}`, err);
+  };
+
+  image.src = fullUrl;
+
   return texture;
-}
-
-function loadTextureWithFallback(url, options, fallbackFactory) {
-  const fallbackTexture = fallbackFactory();
-  configureMapTexture(fallbackTexture, options);
-
-  try {
-    textureLoader.load(
-      url,
-      (loadedTexture) => {
-        if (!loadedTexture) return;
-        configureMapTexture(loadedTexture, options);
-        fallbackTexture.image = loadedTexture.image;
-        fallbackTexture.format = loadedTexture.format;
-        fallbackTexture.type = loadedTexture.type;
-        fallbackTexture.colorSpace = loadedTexture.colorSpace;
-        // Fix: Turn off isDataTexture since it's now an image-backed texture
-        fallbackTexture.isDataTexture = false;
-        fallbackTexture.needsUpdate = true;
-      },
-      undefined,
-      (event) => {
-        console.warn(`Failed to load ground texture: ${url}`, event);
-      },
-    );
-  } catch (error) {
-    console.warn(`Failed to load ground texture: ${url}`, error);
-  }
-
-  return fallbackTexture;
 }
 
 // Lightweight gradient noise to break up perfectly flat surfaces.
@@ -128,20 +154,25 @@ const MAINLAND_EDGE_BUFFER = 0.8;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
+
+// --- 3 GROUND MATERIALS (With Textures) ---
 const CITY_GROUND_MATERIAL = new THREE.MeshStandardMaterial({
   color: 0xc8b89a,
   roughness: 0.6,
   metalness: 0.0,
+  map: loadTextureWithFallback("textures/marble_base.jpg", { repeat: [12, 12] }),
 });
 const INLAND_GROUND_MATERIAL = new THREE.MeshStandardMaterial({
   color: 0x6f5a3a,
   roughness: 0.9,
   metalness: 0.0,
+  map: loadTextureWithFallback("textures/ground/dirt-albedo.jpg", { repeat: [4, 4] }),
 });
 const COASTAL_GROUND_MATERIAL = new THREE.MeshStandardMaterial({
   color: 0xe6d3a3,
   roughness: 0.8,
   metalness: 0.0,
+  map: loadTextureWithFallback("textures/sand/albedo.jpg", { repeat: [8, 8] }),
 });
 
 // Harbor configuration (East Facing)
@@ -525,7 +556,14 @@ export function createTerrain(scene) {
     geometry.setAttribute("basePos", basePos);
   }
 
-    // Skirt disabled: avoid overlapping secondary ground layer near harbor/ocean.
+  // Skirt disabled: avoid overlapping secondary ground layer near harbor/ocean.
+  // const skirtGeo = createSkirtGeometry(geometry, seaLevel);
+
+  // We assign a valid map (reusing our white fallback) to the material to ensure
+  // that Three.js enables UV-related chunks and uniforms (like uvTransform) correctly.
+  // This fixes black screen issues where UVs might be zero or varyings skipped.
+  // Use TextureLoader with data URI to ensure format is handled correctly.
+  const dummyMap = loadTextureWithFallback("", { repeat: [1, 1] });
 
   let terrainMaterial = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -533,6 +571,10 @@ export function createTerrain(scene) {
     metalness: 0.0,
     vertexColors: true,
     side: THREE.FrontSide,
+    map: dummyMap, // Vital for shader compilation stability
+    defines: {
+      USE_UV: "", // Reinforce UV usage
+    }
   });
 
   terrainMaterial.userData.textureBudget = "skip";
@@ -554,25 +596,23 @@ export function createTerrain(scene) {
     shader.uniforms.uSeaLevel = shader.uniforms.uSeaLevel ?? {
       value: getSeaLevelY(),
     };
-    shader.uniforms.uCityGroundColor = {
-      value: CITY_GROUND_MATERIAL.color.clone(),
-    };
-    shader.uniforms.uInlandGroundColor = {
-      value: INLAND_GROUND_MATERIAL.color.clone(),
-    };
-    shader.uniforms.uCoastalGroundColor = {
-      value: COASTAL_GROUND_MATERIAL.color.clone(),
-    };
-    shader.uniforms.uCityGroundRoughness = {
-      value: CITY_GROUND_MATERIAL.roughness,
-    };
-    shader.uniforms.uInlandGroundRoughness = {
-      value: INLAND_GROUND_MATERIAL.roughness,
-    };
-    shader.uniforms.uCoastalGroundRoughness = {
-      value: COASTAL_GROUND_MATERIAL.roughness,
-    };
 
+    // Inject Colors
+    shader.uniforms.uCityGroundColor = { value: CITY_GROUND_MATERIAL.color.clone() };
+    shader.uniforms.uInlandGroundColor = { value: INLAND_GROUND_MATERIAL.color.clone() };
+    shader.uniforms.uCoastalGroundColor = { value: COASTAL_GROUND_MATERIAL.color.clone() };
+
+    // Inject Roughness
+    shader.uniforms.uCityGroundRoughness = { value: CITY_GROUND_MATERIAL.roughness };
+    shader.uniforms.uInlandGroundRoughness = { value: INLAND_GROUND_MATERIAL.roughness };
+    shader.uniforms.uCoastalGroundRoughness = { value: COASTAL_GROUND_MATERIAL.roughness };
+
+    // Inject Maps
+    shader.uniforms.uCityGroundMap = { value: CITY_GROUND_MATERIAL.map };
+    shader.uniforms.uInlandGroundMap = { value: INLAND_GROUND_MATERIAL.map };
+    shader.uniforms.uCoastalGroundMap = { value: COASTAL_GROUND_MATERIAL.map };
+
+    // 1. Inject Varyings/Attributes Declarations into Vertex Shader
     if (!shader.vertexShader.includes("varying float vDSea;")) {
       shader.vertexShader = shader.vertexShader.replace(
         "#include <common>",
@@ -581,8 +621,19 @@ attribute float dSea;
 varying float vDSea;
 varying float vGroundHeight;`,
       );
+    } else {
+        // If vDSea is already present, we must ensure vGroundHeight is also declared.
+        if (!shader.vertexShader.includes("varying float vGroundHeight;")) {
+             shader.vertexShader = shader.vertexShader.replace(
+                "varying float vDSea;",
+                `varying float vDSea;
+varying float vGroundHeight;`
+             );
+        }
     }
 
+    // 2. Inject Assignments into Vertex Shader
+    // Safe injection: Check for vDSea assignment first.
     if (!shader.vertexShader.includes("vDSea = dSea;")) {
       shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
@@ -590,8 +641,17 @@ varying float vGroundHeight;`,
   vDSea = dSea;
   vGroundHeight = position.z;`,
       );
+    } else if (!shader.vertexShader.includes("vGroundHeight = position.z;")) {
+      // If vDSea is already assigned but vGroundHeight is not, we must assign vGroundHeight.
+      // We inject it after vDSea assignment or just inside begin_vertex.
+      shader.vertexShader = shader.vertexShader.replace(
+        "vDSea = dSea;",
+        `vDSea = dSea;
+  vGroundHeight = position.z;`
+      );
     }
 
+    // 3. Inject Declarations into Fragment Shader
     if (!shader.fragmentShader.includes("varying float vDSea;")) {
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <common>",
@@ -604,24 +664,59 @@ uniform vec3 uInlandGroundColor;
 uniform vec3 uCoastalGroundColor;
 uniform float uCityGroundRoughness;
 uniform float uInlandGroundRoughness;
-uniform float uCoastalGroundRoughness;`,
+uniform float uCoastalGroundRoughness;
+uniform sampler2D uCityGroundMap;
+uniform sampler2D uInlandGroundMap;
+uniform sampler2D uCoastalGroundMap;`,
       );
+    } else {
+        // If vDSea exists, check if vGroundHeight exists.
+        // Also ensure uniforms are injected if not present.
+        if (!shader.fragmentShader.includes("varying float vGroundHeight;")) {
+             shader.fragmentShader = shader.fragmentShader.replace(
+                "varying float vDSea;",
+                `varying float vDSea;
+varying float vGroundHeight;`
+             );
+        }
+        // Inject uniforms if missing (assuming they are missing if vDSea was already there but we added maps)
+        if (!shader.fragmentShader.includes("uniform sampler2D uCityGroundMap;")) {
+             shader.fragmentShader = shader.fragmentShader.replace(
+                "#include <common>",
+                `#include <common>
+uniform float uSeaLevel;
+uniform vec3 uCityGroundColor;
+uniform vec3 uInlandGroundColor;
+uniform vec3 uCoastalGroundColor;
+uniform float uCityGroundRoughness;
+uniform float uInlandGroundRoughness;
+uniform float uCoastalGroundRoughness;
+uniform sampler2D uCityGroundMap;
+uniform sampler2D uInlandGroundMap;
+uniform sampler2D uCoastalGroundMap;`
+             );
+        }
     }
 
+    // Apply Zone Logic with Textures
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <color_fragment>",
       `#include <color_fragment>
-  vec3 groundColor = uInlandGroundColor;
+  // Inland (dirt)
+  vec3 groundColor = uInlandGroundColor * texture2D(uInlandGroundMap, vUv * 4.0).rgb;
   float groundRoughness = uInlandGroundRoughness;
+
   if (vGroundHeight < uSeaLevel) {
     #ifdef USE_COLOR
       groundColor = vColor;
     #endif
   } else if (vDSea < 0.15) {
-    groundColor = uCoastalGroundColor;
+    // Coastal (sand)
+    groundColor = uCoastalGroundColor * texture2D(uCoastalGroundMap, vUv * 8.0).rgb;
     groundRoughness = uCoastalGroundRoughness;
   } else if (vDSea <= 0.55) {
-    groundColor = uCityGroundColor;
+    // City (paved/marble)
+    groundColor = uCityGroundColor * texture2D(uCityGroundMap, vUv * 12.0).rgb;
     groundRoughness = uCityGroundRoughness;
   }
   diffuseColor.rgb = groundColor;`,
