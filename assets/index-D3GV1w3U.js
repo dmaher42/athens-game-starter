@@ -60160,7 +60160,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BAKLSTJa.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CrAtHCbk.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60895,7 +60895,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D4JrM5bL.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B0brtuua.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61843,8 +61843,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T06:07:09.021Z" : "",
-      sha: true ? "e05d1ee6eab9f9b1b0e424089072ad1f48eb41d2" : ""
+      time: true ? "2025-12-30T06:08:12.437Z" : "",
+      sha: true ? "d387b04f7835021765cbb1fc277b1e0aad909633" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -64889,142 +64889,23 @@ function initPropCulling(scene2, camera2, options = {}) {
   console.log(`[PropCulling] Initial culling complete: ${result.culled} culled, ${result.kept} kept`);
   return result;
 }
-const CULL_DISTANCE = 400;
-const LOD_DISTANCE_NEAR = 120;
-const LOD_DISTANCE_MID = 220;
-const LOD_DISTANCE_FAR = 320;
-const HORIZON_CHECK_ENABLED = true;
-const FADE_DISTANCE = 120;
-function enableFrustumCulling(scene2) {
-  let count = 0;
-  scene2.traverse((obj) => {
-    if (obj.isMesh) {
-      obj.frustumCulled = true;
-      count++;
-    }
-  });
-  console.log(`[BuildingCulling] Enabled frustum culling on ${count} meshes`);
-  return count;
-}
-function isBelowHorizon(objectPos, cameraPos, cameraDir) {
-  if (!HORIZON_CHECK_ENABLED) return false;
-  const toObject = new Vector3().subVectors(objectPos, cameraPos);
-  if (toObject.dot(cameraDir) < 0) return true;
-  const distance = toObject.length();
-  const heightDiff = objectPos.y - cameraPos.y;
-  return distance > 200 && heightDiff < -20;
-}
-function calculateLODLevel(distance) {
-  if (distance < LOD_DISTANCE_NEAR) return 0;
-  if (distance < LOD_DISTANCE_MID) return 1;
-  if (distance < LOD_DISTANCE_FAR) return 2;
-  return 3;
-}
-function updateBuildingCulling(scene2, camera2, options = {}) {
-  const cullDistance = options.cullDistance || CULL_DISTANCE;
-  const enableHorizon = options.enableHorizon !== false;
-  const cameraPos = camera2.getWorldPosition(new Vector3());
-  const cameraDir = new Vector3();
-  camera2.getWorldDirection(cameraDir);
-  let culledCount = 0;
-  let visibleCount = 0;
-  const buildingGroups = [];
-  scene2.traverse((obj) => {
-    if (obj.isGroup && (obj.name.includes("Building") || obj.name.includes("City") || obj.name.includes("District"))) {
-      buildingGroups.push(obj);
-    }
-  });
-  buildingGroups.forEach((group) => {
-    group.traverse((obj) => {
-      if (!obj.isMesh) return;
-      const worldPos = obj.getWorldPosition(new Vector3());
-      const distance = worldPos.distanceTo(cameraPos);
-      if (obj.userData?.isBuilding && distance > FADE_DISTANCE) {
-        obj.visible = false;
-        culledCount++;
-        return;
-      }
-      if (distance > cullDistance) {
-        obj.visible = false;
-        culledCount++;
-        return;
-      }
-      if (enableHorizon && isBelowHorizon(worldPos, cameraPos, cameraDir)) {
-        obj.visible = false;
-        culledCount++;
-        return;
-      }
-      const lodLevel = calculateLODLevel(distance);
-      obj.userData.lodLevel = lodLevel;
-      if (lodLevel === 3) {
-        obj.visible = false;
-        culledCount++;
+function cullDistantBuildings(scene2, camera2, maxDistance = 300) {
+  const frustum = new Frustum();
+  const projScreenMatrix = new Matrix4();
+  projScreenMatrix.multiplyMatrices(camera2.projectionMatrix, camera2.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(projScreenMatrix);
+  scene2.traverse((child) => {
+    if (!child.isMesh) return;
+    const name = (child.name || "").toLowerCase();
+    if (name.includes("building") || name.includes("house") || name.includes("structure")) {
+      const dist = child.position.distanceTo(camera2.position);
+      if (dist > maxDistance) {
+        child.visible = false;
       } else {
-        obj.visible = true;
-        visibleCount++;
+        child.visible = frustum.intersectsObject(child);
       }
-    });
-  });
-  return { culled: culledCount, visible: visibleCount };
-}
-function createBuildingLOD(originalMesh, lodLevel = 1) {
-  if (!originalMesh || !originalMesh.geometry) return null;
-  const lodGeometry = originalMesh.geometry.clone();
-  if (lodLevel === 1) {
-    lodGeometry.scale(1, 1, 1);
-  } else if (lodLevel === 2) {
-    lodGeometry.scale(1, 1, 1);
-  }
-  const lodMesh = new Mesh(lodGeometry, originalMesh.material);
-  lodMesh.castShadow = false;
-  lodMesh.receiveShadow = originalMesh.receiveShadow;
-  lodMesh.frustumCulled = true;
-  return lodMesh;
-}
-function setupBuildingLODs(buildingGroup) {
-  const buildings = [];
-  buildingGroup.traverse((obj) => {
-    if (obj.isMesh && obj.name.includes("Building")) {
-      buildings.push(obj);
     }
   });
-  console.log(`[BuildingCulling] Setting up LODs for ${buildings.length} buildings`);
-  buildings.forEach((building) => {
-    const lod = new LOD();
-    lod.position.copy(building.position);
-    lod.rotation.copy(building.rotation);
-    lod.scale.copy(building.scale);
-    lod.addLevel(building, 0);
-    const mediumLOD = createBuildingLOD(building, 1);
-    if (mediumLOD) {
-      lod.addLevel(mediumLOD, LOD_DISTANCE_NEAR);
-    }
-    const lowLOD = createBuildingLOD(building, 2);
-    if (lowLOD) {
-      lod.addLevel(lowLOD, LOD_DISTANCE_MID);
-    }
-    if (building.parent) {
-      building.parent.add(lod);
-      building.parent.remove(building);
-    }
-  });
-}
-function initBuildingCulling(scene2, camera2, options = {}) {
-  console.log("[BuildingCulling] Initializing building culling system...");
-  enableFrustumCulling(scene2);
-  if (options.enableLOD) {
-    const cityGroups = [];
-    scene2.traverse((obj) => {
-      if (obj.isGroup && obj.name.includes("City")) {
-        cityGroups.push(obj);
-      }
-    });
-    cityGroups.forEach((group) => setupBuildingLODs(group));
-    console.log(`[BuildingCulling] LOD setup complete for ${cityGroups.length} city groups`);
-  }
-  const result = updateBuildingCulling(scene2, camera2, options);
-  console.log(`[BuildingCulling] Initial culling: ${result.culled} culled, ${result.visible} visible`);
-  return result;
 }
 const ROCK_GEOMETRY = new DodecahedronGeometry(0.25, 0);
 const GRASS_GEOMETRY = new ConeGeometry(0.15, 0.6, 6);
@@ -72171,10 +72052,7 @@ class Application {
         });
       }
       if (Math.floor(elapsed * 60) % 20 === 0) {
-        updateBuildingCulling(scene2, camera2, {
-          cullDistance: 400,
-          enableHorizon: true
-        });
+        cullDistantBuildings(scene2, camera2, 400);
       }
       renderFrame();
     };
@@ -72184,14 +72062,6 @@ class Application {
     hideLoadingScreen();
     try {
       initPropCulling(scene2, camera2, { dryRun: false });
-    } catch {
-    }
-    try {
-      initBuildingCulling(scene2, camera2, {
-        cullDistance: 400,
-        enableHorizon: true,
-        enableLOD: false
-      });
     } catch {
     }
     const getPosition = () => {
@@ -72598,4 +72468,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Ck2RBva3.js.map
+//# sourceMappingURL=index-D3GV1w3U.js.map
