@@ -60156,7 +60156,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BuFfUWMK.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BBy2g3vg.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60771,6 +60771,22 @@ class GLTFMeshStandardSGMaterial extends MeshStandardMaterial {
     } = params || {};
     this.setValues(safeParams);
   }
+  setValues(values) {
+    if (values && typeof values === "object") {
+      const {
+        metalness,
+        roughness,
+        metalnessMap,
+        roughnessMap,
+        ...safeValues
+      } = values;
+      return MeshStandardMaterial.prototype.setValues.call(
+        this,
+        safeValues
+      );
+    }
+    return MeshStandardMaterial.prototype.setValues.call(this, values);
+  }
   copy(source) {
     super.copy(source);
     this.specularMap = source.specularMap;
@@ -60875,7 +60891,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-cG_hc2cK.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CUNcnTWF.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61823,8 +61839,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T05:55:20.788Z" : "",
-      sha: true ? "4ab4f7c2d321121bd78d281c40d9c6e374f0a178" : ""
+      time: true ? "2025-12-30T06:02:07.207Z" : "",
+      sha: true ? "8423813b308dc16ccd02b429bd764579f59959e0" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72578,4 +72594,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CkPrzefd.js.map
+//# sourceMappingURL=index-DDAkjnv3.js.map
