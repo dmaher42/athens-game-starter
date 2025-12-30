@@ -60156,7 +60156,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C1XSJkoG.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BMjux1jV.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60762,7 +60762,14 @@ class GLTFMeshStandardSGMaterial extends MeshStandardMaterial {
     delete this.roughness;
     delete this.metalnessMap;
     delete this.roughnessMap;
-    this.setValues(params);
+    const {
+      metalness,
+      roughness,
+      metalnessMap,
+      roughnessMap,
+      ...safeParams
+    } = params || {};
+    this.setValues(safeParams);
   }
   copy(source) {
     super.copy(source);
@@ -60868,7 +60875,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-NCN2HK7-.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B1un4vES.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61816,8 +61823,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T05:19:45.754Z" : "",
-      sha: true ? "f17a2136204c3950c8c26d42a2ddcf41b608bfb4" : ""
+      time: true ? "2025-12-30T05:28:32.344Z" : "",
+      sha: true ? "8582a75a5c2969ba1c1eca2a387cc788cf5ea8a7" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72568,4 +72575,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Dpmu5OB-.js.map
+//# sourceMappingURL=index-BjGiQoBP.js.map
