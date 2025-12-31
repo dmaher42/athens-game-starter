@@ -43744,7 +43744,7 @@ function createCityGroundMaterial() {
       diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.15));
       `
     );
-    const DEBUG_CITY_MASK = true;
+    const DEBUG_CITY_MASK = false;
     if (DEBUG_CITY_MASK) {
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <dithering_fragment>",
@@ -59511,7 +59511,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BuROHON1.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CVD_8ynl.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60246,7 +60246,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-5N7iJHP7.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dt8N6i7O.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61194,8 +61194,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T21:21:51.115Z" : "",
-      sha: true ? "1fa4846f13ff5eca7beed49e0f5dc52241f531b3" : ""
+      time: true ? "2025-12-31T21:25:15.217Z" : "",
+      sha: true ? "a56954c543936e35db7f626bea1a65b01c51c056" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71826,4 +71826,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-C8AgEVNb.js.map
+//# sourceMappingURL=index-DOlKZYWr.js.map
