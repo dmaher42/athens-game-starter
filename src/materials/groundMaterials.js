@@ -60,6 +60,30 @@ const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
 const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
 const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
 
+// Simple preset system for ground materials; defaults to "default"
+const GROUND_MATERIAL_PRESETS = {
+  default: {
+    city: {
+      color: new THREE.Color(0xc9b79c), // neutral tan
+      roughness: 0.95,
+      metalness: 0.0,
+      repeat: 6,
+    },
+    inland: {
+      color: new THREE.Color(0x8a6f4e), // warm brown
+      roughness: 1.0,
+      metalness: 0.0,
+      repeat: 6,
+    },
+    coastal: {
+      color: new THREE.Color(0xe6d3a3), // sandy light tone
+      roughness: 1.0,
+      metalness: 0.0,
+      repeat: 5,
+    },
+  },
+};
+
 let warnedTextureFailure = false;
 
 const fallbackRoadsideMask = (() => {
@@ -202,6 +226,20 @@ function bindGroundTexture(material, label, url, repeat) {
     },
   );
 }
+
+// ✅ STEP 2: Determine active preset and fetch configuration
+const ACTIVE_PRESET = (() => {
+  try {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get("groundPreset");
+      if (fromQuery && GROUND_MATERIAL_PRESETS[fromQuery]) return fromQuery;
+    }
+  } catch {}
+  return "default";
+})();
+
+const preset = GROUND_MATERIAL_PRESETS[ACTIVE_PRESET] || GROUND_MATERIAL_PRESETS.default;
 
 // ✅ STEP 3: Create CityGroundMaterial as singleton (cached instance)
 const CityGroundMaterial = (() => {

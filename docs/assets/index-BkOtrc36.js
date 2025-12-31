@@ -43557,6 +43557,31 @@ const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}
 const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
 const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
 const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
+const GROUND_MATERIAL_PRESETS = {
+  default: {
+    city: {
+      color: new Color(13219740),
+      // neutral tan
+      roughness: 0.95,
+      metalness: 0,
+      repeat: 6
+    },
+    inland: {
+      color: new Color(9072462),
+      // warm brown
+      roughness: 1,
+      metalness: 0,
+      repeat: 6
+    },
+    coastal: {
+      color: new Color(15127459),
+      // sandy light tone
+      roughness: 1,
+      metalness: 0,
+      repeat: 5
+    }
+  }
+};
 let warnedTextureFailure = false;
 const fallbackRoadsideMask = (() => {
   const data = new Uint8Array([0]);
@@ -43672,6 +43697,18 @@ function bindGroundTexture(material, label, url, repeat) {
     }
   );
 }
+const ACTIVE_PRESET = (() => {
+  try {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const fromQuery = params.get("groundPreset");
+      if (fromQuery && GROUND_MATERIAL_PRESETS[fromQuery]) return fromQuery;
+    }
+  } catch {
+  }
+  return "default";
+})();
+const preset = GROUND_MATERIAL_PRESETS[ACTIVE_PRESET] || GROUND_MATERIAL_PRESETS.default;
 const CityGroundMaterial = (() => {
   const material = new MeshStandardMaterial({
     name: "CityGroundMaterial",
@@ -59562,7 +59599,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CM01xctk.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Ct9wOyPX.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60297,7 +60334,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-U5t9ADot.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D3DCWSMS.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61245,7 +61282,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T22:18:07.535Z" : "",
+      time: true ? "2025-12-31T23:58:56.194Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71878,4 +71915,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BL_dtMHU.js.map
+//# sourceMappingURL=index-BkOtrc36.js.map
