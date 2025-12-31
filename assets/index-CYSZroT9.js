@@ -43563,7 +43563,6 @@ function createCityGroundMaterial() {
     metalness: 0
   });
   material.onBeforeCompile = null;
-  material.customProgramCacheKey = () => "CityGroundMaterial_v2";
   delete material.userData;
   material.map = bindGroundTexture(
     material,
@@ -59222,7 +59221,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CfSHpj-d.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BBW5h66r.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59957,7 +59956,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Bs4AGHtW.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CFMl4Qy2.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60905,8 +60904,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T05:42:25.527Z" : "",
-      sha: true ? "f4baaadaaee7f05889acfbf22a03975ec560b94e" : ""
+      time: true ? "2025-12-31T07:29:48.150Z" : "",
+      sha: true ? "6588affe3658252f3a6d7bb72ae4cc8fb15a07ce" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71537,4 +71536,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DfE1Niex.js.map
+//# sourceMappingURL=index-CYSZroT9.js.map
