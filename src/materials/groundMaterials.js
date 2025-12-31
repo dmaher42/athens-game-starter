@@ -109,23 +109,24 @@ export function createCityGroundMaterial() {
       value: material.userData.roadsideRoughness,
     };
 
-    const hasUvParsFragment = shader.fragmentShader.includes(
-      "#include <uv_pars_fragment>",
-    );
-    const roadsideUniforms =
-      "uniform sampler2D uRoadsideMask;\n" +
-      "uniform vec3 uRoadsideTint;\n" +
-      "uniform float uRoadsideRoughness;\n";
+    const uniformDeclarations = `
+      uniform sampler2D uRoadsideMask;
+      uniform vec3 uRoadsideTint;
+      uniform float uRoadsideRoughness;
+    `;
+    const varyingDeclarations = "varying vec2 vUv;";
 
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <common>",
-      [
-        "#include <common>",
-        ...(hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"]),
-        roadsideUniforms,
-      ].join("\n"),
+    // Patch vertex shader to declare and set vUv
+    shader.vertexShader = varyingDeclarations + "\n" + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <uv_vertex>",
+      "#include <uv_vertex>\n  vUv = uv;"
     );
 
+    // Patch fragment shader to declare uniforms and vUv
+    shader.fragmentShader = uniformDeclarations + "\n" + varyingDeclarations + "\n" + shader.fragmentShader;
+
+    // Inject the roadside effect logic into the fragment shader
     if (!shader.fragmentShader.includes(ROADSIDE_SNIPPET_SENTINEL)) {
       const roadsideSnippet = [
         `#define ${ROADSIDE_SNIPPET_SENTINEL}`,
@@ -141,9 +142,6 @@ export function createCityGroundMaterial() {
       );
     }
 
-    shader.uniforms.uRoadsideMask.value = material.userData.roadsideMask;
-    shader.uniforms.uRoadsideTint.value = material.userData.roadsideTint;
-    shader.uniforms.uRoadsideRoughness.value = material.userData.roadsideRoughness;
   };
 
   // City ground texture
@@ -155,7 +153,6 @@ export function createCityGroundMaterial() {
   );
 
   material.needsUpdate = true;
-  Object.freeze(material);
   return material;
 }
 
