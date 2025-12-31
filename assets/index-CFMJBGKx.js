@@ -43597,28 +43597,26 @@ function createCityGroundMaterial() {
     shader.uniforms.uRoadsideRoughness = shader.uniforms.uRoadsideRoughness || {
       value: material.userData.roadsideRoughness
     };
-    const hasUvParsFragment = shader.fragmentShader.includes(
-      "#include <uv_pars_fragment>"
+    const uniformDeclarations = `
+      uniform sampler2D uRoadsideMask;
+      uniform vec3 uRoadsideTint;
+      uniform float uRoadsideRoughness;
+    `;
+    const varyingDeclarations = "varying vec2 vUv;";
+    shader.vertexShader = varyingDeclarations + "\n" + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <uv_vertex>",
+      "#include <uv_vertex>\n  vUv = uv;"
     );
-    const roadsideUniforms = "uniform sampler2D uRoadsideMask;\nuniform vec3 uRoadsideTint;\nuniform float uRoadsideRoughness;\n";
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <common>",
-      [
-        "#include <common>",
-        ...hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"],
-        roadsideUniforms
-      ].join("\n")
-    );
+    shader.fragmentShader = uniformDeclarations + "\n" + varyingDeclarations + "\n" + shader.fragmentShader;
     if (!shader.fragmentShader.includes(ROADSIDE_SNIPPET_SENTINEL)) {
       const roadsideSnippet = [
         `#define ${ROADSIDE_SNIPPET_SENTINEL}`,
-        "#ifdef USE_UV",
-        "  float roadsideMask = texture2D(uRoadsideMask, vUv).r;",
-        "  if (roadsideMask > 0.0) {",
-        "    diffuseColor.rgb = mix(diffuseColor.rgb, uRoadsideTint, roadsideMask);",
-        "    roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideMask);",
-        "  }",
-        "#endif"
+        "float roadsideMask = texture2D(uRoadsideMask, vUv).r;",
+        "if (roadsideMask > 0.0) {",
+        "  diffuseColor.rgb = mix(diffuseColor.rgb, uRoadsideTint, roadsideMask);",
+        "  roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideMask);",
+        "}"
       ].join("\n");
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <roughnessmap_fragment>",
@@ -43626,9 +43624,6 @@ function createCityGroundMaterial() {
 ${roadsideSnippet}`
       );
     }
-    shader.uniforms.uRoadsideMask.value = material.userData.roadsideMask;
-    shader.uniforms.uRoadsideTint.value = material.userData.roadsideTint;
-    shader.uniforms.uRoadsideRoughness.value = material.userData.roadsideRoughness;
   };
   material.map = bindGroundTexture(
     material,
@@ -43637,7 +43632,6 @@ ${roadsideSnippet}`
     32
   );
   material.needsUpdate = true;
-  Object.freeze(material);
   return material;
 }
 const InlandGroundMaterial = new MeshStandardMaterial({
@@ -59287,7 +59281,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D3or7pTY.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Wmd4DPR6.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60022,7 +60016,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Ba8q1PGh.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DLZd54ue.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60970,8 +60964,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T08:56:01.066Z" : "",
-      sha: true ? "07a6421a428358d55b59e93a304d6820098a6470" : ""
+      time: true ? "2025-12-31T10:50:23.259Z" : "",
+      sha: true ? "896dc693e875696a2037452f0c1287e87e7cb57f" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71602,4 +71596,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DBgNyHy8.js.map
+//# sourceMappingURL=index-CFMJBGKx.js.map
