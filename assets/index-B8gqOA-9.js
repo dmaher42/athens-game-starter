@@ -43562,32 +43562,47 @@ const fallbackDiffuseTexture = (() => {
 })();
 function bindGroundTexture(material, label, url, repeat) {
   console.log(`[Ground] Loading ${label} texture from: ${url}`);
-  const texture = textureLoader$1.load(
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d");
+  if (label === "City") {
+    ctx.fillStyle = "#c9b79c";
+  } else if (label === "Inland") {
+    ctx.fillStyle = "#8a6f4e";
+  } else if (label === "Coastal") {
+    ctx.fillStyle = "#e6d3a3";
+  }
+  ctx.fillRect(0, 0, 128, 128);
+  const placeholderTexture = new CanvasTexture(canvas);
+  placeholderTexture.colorSpace = SRGBColorSpace;
+  placeholderTexture.wrapS = placeholderTexture.wrapT = RepeatWrapping;
+  placeholderTexture.repeat.set(repeat, repeat);
+  material.map = placeholderTexture;
+  material.needsUpdate = true;
+  console.log(`[Ground] ${label} placeholder texture set while loading...`);
+  textureLoader$1.load(
     url,
     (loadedTex) => {
       console.log(`[Ground] ✓ ${label} texture loaded successfully`, {
         url,
-        size: `${loadedTex.source.data.width}x${loadedTex.source.data.height}`,
+        width: loadedTex.source.data.width,
+        height: loadedTex.source.data.height,
         material: material.name
       });
+      loadedTex.colorSpace = SRGBColorSpace;
+      loadedTex.wrapS = loadedTex.wrapT = RepeatWrapping;
+      loadedTex.repeat.set(repeat, repeat);
       material.map = loadedTex;
       material.needsUpdate = true;
+      console.log(`[Ground] ✓ ${label} texture applied to material`);
     },
     void 0,
     (error) => {
       console.error(`[Ground] ✗ Failed to load ${label} texture from ${url}`, error);
-      if (!warnedTextureFailure) {
-        warnedTextureFailure = true;
-        console.warn("[Ground] Failed to load ground texture; using flat color.");
-      }
-      material.map = null;
-      material.needsUpdate = true;
+      console.warn(`[Ground] Using placeholder texture for ${label}`);
     }
   );
-  texture.colorSpace = SRGBColorSpace;
-  texture.wrapS = texture.wrapT = RepeatWrapping;
-  texture.repeat.set(repeat, repeat);
-  return texture;
 }
 function createCityGroundMaterial() {
   const material = new MeshStandardMaterial({
@@ -59364,7 +59379,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B63fvECa.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-sVzZjnbo.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60099,7 +60114,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BwjuooRg.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-FqbWYuvZ.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61047,8 +61062,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T12:08:07.358Z" : "",
-      sha: true ? "b0a45015b90f967925549d56ff611e467b7bdbc2" : ""
+      time: true ? "2025-12-31T12:11:40.362Z" : "",
+      sha: true ? "0a3ffe2c7df8dcd52656d396fe0c3d76b3adcef9" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71679,4 +71694,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-2sB0my8i.js.map
+//# sourceMappingURL=index-B8gqOA-9.js.map
