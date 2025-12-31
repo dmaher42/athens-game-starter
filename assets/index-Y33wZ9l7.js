@@ -44084,13 +44084,14 @@ function updateTerrainCoverageMask(terrain, options = {}) {
       }
     }
   };
+  const roadBuffer = Number.isFinite(options?.roadBuffer) ? options.roadBuffer : 2;
   const paintCurve = (curve, width = 3) => {
     if (!curve?.getPoint) return;
     const samples = 160;
     for (let i = 0; i <= samples; i++) {
       const t = i / samples;
       const point = curve.getPoint(t);
-      const radius = Math.max(0.5, width * 0.65);
+      const radius = Math.max(0.5, width * 0.65 + roadBuffer);
       paintCircle(point.x, point.z, radius);
     }
   };
@@ -59185,7 +59186,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-iXcB-ouZ.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BndnkCbA.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59920,7 +59921,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DYN9fFMB.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-1s6F6Qgs.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60868,8 +60869,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T23:55:25.481Z" : "",
-      sha: true ? "af21c533637c114ee59ccadb2b2745d0addc65ab" : ""
+      time: true ? "2025-12-31T00:02:53.737Z" : "",
+      sha: true ? "8b6b77e9680428d038074defa67ccf2e9ad6f6fe" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -70956,7 +70957,8 @@ class Application {
       roadCurves: roadCurves ?? [],
       mainRoadCurve: mainRoad ?? null,
       mainRoadWidth: MAIN_ROAD_WIDTH,
-      roadWidth: 3.2
+      roadWidth: 3.2,
+      roadBuffer: 2
     });
     scatterGroundProps(worldRoot, terrain, {
       buildingPlacements: harborCity?.userData?.["buildingPlacements"] ?? [],
@@ -71493,4 +71495,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BZ467sc2.js.map
+//# sourceMappingURL=index-Y33wZ9l7.js.map
