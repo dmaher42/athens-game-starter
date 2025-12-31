@@ -43548,6 +43548,19 @@ const fallbackRoadsideMask = (() => {
   texture.colorSpace = LinearSRGBColorSpace;
   return texture;
 })();
+const fallbackDiffuseTexture = (() => {
+  const data = new Uint8Array([255, 255, 255, 255]);
+  const texture = new DataTexture(
+    data,
+    1,
+    1,
+    RGBAFormat,
+    UnsignedByteType
+  );
+  texture.needsUpdate = true;
+  texture.colorSpace = SRGBColorSpace;
+  return texture;
+})();
 function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader$1.load(
     url,
@@ -43584,6 +43597,10 @@ function createCityGroundMaterial() {
     if (!shader?.fragmentShader || !shader.uniforms) {
       return;
     }
+    if (!material.map) {
+      material.map = fallbackDiffuseTexture;
+      material.needsUpdate = true;
+    }
     material.userData = material.userData || {};
     material.userData.roadsideMask = material.userData.roadsideMask || fallbackRoadsideMask;
     material.userData.roadsideTint = material.userData.roadsideTint || new Color(10390384);
@@ -43612,15 +43629,14 @@ function createCityGroundMaterial() {
     if (!shader.fragmentShader.includes(ROADSIDE_SNIPPET_SENTINEL)) {
       const roadsideSnippet = [
         `#define ${ROADSIDE_SNIPPET_SENTINEL}`,
-        "float roadsideMask = texture2D(uRoadsideMask, vUv).r;",
-        "if (roadsideMask > 0.0) {",
-        "  diffuseColor.rgb = mix(diffuseColor.rgb, uRoadsideTint, roadsideMask);",
-        "  roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideMask);",
-        "}"
+        "float roadsideWeight = texture2D(uRoadsideMask, vUv).r;",
+        "roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);",
+        "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);",
+        "roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);"
       ].join("\n");
       shader.fragmentShader = shader.fragmentShader.replace(
-        "#include <roughnessmap_fragment>",
-        `#include <roughnessmap_fragment>
+        "float metalnessFactor = metalness;",
+        `float metalnessFactor = metalness;
 ${roadsideSnippet}`
       );
     }
@@ -44203,6 +44219,15 @@ function updateTerrainCoverageMask(terrain, options = {}) {
   const secondaryRoads = Array.isArray(options?.roadCurves) ? options.roadCurves : [];
   secondaryRoads.forEach((curve) => paintCurve(curve, options.roadWidth ?? 3));
   state.maskTexture.needsUpdate = true;
+  const terrainMaterials = Array.isArray(terrain.material) ? terrain.material : [terrain.material];
+  const cityMaterial = terrainMaterials.find(
+    (material) => material?.name === "CityGroundMaterial"
+  );
+  if (cityMaterial) {
+    cityMaterial.userData = cityMaterial.userData || {};
+    cityMaterial.userData.roadsideMask = roadMaskState.maskTexture;
+    cityMaterial.needsUpdate = true;
+  }
   if (state.uniforms?.mask) {
     state.uniforms.mask.value = state.maskTexture;
   }
@@ -59281,7 +59306,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Wmd4DPR6.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-G3k9ZjAD.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60016,7 +60041,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DLZd54ue.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CiUqn--y.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60964,8 +60989,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T10:50:23.259Z" : "",
-      sha: true ? "896dc693e875696a2037452f0c1287e87e7cb57f" : ""
+      time: true ? "2025-12-31T10:57:37.615Z" : "",
+      sha: true ? "4fead83f97d24be838cd6c417878e3ca5df86f4b" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71596,4 +71621,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CFMJBGKx.js.map
+//# sourceMappingURL=index-BzVPRvL8.js.map
