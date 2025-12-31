@@ -150,16 +150,13 @@ export function createCityGroundMaterial() {
     }
 
     // Inject the roadside effect logic into the fragment shader
-    const roadsideSnippet = [
-      "float roadsideWeight = texture(uRoadsideMask, vUv).r;",
-      "roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);",
-      "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);",
-      "roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);",
-    ].join("\n");
-
     shader.fragmentShader = shader.fragmentShader.replace(
-      "float metalnessFactor = metalness;",
-      `float metalnessFactor = metalness;\n${roadsideSnippet}`,
+      "#include <roughnessmap_fragment>",
+      `#include <roughnessmap_fragment>
+      float roadsideWeight = texture2D(uRoadsideMask, vUv).r;
+      roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);
+      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
+      roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
     );
 
   };
