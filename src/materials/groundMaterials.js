@@ -14,7 +14,6 @@ const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
 const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
 
 let warnedTextureFailure = false;
-const ROADSIDE_SNIPPET_SENTINEL = "ROADSIDE_FRAGMENT_SNIPPET";
 
 const fallbackRoadsideMask = (() => {
   const data = new Uint8Array([0]);
@@ -151,20 +150,17 @@ export function createCityGroundMaterial() {
     }
 
     // Inject the roadside effect logic into the fragment shader
-    if (!shader.fragmentShader.includes(ROADSIDE_SNIPPET_SENTINEL)) {
-      const roadsideSnippet = [
-        `#define ${ROADSIDE_SNIPPET_SENTINEL}`,
-        "float roadsideWeight = texture2D(uRoadsideMask, vUv).r;",
-        "roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);",
-        "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);",
-        "roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);",
-      ].join("\n");
+    const roadsideSnippet = [
+      "float roadsideWeight = texture(uRoadsideMask, vUv).r;",
+      "roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);",
+      "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);",
+      "roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);",
+    ].join("\n");
 
-      shader.fragmentShader = shader.fragmentShader.replace(
-        "float metalnessFactor = metalness;",
-        `float metalnessFactor = metalness;\n${roadsideSnippet}`,
-      );
-    }
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "float metalnessFactor = metalness;",
+      `float metalnessFactor = metalness;\n${roadsideSnippet}`,
+    );
 
   };
 
