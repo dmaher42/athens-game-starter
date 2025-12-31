@@ -1,3 +1,23 @@
+/**
+ * ⚠️ LEGACY CODE - NOT CURRENTLY USED ⚠️
+ * 
+ * This file contains an advanced ground texture system with procedural blending,
+ * detail layers, and height-based transitions. It is NOT currently active.
+ * 
+ * ACTIVE SYSTEM: src/materials/groundMaterials.js
+ * - Simple 3-material system (Coastal, City, Inland)
+ * - Direct texture mapping with basic shader modifications
+ * - Currently in production use
+ * 
+ * This legacy system remains for reference or future enhancement but is not
+ * imported or used anywhere in the codebase.
+ * 
+ * To use this system instead:
+ * 1. Import and call createGroundTextureState() in terrain.js
+ * 2. Replace the current material array with shader-modified materials
+ * 3. Test thoroughly as this system has more complexity
+ */
+
 import * as THREE from "three";
 import {
   GROUND_TEXTURE_CONFIG,

@@ -1,3 +1,22 @@
+/**
+ * ✅ ACTIVE GROUND MATERIAL SYSTEM
+ * 
+ * This is the ACTIVE ground texture system used in production.
+ * 
+ * System Overview:
+ * - Three material zones: Coastal (sand), City (dirt), Inland (grass)
+ * - Simple texture loading with placeholder fallbacks
+ * - Shader modifications for roadside effects (currently disabled)
+ * - UV validation and fallback generation
+ * 
+ * Materials are applied via THREE.BufferGeometry groups in terrain.js:
+ * - Group 0: CoastalGroundMaterial (near shore)
+ * - Group 1: CityGroundMaterial (middle band)
+ * - Group 2: InlandGroundMaterial (inland hills)
+ * 
+ * Legacy Alternative: src/world/groundTextures.js (not used)
+ */
+
 import * as THREE from "three";
 
 let terrainMeshReference = null;

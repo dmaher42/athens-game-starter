@@ -1,3 +1,17 @@
+/**
+ * ⚠️ LEGACY CODE - NOT CURRENTLY USED ⚠️
+ * 
+ * Configuration for the advanced ground texture system (groundTextures.js).
+ * This configuration is NOT currently active in the game.
+ * 
+ * ACTIVE SYSTEM: src/materials/groundMaterials.js
+ * - Uses simple URL-based texture loading
+ * - Configured directly in the material definitions
+ * 
+ * This legacy configuration remains for reference or future use but is not
+ * imported anywhere except by the unused groundTextures.js file.
+ */
+
 // Configuration describing how terrain textures should be layered on top of the
 // existing vertex-colored ground. The JPG files referenced here live under
 // public/textures/ so they resolve to `${BASE_URL}textures/...` at runtime.
