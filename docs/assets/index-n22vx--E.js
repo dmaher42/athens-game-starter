@@ -59256,7 +59256,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C7-lWy5c.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DxiafVdD.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59991,7 +59991,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BKicydVV.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BkOonZ6c.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60939,7 +60939,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T02:43:04.637Z" : "",
+      time: true ? "2025-12-31T02:43:55.818Z" : "",
       sha: true ? "a1f2000d9d26580153d4873a6a789b8199f793c2" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71030,9 +71030,9 @@ class Application {
       roadWidth: 3.2,
       roadBuffer: 2
     });
-    if (!scene2.userData?.roadsideBufferLogged) {
+    if (!scene2.userData?.["roadsideBufferLogged"]) {
       scene2.userData = scene2.userData || {};
-      scene2.userData.roadsideBufferLogged = true;
+      scene2.userData["roadsideBufferLogged"] = true;
       console.info("[Roads] Roadside buffer zone active");
       console.info("[Roads] City ground applied under roads");
     }
@@ -71571,4 +71571,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DwT8pPtb.js.map
+//# sourceMappingURL=index-n22vx--E.js.map
