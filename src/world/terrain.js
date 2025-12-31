@@ -755,9 +755,4 @@ export function updateTerrainCoverageMask(terrain, options = {}) {
   }
 
   roadMaskState.maskTexture.needsUpdate = true;
-  CityGroundMaterial.userData.roadside.maskTexture = roadMaskState.maskTexture;
-  const roadsideUniforms = CityGroundMaterial.userData.roadsideUniforms;
-  if (roadsideUniforms?.uRoadsideMask) {
-    roadsideUniforms.uRoadsideMask.value = roadMaskState.maskTexture;
-  }
 }
