@@ -530,7 +530,7 @@ export async function createCivicDistrict(scene, options = {}) {
       // Avenue is now East-West (gridZ approx 0)
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0x887766 : 0x666666);
-      roadMesh.position.set(localX, localY, localZ);
+      roadMesh.position.set(localX, localY - 0.02, localZ);
       group.add(roadMesh);
     } else if (cell.type === 'plaza') {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xaaaaaa);
