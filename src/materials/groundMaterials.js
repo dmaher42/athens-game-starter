@@ -46,33 +46,57 @@ const fallbackDiffuseTexture = (() => {
 function bindGroundTexture(material, label, url, repeat) {
   console.log(`[Ground] Loading ${label} texture from: ${url}`);
   
-  const texture = textureLoader.load(
+  // Create a simple canvas placeholder while loading
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  
+  // Use label to determine placeholder color
+  if (label === 'City') {
+    ctx.fillStyle = '#c9b79c'; // City tan
+  } else if (label === 'Inland') {
+    ctx.fillStyle = '#8a6f4e'; // Inland brown
+  } else if (label === 'Coastal') {
+    ctx.fillStyle = '#e6d3a3'; // Coastal light
+  }
+  ctx.fillRect(0, 0, 128, 128);
+  
+  const placeholderTexture = new THREE.CanvasTexture(canvas);
+  placeholderTexture.colorSpace = THREE.SRGBColorSpace;
+  placeholderTexture.wrapS = placeholderTexture.wrapT = THREE.RepeatWrapping;
+  placeholderTexture.repeat.set(repeat, repeat);
+  
+  // Set placeholder immediately
+  material.map = placeholderTexture;
+  material.needsUpdate = true;
+  console.log(`[Ground] ${label} placeholder texture set while loading...`);
+  
+  // Load actual texture asynchronously
+  textureLoader.load(
     url,
     (loadedTex) => {
       console.log(`[Ground] ✓ ${label} texture loaded successfully`, {
         url,
-        size: `${loadedTex.source.data.width}x${loadedTex.source.data.height}`,
+        width: loadedTex.source.data.width,
+        height: loadedTex.source.data.height,
         material: material.name
       });
-      // Force material update when texture loads
+      loadedTex.colorSpace = THREE.SRGBColorSpace;
+      loadedTex.wrapS = loadedTex.wrapT = THREE.RepeatWrapping;
+      loadedTex.repeat.set(repeat, repeat);
+      // Replace placeholder with actual texture
       material.map = loadedTex;
       material.needsUpdate = true;
+      console.log(`[Ground] ✓ ${label} texture applied to material`);
     },
     undefined,
     (error) => {
       console.error(`[Ground] ✗ Failed to load ${label} texture from ${url}`, error);
-      if (!warnedTextureFailure) {
-        warnedTextureFailure = true;
-        console.warn("[Ground] Failed to load ground texture; using flat color.");
-      }
-      material.map = null;
-      material.needsUpdate = true;
+      console.warn(`[Ground] Using placeholder texture for ${label}`);
+      // Keep placeholder if load fails
     },
   );
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(repeat, repeat);
-  return texture;
 }
 
 export function createCityGroundMaterial() {
