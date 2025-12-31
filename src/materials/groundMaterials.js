@@ -51,40 +51,6 @@ export const CityGroundMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.6,
   metalness: 0,
 });
-// City ground texture
-CityGroundMaterial.map = bindGroundTexture(
-  CityGroundMaterial,
-  "City",
-  CITY_GROUND_PNG_URL,
-  32,
-);
-CityGroundMaterial.userData.roadside = {
-  maskTexture: ROADSIDE_MASK_FALLBACK,
-  tint: new THREE.Color(1.08, 1.06, 1.04),
-  roughness: 0.75,
-};
-CityGroundMaterial.onBeforeCompile = (shader) => {
-  shader.uniforms.uRoadsideMask = {
-    value: CityGroundMaterial.userData?.roadside?.maskTexture ?? ROADSIDE_MASK_FALLBACK,
-  };
-  shader.uniforms.uRoadsideTint = {
-    value: CityGroundMaterial.userData?.roadside?.tint ?? new THREE.Color(1, 1, 1),
-  };
-  shader.uniforms.uRoadsideRoughness = {
-    value: CityGroundMaterial.userData?.roadside?.roughness ?? CityGroundMaterial.roughness,
-  };
-
-  CityGroundMaterial.userData.roadsideUniforms = shader.uniforms;
-
-  shader.fragmentShader = shader.fragmentShader.replace(
-    "#include <roughnessmap_fragment>",
-    `#include <roughnessmap_fragment>
-     float roadsideWeight = texture2D(uRoadsideMask, vUv).r;
-     roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);
-     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
-     roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`,
-  );
-};
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 0x8a6f4e,
