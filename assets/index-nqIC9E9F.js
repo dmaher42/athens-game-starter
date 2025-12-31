@@ -43673,7 +43673,8 @@ const CityGroundMaterial = (() => {
     metalness: material.metalness
   });
   const roadsideMaskTexture = new DataTexture(
-    new Uint8Array([255]),
+    new Uint8Array([0]),
+    // Set to 0 to disable roadside tint overlay
     1,
     1,
     RedFormat,
@@ -43683,8 +43684,8 @@ const CityGroundMaterial = (() => {
   roadsideMaskTexture.colorSpace = LinearSRGBColorSpace;
   material.userData = material.userData || {};
   material.userData.roadsideMask = roadsideMaskTexture;
-  material.userData.roadsideTint = new Color(0.8, 0.7, 0.6);
-  material.userData.roadsideRoughness = 0.9;
+  material.userData.roadsideTint = new Color(1, 1, 1);
+  material.userData.roadsideRoughness = 1;
   const baseOnBeforeCompile = material.onBeforeCompile;
   material.onBeforeCompile = (shader) => {
     if (typeof baseOnBeforeCompile === "function") {
@@ -59497,7 +59498,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CWQ2Cjfk.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-wf3Rlhc0.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60232,7 +60233,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D2ayOlHP.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-PAp9KqsF.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61180,8 +61181,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T21:48:24.460Z" : "",
-      sha: true ? "c2f47540f0c0186a6e8c12f7ed9885bbdef838c0" : ""
+      time: true ? "2025-12-31T21:59:32.652Z" : "",
+      sha: true ? "94e29e2da360a812d37951a1ecf39f0c3254cd8c" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71812,4 +71813,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CuYtd9w5.js.map
+//# sourceMappingURL=index-nqIC9E9F.js.map
