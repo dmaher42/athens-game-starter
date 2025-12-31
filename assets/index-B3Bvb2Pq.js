@@ -43601,8 +43601,7 @@ function bindGroundTexture(material, label, url, repeat) {
   const placeholderTexture = new CanvasTexture(canvas);
   placeholderTexture.colorSpace = SRGBColorSpace;
   placeholderTexture.wrapS = placeholderTexture.wrapT = RepeatWrapping;
-  const repeatScale = repeat * 3;
-  placeholderTexture.repeat.set(repeatScale, repeatScale);
+  placeholderTexture.repeat.set(repeat, repeat);
   material.map = placeholderTexture;
   material.needsUpdate = true;
   console.log(`[Ground] ${label} placeholder texture set while loading...`);
@@ -43617,15 +43616,14 @@ function bindGroundTexture(material, label, url, repeat) {
       });
       loadedTex.colorSpace = SRGBColorSpace;
       loadedTex.wrapS = loadedTex.wrapT = RepeatWrapping;
-      const repeatScale2 = repeat * 3;
-      loadedTex.repeat.set(repeatScale2, repeatScale2);
+      loadedTex.repeat.set(repeat, repeat);
       material.map = loadedTex;
       material.map.needsUpdate = true;
       material.needsUpdate = true;
       triggerTerrainUpdate();
       console.log(`[Ground] ✓ ${label} texture applied to material`, {
         materialHasMap: !!material.map,
-        repeatScale: repeatScale2,
+        repeat,
         mapSource: material.map?.source?.currentSrc
       });
     },
@@ -43742,7 +43740,8 @@ function createCityGroundMaterial() {
     material,
     "City",
     CITY_GROUND_URL,
-    32
+    120
+    // UV tiling scale for city ground
   );
   material.needsUpdate = true;
   return material;
@@ -43780,7 +43779,8 @@ InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
   INLAND_GROUND_URL,
-  32
+  80
+  // UV tiling scale for inland ground
 );
 InlandGroundMaterial.needsUpdate = true;
 const CoastalGroundMaterial = new MeshStandardMaterial({
@@ -59474,7 +59474,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CzxM_SAz.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CnAsiUKL.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60209,7 +60209,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-kurCaYiv.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Ba14Dt0q.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61157,8 +61157,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T12:50:49.553Z" : "",
-      sha: true ? "c4cb240773a4b13ea49d21764feff1ee4f23eed5" : ""
+      time: true ? "2025-12-31T12:54:24.615Z" : "",
+      sha: true ? "ba5a8932cdbf8beeef8af8cdbd9aec45f5ce028d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71789,4 +71789,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-iXhbOoxo.js.map
+//# sourceMappingURL=index-B3Bvb2Pq.js.map
