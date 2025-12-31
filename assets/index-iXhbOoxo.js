@@ -43756,6 +43756,26 @@ const InlandGroundMaterial = new MeshStandardMaterial({
   metalness: 0,
   aoMapIntensity: 0
 });
+InlandGroundMaterial.onBeforeCompile = (shader) => {
+  shader.fragmentShader = `
+    uniform float uShoreHeight;
+    uniform float uShoreFade;
+  ` + shader.fragmentShader;
+  shader.uniforms.uShoreHeight = { value: 0 };
+  shader.uniforms.uShoreFade = { value: 20 };
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "#include <dithering_fragment>",
+    `
+    // Compute blend factor by world Y height
+    float blendFactor = clamp((vViewPosition.y + uShoreHeight) / uShoreFade, 0.0, 1.0);
+
+    // Fade to coastal color near shore (assumes coastal is sandy bright)
+    diffuseColor.rgb = mix(vec3(0.96, 0.85, 0.72), diffuseColor.rgb, blendFactor);
+
+    #include <dithering_fragment>
+    `
+  );
+};
 InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
@@ -59454,7 +59474,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-trxj94Lu.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CzxM_SAz.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60189,7 +60209,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BXVKGPrA.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-kurCaYiv.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61137,8 +61157,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T12:43:33.223Z" : "",
-      sha: true ? "270e889195a1a24346a35e169111f9847ef9d9da" : ""
+      time: true ? "2025-12-31T12:50:49.553Z" : "",
+      sha: true ? "c4cb240773a4b13ea49d21764feff1ee4f23eed5" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71769,4 +71789,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DTIA81Ii.js.map
+//# sourceMappingURL=index-iXhbOoxo.js.map
