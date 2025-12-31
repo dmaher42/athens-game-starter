@@ -152,8 +152,8 @@ function bindGroundTexture(material, label, url, repeat) {
   );
 }
 
-export function createCityGroundMaterial() {
-  // ✅ STEP 3: Rebuild the material with explicit texture support
+// ✅ STEP 3: Create CityGroundMaterial as singleton (cached instance)
+const CityGroundMaterial = (() => {
   const material = new THREE.MeshStandardMaterial({
     name: "CityGroundMaterial",
     color: 0xffffff, // White to let texture show through clearly
@@ -305,7 +305,9 @@ export function createCityGroundMaterial() {
 
   material.needsUpdate = true;
   return material;
-}
+})();
+
+export { CityGroundMaterial };
 
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
@@ -369,8 +371,8 @@ export function diagnoseMaterialState() {
   const diagnostics = {
     city: {
       material: 'CityGroundMaterial',
-      hasMap: !!createCityGroundMaterial().map,
-      colorSpace: createCityGroundMaterial().map?.colorSpace
+      hasMap: !!CityGroundMaterial.map,
+      colorSpace: CityGroundMaterial.map?.colorSpace
     },
     inland: {
       material: 'InlandGroundMaterial',

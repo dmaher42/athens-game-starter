@@ -12,7 +12,7 @@ import {
 } from "../config/terrainMaterials.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 import {
-  createCityGroundMaterial,
+  CityGroundMaterial,
   CoastalGroundMaterial,
   InlandGroundMaterial,
   setTerrainMeshForUpdates,
@@ -505,7 +505,7 @@ export function createTerrain(scene) {
 
   const terrainMaterials = [
     CoastalGroundMaterial,
-    createCityGroundMaterial(),
+    CityGroundMaterial,
     InlandGroundMaterial,
   ];
 
