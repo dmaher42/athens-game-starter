@@ -682,13 +682,15 @@ export function updateTerrainCoverageMask(terrain, options = {}) {
     }
   };
 
+  const roadBuffer = Number.isFinite(options?.roadBuffer) ? options.roadBuffer : 2;
+
   const paintCurve = (curve, width = 3) => {
     if (!curve?.getPoint) return;
     const samples = 160;
     for (let i = 0; i <= samples; i++) {
       const t = i / samples;
       const point = curve.getPoint(t);
-      const radius = Math.max(0.5, width * 0.65);
+      const radius = Math.max(0.5, width * 0.65 + roadBuffer);
       paintCircle(point.x, point.z, radius);
     }
   };

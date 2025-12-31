@@ -661,6 +661,7 @@ export class Application {
         mainRoadCurve: mainRoad ?? null,
         mainRoadWidth: MAIN_ROAD_WIDTH,
         roadWidth: 3.2,
+        roadBuffer: 2,
       });
 
       scatterGroundProps(worldRoot, terrain, {
