@@ -123,14 +123,46 @@ function bindGroundTexture(material, label, url, repeat) {
   textureLoader.load(
     url,
     (loadedTex) => {
+      const width = loadedTex.source.data.width;
+      const height = loadedTex.source.data.height;
+      
       console.log(`[Ground] ✅ ${label} texture loaded successfully`, {
         url,
-        width: loadedTex.source.data.width,
-        height: loadedTex.source.data.height,
+        width,
+        height,
         format: loadedTex.format,
         type: loadedTex.type,
         material: material.name
       });
+      
+      // ✅ STEP 6: Validate texture dimensions
+      const MIN_TEXTURE_SIZE = 256;
+      const MAX_TEXTURE_SIZE = 4096;
+      const RECOMMENDED_MIN = 512;
+      const RECOMMENDED_MAX = 2048;
+      
+      if (width < MIN_TEXTURE_SIZE || height < MIN_TEXTURE_SIZE) {
+        console.warn(`[Ground] ⚠️ ${label} texture is very small (${width}x${height}). Minimum: ${MIN_TEXTURE_SIZE}px. May appear blurry.`);
+      } else if (width < RECOMMENDED_MIN || height < RECOMMENDED_MIN) {
+        console.info(`[Ground] ℹ️ ${label} texture is below recommended size (${width}x${height}). Recommended minimum: ${RECOMMENDED_MIN}px for best quality.`);
+      }
+      
+      if (width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE) {
+        console.warn(`[Ground] ⚠️ ${label} texture is very large (${width}x${height}). Maximum recommended: ${MAX_TEXTURE_SIZE}px. May impact performance.`);
+      } else if (width > RECOMMENDED_MAX || height > RECOMMENDED_MAX) {
+        console.info(`[Ground] ℹ️ ${label} texture exceeds recommended size (${width}x${height}). Consider ${RECOMMENDED_MAX}px for better performance.`);
+      }
+      
+      // Check if texture is square (recommended for tiling)
+      if (width !== height) {
+        console.info(`[Ground] ℹ️ ${label} texture is non-square (${width}x${height}). Square textures tile more naturally.`);
+      }
+      
+      // Check if texture is power-of-two (optimal for GPU)
+      const isPowerOfTwo = (n) => n > 0 && (n & (n - 1)) === 0;
+      if (!isPowerOfTwo(width) || !isPowerOfTwo(height)) {
+        console.info(`[Ground] ℹ️ ${label} texture dimensions are not power-of-two (${width}x${height}). May use more GPU memory.`);
+      }
       
       // ✅ STEP 3: Rebuild texture with correct settings
       loadedTex.colorSpace = THREE.SRGBColorSpace;

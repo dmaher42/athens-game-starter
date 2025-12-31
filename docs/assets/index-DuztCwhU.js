@@ -43608,14 +43608,37 @@ function bindGroundTexture(material, label, url, repeat) {
   textureLoader$1.load(
     url,
     (loadedTex) => {
+      const width = loadedTex.source.data.width;
+      const height = loadedTex.source.data.height;
       console.log(`[Ground] ✅ ${label} texture loaded successfully`, {
         url,
-        width: loadedTex.source.data.width,
-        height: loadedTex.source.data.height,
+        width,
+        height,
         format: loadedTex.format,
         type: loadedTex.type,
         material: material.name
       });
+      const MIN_TEXTURE_SIZE = 256;
+      const MAX_TEXTURE_SIZE = 4096;
+      const RECOMMENDED_MIN = 512;
+      const RECOMMENDED_MAX = 2048;
+      if (width < MIN_TEXTURE_SIZE || height < MIN_TEXTURE_SIZE) {
+        console.warn(`[Ground] ⚠️ ${label} texture is very small (${width}x${height}). Minimum: ${MIN_TEXTURE_SIZE}px. May appear blurry.`);
+      } else if (width < RECOMMENDED_MIN || height < RECOMMENDED_MIN) {
+        console.info(`[Ground] ℹ️ ${label} texture is below recommended size (${width}x${height}). Recommended minimum: ${RECOMMENDED_MIN}px for best quality.`);
+      }
+      if (width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE) {
+        console.warn(`[Ground] ⚠️ ${label} texture is very large (${width}x${height}). Maximum recommended: ${MAX_TEXTURE_SIZE}px. May impact performance.`);
+      } else if (width > RECOMMENDED_MAX || height > RECOMMENDED_MAX) {
+        console.info(`[Ground] ℹ️ ${label} texture exceeds recommended size (${width}x${height}). Consider ${RECOMMENDED_MAX}px for better performance.`);
+      }
+      if (width !== height) {
+        console.info(`[Ground] ℹ️ ${label} texture is non-square (${width}x${height}). Square textures tile more naturally.`);
+      }
+      const isPowerOfTwo2 = (n) => n > 0 && (n & n - 1) === 0;
+      if (!isPowerOfTwo2(width) || !isPowerOfTwo2(height)) {
+        console.info(`[Ground] ℹ️ ${label} texture dimensions are not power-of-two (${width}x${height}). May use more GPU memory.`);
+      }
       loadedTex.colorSpace = SRGBColorSpace;
       loadedTex.wrapS = loadedTex.wrapT = RepeatWrapping;
       loadedTex.repeat.set(repeat, repeat);
@@ -59498,7 +59521,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DM-J7YLU.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BxlPUWZj.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60233,7 +60256,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-F1MZwqRz.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DnlK9-0j.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61181,7 +61204,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T21:56:43.285Z" : "",
+      time: true ? "2025-12-31T22:05:04.025Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71813,4 +71836,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BE915kC5.js.map
+//# sourceMappingURL=index-DuztCwhU.js.map
