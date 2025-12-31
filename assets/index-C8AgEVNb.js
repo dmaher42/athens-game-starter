@@ -43585,7 +43585,7 @@ const fallbackDiffuseTexture = (() => {
   return texture;
 })();
 function bindGroundTexture(material, label, url, repeat) {
-  console.log(`[Ground] Loading ${label} texture from: ${url}`);
+  console.log(`[Ground] 🔄 Loading ${label} texture from: ${url}`);
   const canvas = document.createElement("canvas");
   canvas.width = 128;
   canvas.height = 128;
@@ -43604,33 +43604,48 @@ function bindGroundTexture(material, label, url, repeat) {
   placeholderTexture.repeat.set(repeat, repeat);
   material.map = placeholderTexture;
   material.needsUpdate = true;
-  console.log(`[Ground] ${label} placeholder texture set while loading...`);
+  console.log(`[Ground] 📋 ${label} placeholder texture set while loading...`);
   textureLoader$1.load(
     url,
     (loadedTex) => {
-      console.log(`[Ground] ✓ ${label} texture loaded successfully`, {
+      console.log(`[Ground] ✅ ${label} texture loaded successfully`, {
         url,
         width: loadedTex.source.data.width,
         height: loadedTex.source.data.height,
+        format: loadedTex.format,
+        type: loadedTex.type,
         material: material.name
       });
       loadedTex.colorSpace = SRGBColorSpace;
       loadedTex.wrapS = loadedTex.wrapT = RepeatWrapping;
       loadedTex.repeat.set(repeat, repeat);
+      loadedTex.needsUpdate = true;
       material.map = loadedTex;
       material.map.needsUpdate = true;
       material.needsUpdate = true;
       triggerTerrainUpdate();
-      console.log(`[Ground] ✓ ${label} texture applied to material`, {
+      console.log(`[Ground] ✅ ${label} texture applied to material`, {
         materialHasMap: !!material.map,
+        mapIsValid: material.map?.image?.width > 0,
         repeat,
-        mapSource: material.map?.source?.currentSrc
+        wrapS: material.map?.wrapS,
+        wrapT: material.map?.wrapT
       });
     },
-    void 0,
+    (progress) => {
+      if (progress.lengthComputable) {
+        const percentComplete = progress.loaded / progress.total * 100;
+        console.log(`[Ground] 📥 ${label} loading... ${percentComplete.toFixed(1)}%`);
+      }
+    },
     (error) => {
-      console.error(`[Ground] ✗ Failed to load ${label} texture from ${url}`, error);
-      console.warn(`[Ground] Using placeholder texture for ${label}`);
+      console.error(`[Ground] ❌ Failed to load ${label} texture from ${url}`, error);
+      console.warn(`[Ground] ⚠️ Using placeholder texture for ${label}`);
+      console.error("[Ground] Error details:", {
+        message: error.message,
+        type: error.type,
+        target: error.target
+      });
     }
   );
 }
@@ -43638,12 +43653,21 @@ function createCityGroundMaterial() {
   const material = new MeshStandardMaterial({
     name: "CityGroundMaterial",
     color: 16777215,
-    // White to let texture show through
-    roughness: 0.9,
-    // Higher roughness for less glossy ground
+    // White to let texture show through clearly
+    roughness: 1,
+    // Maximum roughness for matte ground appearance
     metalness: 0,
-    aoMapIntensity: 0
+    // No metallic reflection
+    aoMapIntensity: 0,
     // Disable AO so texture is clearly visible
+    map: null
+    // Will be set by bindGroundTexture
+  });
+  console.log("[Ground] 🏗️ CityGroundMaterial created:", {
+    name: material.name,
+    color: material.color.getHexString(),
+    roughness: material.roughness,
+    metalness: material.metalness
   });
   const roadsideMaskTexture = new DataTexture(
     new Uint8Array([255]),
@@ -43664,9 +43688,11 @@ function createCityGroundMaterial() {
       baseOnBeforeCompile.call(material, shader);
     }
     if (!shader?.fragmentShader || !shader.uniforms) {
+      console.warn("[Ground] Shader compilation skipped - invalid shader object");
       return;
     }
     if (!material.map) {
+      console.warn("[Ground] No texture map found, using fallback");
       material.map = fallbackDiffuseTexture;
       material.needsUpdate = true;
     }
@@ -44196,14 +44222,25 @@ function createTerrain(scene2) {
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
   terrain.renderOrder = RENDER_LAYERS.TERRAIN;
-  console.log("[Debug] terrain.geometry.attributes.uv:", terrain.geometry.attributes.uv);
   if (!terrain.geometry.attributes.uv) {
-    terrain.geometry.computeBoundingBox();
-    terrain.geometry.computeBoundingSphere();
-    terrain.geometry.computeVertexNormals();
-    const uvAttr = new Float32BufferAttribute(terrain.geometry.attributes.position.count * 2, 2);
-    terrain.geometry.setAttribute("uv", uvAttr);
-    console.warn("[Terrain] UVs were missing – dummy UVs injected");
+    console.warn("[Terrain] ⚠️ City mesh is missing UVs. Adding fallback.");
+    const uvCount = terrain.geometry.attributes.position.count;
+    const uvAttr = new Float32Array(uvCount * 2);
+    const positions = terrain.geometry.attributes.position;
+    const terrainSize = TERRAIN_SIZE;
+    for (let i = 0; i < uvCount; i++) {
+      const x = positions.getX(i);
+      const z = positions.getY(i);
+      uvAttr[i * 2] = (x + terrainSize / 2) / terrainSize;
+      uvAttr[i * 2 + 1] = (z + terrainSize / 2) / terrainSize;
+    }
+    terrain.geometry.setAttribute("uv", new BufferAttribute(uvAttr, 2));
+    console.log("[Terrain] ✅ Fallback UVs generated for", uvCount, "vertices");
+  } else {
+    console.log("[Terrain] ✅ UV attributes confirmed:", {
+      uvCount: terrain.geometry.attributes.uv.count,
+      itemSize: terrain.geometry.attributes.uv.itemSize
+    });
   }
   setTerrainMeshForUpdates(terrain);
   scene2.add(terrain);
@@ -59474,7 +59511,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CnAsiUKL.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BuROHON1.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60209,7 +60246,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Ba14Dt0q.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-5N7iJHP7.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61157,8 +61194,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T12:54:24.615Z" : "",
-      sha: true ? "ba5a8932cdbf8beeef8af8cdbd9aec45f5ce028d" : ""
+      time: true ? "2025-12-31T21:21:51.115Z" : "",
+      sha: true ? "1fa4846f13ff5eca7beed49e0f5dc52241f531b3" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71789,4 +71826,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-B3Bvb2Pq.js.map
+//# sourceMappingURL=index-C8AgEVNb.js.map
