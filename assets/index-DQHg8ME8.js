@@ -59319,7 +59319,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BSxKQNCe.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-89Rr1mGn.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60054,7 +60054,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CA6aAdqq.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C18CVIAa.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61002,8 +61002,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T11:44:14.072Z" : "",
-      sha: true ? "2e9c38fe2f237e132035b6055cefb8b8ff029ed3" : ""
+      time: true ? "2025-12-31T11:50:56.156Z" : "",
+      sha: true ? "c10d04789cfc9a7cddd65565a9b334479f6bb7a2" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71634,4 +71634,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BMrdeunI.js.map
+//# sourceMappingURL=index-DQHg8ME8.js.map
