@@ -43589,6 +43589,19 @@ function createCityGroundMaterial() {
     roughness: 0.6,
     metalness: 0
   });
+  const roadsideMaskTexture = new DataTexture(
+    new Uint8Array([255]),
+    1,
+    1,
+    RedFormat,
+    UnsignedByteType
+  );
+  roadsideMaskTexture.needsUpdate = true;
+  roadsideMaskTexture.colorSpace = LinearSRGBColorSpace;
+  material.userData = material.userData || {};
+  material.userData.roadsideMask = roadsideMaskTexture;
+  material.userData.roadsideTint = new Color(0.8, 0.7, 0.6);
+  material.userData.roadsideRoughness = 0.9;
   const baseOnBeforeCompile = material.onBeforeCompile;
   material.onBeforeCompile = (shader) => {
     if (typeof baseOnBeforeCompile === "function") {
@@ -43620,12 +43633,19 @@ function createCityGroundMaterial() {
       uniform float uRoadsideRoughness;
     `;
     const varyingDeclarations = "varying vec2 vUv;";
-    shader.vertexShader = varyingDeclarations + "\n" + shader.vertexShader;
+    if (!shader.vertexShader.includes(varyingDeclarations)) {
+      shader.vertexShader = varyingDeclarations + "\n" + shader.vertexShader;
+    }
     shader.vertexShader = shader.vertexShader.replace(
       "#include <uv_vertex>",
       "#include <uv_vertex>\n  vUv = uv;"
     );
-    shader.fragmentShader = uniformDeclarations + "\n" + varyingDeclarations + "\n" + shader.fragmentShader;
+    if (!shader.fragmentShader.includes(uniformDeclarations.trim())) {
+      shader.fragmentShader = uniformDeclarations + "\n" + shader.fragmentShader;
+    }
+    if (!shader.fragmentShader.includes(varyingDeclarations)) {
+      shader.fragmentShader = varyingDeclarations + "\n" + shader.fragmentShader;
+    }
     if (!shader.fragmentShader.includes(ROADSIDE_SNIPPET_SENTINEL)) {
       const roadsideSnippet = [
         `#define ${ROADSIDE_SNIPPET_SENTINEL}`,
@@ -59306,7 +59326,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-G3k9ZjAD.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BIWeVn02.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60041,7 +60061,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CiUqn--y.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Bjv4b0Ft.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60989,8 +61009,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T10:57:37.615Z" : "",
-      sha: true ? "4fead83f97d24be838cd6c417878e3ca5df86f4b" : ""
+      time: true ? "2025-12-31T11:04:08.763Z" : "",
+      sha: true ? "1e9ec34a851436b940707972b3290813af7ba46a" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71621,4 +71641,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BzVPRvL8.js.map
+//# sourceMappingURL=index-DKP61aWX.js.map
