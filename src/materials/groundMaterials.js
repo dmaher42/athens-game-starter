@@ -44,13 +44,23 @@ const fallbackDiffuseTexture = (() => {
 })();
 
 function bindGroundTexture(material, label, url, repeat) {
+  console.log(`[Ground] Loading ${label} texture from: ${url}`);
+  
   const texture = textureLoader.load(
     url,
-    () => {
-      console.log(`[Ground] ${label} texture bound to ${material.name}`);
+    (loadedTex) => {
+      console.log(`[Ground] ✓ ${label} texture loaded successfully`, {
+        url,
+        size: `${loadedTex.source.data.width}x${loadedTex.source.data.height}`,
+        material: material.name
+      });
+      // Force material update when texture loads
+      material.map = loadedTex;
+      material.needsUpdate = true;
     },
     undefined,
-    () => {
+    (error) => {
+      console.error(`[Ground] ✗ Failed to load ${label} texture from ${url}`, error);
       if (!warnedTextureFailure) {
         warnedTextureFailure = true;
         console.warn("[Ground] Failed to load ground texture; using flat color.");
@@ -203,8 +213,32 @@ CoastalGroundMaterial.map = bindGroundTexture(
 );
 CoastalGroundMaterial.needsUpdate = true;
 
+// Diagnostic function to inspect material state
+export function diagnoseMaterialState() {
+  const diagnostics = {
+    city: {
+      material: 'CityGroundMaterial',
+      hasMap: !!createCityGroundMaterial().map,
+      colorSpace: createCityGroundMaterial().map?.colorSpace
+    },
+    inland: {
+      material: 'InlandGroundMaterial',
+      hasMap: !!InlandGroundMaterial.map,
+      mapURL: InlandGroundMaterial.map?.source?.data?.currentSrc || 'unknown'
+    },
+    coastal: {
+      material: 'CoastalGroundMaterial',
+      hasMap: !!CoastalGroundMaterial.map,
+      mapURL: CoastalGroundMaterial.map?.source?.data?.currentSrc || 'unknown'
+    }
+  };
+  
+  console.log('[Ground] Material diagnostics:', diagnostics);
+  return diagnostics;
+}
+
 // Step 6: Confirm all ground textures are restored for City, Inland, and Coastal zones
-console.log('[Ground] Ground textures applied to materials:', {
+console.log('[Ground] Ground texture materials initialized:', {
   city: 'CityGroundMaterial (dirt-albedo.jpg)',
   inland: 'InlandGroundMaterial (grass/albedo.jpg)',
   coastal: 'CoastalGroundMaterial (sand/albedo.jpg)'

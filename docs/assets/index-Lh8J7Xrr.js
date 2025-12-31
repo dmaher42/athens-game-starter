@@ -43561,13 +43561,21 @@ const fallbackDiffuseTexture = (() => {
   return texture;
 })();
 function bindGroundTexture(material, label, url, repeat) {
+  console.log(`[Ground] Loading ${label} texture from: ${url}`);
   const texture = textureLoader$1.load(
     url,
-    () => {
-      console.log(`[Ground] ${label} texture bound to ${material.name}`);
+    (loadedTex) => {
+      console.log(`[Ground] ✓ ${label} texture loaded successfully`, {
+        url,
+        size: `${loadedTex.source.data.width}x${loadedTex.source.data.height}`,
+        material: material.name
+      });
+      material.map = loadedTex;
+      material.needsUpdate = true;
     },
     void 0,
-    () => {
+    (error) => {
+      console.error(`[Ground] ✗ Failed to load ${label} texture from ${url}`, error);
       if (!warnedTextureFailure) {
         warnedTextureFailure = true;
         console.warn("[Ground] Failed to load ground texture; using flat color.");
@@ -43689,7 +43697,28 @@ CoastalGroundMaterial.map = bindGroundTexture(
   16
 );
 CoastalGroundMaterial.needsUpdate = true;
-console.log("[Ground] Ground textures applied to materials:", {
+function diagnoseMaterialState() {
+  const diagnostics = {
+    city: {
+      material: "CityGroundMaterial",
+      hasMap: !!createCityGroundMaterial().map,
+      colorSpace: createCityGroundMaterial().map?.colorSpace
+    },
+    inland: {
+      material: "InlandGroundMaterial",
+      hasMap: !!InlandGroundMaterial.map,
+      mapURL: InlandGroundMaterial.map?.source?.data?.currentSrc || "unknown"
+    },
+    coastal: {
+      material: "CoastalGroundMaterial",
+      hasMap: !!CoastalGroundMaterial.map,
+      mapURL: CoastalGroundMaterial.map?.source?.data?.currentSrc || "unknown"
+    }
+  };
+  console.log("[Ground] Material diagnostics:", diagnostics);
+  return diagnostics;
+}
+console.log("[Ground] Ground texture materials initialized:", {
   city: "CityGroundMaterial (dirt-albedo.jpg)",
   inland: "InlandGroundMaterial (grass/albedo.jpg)",
   coastal: "CoastalGroundMaterial (sand/albedo.jpg)"
@@ -59335,7 +59364,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CmsOqUzd.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-QlgxkdTB.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60070,7 +60099,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-SdSiT_aO.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CPNxDkAo.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61018,7 +61047,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T11:59:13.089Z" : "",
+      time: true ? "2025-12-31T12:06:44.039Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71650,4 +71679,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DZRkV5al.js.map
+//# sourceMappingURL=index-Lh8J7Xrr.js.map
