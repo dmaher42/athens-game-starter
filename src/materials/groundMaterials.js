@@ -283,6 +283,31 @@ export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   metalness: 0,
   aoMapIntensity: 0,
 });
+
+// Add shore blending effect based on elevation
+InlandGroundMaterial.onBeforeCompile = (shader) => {
+  shader.fragmentShader = `
+    uniform float uShoreHeight;
+    uniform float uShoreFade;
+  ` + shader.fragmentShader;
+
+  shader.uniforms.uShoreHeight = { value: 0.0 };
+  shader.uniforms.uShoreFade = { value: 20.0 };
+
+  shader.fragmentShader = shader.fragmentShader.replace(
+    '#include <dithering_fragment>',
+    `
+    // Compute blend factor by world Y height
+    float blendFactor = clamp((vViewPosition.y + uShoreHeight) / uShoreFade, 0.0, 1.0);
+
+    // Fade to coastal color near shore (assumes coastal is sandy bright)
+    diffuseColor.rgb = mix(vec3(0.96, 0.85, 0.72), diffuseColor.rgb, blendFactor);
+
+    #include <dithering_fragment>
+    `
+  );
+};
+
 // Inland ground texture
 InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
