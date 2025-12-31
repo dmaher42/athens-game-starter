@@ -43530,7 +43530,6 @@ const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV":
 const textureLoader$1 = new TextureLoader();
 const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
 const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
-const CITY_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 const INLAND_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 const COASTAL_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 const ROADSIDE_MASK_FALLBACK = new DataTexture(
@@ -43567,7 +43566,6 @@ function bindGroundTexture(material, label, url, repeat) {
 const CityGroundMaterial = new MeshStandardMaterial({
   name: "CityGroundMaterial",
   color: 13219740,
-  map: cityGroundTexture,
   roughness: 0.6,
   metalness: 0
 });
@@ -43596,12 +43594,6 @@ CityGroundMaterial.onBeforeCompile = (shader) => {
      roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
   );
 };
-CityGroundMaterial.map = bindGroundTexture(
-  CityGroundMaterial,
-  "City",
-  CITY_GROUND_PNG_URL,
-  20
-);
 const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 9072462,
@@ -59256,7 +59248,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DwYvRxAY.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-gKEaRJWP.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59991,7 +59983,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BRcYbGN2.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DNuVxKpy.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60939,8 +60931,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T02:47:12.672Z" : "",
-      sha: true ? "e257a36c407c571ed6f6ee2cb1d03f915bec78b2" : ""
+      time: true ? "2025-12-31T02:52:54.586Z" : "",
+      sha: true ? "8cfbfa02729f88e1073570e72f0c3f4bbe5ca511" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71571,4 +71563,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CsJvG0XZ.js.map
+//# sourceMappingURL=index-Cm8tlGyy.js.map
