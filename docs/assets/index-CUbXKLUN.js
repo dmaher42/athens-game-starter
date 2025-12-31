@@ -43530,19 +43530,36 @@ const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV":
 const textureLoader$1 = new TextureLoader();
 const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
 const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
-const INLAND_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-const COASTAL_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-const CITY_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-const ROADSIDE_MASK_FALLBACK = new DataTexture(
-  new Uint8Array([0]),
-  1,
-  1,
-  RedFormat,
-  UnsignedByteType
-);
-ROADSIDE_MASK_FALLBACK.needsUpdate = true;
-ROADSIDE_MASK_FALLBACK.colorSpace = LinearSRGBColorSpace;
+const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
+const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
+const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
 let warnedTextureFailure = false;
+const fallbackRoadsideMask = (() => {
+  const data = new Uint8Array([0]);
+  const texture = new DataTexture(
+    data,
+    1,
+    1,
+    RedFormat,
+    UnsignedByteType
+  );
+  texture.needsUpdate = true;
+  texture.colorSpace = LinearSRGBColorSpace;
+  return texture;
+})();
+const fallbackDiffuseTexture = (() => {
+  const data = new Uint8Array([255, 255, 255, 255]);
+  const texture = new DataTexture(
+    data,
+    1,
+    1,
+    RGBAFormat,
+    UnsignedByteType
+  );
+  texture.needsUpdate = true;
+  texture.colorSpace = SRGBColorSpace;
+  return texture;
+})();
 function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader$1.load(
     url,
@@ -43564,43 +43581,88 @@ function bindGroundTexture(material, label, url, repeat) {
   texture.repeat.set(repeat, repeat);
   return texture;
 }
-const CityGroundMaterial = new MeshStandardMaterial({
-  name: "CityGroundMaterial",
-  color: 13219740,
-  roughness: 0.6,
-  metalness: 0
-});
-CityGroundMaterial.map = bindGroundTexture(
-  CityGroundMaterial,
-  "City",
-  CITY_GROUND_PNG_URL,
-  32
-);
-CityGroundMaterial.userData.roadside = {
-  maskTexture: ROADSIDE_MASK_FALLBACK,
-  tint: new Color(1.08, 1.06, 1.04),
-  roughness: 0.75
-};
-CityGroundMaterial.onBeforeCompile = (shader) => {
-  shader.uniforms.uRoadsideMask = {
-    value: CityGroundMaterial.userData?.roadside?.maskTexture ?? ROADSIDE_MASK_FALLBACK
-  };
-  shader.uniforms.uRoadsideTint = {
-    value: CityGroundMaterial.userData?.roadside?.tint ?? new Color(1, 1, 1)
-  };
-  shader.uniforms.uRoadsideRoughness = {
-    value: CityGroundMaterial.userData?.roadside?.roughness ?? CityGroundMaterial.roughness
-  };
-  CityGroundMaterial.userData.roadsideUniforms = shader.uniforms;
-  shader.fragmentShader = shader.fragmentShader.replace(
-    "#include <roughnessmap_fragment>",
-    `#include <roughnessmap_fragment>
-     float roadsideWeight = texture2D(uRoadsideMask, vUv).r;
-     roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);
-     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
-     roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
+function createCityGroundMaterial() {
+  const material = new MeshStandardMaterial({
+    name: "CityGroundMaterial",
+    color: 13219740,
+    roughness: 0.6,
+    metalness: 0
+  });
+  const roadsideMaskTexture = new DataTexture(
+    new Uint8Array([255]),
+    1,
+    1,
+    RedFormat,
+    UnsignedByteType
   );
-};
+  roadsideMaskTexture.needsUpdate = true;
+  roadsideMaskTexture.colorSpace = LinearSRGBColorSpace;
+  material.userData = material.userData || {};
+  material.userData.roadsideMask = roadsideMaskTexture;
+  material.userData.roadsideTint = new Color(0.8, 0.7, 0.6);
+  material.userData.roadsideRoughness = 0.9;
+  const baseOnBeforeCompile = material.onBeforeCompile;
+  material.onBeforeCompile = (shader) => {
+    if (typeof baseOnBeforeCompile === "function") {
+      baseOnBeforeCompile.call(material, shader);
+    }
+    if (!shader?.fragmentShader || !shader.uniforms) {
+      return;
+    }
+    if (!material.map) {
+      material.map = fallbackDiffuseTexture;
+      material.needsUpdate = true;
+    }
+    material.userData = material.userData || {};
+    material.userData.roadsideMask = material.userData.roadsideMask || fallbackRoadsideMask;
+    material.userData.roadsideTint = material.userData.roadsideTint || new Color(10390384);
+    material.userData.roadsideRoughness = typeof material.userData.roadsideRoughness === "number" ? material.userData.roadsideRoughness : 0.85;
+    shader.uniforms.uRoadsideMask = shader.uniforms.uRoadsideMask || {
+      value: material.userData.roadsideMask
+    };
+    shader.uniforms.uRoadsideTint = shader.uniforms.uRoadsideTint || {
+      value: material.userData.roadsideTint
+    };
+    shader.uniforms.uRoadsideRoughness = shader.uniforms.uRoadsideRoughness || {
+      value: material.userData.roadsideRoughness
+    };
+    const uniformDeclarations = `
+      uniform sampler2D uRoadsideMask;
+      uniform vec3 uRoadsideTint;
+      uniform float uRoadsideRoughness;
+    `;
+    const varyingDeclarations = "varying vec2 vUv;";
+    if (!shader.vertexShader.includes(varyingDeclarations)) {
+      shader.vertexShader = varyingDeclarations + "\n" + shader.vertexShader;
+    }
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <uv_vertex>",
+      "#include <uv_vertex>\n  vUv = uv;"
+    );
+    if (!shader.fragmentShader.includes(uniformDeclarations.trim())) {
+      shader.fragmentShader = uniformDeclarations + "\n" + shader.fragmentShader;
+    }
+    if (!shader.fragmentShader.includes(varyingDeclarations)) {
+      shader.fragmentShader = varyingDeclarations + "\n" + shader.fragmentShader;
+    }
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <roughnessmap_fragment>",
+      `#include <roughnessmap_fragment>
+      float roadsideWeight = texture2D(uRoadsideMask, vUv).r;
+      roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);
+      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
+      roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
+    );
+  };
+  material.map = bindGroundTexture(
+    material,
+    "City",
+    CITY_GROUND_URL,
+    32
+  );
+  material.needsUpdate = true;
+  return material;
+}
 const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 9072462,
@@ -43610,7 +43672,7 @@ const InlandGroundMaterial = new MeshStandardMaterial({
 InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
-  INLAND_GROUND_PNG_URL,
+  INLAND_GROUND_URL,
   32
 );
 const CoastalGroundMaterial = new MeshStandardMaterial({
@@ -43622,7 +43684,7 @@ const CoastalGroundMaterial = new MeshStandardMaterial({
 CoastalGroundMaterial.map = bindGroundTexture(
   CoastalGroundMaterial,
   "Coastal",
-  COASTAL_GROUND_PNG_URL,
+  COASTAL_GROUND_URL,
   16
 );
 const SEA_SIDE = "east";
@@ -43981,7 +44043,7 @@ function createTerrain(scene2) {
   geometry.setIndex(new BufferAttribute(reorderedIndices, 1));
   const terrainMaterials = [
     CoastalGroundMaterial,
-    CityGroundMaterial,
+    createCityGroundMaterial(),
     InlandGroundMaterial
   ];
   const terrain = new Mesh(geometry, terrainMaterials);
@@ -44170,6 +44232,15 @@ function updateTerrainCoverageMask(terrain, options = {}) {
   const secondaryRoads = Array.isArray(options?.roadCurves) ? options.roadCurves : [];
   secondaryRoads.forEach((curve) => paintCurve(curve, options.roadWidth ?? 3));
   state.maskTexture.needsUpdate = true;
+  const terrainMaterials = Array.isArray(terrain.material) ? terrain.material : [terrain.material];
+  const cityMaterial = terrainMaterials.find(
+    (material) => material?.name === "CityGroundMaterial"
+  );
+  if (cityMaterial) {
+    cityMaterial.userData = cityMaterial.userData || {};
+    cityMaterial.userData.roadsideMask = roadMaskState.maskTexture;
+    cityMaterial.needsUpdate = true;
+  }
   if (state.uniforms?.mask) {
     state.uniforms.mask.value = state.maskTexture;
   }
@@ -44177,11 +44248,6 @@ function updateTerrainCoverageMask(terrain, options = {}) {
     state.uniforms.maskStrength.value = state.maskStrength ?? 1;
   }
   roadMaskState.maskTexture.needsUpdate = true;
-  CityGroundMaterial.userData.roadside.maskTexture = roadMaskState.maskTexture;
-  const roadsideUniforms = CityGroundMaterial.userData.roadsideUniforms;
-  if (roadsideUniforms?.uRoadsideMask) {
-    roadsideUniforms.uRoadsideMask.value = roadMaskState.maskTexture;
-  }
 }
 const DEFAULT_HORIZON_RADIUS = 1700;
 const DEFAULT_FADE_WIDTH = 320;
@@ -59253,7 +59319,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DINC10wX.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C-dzjlve.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59988,7 +60054,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DZ_5AfMk.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Du2XrBNE.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60936,7 +61002,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T03:06:16.676Z" : "",
+      time: true ? "2025-12-31T11:49:25.517Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71568,4 +71634,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DEU0iW32.js.map
+//# sourceMappingURL=index-CUbXKLUN.js.map
