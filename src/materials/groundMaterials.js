@@ -1,5 +1,26 @@
 import * as THREE from "three";
 
+let terrainMeshReference = null;
+
+export function setTerrainMeshForUpdates(terrain) {
+  terrainMeshReference = terrain;
+  console.log('[Ground] Terrain mesh registered for material updates');
+}
+
+function triggerTerrainUpdate() {
+  if (terrainMeshReference && terrainMeshReference.material) {
+    // Force all materials to update
+    if (Array.isArray(terrainMeshReference.material)) {
+      terrainMeshReference.material.forEach(mat => {
+        mat.needsUpdate = true;
+      });
+    } else {
+      terrainMeshReference.material.needsUpdate = true;
+    }
+    console.log('[Ground] Terrain materials flagged for update');
+  }
+}
+
 const textureLoader = new THREE.TextureLoader();
 const BASE_URL =
   typeof import.meta !== "undefined" &&
@@ -87,8 +108,13 @@ function bindGroundTexture(material, label, url, repeat) {
       loadedTex.repeat.set(repeat, repeat);
       // Replace placeholder with actual texture
       material.map = loadedTex;
+      material.map.needsUpdate = true;
       material.needsUpdate = true;
-      console.log(`[Ground] ✓ ${label} texture applied to material`);
+      triggerTerrainUpdate(); // Force terrain to update
+      console.log(`[Ground] ✓ ${label} texture applied to material`, {
+        materialHasMap: !!material.map,
+        mapSource: material.map?.source?.currentSrc
+      });
     },
     undefined,
     (error) => {

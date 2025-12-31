@@ -15,6 +15,7 @@ import {
   createCityGroundMaterial,
   CoastalGroundMaterial,
   InlandGroundMaterial,
+  setTerrainMeshForUpdates,
 } from "../materials/groundMaterials.js";
 import {
   SEA_SIDE,
@@ -528,6 +529,9 @@ export function createTerrain(scene) {
     terrain.geometry.setAttribute('uv', uvAttr);
     console.warn('[Terrain] UVs were missing – dummy UVs injected');
   }
+  
+  // Register terrain mesh so ground material loader can trigger updates
+  setTerrainMeshForUpdates(terrain);
   
   scene.add(terrain);
 
