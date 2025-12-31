@@ -93,7 +93,9 @@ function bindGroundTexture(material, label, url, repeat) {
   const placeholderTexture = new THREE.CanvasTexture(canvas);
   placeholderTexture.colorSpace = THREE.SRGBColorSpace;
   placeholderTexture.wrapS = placeholderTexture.wrapT = THREE.RepeatWrapping;
-  placeholderTexture.repeat.set(repeat, repeat);
+  // Use higher repeat for better detail
+  const repeatScale = repeat * 3; // Increase tiling for more detail
+  placeholderTexture.repeat.set(repeatScale, repeatScale);
   
   // Set placeholder immediately
   material.map = placeholderTexture;
@@ -112,7 +114,9 @@ function bindGroundTexture(material, label, url, repeat) {
       });
       loadedTex.colorSpace = THREE.SRGBColorSpace;
       loadedTex.wrapS = loadedTex.wrapT = THREE.RepeatWrapping;
-      loadedTex.repeat.set(repeat, repeat);
+      // Use higher repeat for better detail visibility
+      const repeatScale = repeat * 3;
+      loadedTex.repeat.set(repeatScale, repeatScale);
       // Replace placeholder with actual texture
       material.map = loadedTex;
       material.map.needsUpdate = true;
@@ -120,6 +124,7 @@ function bindGroundTexture(material, label, url, repeat) {
       triggerTerrainUpdate(); // Force terrain to update
       console.log(`[Ground] ✓ ${label} texture applied to material`, {
         materialHasMap: !!material.map,
+        repeatScale: repeatScale,
         mapSource: material.map?.source?.currentSrc
       });
     },
@@ -136,7 +141,7 @@ export function createCityGroundMaterial() {
   const material = new THREE.MeshStandardMaterial({
     name: "CityGroundMaterial",
     color: 0xffffff, // White to let texture show through
-    roughness: 0.6,
+    roughness: 0.9, // Higher roughness for less glossy ground
     metalness: 0,
     aoMapIntensity: 0, // Disable AO so texture is clearly visible
   });
@@ -227,6 +232,16 @@ export function createCityGroundMaterial() {
       roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
     );
 
+    // Add contrast boost to make textures more visible
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `
+      #include <map_fragment>
+      // Boost contrast slightly to enhance texture visibility
+      diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.15));
+      `
+    );
+
     // 👀 DEBUG: City mask visualization (uncomment to enable)
     // Visualize city mask as red/green overlay to see where blending occurs
     const DEBUG_CITY_MASK = true; // Set to true to enable visualization
@@ -264,7 +279,7 @@ export function createCityGroundMaterial() {
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 0xffffff, // White to let texture show
-  roughness: 0.85,
+  roughness: 0.9, // Higher roughness for natural ground
   metalness: 0,
   aoMapIntensity: 0,
 });
@@ -280,7 +295,7 @@ InlandGroundMaterial.needsUpdate = true;
 export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
   name: "CoastalGroundMaterial",
   color: 0xffffff, // White to let texture show
-  roughness: 0.75,
+  roughness: 0.9, // Higher roughness for sandy ground
   metalness: 0,
   aoMapIntensity: 0,
 });

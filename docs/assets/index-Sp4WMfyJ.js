@@ -43601,7 +43601,8 @@ function bindGroundTexture(material, label, url, repeat) {
   const placeholderTexture = new CanvasTexture(canvas);
   placeholderTexture.colorSpace = SRGBColorSpace;
   placeholderTexture.wrapS = placeholderTexture.wrapT = RepeatWrapping;
-  placeholderTexture.repeat.set(repeat, repeat);
+  const repeatScale = repeat * 3;
+  placeholderTexture.repeat.set(repeatScale, repeatScale);
   material.map = placeholderTexture;
   material.needsUpdate = true;
   console.log(`[Ground] ${label} placeholder texture set while loading...`);
@@ -43616,13 +43617,15 @@ function bindGroundTexture(material, label, url, repeat) {
       });
       loadedTex.colorSpace = SRGBColorSpace;
       loadedTex.wrapS = loadedTex.wrapT = RepeatWrapping;
-      loadedTex.repeat.set(repeat, repeat);
+      const repeatScale2 = repeat * 3;
+      loadedTex.repeat.set(repeatScale2, repeatScale2);
       material.map = loadedTex;
       material.map.needsUpdate = true;
       material.needsUpdate = true;
       triggerTerrainUpdate();
       console.log(`[Ground] ✓ ${label} texture applied to material`, {
         materialHasMap: !!material.map,
+        repeatScale: repeatScale2,
         mapSource: material.map?.source?.currentSrc
       });
     },
@@ -43638,7 +43641,8 @@ function createCityGroundMaterial() {
     name: "CityGroundMaterial",
     color: 16777215,
     // White to let texture show through
-    roughness: 0.6,
+    roughness: 0.9,
+    // Higher roughness for less glossy ground
     metalness: 0,
     aoMapIntensity: 0
     // Disable AO so texture is clearly visible
@@ -43708,6 +43712,14 @@ function createCityGroundMaterial() {
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
       roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
     );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <map_fragment>",
+      `
+      #include <map_fragment>
+      // Boost contrast slightly to enhance texture visibility
+      diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.15));
+      `
+    );
     const DEBUG_CITY_MASK = true;
     if (DEBUG_CITY_MASK) {
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -43739,7 +43751,8 @@ const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 16777215,
   // White to let texture show
-  roughness: 0.85,
+  roughness: 0.9,
+  // Higher roughness for natural ground
   metalness: 0,
   aoMapIntensity: 0
 });
@@ -43754,7 +43767,8 @@ const CoastalGroundMaterial = new MeshStandardMaterial({
   name: "CoastalGroundMaterial",
   color: 16777215,
   // White to let texture show
-  roughness: 0.75,
+  roughness: 0.9,
+  // Higher roughness for sandy ground
   metalness: 0,
   aoMapIntensity: 0
 });
@@ -59440,7 +59454,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BMtS61ao.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CE106liP.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60175,7 +60189,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C3YvXHyj.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DkrAub_y.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61123,7 +61137,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T12:35:37.983Z" : "",
+      time: true ? "2025-12-31T12:42:17.256Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71755,4 +71769,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BU636nWN.js.map
+//# sourceMappingURL=index-Sp4WMfyJ.js.map
