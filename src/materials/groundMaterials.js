@@ -30,6 +30,20 @@ const fallbackRoadsideMask = (() => {
   return texture;
 })();
 
+const fallbackDiffuseTexture = (() => {
+  const data = new Uint8Array([255, 255, 255, 255]);
+  const texture = new THREE.DataTexture(
+    data,
+    1,
+    1,
+    THREE.RGBAFormat,
+    THREE.UnsignedByteType,
+  );
+  texture.needsUpdate = true;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+})();
+
 function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader.load(
     url,
@@ -68,6 +82,11 @@ export function createCityGroundMaterial() {
 
     if (!shader?.fragmentShader || !shader.uniforms) {
       return;
+    }
+
+    if (!material.map) {
+      material.map = fallbackDiffuseTexture;
+      material.needsUpdate = true;
     }
 
     material.userData = material.userData || {};
@@ -110,18 +129,15 @@ export function createCityGroundMaterial() {
     if (!shader.fragmentShader.includes(ROADSIDE_SNIPPET_SENTINEL)) {
       const roadsideSnippet = [
         `#define ${ROADSIDE_SNIPPET_SENTINEL}`,
-        "#ifdef USE_UV",
-        "  float roadsideMask = texture2D(uRoadsideMask, vUv).r;",
-        "  if (roadsideMask > 0.0) {",
-        "    diffuseColor.rgb = mix(diffuseColor.rgb, uRoadsideTint, roadsideMask);",
-        "    roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideMask);",
-        "  }",
-        "#endif",
+        "float roadsideWeight = texture2D(uRoadsideMask, vUv).r;",
+        "roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);",
+        "diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);",
+        "roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);",
       ].join("\n");
 
       shader.fragmentShader = shader.fragmentShader.replace(
-        "#include <roughnessmap_fragment>",
-        `#include <roughnessmap_fragment>\n${roadsideSnippet}`,
+        "float metalnessFactor = metalness;",
+        `float metalnessFactor = metalness;\n${roadsideSnippet}`,
       );
     }
 
