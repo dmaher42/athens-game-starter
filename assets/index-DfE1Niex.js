@@ -43562,8 +43562,8 @@ function createCityGroundMaterial() {
     roughness: 0.6,
     metalness: 0
   });
-  material.onBeforeCompile = function() {
-  };
+  material.onBeforeCompile = null;
+  material.customProgramCacheKey = () => "CityGroundMaterial_v2";
   delete material.userData;
   material.map = bindGroundTexture(
     material,
@@ -43572,6 +43572,7 @@ function createCityGroundMaterial() {
     32
   );
   material.needsUpdate = true;
+  Object.freeze(material);
   return material;
 }
 const InlandGroundMaterial = new MeshStandardMaterial({
@@ -59221,7 +59222,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CBtIsk5B.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CfSHpj-d.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59956,7 +59957,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-6PloMelf.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Bs4AGHtW.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60904,8 +60905,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T05:34:37.207Z" : "",
-      sha: true ? "a8a387b406ed93f6c440b1e70d200c16f5cf71b1" : ""
+      time: true ? "2025-12-31T05:42:25.527Z" : "",
+      sha: true ? "f4baaadaaee7f05889acfbf22a03975ec560b94e" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71536,4 +71537,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BqmDTHYg.js.map
+//# sourceMappingURL=index-DfE1Niex.js.map
