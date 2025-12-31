@@ -43649,7 +43649,7 @@ function bindGroundTexture(material, label, url, repeat) {
     }
   );
 }
-function createCityGroundMaterial() {
+const CityGroundMaterial = (() => {
   const material = new MeshStandardMaterial({
     name: "CityGroundMaterial",
     color: 16777215,
@@ -43771,7 +43771,7 @@ function createCityGroundMaterial() {
   );
   material.needsUpdate = true;
   return material;
-}
+})();
 const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 16777215,
@@ -43829,8 +43829,8 @@ function diagnoseMaterialState() {
   const diagnostics = {
     city: {
       material: "CityGroundMaterial",
-      hasMap: !!createCityGroundMaterial().map,
-      colorSpace: createCityGroundMaterial().map?.colorSpace
+      hasMap: !!CityGroundMaterial.map,
+      colorSpace: CityGroundMaterial.map?.colorSpace
     },
     inland: {
       material: "InlandGroundMaterial",
@@ -44214,7 +44214,7 @@ function createTerrain(scene2) {
   geometry.setIndex(new BufferAttribute(reorderedIndices, 1));
   const terrainMaterials = [
     CoastalGroundMaterial,
-    createCityGroundMaterial(),
+    CityGroundMaterial,
     InlandGroundMaterial
   ];
   const terrain = new Mesh(geometry, terrainMaterials);
@@ -59511,7 +59511,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CVD_8ynl.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CRH1aiaD.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60246,7 +60246,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dt8N6i7O.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CJP9aj8L.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61194,8 +61194,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T21:25:15.217Z" : "",
-      sha: true ? "a56954c543936e35db7f626bea1a65b01c51c056" : ""
+      time: true ? "2025-12-31T21:27:39.945Z" : "",
+      sha: true ? "a015e6cea8021dbbb00852a7a6a6272daefc8414" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71826,4 +71826,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DOlKZYWr.js.map
+//# sourceMappingURL=index-BLr8yevW.js.map
