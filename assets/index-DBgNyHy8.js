@@ -43534,6 +43534,20 @@ const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
 const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
 const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
 let warnedTextureFailure = false;
+const ROADSIDE_SNIPPET_SENTINEL = "ROADSIDE_FRAGMENT_SNIPPET";
+const fallbackRoadsideMask = (() => {
+  const data = new Uint8Array([0]);
+  const texture = new DataTexture(
+    data,
+    1,
+    1,
+    RedFormat,
+    UnsignedByteType
+  );
+  texture.needsUpdate = true;
+  texture.colorSpace = LinearSRGBColorSpace;
+  return texture;
+})();
 function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader$1.load(
     url,
@@ -43562,8 +43576,60 @@ function createCityGroundMaterial() {
     roughness: 0.6,
     metalness: 0
   });
-  material.onBeforeCompile = null;
-  delete material.userData;
+  const baseOnBeforeCompile = material.onBeforeCompile;
+  material.onBeforeCompile = (shader) => {
+    if (typeof baseOnBeforeCompile === "function") {
+      baseOnBeforeCompile.call(material, shader);
+    }
+    if (!shader?.fragmentShader || !shader.uniforms) {
+      return;
+    }
+    material.userData = material.userData || {};
+    material.userData.roadsideMask = material.userData.roadsideMask || fallbackRoadsideMask;
+    material.userData.roadsideTint = material.userData.roadsideTint || new Color(10390384);
+    material.userData.roadsideRoughness = typeof material.userData.roadsideRoughness === "number" ? material.userData.roadsideRoughness : 0.85;
+    shader.uniforms.uRoadsideMask = shader.uniforms.uRoadsideMask || {
+      value: material.userData.roadsideMask
+    };
+    shader.uniforms.uRoadsideTint = shader.uniforms.uRoadsideTint || {
+      value: material.userData.roadsideTint
+    };
+    shader.uniforms.uRoadsideRoughness = shader.uniforms.uRoadsideRoughness || {
+      value: material.userData.roadsideRoughness
+    };
+    const hasUvParsFragment = shader.fragmentShader.includes(
+      "#include <uv_pars_fragment>"
+    );
+    const roadsideUniforms = "uniform sampler2D uRoadsideMask;\nuniform vec3 uRoadsideTint;\nuniform float uRoadsideRoughness;\n";
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <common>",
+      [
+        "#include <common>",
+        ...hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"],
+        roadsideUniforms
+      ].join("\n")
+    );
+    if (!shader.fragmentShader.includes(ROADSIDE_SNIPPET_SENTINEL)) {
+      const roadsideSnippet = [
+        `#define ${ROADSIDE_SNIPPET_SENTINEL}`,
+        "#ifdef USE_UV",
+        "  float roadsideMask = texture2D(uRoadsideMask, vUv).r;",
+        "  if (roadsideMask > 0.0) {",
+        "    diffuseColor.rgb = mix(diffuseColor.rgb, uRoadsideTint, roadsideMask);",
+        "    roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideMask);",
+        "  }",
+        "#endif"
+      ].join("\n");
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <roughnessmap_fragment>",
+        `#include <roughnessmap_fragment>
+${roadsideSnippet}`
+      );
+    }
+    shader.uniforms.uRoadsideMask.value = material.userData.roadsideMask;
+    shader.uniforms.uRoadsideTint.value = material.userData.roadsideTint;
+    shader.uniforms.uRoadsideRoughness.value = material.userData.roadsideRoughness;
+  };
   material.map = bindGroundTexture(
     material,
     "City",
@@ -59221,7 +59287,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BBW5h66r.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D3or7pTY.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59956,7 +60022,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CFMl4Qy2.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Ba8q1PGh.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60904,8 +60970,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T07:29:48.150Z" : "",
-      sha: true ? "6588affe3658252f3a6d7bb72ae4cc8fb15a07ce" : ""
+      time: true ? "2025-12-31T08:56:01.066Z" : "",
+      sha: true ? "07a6421a428358d55b59e93a304d6820098a6470" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71536,4 +71602,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CYSZroT9.js.map
+//# sourceMappingURL=index-DBgNyHy8.js.map
