@@ -14,21 +14,6 @@ const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
 const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
 
 let warnedTextureFailure = false;
-const ROADSIDE_SNIPPET_SENTINEL = "ROADSIDE_FRAGMENT_SNIPPET";
-
-const fallbackRoadsideMask = (() => {
-  const data = new Uint8Array([0]);
-  const texture = new THREE.DataTexture(
-    data,
-    1,
-    1,
-    THREE.RedFormat,
-    THREE.UnsignedByteType,
-  );
-  texture.needsUpdate = true;
-  texture.colorSpace = THREE.LinearSRGBColorSpace;
-  return texture;
-})();
 
 function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader.load(
@@ -60,76 +45,6 @@ export function createCityGroundMaterial() {
     metalness: 0,
   });
 
-  const baseOnBeforeCompile = material.onBeforeCompile;
-  material.onBeforeCompile = (shader) => {
-    if (typeof baseOnBeforeCompile === "function") {
-      baseOnBeforeCompile.call(material, shader);
-    }
-
-    if (!shader?.fragmentShader || !shader.uniforms) {
-      return;
-    }
-
-    material.userData = material.userData || {};
-    material.userData.roadsideMask =
-      material.userData.roadsideMask || fallbackRoadsideMask;
-    material.userData.roadsideTint =
-      material.userData.roadsideTint || new THREE.Color(0x9e8b70);
-    material.userData.roadsideRoughness =
-      typeof material.userData.roadsideRoughness === "number"
-        ? material.userData.roadsideRoughness
-        : 0.85;
-
-    shader.uniforms.uRoadsideMask = shader.uniforms.uRoadsideMask || {
-      value: material.userData.roadsideMask,
-    };
-    shader.uniforms.uRoadsideTint = shader.uniforms.uRoadsideTint || {
-      value: material.userData.roadsideTint,
-    };
-    shader.uniforms.uRoadsideRoughness = shader.uniforms.uRoadsideRoughness || {
-      value: material.userData.roadsideRoughness,
-    };
-
-    const hasUvParsFragment = shader.fragmentShader.includes(
-      "#include <uv_pars_fragment>",
-    );
-    const roadsideUniforms =
-      "uniform sampler2D uRoadsideMask;\n" +
-      "uniform vec3 uRoadsideTint;\n" +
-      "uniform float uRoadsideRoughness;\n";
-
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <common>",
-      [
-        "#include <common>",
-        ...(hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"]),
-        roadsideUniforms,
-      ].join("\n"),
-    );
-
-    if (!shader.fragmentShader.includes(ROADSIDE_SNIPPET_SENTINEL)) {
-      const roadsideSnippet = [
-        `#define ${ROADSIDE_SNIPPET_SENTINEL}`,
-        "#ifdef USE_UV",
-        "  float roadsideMask = texture2D(uRoadsideMask, vUv).r;",
-        "  if (roadsideMask > 0.0) {",
-        "    diffuseColor.rgb = mix(diffuseColor.rgb, uRoadsideTint, roadsideMask);",
-        "    roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideMask);",
-        "  }",
-        "#endif",
-      ].join("\n");
-
-      shader.fragmentShader = shader.fragmentShader.replace(
-        "#include <roughnessmap_fragment>",
-        `#include <roughnessmap_fragment>\n${roadsideSnippet}`,
-      );
-    }
-
-    shader.uniforms.uRoadsideMask.value = material.userData.roadsideMask;
-    shader.uniforms.uRoadsideTint.value = material.userData.roadsideTint;
-    shader.uniforms.uRoadsideRoughness.value = material.userData.roadsideRoughness;
-  };
-
   // City ground texture
   material.map = bindGroundTexture(
     material,
@@ -139,7 +54,6 @@ export function createCityGroundMaterial() {
   );
 
   material.needsUpdate = true;
-  Object.freeze(material);
   return material;
 }
 

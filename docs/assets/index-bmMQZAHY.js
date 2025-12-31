@@ -43530,18 +43530,9 @@ const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV":
 const textureLoader$1 = new TextureLoader();
 const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
 const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
-const INLAND_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-const COASTAL_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-const CITY_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-const ROADSIDE_MASK_FALLBACK = new DataTexture(
-  new Uint8Array([0]),
-  1,
-  1,
-  RedFormat,
-  UnsignedByteType
-);
-ROADSIDE_MASK_FALLBACK.needsUpdate = true;
-ROADSIDE_MASK_FALLBACK.colorSpace = LinearSRGBColorSpace;
+const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
+const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
+const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
 let warnedTextureFailure = false;
 function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader$1.load(
@@ -43564,43 +43555,22 @@ function bindGroundTexture(material, label, url, repeat) {
   texture.repeat.set(repeat, repeat);
   return texture;
 }
-const CityGroundMaterial = new MeshStandardMaterial({
-  name: "CityGroundMaterial",
-  color: 13219740,
-  roughness: 0.6,
-  metalness: 0
-});
-CityGroundMaterial.map = bindGroundTexture(
-  CityGroundMaterial,
-  "City",
-  CITY_GROUND_PNG_URL,
-  32
-);
-CityGroundMaterial.userData.roadside = {
-  maskTexture: ROADSIDE_MASK_FALLBACK,
-  tint: new Color(1.08, 1.06, 1.04),
-  roughness: 0.75
-};
-CityGroundMaterial.onBeforeCompile = (shader) => {
-  shader.uniforms.uRoadsideMask = {
-    value: CityGroundMaterial.userData?.roadside?.maskTexture ?? ROADSIDE_MASK_FALLBACK
-  };
-  shader.uniforms.uRoadsideTint = {
-    value: CityGroundMaterial.userData?.roadside?.tint ?? new Color(1, 1, 1)
-  };
-  shader.uniforms.uRoadsideRoughness = {
-    value: CityGroundMaterial.userData?.roadside?.roughness ?? CityGroundMaterial.roughness
-  };
-  CityGroundMaterial.userData.roadsideUniforms = shader.uniforms;
-  shader.fragmentShader = shader.fragmentShader.replace(
-    "#include <roughnessmap_fragment>",
-    `#include <roughnessmap_fragment>
-     float roadsideWeight = texture2D(uRoadsideMask, vUv).r;
-     roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);
-     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
-     roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
+function createCityGroundMaterial() {
+  const material = new MeshStandardMaterial({
+    name: "CityGroundMaterial",
+    color: 13219740,
+    roughness: 0.6,
+    metalness: 0
+  });
+  material.map = bindGroundTexture(
+    material,
+    "City",
+    CITY_GROUND_URL,
+    32
   );
-};
+  material.needsUpdate = true;
+  return material;
+}
 const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 9072462,
@@ -43610,7 +43580,7 @@ const InlandGroundMaterial = new MeshStandardMaterial({
 InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
-  INLAND_GROUND_PNG_URL,
+  INLAND_GROUND_URL,
   32
 );
 const CoastalGroundMaterial = new MeshStandardMaterial({
@@ -43622,7 +43592,7 @@ const CoastalGroundMaterial = new MeshStandardMaterial({
 CoastalGroundMaterial.map = bindGroundTexture(
   CoastalGroundMaterial,
   "Coastal",
-  COASTAL_GROUND_PNG_URL,
+  COASTAL_GROUND_URL,
   16
 );
 const SEA_SIDE = "east";
@@ -43981,7 +43951,7 @@ function createTerrain(scene2) {
   geometry.setIndex(new BufferAttribute(reorderedIndices, 1));
   const terrainMaterials = [
     CoastalGroundMaterial,
-    CityGroundMaterial,
+    createCityGroundMaterial(),
     InlandGroundMaterial
   ];
   const terrain = new Mesh(geometry, terrainMaterials);
@@ -44177,11 +44147,6 @@ function updateTerrainCoverageMask(terrain, options = {}) {
     state.uniforms.maskStrength.value = state.maskStrength ?? 1;
   }
   roadMaskState.maskTexture.needsUpdate = true;
-  CityGroundMaterial.userData.roadside.maskTexture = roadMaskState.maskTexture;
-  const roadsideUniforms = CityGroundMaterial.userData.roadsideUniforms;
-  if (roadsideUniforms?.uRoadsideMask) {
-    roadsideUniforms.uRoadsideMask.value = roadMaskState.maskTexture;
-  }
 }
 const DEFAULT_HORIZON_RADIUS = 1700;
 const DEFAULT_FADE_WIDTH = 320;
@@ -59253,7 +59218,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DINC10wX.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-fssdIGNF.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59988,7 +59953,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DZ_5AfMk.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Bx7mUfiw.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60936,7 +60901,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T03:06:16.676Z" : "",
+      time: true ? "2025-12-31T09:40:52.695Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71568,4 +71533,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DEU0iW32.js.map
+//# sourceMappingURL=index-bmMQZAHY.js.map
