@@ -43744,23 +43744,6 @@ const CityGroundMaterial = (() => {
       diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.15));
       `
     );
-    const DEBUG_CITY_MASK = false;
-    if (DEBUG_CITY_MASK) {
-      shader.fragmentShader = shader.fragmentShader.replace(
-        "#include <dithering_fragment>",
-        `
-        // City mask debug visualization
-        vec2 debugUV = vUv;
-        
-        // Sample city mask
-        float cityWeight = texture2D(uRoadsideMask, debugUV).r;
-        
-        // Map cityWeight to RGB: red = masked, green = unmasked, blue = blend
-        gl_FragColor = vec4(vec3(cityWeight, 1.0 - cityWeight, cityWeight * 0.5), 1.0);
-        `
-      );
-      console.log("[Ground] DEBUG: City mask visualization enabled - red=masked, green=unmasked");
-    }
   };
   material.map = bindGroundTexture(
     material,
@@ -59511,7 +59494,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CRH1aiaD.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BIQHMDJv.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60246,7 +60229,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CJP9aj8L.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DH25_EB5.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61194,8 +61177,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T21:27:39.945Z" : "",
-      sha: true ? "a015e6cea8021dbbb00852a7a6a6272daefc8414" : ""
+      time: true ? "2025-12-31T21:38:09.572Z" : "",
+      sha: true ? "e28d0a29fdf9d89b4831c21f2443a9b2e81ccc4a" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71826,4 +71809,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BLr8yevW.js.map
+//# sourceMappingURL=index-Db4E-VNe.js.map
