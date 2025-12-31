@@ -323,7 +323,7 @@ function generateUUID() {
   const uuid = _lut[d0 & 255] + _lut[d0 >> 8 & 255] + _lut[d0 >> 16 & 255] + _lut[d0 >> 24 & 255] + "-" + _lut[d1 & 255] + _lut[d1 >> 8 & 255] + "-" + _lut[d1 >> 16 & 15 | 64] + _lut[d1 >> 24 & 255] + "-" + _lut[d2 & 63 | 128] + _lut[d2 >> 8 & 255] + "-" + _lut[d2 >> 16 & 255] + _lut[d2 >> 24 & 255] + _lut[d3 & 255] + _lut[d3 >> 8 & 255] + _lut[d3 >> 16 & 255] + _lut[d3 >> 24 & 255];
   return uuid.toLowerCase();
 }
-function clamp$3(value, min, max2) {
+function clamp$2(value, min, max2) {
   return Math.max(min, Math.min(max2, value));
 }
 function euclideanModulo(n, m) {
@@ -339,11 +339,11 @@ function inverseLerp(x, y, value) {
     return 0;
   }
 }
-function lerp$1(x, y, t) {
+function lerp(x, y, t) {
   return (1 - t) * x + t * y;
 }
 function damp(x, y, lambda, dt) {
-  return lerp$1(x, y, 1 - Math.exp(-lambda * dt));
+  return lerp(x, y, 1 - Math.exp(-lambda * dt));
 }
 function pingpong(x, length = 1) {
   return length - Math.abs(euclideanModulo(x, length * 2) - length);
@@ -487,7 +487,7 @@ const MathUtils = {
    * @param {number} max - The max value.
    * @return {number} The clamped value.
    */
-  clamp: clamp$3,
+  clamp: clamp$2,
   /**
    * Computes the Euclidean modulo of the given parameters that
    * is `( ( n % m ) + m ) % m`.
@@ -536,7 +536,7 @@ const MathUtils = {
    * @param {number} t - The interpolation factor in the closed interval `[0, 1]`.
    * @return {number} The interpolated value.
    */
-  lerp: lerp$1,
+  lerp,
   /**
    * Smoothly interpolate a number from `x` to `y` in  a spring-like manner using a delta
    * time to maintain frame rate independent movement. For details, see
@@ -1012,8 +1012,8 @@ class Vector2 {
    * @return {Vector2} A reference to this vector.
    */
   clamp(min, max2) {
-    this.x = clamp$3(this.x, min.x, max2.x);
-    this.y = clamp$3(this.y, min.y, max2.y);
+    this.x = clamp$2(this.x, min.x, max2.x);
+    this.y = clamp$2(this.y, min.y, max2.y);
     return this;
   }
   /**
@@ -1027,8 +1027,8 @@ class Vector2 {
    * @return {Vector2} A reference to this vector.
    */
   clampScalar(minVal, maxVal) {
-    this.x = clamp$3(this.x, minVal, maxVal);
-    this.y = clamp$3(this.y, minVal, maxVal);
+    this.x = clamp$2(this.x, minVal, maxVal);
+    this.y = clamp$2(this.y, minVal, maxVal);
     return this;
   }
   /**
@@ -1043,7 +1043,7 @@ class Vector2 {
    */
   clampLength(min, max2) {
     const length = this.length();
-    return this.divideScalar(length || 1).multiplyScalar(clamp$3(length, min, max2));
+    return this.divideScalar(length || 1).multiplyScalar(clamp$2(length, min, max2));
   }
   /**
    * The components of this vector are rounded down to the nearest integer value.
@@ -1168,7 +1168,7 @@ class Vector2 {
     const denominator = Math.sqrt(this.lengthSq() * v.lengthSq());
     if (denominator === 0) return Math.PI / 2;
     const theta = this.dot(v) / denominator;
-    return Math.acos(clamp$3(theta, -1, 1));
+    return Math.acos(clamp$2(theta, -1, 1));
   }
   /**
    * Computes the distance from the given vector to this instance.
@@ -1659,7 +1659,7 @@ class Quaternion {
    * @return {number} The angle in radians.
    */
   angleTo(q) {
-    return 2 * Math.acos(Math.abs(clamp$3(this.dot(q), -1, 1)));
+    return 2 * Math.acos(Math.abs(clamp$2(this.dot(q), -1, 1)));
   }
   /**
    * Rotates this quaternion by a given angular step to the given quaternion.
@@ -2374,9 +2374,9 @@ class Vector3 {
    * @return {Vector3} A reference to this vector.
    */
   clamp(min, max2) {
-    this.x = clamp$3(this.x, min.x, max2.x);
-    this.y = clamp$3(this.y, min.y, max2.y);
-    this.z = clamp$3(this.z, min.z, max2.z);
+    this.x = clamp$2(this.x, min.x, max2.x);
+    this.y = clamp$2(this.y, min.y, max2.y);
+    this.z = clamp$2(this.z, min.z, max2.z);
     return this;
   }
   /**
@@ -2390,9 +2390,9 @@ class Vector3 {
    * @return {Vector3} A reference to this vector.
    */
   clampScalar(minVal, maxVal) {
-    this.x = clamp$3(this.x, minVal, maxVal);
-    this.y = clamp$3(this.y, minVal, maxVal);
-    this.z = clamp$3(this.z, minVal, maxVal);
+    this.x = clamp$2(this.x, minVal, maxVal);
+    this.y = clamp$2(this.y, minVal, maxVal);
+    this.z = clamp$2(this.z, minVal, maxVal);
     return this;
   }
   /**
@@ -2407,7 +2407,7 @@ class Vector3 {
    */
   clampLength(min, max2) {
     const length = this.length();
-    return this.divideScalar(length || 1).multiplyScalar(clamp$3(length, min, max2));
+    return this.divideScalar(length || 1).multiplyScalar(clamp$2(length, min, max2));
   }
   /**
    * The components of this vector are rounded down to the nearest integer value.
@@ -2618,7 +2618,7 @@ class Vector3 {
     const denominator = Math.sqrt(this.lengthSq() * v.lengthSq());
     if (denominator === 0) return Math.PI / 2;
     const theta = this.dot(v) / denominator;
-    return Math.acos(clamp$3(theta, -1, 1));
+    return Math.acos(clamp$2(theta, -1, 1));
   }
   /**
    * Computes the distance from the given vector to this instance.
@@ -4486,10 +4486,10 @@ class Vector4 {
    * @return {Vector4} A reference to this vector.
    */
   clamp(min, max2) {
-    this.x = clamp$3(this.x, min.x, max2.x);
-    this.y = clamp$3(this.y, min.y, max2.y);
-    this.z = clamp$3(this.z, min.z, max2.z);
-    this.w = clamp$3(this.w, min.w, max2.w);
+    this.x = clamp$2(this.x, min.x, max2.x);
+    this.y = clamp$2(this.y, min.y, max2.y);
+    this.z = clamp$2(this.z, min.z, max2.z);
+    this.w = clamp$2(this.w, min.w, max2.w);
     return this;
   }
   /**
@@ -4503,10 +4503,10 @@ class Vector4 {
    * @return {Vector4} A reference to this vector.
    */
   clampScalar(minVal, maxVal) {
-    this.x = clamp$3(this.x, minVal, maxVal);
-    this.y = clamp$3(this.y, minVal, maxVal);
-    this.z = clamp$3(this.z, minVal, maxVal);
-    this.w = clamp$3(this.w, minVal, maxVal);
+    this.x = clamp$2(this.x, minVal, maxVal);
+    this.y = clamp$2(this.y, minVal, maxVal);
+    this.z = clamp$2(this.z, minVal, maxVal);
+    this.w = clamp$2(this.w, minVal, maxVal);
     return this;
   }
   /**
@@ -4521,7 +4521,7 @@ class Vector4 {
    */
   clampLength(min, max2) {
     const length = this.length();
-    return this.divideScalar(length || 1).multiplyScalar(clamp$3(length, min, max2));
+    return this.divideScalar(length || 1).multiplyScalar(clamp$2(length, min, max2));
   }
   /**
    * The components of this vector are rounded down to the nearest integer value.
@@ -7473,7 +7473,7 @@ class Euler {
     const m31 = te2[2], m32 = te2[6], m33 = te2[10];
     switch (order) {
       case "XYZ":
-        this._y = Math.asin(clamp$3(m13, -1, 1));
+        this._y = Math.asin(clamp$2(m13, -1, 1));
         if (Math.abs(m13) < 0.9999999) {
           this._x = Math.atan2(-m23, m33);
           this._z = Math.atan2(-m12, m11);
@@ -7483,7 +7483,7 @@ class Euler {
         }
         break;
       case "YXZ":
-        this._x = Math.asin(-clamp$3(m23, -1, 1));
+        this._x = Math.asin(-clamp$2(m23, -1, 1));
         if (Math.abs(m23) < 0.9999999) {
           this._y = Math.atan2(m13, m33);
           this._z = Math.atan2(m21, m22);
@@ -7493,7 +7493,7 @@ class Euler {
         }
         break;
       case "ZXY":
-        this._x = Math.asin(clamp$3(m32, -1, 1));
+        this._x = Math.asin(clamp$2(m32, -1, 1));
         if (Math.abs(m32) < 0.9999999) {
           this._y = Math.atan2(-m31, m33);
           this._z = Math.atan2(-m12, m22);
@@ -7503,7 +7503,7 @@ class Euler {
         }
         break;
       case "ZYX":
-        this._y = Math.asin(-clamp$3(m31, -1, 1));
+        this._y = Math.asin(-clamp$2(m31, -1, 1));
         if (Math.abs(m31) < 0.9999999) {
           this._x = Math.atan2(m32, m33);
           this._z = Math.atan2(m21, m11);
@@ -7513,7 +7513,7 @@ class Euler {
         }
         break;
       case "YZX":
-        this._z = Math.asin(clamp$3(m21, -1, 1));
+        this._z = Math.asin(clamp$2(m21, -1, 1));
         if (Math.abs(m21) < 0.9999999) {
           this._x = Math.atan2(-m23, m22);
           this._y = Math.atan2(-m31, m11);
@@ -7523,7 +7523,7 @@ class Euler {
         }
         break;
       case "XZY":
-        this._z = Math.asin(-clamp$3(m12, -1, 1));
+        this._z = Math.asin(-clamp$2(m12, -1, 1));
         if (Math.abs(m12) < 0.9999999) {
           this._x = Math.atan2(m32, m22);
           this._y = Math.atan2(m13, m11);
@@ -9255,8 +9255,8 @@ class Color {
    */
   setHSL(h, s, l, colorSpace = ColorManagement.workingColorSpace) {
     h = euclideanModulo(h, 1);
-    s = clamp$3(s, 0, 1);
-    l = clamp$3(l, 0, 1);
+    s = clamp$2(s, 0, 1);
+    l = clamp$2(l, 0, 1);
     if (s === 0) {
       this.r = this.g = this.b = l;
     } else {
@@ -9442,7 +9442,7 @@ class Color {
    */
   getHex(colorSpace = SRGBColorSpace) {
     ColorManagement.workingToColorSpace(_color.copy(this), colorSpace);
-    return Math.round(clamp$3(_color.r * 255, 0, 255)) * 65536 + Math.round(clamp$3(_color.g * 255, 0, 255)) * 256 + Math.round(clamp$3(_color.b * 255, 0, 255));
+    return Math.round(clamp$2(_color.r * 255, 0, 255)) * 65536 + Math.round(clamp$2(_color.g * 255, 0, 255)) * 256 + Math.round(clamp$2(_color.b * 255, 0, 255));
   }
   /**
    * Returns the hexadecimal value of this color as a string (for example, 'FFFFFF').
@@ -9652,9 +9652,9 @@ class Color {
   lerpHSL(color, alpha) {
     this.getHSL(_hslA);
     color.getHSL(_hslB);
-    const h = lerp$1(_hslA.h, _hslB.h, alpha);
-    const s = lerp$1(_hslA.s, _hslB.s, alpha);
-    const l = lerp$1(_hslA.l, _hslB.l, alpha);
+    const h = lerp(_hslA.h, _hslB.h, alpha);
+    const s = lerp(_hslA.s, _hslB.s, alpha);
+    const l = lerp(_hslA.l, _hslB.l, alpha);
     this.setHSL(h, s, l);
     return this;
   }
@@ -10305,7 +10305,7 @@ function _generateTables() {
 }
 function toHalfFloat(val) {
   if (Math.abs(val) > 65504) console.warn("THREE.DataUtils.toHalfFloat(): Value out of range.");
-  val = clamp$3(val, -65504, 65504);
+  val = clamp$2(val, -65504, 65504);
   _tables.floatView[0] = val;
   const f = _tables.uint32View[0];
   const e = f >> 23 & 511;
@@ -17862,13 +17862,13 @@ class Curve {
       vec.crossVectors(tangents[i - 1], tangents[i]);
       if (vec.length() > Number.EPSILON) {
         vec.normalize();
-        const theta = Math.acos(clamp$3(tangents[i - 1].dot(tangents[i]), -1, 1));
+        const theta = Math.acos(clamp$2(tangents[i - 1].dot(tangents[i]), -1, 1));
         normals[i].applyMatrix4(mat.makeRotationAxis(vec, theta));
       }
       binormals[i].crossVectors(tangents[i], normals[i]);
     }
     if (closed === true) {
-      let theta = Math.acos(clamp$3(normals[0].dot(normals[segments]), -1, 1));
+      let theta = Math.acos(clamp$2(normals[0].dot(normals[segments]), -1, 1));
       theta /= segments;
       if (tangents[0].dot(vec.crossVectors(normals[0], normals[segments])) > 0) {
         theta = -theta;
@@ -20163,7 +20163,7 @@ class LatheGeometry extends BufferGeometry {
       phiLength
     };
     segments = Math.floor(segments);
-    phiLength = clamp$3(phiLength, 0, Math.PI * 2);
+    phiLength = clamp$2(phiLength, 0, Math.PI * 2);
     const indices = [];
     const vertices = [];
     const uvs = [];
@@ -21271,7 +21271,7 @@ class MeshPhysicalMaterial extends MeshStandardMaterial {
     this.ior = 1.5;
     Object.defineProperty(this, "reflectivity", {
       get: function() {
-        return clamp$3(2.5 * (this.ior - 1) / (this.ior + 1), 0, 1);
+        return clamp$2(2.5 * (this.ior - 1) / (this.ior + 1), 0, 1);
       },
       set: function(reflectivity) {
         this.ior = (1 + 0.4 * reflectivity) / (1 - 0.4 * reflectivity);
@@ -29258,7 +29258,7 @@ class Spherical {
    */
   makeSafe() {
     const EPS = 1e-6;
-    this.phi = clamp$3(this.phi, EPS, Math.PI - EPS);
+    this.phi = clamp$2(this.phi, EPS, Math.PI - EPS);
     return this;
   }
   /**
@@ -29286,7 +29286,7 @@ class Spherical {
       this.phi = 0;
     } else {
       this.theta = Math.atan2(x, z);
-      this.phi = Math.acos(clamp$3(y / this.radius, -1, 1));
+      this.phi = Math.acos(clamp$2(y / this.radius, -1, 1));
     }
     return this;
   }
@@ -29798,7 +29798,7 @@ class Line3 {
     const startEnd_startP = _startEnd.dot(_startP);
     let t = startEnd_startP / startEnd2;
     if (clampToLine) {
-      t = clamp$3(t, 0, 1);
+      t = clamp$2(t, 0, 1);
     }
     return t;
   }
@@ -29844,27 +29844,27 @@ class Line3 {
     if (a <= EPSILON2) {
       s = 0;
       t = f / e;
-      t = clamp$3(t, 0, 1);
+      t = clamp$2(t, 0, 1);
     } else {
       const c = _d1.dot(_r);
       if (e <= EPSILON2) {
         t = 0;
-        s = clamp$3(-c / a, 0, 1);
+        s = clamp$2(-c / a, 0, 1);
       } else {
         const b = _d1.dot(_d2);
         const denom = a * e - b * b;
         if (denom !== 0) {
-          s = clamp$3((b * f - c * e) / denom, 0, 1);
+          s = clamp$2((b * f - c * e) / denom, 0, 1);
         } else {
           s = 0;
         }
         t = (b * s + f) / e;
         if (t < 0) {
           t = 0;
-          s = clamp$3(-c / a, 0, 1);
+          s = clamp$2(-c / a, 0, 1);
         } else if (t > 1) {
           t = 1;
-          s = clamp$3((b - c) / a, 0, 1);
+          s = clamp$2((b - c) / a, 0, 1);
         }
       }
     }
@@ -41966,6 +41966,10 @@ function installAmbientOcclusionPatch() {
       for (const [k, v] of Object.entries(values)) {
         if (v !== void 0) cleaned[k] = v;
       }
+      if (!("metalness" in this)) delete cleaned.metalness;
+      if (!("roughness" in this)) delete cleaned.roughness;
+      if (!("metalnessMap" in this)) delete cleaned.metalnessMap;
+      if (!("roughnessMap" in this)) delete cleaned.roughnessMap;
       originalSetValues.call(this, cleaned);
     } else {
       originalSetValues.call(this, values);
@@ -42178,7 +42182,7 @@ function normalizeRelativeBaseUrl(value) {
     `/${REPO_SEGMENT$1}`
   );
 }
-function resolveBaseUrl$5() {
+function resolveBaseUrl$4() {
   let base = "/";
   if (typeof import.meta !== "undefined" && __vite_import_meta_env__$5 && true) {
     base = "/athens-game-starter/";
@@ -42192,12 +42196,12 @@ function resolveBaseUrl$5() {
   return normalizeRelativeBaseUrl(base);
 }
 function normalizeBaseUrl$1(base) {
-  const b = base || resolveBaseUrl$5();
+  const b = base || resolveBaseUrl$4();
   const normalized = /^(?:[a-z]+:)?\/\//i.test(b) ? normalizeAbsoluteBaseUrl(b) : b;
   return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
 function joinPath(base, rel) {
-  const effectiveBase = base || resolveBaseUrl$5();
+  const effectiveBase = base || resolveBaseUrl$4();
   if (!rel) return effectiveBase;
   if (/^(?:[a-z]+:)?\/\//i.test(rel)) {
     return rel;
@@ -42341,7 +42345,7 @@ class Soundscape {
     this.manifestLoaded = false;
     this._manifest = null;
     this.zoneAmbience = null;
-    const BASE = resolveBaseUrl$5();
+    const BASE = resolveBaseUrl$4();
     this._registerZoneTrack("harbor", {
       label: "Ocean Waves",
       url: joinPath(BASE, "audio/ocean_waves.mp3"),
@@ -42542,7 +42546,7 @@ class Soundscape {
     if (this.manifestLoaded) {
       return this._manifest;
     }
-    const BASE = resolveBaseUrl$5();
+    const BASE = resolveBaseUrl$4();
     const manifestUrl = joinPath(BASE, "audio/manifest.json");
     try {
       const response = await fetch(manifestUrl, {
@@ -42609,7 +42613,7 @@ class Soundscape {
     }
   }
   async initFromManifest() {
-    const BASE = resolveBaseUrl$5();
+    const BASE = resolveBaseUrl$4();
     const audioBase = joinPath(BASE, "audio");
     const manifest = await this.loadManifest();
     if (!manifest) {
@@ -43337,1041 +43341,6 @@ subscribeSeaLevelChange((seaLevelY) => {
   ACROPOLIS_PEAK_3D.y = newGroundY;
   CITY_CHUNK_CENTER.y = newGroundY;
 });
-const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-function resolveBaseUrl$4() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
-  return base.endsWith("/") ? base : `${base}/`;
-}
-function joinBase$1(base, relativePath) {
-  const safeBase = base.endsWith("/") ? base : `${base}/`;
-  const safePath = relativePath.replace(/^\/+/, "");
-  return `${safeBase}${safePath}`;
-}
-const BASE_URL$1 = resolveBaseUrl$4();
-const MATERIALS = {
-  sand: {
-    albedo: joinBase$1(BASE_URL$1, "textures/sand/albedo.jpg"),
-    normal: joinBase$1(BASE_URL$1, "textures/sand/normal_gl.jpg"),
-    arm: joinBase$1(BASE_URL$1, "textures/sand/arm.jpg")
-  },
-  grass: {
-    albedo: joinBase$1(BASE_URL$1, "textures/grass/albedo.jpg"),
-    normal: joinBase$1(BASE_URL$1, "textures/grass/normal_dx.jpg"),
-    roughness: joinBase$1(BASE_URL$1, "textures/grass/roughness.jpg"),
-    metallic: joinBase$1(BASE_URL$1, "textures/grass/metallic.jpg"),
-    ao: joinBase$1(BASE_URL$1, "textures/grass/ao.jpg"),
-    height: joinBase$1(BASE_URL$1, "textures/grass/height.jpg")
-  },
-  stoneFallback: {
-    albedo: joinBase$1(BASE_URL$1, "textures/marble_base.jpg")
-  },
-  dirt: {
-    albedo: joinBase$1(BASE_URL$1, "textures/ground/dirt-albedo.jpg")
-  }
-};
-const SAND_MAX_ELEV = 3;
-const GRASS_MIN_ELEV = 6;
-const SLOPE_ROCK_MIN = 0.6;
-const __vite_import_meta_env__$3 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
-function resolveBaseUrl$3() {
-  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$3 && true ? "/athens-game-starter/" : "/";
-  return base.endsWith("/") ? base : `${base}/`;
-}
-const BASE_URL = resolveBaseUrl$3();
-const resolveTexturePath = (relativePath) => {
-  if (relativePath.startsWith(BASE_URL)) {
-    return relativePath;
-  }
-  const safePath = relativePath.replace(/^\/+/, "");
-  return `${BASE_URL}${safePath}`;
-};
-const SAND_ALBEDO_URL = resolveTexturePath(
-  MATERIALS?.sand?.albedo ?? "textures/sand/albedo.jpg"
-);
-const GRASS_ALBEDO_URL = resolveTexturePath(
-  MATERIALS?.grass?.albedo ?? "textures/grass/albedo.jpg"
-);
-const DIRT_ALBEDO_URL = resolveTexturePath(
-  MATERIALS?.dirt?.albedo ?? "textures/ground/dirt-albedo.jpg"
-);
-const NEUTRAL_GROUND_FALLBACK_TINT = {
-  baseColor: [150, 152, 160],
-  shadowColor: [112, 118, 128],
-  highlightColor: [192, 198, 210],
-  shadowStrength: 0.25,
-  highlightStrength: 0.24,
-  contrast: 0.95
-};
-const GROUND_TEXTURE_CONFIG = {
-  /**
-   * Base layer (what you see everywhere, then blended with dirt/grass regions)
-   */
-  base: {
-    // Swap the entire ground to our sand atlas.
-    url: SAND_ALBEDO_URL,
-    colorSpace: "srgb",
-    repeat: [28, 24],
-    rotation: 0.03,
-    roughness: 0.8,
-    metalness: 0
-  },
-  /**
-   * Blended layers + procedural mask controls
-   * Enable blend to use beach configuration for sand near shoreline
-   * Use sand as dirt texture so beach areas show pure sand
-   */
-  blend: {
-    enabled: true,
-    // Use grass texture for inland areas
-    grass: {
-      url: GRASS_ALBEDO_URL,
-      colorSpace: "srgb",
-      repeat: [28, 24]
-    },
-    // Use sand as "dirt" texture so beach effect shows sand
-    dirt: {
-      url: SAND_ALBEDO_URL,
-      colorSpace: "srgb",
-      repeat: [28, 24]
-    },
-    // Noise controls for grass/dirt blend (disable for clean beach effect)
-    noiseScale: 0.1,
-    // Very low for minimal procedural variation
-    noiseContrast: 0.01,
-    // Near zero to rely on beach height
-    maskStrength: 0,
-    // No mask, rely on beach height
-    // Stone for steep slopes (optional, can disable if not needed)
-    stone: {
-      url: DIRT_ALBEDO_URL,
-      tint: [0.6, 0.6, 0.6],
-      repeat: [14, 12]
-    },
-    slopeThreshold: 0.4,
-    slopeBlend: 0.2
-  },
-  /**
-   * Macro variation
-   * Adds large scale color noise to avoid "repeating carpet" look
-   */
-  macro: {
-    scale: 0.05,
-    strength: 0.15
-  },
-  /**
-   * Beach configuration
-   * Applied by shader to force dirt/sand texture at low altitudes
-   * height: Distance above sea level where beach effect starts to fade out
-   * fade: Transition range for smooth blending from sand to grass
-   */
-  beach: {
-    height: SAND_MAX_ELEV,
-    fade: Math.max(0.1, GRASS_MIN_ELEV - SAND_MAX_ELEV)
-  },
-  /**
-   * Detail layers (e.g. gravel, rock, variations)
-   */
-  details: [
-    // No secondary detail layers; keep the ground uniformly sandy.
-  ]
-};
-const { clamp: clamp$2, lerp } = MathUtils;
-function wrapIndex(value, period) {
-  if (!Number.isFinite(period) || period <= 0) {
-    return value;
-  }
-  let wrapped = value % period;
-  if (wrapped < 0) {
-    wrapped += period;
-  }
-  return wrapped;
-}
-function hashNoise$1(x, y, seed, periodX, periodY) {
-  const wrappedX = wrapIndex(x, periodX);
-  const wrappedY = wrapIndex(y, periodY);
-  const s = Math.sin(wrappedX * 127.1 + wrappedY * 311.7 + seed * 74.7) * 43758.5453;
-  return s - Math.floor(s);
-}
-function smoothNoise$1(x, y, seed, periodX, periodY) {
-  const x0 = Math.floor(x);
-  const y0 = Math.floor(y);
-  const xf = x - x0;
-  const yf = y - y0;
-  const n00 = hashNoise$1(x0, y0, seed, periodX, periodY);
-  const n10 = hashNoise$1(x0 + 1, y0, seed, periodX, periodY);
-  const n01 = hashNoise$1(x0, y0 + 1, seed, periodX, periodY);
-  const n11 = hashNoise$1(x0 + 1, y0 + 1, seed, periodX, periodY);
-  const nx0 = lerp(n00, n10, xf);
-  const nx1 = lerp(n01, n11, xf);
-  return lerp(nx0, nx1, yf);
-}
-function fbmNoise(x, y, options = {}) {
-  const {
-    octaves = 4,
-    persistence = 0.55,
-    lacunarity = 2,
-    seed = 1,
-    periodX = 0,
-    periodY = 0
-  } = options;
-  let amplitude = 1;
-  let frequency = 1;
-  let sum = 0;
-  let max2 = 0;
-  for (let i = 0; i < octaves; i++) {
-    const octaveSeed = seed + i * 17.23;
-    const octavePeriodX = periodX ? Math.max(1, Math.round(periodX * frequency)) : 0;
-    const octavePeriodY = periodY ? Math.max(1, Math.round(periodY * frequency)) : 0;
-    sum += smoothNoise$1(
-      x * frequency,
-      y * frequency,
-      octaveSeed,
-      octavePeriodX,
-      octavePeriodY
-    ) * amplitude;
-    max2 += amplitude;
-    amplitude *= persistence;
-    frequency *= lacunarity;
-  }
-  if (max2 <= 0) return 0;
-  return sum / max2;
-}
-function applySaturation(rgb, amount) {
-  const [r, g, b] = rgb;
-  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return [
-    clamp$2(lum + (r - lum) * amount, 0, 255),
-    clamp$2(lum + (g - lum) * amount, 0, 255),
-    clamp$2(lum + (b - lum) * amount, 0, 255)
-  ];
-}
-function applyContrast(rgb, amount) {
-  const [r, g, b] = rgb;
-  const adjust = (value) => clamp$2((value - 128) * amount + 128, 0, 255);
-  return [adjust(r), adjust(g), adjust(b)];
-}
-function composeColor(base, shadow, highlight, params) {
-  const { shadowMix, highlightMix, variation } = params;
-  const mixChannel = (channelBase, channelShadow, channelHighlight) => {
-    const shadowed = lerp(channelBase, channelShadow, shadowMix);
-    const highlighted = lerp(shadowed, channelHighlight, highlightMix);
-    return clamp$2(highlighted * (1 + variation), 0, 255);
-  };
-  return [
-    mixChannel(base[0], shadow[0], highlight[0]),
-    mixChannel(base[1], shadow[1], highlight[1]),
-    mixChannel(base[2], shadow[2], highlight[2])
-  ];
-}
-function makeTileableSample(nx, ny, freqX, freqY, offsetX, offsetY) {
-  const safeFreqX = Math.max(Math.abs(freqX), 1e-6);
-  const safeFreqY = Math.max(Math.abs(freqY), 1e-6);
-  const periodX = Math.max(1, Math.round(safeFreqX));
-  const periodY = Math.max(1, Math.round(safeFreqY));
-  const scaleX = periodX / safeFreqX;
-  const scaleY = periodY / safeFreqY;
-  return {
-    x: (nx * freqX + offsetX) * scaleX,
-    y: (ny * freqY + offsetY) * scaleY,
-    periodX,
-    periodY
-  };
-}
-function createGrassTexture(options = {}) {
-  const {
-    size = 256,
-    seed = 1337,
-    baseColor = [92, 148, 70],
-    shadowColor = [36, 74, 34],
-    highlightColor = [164, 214, 116],
-    bladeFrequency = 5.5,
-    bladeTaper = 1.45,
-    highlightStrength = 0.55,
-    shadowStrength = 0.65,
-    noiseScale = 3.5,
-    patchiness = 0.2,
-    saturation = 1.08,
-    contrast = 1.06
-  } = options;
-  const width = size;
-  const height = size;
-  const data = new Uint8Array(width * height * 4);
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const nx = x / width;
-      const ny = y / height;
-      const patchSample = makeTileableSample(
-        nx,
-        ny,
-        noiseScale,
-        noiseScale,
-        seed * 0.13,
-        seed * 0.19
-      );
-      const patchNoise = fbmNoise(patchSample.x, patchSample.y, {
-        octaves: 4,
-        persistence: 0.55,
-        seed,
-        periodX: patchSample.periodX,
-        periodY: patchSample.periodY
-      });
-      const bladeSample = makeTileableSample(
-        nx,
-        ny,
-        noiseScale * 1.7,
-        noiseScale * 1.1,
-        seed * 0.31,
-        seed * 0.47
-      );
-      const bladeNoise = fbmNoise(bladeSample.x, bladeSample.y, {
-        octaves: 5,
-        persistence: 0.5,
-        seed: seed * 1.7,
-        periodX: bladeSample.periodX,
-        periodY: bladeSample.periodY
-      });
-      const bladePhase = Math.sin((nx + ny * 0.25) * Math.PI * bladeFrequency + bladeNoise * Math.PI * 2) * 0.5 + 0.5;
-      const bladeProfile = Math.pow(bladePhase, bladeTaper);
-      const shadowMix = clamp$2(bladeProfile * shadowStrength, 0, 1);
-      const highlightMix = clamp$2(
-        Math.pow(1 - bladeProfile, 2) * highlightStrength,
-        0,
-        1
-      );
-      const variation = clamp$2((patchNoise - 0.5) * (patchiness * 2.4), -0.35, 0.4);
-      let color = composeColor(baseColor, shadowColor, highlightColor, {
-        shadowMix,
-        highlightMix,
-        variation
-      });
-      color = applySaturation(color, saturation);
-      color = applyContrast(color, contrast);
-      const index = (y * width + x) * 4;
-      data[index] = color[0];
-      data[index + 1] = color[1];
-      data[index + 2] = color[2];
-      data[index + 3] = 255;
-    }
-  }
-  const texture = new DataTexture(
-    data,
-    width,
-    height,
-    RGBAFormat,
-    UnsignedByteType
-  );
-  texture.needsUpdate = true;
-  texture.wrapS = texture.wrapT = RepeatWrapping;
-  texture.flipY = false;
-  if ("colorSpace" in texture && SRGBColorSpace) {
-    texture.colorSpace = SRGBColorSpace;
-  }
-  return texture;
-}
-function createGrassDetailTexture(options = {}) {
-  const detailTexture = createGrassTexture({
-    size: options.size ?? 256,
-    seed: (options.seed ?? 1337) * 3.1,
-    baseColor: options.baseColor ?? [86, 146, 68],
-    shadowColor: options.shadowColor ?? [30, 64, 32],
-    highlightColor: options.highlightColor ?? [182, 226, 128],
-    bladeFrequency: options.bladeFrequency ?? 9.5,
-    bladeTaper: options.bladeTaper ?? 1.1,
-    highlightStrength: options.highlightStrength ?? 0.85,
-    shadowStrength: options.shadowStrength ?? 0.75,
-    noiseScale: options.noiseScale ?? 5.5,
-    patchiness: options.patchiness ?? 0.35,
-    saturation: options.saturation ?? 1.12,
-    contrast: options.contrast ?? 1.15
-  });
-  return detailTexture;
-}
-function createFreshGrassLowlandsTexture(options = {}) {
-  return createGrassTexture({
-    size: options.size ?? 256,
-    seed: (options.seed ?? 733) * 2.7,
-    baseColor: options.baseColor ?? [112, 168, 98],
-    shadowColor: options.shadowColor ?? [58, 106, 64],
-    highlightColor: options.highlightColor ?? [196, 232, 150],
-    bladeFrequency: options.bladeFrequency ?? 6.25,
-    bladeTaper: options.bladeTaper ?? 1.3,
-    highlightStrength: options.highlightStrength ?? 0.68,
-    shadowStrength: options.shadowStrength ?? 0.52,
-    noiseScale: options.noiseScale ?? 4.1,
-    patchiness: options.patchiness ?? 0.22,
-    saturation: options.saturation ?? 1.08,
-    contrast: options.contrast ?? 1.04
-  });
-}
-function createDryGrassDetailTexture(options = {}) {
-  return createGrassTexture({
-    size: options.size ?? 256,
-    seed: (options.seed ?? 905) * 3.5,
-    baseColor: options.baseColor ?? [170, 156, 108],
-    shadowColor: options.shadowColor ?? [102, 96, 68],
-    highlightColor: options.highlightColor ?? [216, 206, 150],
-    bladeFrequency: options.bladeFrequency ?? 8.4,
-    bladeTaper: options.bladeTaper ?? 1.05,
-    highlightStrength: options.highlightStrength ?? 0.58,
-    shadowStrength: options.shadowStrength ?? 0.48,
-    noiseScale: options.noiseScale ?? 5.9,
-    patchiness: options.patchiness ?? 0.32,
-    saturation: options.saturation ?? 0.94,
-    contrast: options.contrast ?? 1.1
-  });
-}
-const textureLoader$2 = new TextureLoader();
-const DEFAULT_MASK_RESOLUTION = 128;
-const fallbackMask = (() => {
-  const data = new Uint8Array([0]);
-  const tex = new DataTexture(
-    data,
-    1,
-    1,
-    RedFormat,
-    UnsignedByteType
-  );
-  tex.needsUpdate = true;
-  tex.colorSpace = LinearSRGBColorSpace;
-  return tex;
-})();
-const PROCEDURAL_GENERATORS = {
-  "lush-grass": (config) => createGrassTexture({
-    size: config.size,
-    seed: config.seed,
-    baseColor: config.baseColor,
-    shadowColor: config.shadowColor,
-    highlightColor: config.highlightColor,
-    bladeFrequency: config.bladeFrequency,
-    bladeTaper: config.bladeTaper,
-    highlightStrength: config.highlightStrength,
-    shadowStrength: config.shadowStrength,
-    noiseScale: config.noiseScale,
-    patchiness: config.patchiness,
-    saturation: config.saturation,
-    contrast: config.contrast
-  }),
-  "lush-grass-detail": (config) => createGrassDetailTexture({
-    size: config.size,
-    seed: config.seed,
-    baseColor: config.baseColor,
-    shadowColor: config.shadowColor,
-    highlightColor: config.highlightColor,
-    bladeFrequency: config.bladeFrequency,
-    bladeTaper: config.bladeTaper,
-    highlightStrength: config.highlightStrength,
-    shadowStrength: config.shadowStrength,
-    noiseScale: config.noiseScale,
-    patchiness: config.patchiness,
-    saturation: config.saturation,
-    contrast: config.contrast
-  }),
-  "fresh-grass-lowlands": (config) => createFreshGrassLowlandsTexture({
-    size: config.size,
-    seed: config.seed,
-    baseColor: config.baseColor,
-    shadowColor: config.shadowColor,
-    highlightColor: config.highlightColor,
-    bladeFrequency: config.bladeFrequency,
-    bladeTaper: config.bladeTaper,
-    highlightStrength: config.highlightStrength,
-    shadowStrength: config.shadowStrength,
-    noiseScale: config.noiseScale,
-    patchiness: config.patchiness,
-    saturation: config.saturation,
-    contrast: config.contrast
-  }),
-  "dry-grass-detail": (config) => createDryGrassDetailTexture({
-    size: config.size,
-    seed: config.seed,
-    baseColor: config.baseColor,
-    shadowColor: config.shadowColor,
-    highlightColor: config.highlightColor,
-    bladeFrequency: config.bladeFrequency,
-    bladeTaper: config.bladeTaper,
-    highlightStrength: config.highlightStrength,
-    shadowStrength: config.shadowStrength,
-    noiseScale: config.noiseScale,
-    patchiness: config.patchiness,
-    saturation: config.saturation,
-    contrast: config.contrast
-  })
-};
-function cloneWithNeutralFallbackTint(config) {
-  if (!config) return config;
-  if (config.preserveFallbackTint) {
-    return { ...config };
-  }
-  return {
-    ...config,
-    baseColor: [...NEUTRAL_GROUND_FALLBACK_TINT.baseColor],
-    shadowColor: [...NEUTRAL_GROUND_FALLBACK_TINT.shadowColor],
-    highlightColor: [...NEUTRAL_GROUND_FALLBACK_TINT.highlightColor],
-    shadowStrength: NEUTRAL_GROUND_FALLBACK_TINT.shadowStrength,
-    highlightStrength: NEUTRAL_GROUND_FALLBACK_TINT.highlightStrength,
-    contrast: NEUTRAL_GROUND_FALLBACK_TINT.contrast
-  };
-}
-function loadAdditionalTexture(url, baseConfig, overrides = {}) {
-  if (!url) return null;
-  const options = {
-    ...baseConfig,
-    ...overrides
-  };
-  return loadTexture$1(url, options);
-}
-function createProceduralTexture(config) {
-  const generatorName = config?.generator ?? config?.procedural;
-  if (!generatorName) return null;
-  const builder = PROCEDURAL_GENERATORS[generatorName];
-  if (!builder) {
-    console.warn(`Unknown ground texture generator: ${generatorName}`);
-    return null;
-  }
-  try {
-    return builder(config);
-  } catch (error) {
-    console.warn(`Failed to build procedural texture: ${generatorName}`, error);
-    return null;
-  }
-}
-function configureTexture(texture, options = {}) {
-  texture.wrapS = texture.wrapT = RepeatWrapping;
-  const [repeatX, repeatY] = Array.isArray(options.repeat) ? [options.repeat[0] ?? 1, options.repeat[1] ?? options.repeat[0] ?? 1] : [options.repeat ?? 1, options.repeat ?? 1];
-  texture.repeat.set(repeatX, repeatY);
-  if (options.offset) {
-    const [offsetX, offsetY] = Array.isArray(options.offset) ? [options.offset[0] ?? 0, options.offset[1] ?? 0] : [options.offset ?? 0, options.offset ?? 0];
-    texture.offset.set(offsetX, offsetY);
-  }
-  if (typeof options.rotation === "number" && options.rotation !== 0) {
-    texture.center.set(0.5, 0.5);
-    texture.rotation = options.rotation;
-  }
-  if (options.colorSpace === "srgb") {
-    if ("colorSpace" in texture && SRGBColorSpace !== void 0) {
-      texture.colorSpace = SRGBColorSpace;
-    }
-  } else if (options.colorSpace === "linear") {
-    if ("colorSpace" in texture && LinearSRGBColorSpace !== void 0) {
-      texture.colorSpace = LinearSRGBColorSpace;
-    }
-  }
-  if (typeof options.anisotropy === "number") {
-    texture.anisotropy = options.anisotropy;
-  } else {
-    try {
-      texture.anisotropy = Math.max(texture.anisotropy || 1, 8);
-    } catch (e) {
-    }
-  }
-  if (texture.isDataTexture || texture.image && (texture.image.width > 0 || texture.image.data)) {
-    texture.needsUpdate = true;
-  }
-}
-function loadTexture$1(url, options, onError) {
-  try {
-    const fallbackData = new Uint8Array([255, 255, 255, 255]);
-    const placeholder = new DataTexture(
-      fallbackData,
-      1,
-      1,
-      RGBAFormat
-    );
-    if (options?.colorSpace === "srgb") {
-      placeholder.colorSpace = SRGBColorSpace;
-    } else if (options?.colorSpace === "linear") {
-      placeholder.colorSpace = LinearSRGBColorSpace;
-    }
-    configureTexture(placeholder, options);
-    textureLoader$2.load(
-      url,
-      (loadedTexture) => {
-        if (!loadedTexture?.image) return;
-        placeholder.image = loadedTexture.image;
-        placeholder.format = loadedTexture.format;
-        placeholder.type = loadedTexture.type;
-        placeholder.colorSpace = loadedTexture.colorSpace;
-        placeholder.isDataTexture = false;
-        configureTexture(placeholder, options);
-      },
-      void 0,
-      (event) => {
-        console.warn(`Failed to load ground texture: ${url}`, event);
-        if (onError) onError(event);
-      }
-    );
-    return placeholder;
-  } catch (error) {
-    console.warn(`Failed to load ground texture: ${url}`, error);
-    if (onError) onError(error);
-    return null;
-  }
-}
-function createDetailLayer(config) {
-  const texture = config?.url ? loadTexture$1(config.url, config) : createProceduralTexture(config);
-  if (!texture) return null;
-  configureTexture(texture, config);
-  const strength = MathUtils.clamp(config.strength ?? 0.35, 0, 1);
-  const hasRealTexture = Boolean(config?.url);
-  const attenuationOverride = Number.isFinite(config?.tintAttenuation) ? config.tintAttenuation : void 0;
-  const tintAttenuation = hasRealTexture ? MathUtils.clamp(attenuationOverride ?? 0.45, 0, 1) : MathUtils.clamp(attenuationOverride ?? 1, 0, 1);
-  const effectiveStrength = strength * tintAttenuation;
-  const minHeight = Number.isFinite(config.minHeight) ? config.minHeight : -1e3;
-  const maxHeight = Number.isFinite(config.maxHeight) ? config.maxHeight : 1e3;
-  const fade = Math.max(config.fade ?? 8, 0);
-  const applyTintMultiplier = config.tintMultiplier !== false;
-  const tint = new Color(1, 1, 1);
-  if (applyTintMultiplier) {
-    if (Array.isArray(config.tint)) {
-      tint.setRGB(
-        config.tint[0] ?? 1,
-        config.tint[1] ?? config.tint[0] ?? 1,
-        config.tint[2] ?? config.tint[1] ?? config.tint[0] ?? 1
-      );
-    } else if (typeof config.tint === "string") {
-      tint.set(config.tint);
-    }
-  }
-  const mode = config.mode === "mix" ? 1 : 0;
-  const noiseScale = Number.isFinite(config.noiseScale) ? config.noiseScale : 0;
-  const noiseStrength = MathUtils.clamp(config.noiseStrength ?? 0, 0, 1);
-  return {
-    texture,
-    params: new Vector4(minHeight, maxHeight, fade, effectiveStrength),
-    tint,
-    mode,
-    tintMultiplier: applyTintMultiplier ? 1 : 0,
-    noise: new Vector2(noiseScale, noiseStrength)
-  };
-}
-function createGroundTextureState(material, config = GROUND_TEXTURE_CONFIG) {
-  if (!material) return { detailLayers: [] };
-  const state = {
-    detailLayers: [],
-    baseBlend: null,
-    stoneBlend: null,
-    beach: null,
-    macro: null
-  };
-  const baseConfig = config?.base;
-  if (typeof baseConfig?.roughness === "number") {
-    material.roughness = MathUtils.clamp(baseConfig.roughness, 0, 1);
-  }
-  if (typeof baseConfig?.metalness === "number") {
-    material.metalness = MathUtils.clamp(baseConfig.metalness, 0, 1);
-  }
-  if (baseConfig?.url || baseConfig?.generator || baseConfig?.procedural) {
-    const hasProceduralFallback = baseConfig?.generator || baseConfig?.procedural;
-    const fallbackConfig = baseConfig?.url && hasProceduralFallback ? cloneWithNeutralFallbackTint(baseConfig) : null;
-    let baseTexture = null;
-    let usingFallbackTint = false;
-    if (baseConfig?.url) {
-      baseTexture = loadTexture$1(
-        baseConfig.url,
-        baseConfig,
-        () => {
-          if (!material || !fallbackConfig) return;
-          const fallbackTexture = createProceduralTexture(fallbackConfig);
-          if (fallbackTexture) {
-            configureTexture(fallbackTexture, fallbackConfig);
-            material.map = fallbackTexture;
-            material.needsUpdate = true;
-          }
-        }
-      );
-      if (!baseTexture && fallbackConfig) {
-        baseTexture = createProceduralTexture(fallbackConfig);
-        usingFallbackTint = Boolean(baseTexture);
-      }
-    } else if (hasProceduralFallback) {
-      baseTexture = createProceduralTexture(baseConfig);
-    }
-    if (baseTexture) {
-      const textureOptions = usingFallbackTint && fallbackConfig ? fallbackConfig : baseConfig;
-      configureTexture(baseTexture, textureOptions);
-      material.map = baseTexture;
-      material.needsUpdate = true;
-    }
-  }
-  const detailConfigs = Array.isArray(config?.details) ? config.details : [];
-  for (const layerConfig of detailConfigs) {
-    const layer = createDetailLayer(layerConfig);
-    if (layer) state.detailLayers.push(layer);
-  }
-  const blendConfig = config?.blend;
-  const blendEnabled = blendConfig?.enabled !== false;
-  if (blendEnabled && (blendConfig?.dirt?.url || blendConfig?.dirt?.generator)) {
-    const grassTex = blendConfig.grass?.url ? loadTexture$1(blendConfig.grass.url, blendConfig.grass) : null;
-    const dirtTex = blendConfig.dirt?.url ? loadTexture$1(blendConfig.dirt.url, blendConfig.dirt) : null;
-    const stoneTex = blendConfig.stone?.url ? loadTexture$1(blendConfig.stone.url, blendConfig.stone) : null;
-    if (grassTex) configureTexture(grassTex, blendConfig.grass);
-    if (dirtTex) configureTexture(dirtTex, blendConfig.dirt);
-    if (stoneTex) configureTexture(stoneTex, blendConfig.stone);
-    const maskSize = Math.max(
-      8,
-      Math.min(blendConfig.maskResolution ?? DEFAULT_MASK_RESOLUTION, 1024)
-    );
-    const maskData = new Uint8Array(maskSize * maskSize);
-    const maskTexture = new DataTexture(
-      maskData,
-      maskSize,
-      maskSize,
-      RedFormat,
-      UnsignedByteType
-    );
-    maskTexture.needsUpdate = true;
-    maskTexture.colorSpace = LinearSRGBColorSpace;
-    maskTexture.magFilter = LinearFilter;
-    maskTexture.minFilter = LinearMipMapLinearFilter;
-    const stoneTint = new Color(1, 1, 1);
-    if (blendConfig.stone?.tint) {
-      if (Array.isArray(blendConfig.stone.tint)) {
-        stoneTint.fromArray(blendConfig.stone.tint);
-      } else {
-        stoneTint.set(blendConfig.stone.tint);
-      }
-    }
-    state.baseBlend = {
-      grassTexture: grassTex,
-      dirtTexture: dirtTex,
-      stoneTexture: stoneTex,
-      stoneTint,
-      noiseScale: blendConfig.noiseScale ?? 16,
-      noiseContrast: Math.max(1e-4, blendConfig.noiseContrast ?? 1.2),
-      slopeThreshold: blendConfig.slopeThreshold ?? 0.7,
-      slopeBlend: blendConfig.slopeBlend ?? 0.2,
-      maskTexture,
-      maskData,
-      maskSize,
-      maskStrength: MathUtils.clamp(blendConfig.maskStrength ?? 1, 0, 2),
-      uniforms: {}
-    };
-  }
-  if (config?.beach) {
-    state.beach = {
-      height: config.beach.height ?? 2,
-      fade: config.beach.fade ?? 2,
-      uniforms: {}
-    };
-  }
-  if (config?.macro) {
-    state.macro = {
-      scale: config.macro.scale ?? 0.05,
-      strength: config.macro.strength ?? 0.15,
-      uniforms: {}
-    };
-  }
-  return state;
-}
-function injectGroundTextureShader(shader, state) {
-  const hasDetails = state?.detailLayers?.length > 0;
-  const hasBlend = !!state?.baseBlend?.dirtTexture;
-  const hasStone = !!state?.baseBlend?.stoneTexture;
-  const hasBeach = !!state?.beach;
-  const hasMacro = !!state?.macro;
-  if (!hasDetails && !hasBlend && !hasBeach && !hasMacro) {
-    return;
-  }
-  if (!shader.defines) {
-    shader.defines = {};
-  }
-  if (shader.defines.USE_UV === void 0) {
-    shader.defines.USE_UV = "";
-  }
-  if (!shader.extensions) shader.extensions = {};
-  shader.extensions.derivatives = true;
-  if (!shader.vertexShader.includes("#include <uv_pars_vertex>")) {
-    shader.vertexShader = shader.vertexShader.replace(
-      "void main() {",
-      `#include <uv_pars_vertex>
-void main() {`
-    );
-  }
-  if (!shader.vertexShader.includes("#include <uv_vertex>")) {
-    shader.vertexShader = shader.vertexShader.replace(
-      "#include <project_vertex>",
-      `#include <uv_vertex>
-#include <project_vertex>`
-    );
-  }
-  const varyings = [];
-  if (hasDetails || hasBeach || hasBlend || hasMacro) {
-    const groundHeightVarying = "varying float vGroundHeight;";
-    if (!shader.vertexShader.includes(groundHeightVarying)) {
-      shader.vertexShader = shader.vertexShader.replace(
-        "#include <uv_pars_vertex>",
-        `#include <uv_pars_vertex>
-${groundHeightVarying}`
-      );
-    }
-    if (!shader.vertexShader.includes("vGroundHeight = position.z;")) {
-      shader.vertexShader = shader.vertexShader.replace(
-        "#include <begin_vertex>",
-        "#include <begin_vertex>\n  vGroundHeight = position.z;"
-      );
-    }
-    varyings.push(groundHeightVarying);
-  }
-  if (hasBlend) {
-    const worldNormalVarying = "varying vec3 vWorldNormal;";
-    if (!shader.vertexShader.includes(worldNormalVarying)) {
-      shader.vertexShader = shader.vertexShader.replace(
-        "#include <uv_pars_vertex>",
-        `#include <uv_pars_vertex>
-${worldNormalVarying}`
-      );
-    }
-    if (!shader.vertexShader.includes("vWorldNormal = normalize(")) {
-      shader.vertexShader = shader.vertexShader.replace(
-        "#include <defaultnormal_vertex>",
-        `#include <defaultnormal_vertex>
- vWorldNormal = normalize( mat3( modelMatrix ) * objectNormal );`
-      );
-    }
-    varyings.push(worldNormalVarying);
-  }
-  if (hasBlend || hasMacro) {
-    const worldXZVarying = "varying vec2 vWorldXZ;";
-    if (!shader.vertexShader.includes(worldXZVarying)) {
-      shader.vertexShader = shader.vertexShader.replace(
-        "#include <uv_pars_vertex>",
-        `#include <uv_pars_vertex>
-${worldXZVarying}`
-      );
-    }
-    if (!shader.vertexShader.includes("vWorldXZ = (modelMatrix * vec4(transformed, 1.0)).xz;")) {
-      shader.vertexShader = shader.vertexShader.replace(
-        "#include <begin_vertex>",
-        "#include <begin_vertex>\n  vWorldXZ = (modelMatrix * vec4(transformed, 1.0)).xz;"
-      );
-    }
-    varyings.push(worldXZVarying);
-  }
-  const header = shader.fragmentShader.includes("varying float vGroundHeight;") ? [] : varyings;
-  const mixCode = [];
-  shader.uniforms.uDebugTerrain = { value: 0 };
-  header.push("uniform float uDebugTerrain;");
-  let beachHeader = "";
-  if (hasBeach) {
-    shader.uniforms.uSeaLevel = { value: 0 };
-    shader.uniforms.uBeachHeight = { value: state.beach.height };
-    shader.uniforms.uBeachFade = { value: state.beach.fade };
-    state.beach.uniforms = {
-      uSeaLevel: shader.uniforms.uSeaLevel
-    };
-    beachHeader = `uniform float uSeaLevel;
-uniform float uBeachHeight;
-uniform float uBeachFade;`;
-  }
-  let macroHeader = "";
-  if (hasMacro) {
-    shader.uniforms.uGroundMacroParams = { value: new Vector2(state.macro.scale, state.macro.strength) };
-    macroHeader = `uniform vec2 uGroundMacroParams;`;
-  }
-  if (hasBlend) {
-    shader.uniforms.uGroundDirtMap = { value: state.baseBlend.dirtTexture };
-    shader.uniforms.uGroundStoneMap = { value: state.baseBlend.stoneTexture || fallbackMask };
-    shader.uniforms.uGroundStoneTint = { value: state.baseBlend.stoneTint };
-    shader.uniforms.uGroundBlendNoise = {
-      value: new Vector2(
-        state.baseBlend.noiseScale ?? 16,
-        state.baseBlend.noiseContrast ?? 1.2
-      )
-    };
-    shader.uniforms.uGroundSlopeParams = {
-      value: new Vector2(state.baseBlend.slopeThreshold, state.baseBlend.slopeBlend)
-    };
-    shader.uniforms.uGroundBlendMask = {
-      value: state.baseBlend.maskTexture || fallbackMask
-    };
-    shader.uniforms.uGroundBlendMaskStrength = {
-      value: state.baseBlend.maskStrength ?? 1
-    };
-    shader.uniforms.uGroundGrassMap = {
-      value: state.baseBlend.grassTexture || shader.uniforms.map?.value || fallbackMask
-    };
-    state.baseBlend.uniforms = {
-      mask: shader.uniforms.uGroundBlendMask,
-      maskStrength: shader.uniforms.uGroundBlendMaskStrength
-    };
-  }
-  if (hasDetails) {
-    state.detailLayers.forEach((layer, index) => {
-      const mapName = `uGroundDetailMap${index}`;
-      const paramName = `uGroundDetailParams${index}`;
-      const tintName = `uGroundDetailTint${index}`;
-      const modeName = `uGroundDetailMode${index}`;
-      const tintMultiplierName = `uGroundDetailTintMultiplier${index}`;
-      const noiseName = `uGroundDetailNoise${index}`;
-      shader.uniforms[mapName] = { value: layer.texture };
-      shader.uniforms[paramName] = { value: layer.params };
-      shader.uniforms[tintName] = { value: layer.tint };
-      shader.uniforms[modeName] = { value: layer.mode };
-      shader.uniforms[tintMultiplierName] = {
-        value: layer.tintMultiplier ?? 1
-      };
-      shader.uniforms[noiseName] = {
-        value: layer.noise ?? new Vector2(0, 0)
-      };
-      header.push(
-        [
-          `uniform sampler2D ${mapName};`,
-          `uniform vec4 ${paramName};`,
-          `uniform vec3 ${tintName};`,
-          `uniform float ${modeName};`,
-          `uniform float ${tintMultiplierName};`,
-          `uniform vec2 ${noiseName};`
-        ].join("\n")
-      );
-      mixCode.push(`
-      {
-        vec4 detailSample = texture2D(${mapName}, vUv);
-        float minH = ${paramName}.x;
-        float maxH = ${paramName}.y;
-        float fade = max(${paramName}.z, 0.0001);
-        float strength = clamp(${paramName}.w, 0.0, 1.0);
-        float mask = 1.0;
-        if (maxH > minH) {
-          mask = smoothstep(minH, minH + fade, vGroundHeight);
-          mask *= 1.0 - smoothstep(maxH - fade, maxH, vGroundHeight);
-        }
-        float layerStrength = strength * mask;
-        float noiseScale = ${noiseName}.x;
-        float noiseStrength = ${noiseName}.y;
-        if (noiseScale > 0.0 && noiseStrength > 0.0) {
-          float n = groundNoise(vUv * noiseScale);
-          float noiseMask = smoothstep(0.5 - 0.5 * noiseStrength, 0.5 + 0.5 * noiseStrength, n);
-          layerStrength *= noiseMask;
-        }
-        if (layerStrength > 0.0) {
-          vec3 layerColor = detailSample.rgb;
-          layerColor *= mix(vec3(1.0), ${tintName}, ${tintMultiplierName});
-          if (abs(${modeName} - 1.0) < 0.5) {
-            diffuseColor.rgb = mix(diffuseColor.rgb, layerColor, layerStrength);
-          } else {
-            diffuseColor.rgb *= mix(vec3(1.0), layerColor, layerStrength);
-          }
-        }
-      }
-    `);
-    });
-  }
-  const hasUvParsFragment = shader.fragmentShader.includes(
-    "#include <uv_pars_fragment>"
-  );
-  const groundNoiseFn = `
-float groundHash(vec2 p) {
-  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
-}
-
-float groundNoise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  float a = groundHash(i);
-  float b = groundHash(i + vec2(1.0, 0.0));
-  float c = groundHash(i + vec2(0.0, 1.0));
-  float d = groundHash(i + vec2(1.0, 1.0));
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
-}
-`;
-  const blendHeader = hasBlend ? `uniform sampler2D uGroundDirtMap;
-       uniform sampler2D uGroundStoneMap;
-       uniform vec3 uGroundStoneTint;
-       uniform sampler2D uGroundBlendMask;
-       uniform vec2 uGroundBlendNoise;
-       uniform vec2 uGroundSlopeParams;
-       uniform float uGroundBlendMaskStrength;
-       uniform sampler2D uGroundGrassMap;` : "";
-  const commonInjection = [
-    "#include <common>",
-    ...hasUvParsFragment ? [] : ["#include <uv_pars_fragment>"],
-    ...header,
-    groundNoiseFn,
-    blendHeader,
-    beachHeader,
-    macroHeader
-  ].filter(Boolean).join("\n");
-  shader.fragmentShader = shader.fragmentShader.replace(
-    "#include <common>",
-    commonInjection
-  );
-  if (hasBlend) {
-    let blendLogic = `
-      vec3 grassTexel = vec3(1.0);
-      vec3 baseDiffuse = diffuseColor.rgb;
-      #ifdef USE_MAP
-        grassTexel = texture2D(uGroundGrassMap, vUv).rgb;
-      #endif
-
-      vec3 dirtTexel = texture2D(uGroundDirtMap, vUv).rgb;
-      vec3 stoneTexel = texture2D(uGroundStoneMap, vUv).rgb * uGroundStoneTint;
-
-      // 1. Compute Base Dirt Noise Blend
-      float noiseWeight = clamp(groundNoise(vWorldXZ * uGroundBlendNoise.x), 0.0, 1.0);
-      noiseWeight = pow(noiseWeight, max(uGroundBlendNoise.y, 0.0001));
-      float maskWeight = texture2D(uGroundBlendMask, vUv).r * uGroundBlendMaskStrength;
-      float dirtWeight = clamp(max(noiseWeight, maskWeight), 0.0, 1.0);
-
-      // 2. Beach Override (Low Height -> Sand/Dirt)
-      float beachLimit = uSeaLevel + uBeachHeight;
-      float beachFactor = 1.0 - smoothstep(beachLimit, beachLimit + uBeachFade, vGroundHeight);
-      dirtWeight = clamp(max(dirtWeight, beachFactor), 0.0, 1.0);
-
-      // 3. Slope Override (High Slope -> Stone)
-      // vWorldNormal.y is 1.0 for flat ground, 0.0 for vertical.
-      // Slope = 1.0 - vWorldNormal.y.
-      float slope = 1.0 - clamp(vWorldNormal.y, 0.0, 1.0);
-      float slopeThresh = uGroundSlopeParams.x;
-      float slopeBlendWidth = uGroundSlopeParams.y;
-      float stoneWeight = smoothstep(slopeThresh, slopeThresh + slopeBlendWidth, slope);
-
-      // 4. Combine
-      // Stone is top layer, then Dirt, then Grass
-      vec3 mixed = mix(grassTexel, dirtTexel, dirtWeight);
-      mixed = mix(mixed, stoneTexel, stoneWeight);
-
-      // Apply Macro Variation
-      #ifdef USE_UV
-         vec2 macroUv = vWorldXZ * uGroundMacroParams.x;
-         float macroNoise = groundNoise(macroUv);
-         // Remap 0..1 to (1-strength)..(1+strength)
-         float macroFactor = 1.0 + (macroNoise - 0.5) * 2.0 * uGroundMacroParams.y;
-         mixed *= macroFactor;
-      #endif
-
-      // Debug Visualization
-      if (uDebugTerrain > 0.5) {
-         if (uDebugTerrain < 1.5) {
-            // Mode 1: Weights (R=Grass, G=Dirt, B=Stone)
-            // Note: This is an approximation since they overlap
-            float grassW = (1.0 - stoneWeight) * (1.0 - dirtWeight);
-            float dirtW = (1.0 - stoneWeight) * dirtWeight;
-            mixed = vec3(grassW, dirtW, stoneWeight);
-         } else {
-            // Mode 2: Height/Slope
-            // R = Height (normalized), G = Slope, B = 0
-            float h = (vGroundHeight - uSeaLevel) / 20.0;
-            mixed = vec3(h, slope, 0.0);
-         }
-      }
-
-      diffuseColor = vec4(mixed * baseDiffuse, diffuseColor.a);
-    `;
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <map_fragment>",
-      blendLogic
-    );
-  }
-  if (hasDetails) {
-    const injection = `vec4 diffuseColor = vec4( diffuse, opacity );
-${mixCode.join("\n")}`;
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "vec4 diffuseColor = vec4( diffuse, opacity );",
-      injection
-    );
-  }
-}
 const SEA_LEVEL_Y = () => getSeaLevelY();
 const HARBOR_ZONE_THRESHOLD = 0.1;
 const COAST_DISTANCE_THRESHOLD = 10;
@@ -44549,496 +43518,116 @@ const HARBOR_ZONE_CONFIG = {
   RAISED_MIN: RAISED_PLATFORM_MIN,
   RAISED_MAX: RAISED_PLATFORM_MAX
 };
-const DEFAULT_HARDWARE_LIMIT = 8;
-const LOW_TIER_LIMIT = 10;
-const SAFE_MODE_FRAME_LIMIT = 24;
-let processedMaterials = /* @__PURE__ */ new WeakMap();
-const CORE_TEXTURE_SLOTS = ["map", "normalMap", "roughnessMap"];
-const OPTIONAL_TEXTURE_PRIORITY = [
-  "aoMap",
-  "emissiveMap",
-  "lightMap",
-  "specularIntensityMap",
-  "specularColorMap",
-  "clearcoatMap",
-  "clearcoatRoughnessMap",
-  "clearcoatNormalMap",
-  "sheenColorMap",
-  "sheenRoughnessMap",
-  "transmissionMap",
-  "thicknessMap",
-  "iridescenceMap",
-  "iridescenceThicknessMap",
-  "anisotropyMap",
-  "metalnessMap",
-  "bumpMap",
-  "displacementMap",
-  "alphaMap",
-  "envMap"
-];
-const MAP_RESETTERS = {
-  aoMap: (material) => {
-    if ("aoMapIntensity" in material) {
-      material.aoMapIntensity = 0;
-    }
-  },
-  emissiveMap: (material) => {
-    if ("emissiveIntensity" in material) {
-      material.emissiveIntensity = 0;
-    }
-  },
-  lightMap: (material) => {
-    if ("lightMapIntensity" in material) {
-      material.lightMapIntensity = 0;
-    }
-  },
-  clearcoatMap: (material) => {
-    if ("clearcoat" in material) {
-      material.clearcoat = 0;
-    }
-  },
-  clearcoatNormalMap: (material) => {
-    if ("clearcoat" in material) {
-      material.clearcoat = 0;
-    }
-  },
-  clearcoatRoughnessMap: (material) => {
-    if ("clearcoat" in material) {
-      material.clearcoat = 0;
-    }
-    if ("clearcoatRoughness" in material) {
-      material.clearcoatRoughness = 0;
-    }
-  },
-  sheenColorMap: (material) => {
-    if ("sheen" in material) {
-      material.sheen = 0;
-    }
-    if (material.sheenColor?.isColor) {
-      material.sheenColor.setRGB(0, 0, 0);
-    }
-  },
-  sheenRoughnessMap: (material) => {
-    if ("sheen" in material) {
-      material.sheen = 0;
-    }
-  },
-  transmissionMap: (material) => {
-    if ("transmission" in material) {
-      material.transmission = 0;
-    }
-  },
-  thicknessMap: (material) => {
-    if ("thickness" in material) {
-      material.thickness = 0;
-    }
-  },
-  specularIntensityMap: (material) => {
-    if ("specularIntensity" in material) {
-      material.specularIntensity = 1;
-    }
-  },
-  specularColorMap: (material) => {
-    if (material.specularColor?.isColor) {
-      material.specularColor.setRGB(1, 1, 1);
-    }
-  },
-  iridescenceMap: (material) => {
-    if ("iridescence" in material) {
-      material.iridescence = 0;
-    }
-  },
-  iridescenceThicknessMap: (material) => {
-    if ("iridescence" in material) {
-      material.iridescence = 0;
-    }
-  },
-  anisotropyMap: (material) => {
-    if ("anisotropy" in material) {
-      material.anisotropy = 0;
-    }
-  }
-};
-const SAFE_MODE_DISTANCE_THRESHOLD = 160;
-const SAFE_MODE_SMALL_SCALE_THRESHOLD = 0.45;
-const SAFE_MODE_SMALL_WORLD_RADIUS = 0.8;
-const _safeModeTempPosition = new Vector3();
-const _safeModeTempScale = new Vector3();
-function isNodeMarkedDistant(node) {
-  const tag = node?.userData?.textureBudget;
-  if (typeof tag === "string") {
-    const lower = tag.toLowerCase();
-    return lower === "distant" || lower === "far";
-  }
-  return Boolean(node?.userData?.textureBudgetDistant);
-}
-function isNodeMarkedSmall(node) {
-  return Boolean(node?.userData?.textureBudgetSmall || node?.userData?.smallObject);
-}
-function isNodeDistant(node) {
-  if (!node) return false;
-  if (isNodeMarkedDistant(node)) {
-    return true;
-  }
-  const hintedDistance = node?.userData?.distanceToCamera;
-  if (Number.isFinite(hintedDistance)) {
-    return hintedDistance > SAFE_MODE_DISTANCE_THRESHOLD;
-  }
-  try {
-    if (typeof node.getWorldPosition === "function") {
-      node.getWorldPosition(_safeModeTempPosition);
-      return _safeModeTempPosition.length() > SAFE_MODE_DISTANCE_THRESHOLD;
-    }
-    if (node.matrixWorld) {
-      _safeModeTempPosition.setFromMatrixPosition(node.matrixWorld);
-      return _safeModeTempPosition.length() > SAFE_MODE_DISTANCE_THRESHOLD;
-    }
-  } catch {
-  }
-  return false;
-}
-function isNodeVerySmall(node) {
-  if (!node) return false;
-  if (isNodeMarkedSmall(node)) {
-    return true;
-  }
-  try {
-    if (typeof node.getWorldScale === "function") {
-      node.getWorldScale(_safeModeTempScale);
-    } else if (node.scale) {
-      _safeModeTempScale.copy(node.scale);
-    } else {
-      _safeModeTempScale.set(1, 1, 1);
-    }
-    const avgScale = (Math.abs(_safeModeTempScale.x) + Math.abs(_safeModeTempScale.y) + Math.abs(_safeModeTempScale.z)) / 3;
-    if (avgScale < SAFE_MODE_SMALL_SCALE_THRESHOLD) {
-      return true;
-    }
-    if (node.isMesh && node.geometry) {
-      const geometry = node.geometry;
-      let radius = geometry.boundingSphere?.radius;
-      if (!Number.isFinite(radius) && typeof geometry.computeBoundingSphere === "function") {
-        geometry.computeBoundingSphere();
-        radius = geometry.boundingSphere?.radius;
-      }
-      if (Number.isFinite(radius)) {
-        const worldRadius = radius * avgScale;
-        if (worldRadius < SAFE_MODE_SMALL_WORLD_RADIUS) {
-          return true;
-        }
-      }
-    }
-  } catch {
-  }
-  return false;
-}
-function computeSafeModePriority(node, slot) {
-  const distant = isNodeDistant(node);
-  const tiny = isNodeVerySmall(node);
-  if (slot === "map") {
-    return Number.POSITIVE_INFINITY;
-  }
-  if (slot === "roughnessMap" || slot === "aoMap") {
-    return distant ? 1 : 6;
-  }
-  if (slot === "normalMap") {
-    return tiny ? 2 : 8;
-  }
-  if (slot === "metalnessMap" || slot === "specularIntensityMap") {
-    return 10;
-  }
-  if (slot === "displacementMap" || slot === "bumpMap" || slot === "lightMap") {
-    return 12;
-  }
-  if (slot === "emissiveMap") {
-    return 14;
-  }
-  return 20;
-}
-function isTexture(value) {
-  return Boolean(value && typeof value === "object" && value.isTexture);
-}
-function resolveRenderer(options) {
-  if (!options) return null;
-  if (options.renderer) {
-    return options.renderer;
-  }
-  if (options.scene?.userData?.renderer) {
-    return options.scene.userData.renderer;
-  }
-  return null;
-}
-function resolveTextureLimit(options) {
-  const renderer2 = resolveRenderer(options);
-  if (Number.isFinite(options?.maxTextures)) {
-    return Math.max(1, Math.floor(options.maxTextures));
-  }
-  const capabilities = renderer2?.capabilities;
-  if (capabilities) {
-    const maxTextures = capabilities.maxTextures ?? capabilities.maxTextureUnits ?? capabilities.maxFragmentTextures ?? capabilities.maxFragmentUniforms;
-    if (Number.isFinite(maxTextures)) {
-      return Math.max(1, Math.floor(maxTextures));
-    }
-  }
-  return DEFAULT_HARDWARE_LIMIT;
-}
-function gatherTextureSlots(material) {
-  const slots = new Set(CORE_TEXTURE_SLOTS.concat(OPTIONAL_TEXTURE_PRIORITY));
-  for (const key in material) {
-    if (key && key.endsWith("Map")) {
-      slots.add(key);
-    }
-  }
-  return Array.from(slots);
-}
-function getActiveTextureSlots(material) {
-  const slots = gatherTextureSlots(material);
-  const active = [];
-  for (const slot of slots) {
-    if (isTexture(material[slot])) {
-      active.push(slot);
-    }
-  }
-  return active;
-}
-function registerMaterialForSafeMode(material, node, state) {
-  if (!state || !material) {
-    return;
-  }
-  const activeSlots = getActiveTextureSlots(material);
-  const firstEncounter = !state.countedMaterials.has(material);
-  if (firstEncounter) {
-    state.countedMaterials.add(material);
-    state.active += activeSlots.length;
-  }
-  for (const slot of activeSlots) {
-    if (slot === "map") {
-      continue;
-    }
-    const priority = computeSafeModePriority(node, slot);
-    if (!Number.isFinite(priority)) {
-      continue;
-    }
-    const key = `${material.uuid}:${slot}`;
-    const existing = state.candidates.get(key);
-    if (!existing || priority < existing.priority) {
-      state.candidates.set(key, {
-        material,
-        slot,
-        priority,
-        key
-      });
-    }
-  }
-}
-function enforceSafeModeLimit(state) {
-  if (!state || state.active <= state.limit) {
-    return;
-  }
-  const candidates = Array.from(state.candidates.values());
-  candidates.sort((a, b) => {
-    if (a.priority === b.priority) {
-      return a.slot.localeCompare(b.slot);
-    }
-    return a.priority - b.priority;
-  });
-  for (const candidate of candidates) {
-    if (state.active <= state.limit) {
-      break;
-    }
-    const { material, slot, key } = candidate;
-    if (!material || !isTexture(material[slot])) {
-      state.candidates.delete(key);
-      continue;
-    }
-    if (removeTexture(material, slot)) {
-      state.candidates.delete(key);
-      state.active = Math.max(0, state.active - 1);
-    }
-  }
-}
-function removeTexture(material, slot) {
-  if (!slot || !isTexture(material[slot])) {
-    return false;
-  }
-  material[slot] = null;
-  const reset = MAP_RESETTERS[slot];
-  if (reset) {
-    reset(material);
-  }
-  if (material.needsUpdate !== true) {
-    material.needsUpdate = true;
-  }
-  return true;
-}
-function usesPhysicalExtensions(material) {
-  if (!material?.isMeshPhysicalMaterial) {
-    return false;
-  }
-  const clearcoatActive = (material.clearcoat ?? 0) > 1e-3 || isTexture(material.clearcoatMap) || isTexture(material.clearcoatNormalMap) || isTexture(material.clearcoatRoughnessMap);
-  const sheenActive = (material.sheen ?? 0) > 1e-3 || material.sheenColor?.isColor && material.sheenColor.getHex() !== 0 || isTexture(material.sheenColorMap) || isTexture(material.sheenRoughnessMap);
-  const transmissionActive = (material.transmission ?? 0) > 1e-3 || isTexture(material.transmissionMap) || (material.thickness ?? 0) > 1e-3 || isTexture(material.thicknessMap);
-  const iridescenceActive = (material.iridescence ?? 0) > 1e-3 || isTexture(material.iridescenceMap) || isTexture(material.iridescenceThicknessMap);
-  return clearcoatActive || sheenActive || transmissionActive || iridescenceActive;
-}
-function maybeDowngradePhysicalMaterial(material, options, trimmed) {
-  if (!material?.isMeshPhysicalMaterial) {
-    return null;
-  }
-  const limit = resolveTextureLimit(options);
-  const lowTierDevice = limit <= LOW_TIER_LIMIT;
-  if (!trimmed && !lowTierDevice) {
-    return null;
-  }
-  if (usesPhysicalExtensions(material)) {
-    return null;
-  }
-  const downgraded = new MeshStandardMaterial();
-  downgraded.copy(material);
-  downgraded.name = material.name;
-  downgraded.userData = { ...material.userData || {} };
-  downgraded.onBeforeCompile = material.onBeforeCompile;
-  if (typeof material.customProgramCacheKey === "function") {
-    downgraded.customProgramCacheKey = () => material.customProgramCacheKey.call(downgraded);
-  }
-  downgraded.needsUpdate = true;
-  return downgraded;
-}
-function budgetSingleMaterial(material, options) {
-  if (!material) {
-    return material;
-  }
-  const cached = processedMaterials.get(material);
-  if (cached) {
-    return cached;
-  }
-  if (material.userData?.textureBudget === "skip" || material.userData?.textureBudgetSkip) {
-    processedMaterials.set(material, material);
-    return material;
-  }
-  const activeSlots = getActiveTextureSlots(material);
-  const limit = Math.max(3, resolveTextureLimit(options));
-  if (activeSlots.length <= limit) {
-    processedMaterials.set(material, material);
-    return material;
-  }
-  const active = new Set(activeSlots);
-  let trimmed = false;
-  for (const slot of OPTIONAL_TEXTURE_PRIORITY) {
-    if (!active.has(slot)) continue;
-    if (CORE_TEXTURE_SLOTS.includes(slot)) continue;
-    if (removeTexture(material, slot)) {
-      active.delete(slot);
-      trimmed = true;
-      if (active.size <= limit) {
-        break;
-      }
-    }
-  }
-  if (active.size > limit) {
-    for (const slot of activeSlots) {
-      if (!active.has(slot)) continue;
-      if (CORE_TEXTURE_SLOTS.includes(slot)) {
-        continue;
-      }
-      if (removeTexture(material, slot)) {
-        active.delete(slot);
-        trimmed = true;
-        if (active.size <= limit) {
-          break;
-        }
-      }
-    }
-  }
-  if (active.size > limit) {
-    for (const slot of CORE_TEXTURE_SLOTS.filter((name) => name !== "map")) {
-      if (!active.has(slot)) continue;
-      if (removeTexture(material, slot)) {
-        active.delete(slot);
-        trimmed = true;
-        if (active.size <= limit) {
-          break;
-        }
-      }
-    }
-  }
-  if (active.size > limit) {
-    processedMaterials.set(material, material);
-    return material;
-  }
-  const replacement = maybeDowngradePhysicalMaterial(material, options, trimmed);
-  if (replacement && replacement !== material) {
-    processedMaterials.set(material, replacement);
-    processedMaterials.set(replacement, replacement);
-    return replacement;
-  }
-  processedMaterials.set(material, material);
-  return material;
-}
-function applyTextureBudgetToMaterial(material, options = {}) {
-  if (!material) return material;
-  if (Array.isArray(material)) {
-    return material.map((mat) => applyTextureBudgetToMaterial(mat, options));
-  }
-  return budgetSingleMaterial(material, options);
-}
-function applyTextureBudgetToObject(object, options = {}) {
-  if (!object || typeof object.traverse !== "function") {
-    return;
-  }
-  const safeMode = options.safeMode === true;
-  const safeState = safeMode ? {
-    limit: Math.max(
-      1,
-      Math.floor(
-        Number.isFinite(options.safeModeLimit) ? Math.min(options.safeModeLimit, SAFE_MODE_FRAME_LIMIT) : SAFE_MODE_FRAME_LIMIT
-      )
-    ),
-    active: 0,
-    countedMaterials: /* @__PURE__ */ new WeakSet(),
-    candidates: /* @__PURE__ */ new Map()
-  } : null;
-  object.traverse((node) => {
-    const materials = node.material;
-    if (!materials) return;
-    if (Array.isArray(materials)) {
-      let replaced = false;
-      const updated = materials.map((material) => {
-        const result = applyTextureBudgetToMaterial(material, options);
-        if (result && result !== material) {
-          replaced = true;
-        }
-        return result;
-      });
-      if (replaced) {
-        node.material = updated;
-      }
-      const finalMaterials = Array.isArray(node.material) ? node.material : [node.material];
-      for (const material of finalMaterials) {
-        registerMaterialForSafeMode(material, node, safeState);
-      }
-    } else {
-      const result = applyTextureBudgetToMaterial(materials, options);
-      if (result && result !== materials) {
-        node.material = result;
-        registerMaterialForSafeMode(result, node, safeState);
-      } else {
-        registerMaterialForSafeMode(materials, node, safeState);
-      }
-    }
-  });
-  if (safeState) {
-    enforceSafeModeLimit(safeState);
-  }
-}
-function resetTextureBudgetCache() {
-  processedMaterials = /* @__PURE__ */ new WeakMap();
-}
+const SAND_MAX_ELEV = 3;
+const GRASS_MIN_ELEV = 6;
+const SLOPE_ROCK_MIN = 0.6;
 const RENDER_LAYERS = Object.freeze({
   WATER: -1,
   TERRAIN: 1,
   DETAIL: 2
 });
+const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const textureLoader$1 = new TextureLoader();
+const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
+const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
+const CITY_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
+const INLAND_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
+const COASTAL_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
+const ROADSIDE_MASK_FALLBACK = new DataTexture(
+  new Uint8Array([0]),
+  1,
+  1,
+  RedFormat,
+  UnsignedByteType
+);
+ROADSIDE_MASK_FALLBACK.needsUpdate = true;
+ROADSIDE_MASK_FALLBACK.colorSpace = LinearSRGBColorSpace;
+let warnedTextureFailure = false;
+function bindGroundTexture(material, label, url, repeat) {
+  const texture = textureLoader$1.load(
+    url,
+    () => {
+      console.log(`[Ground] ${label} texture bound to ${material.name}`);
+    },
+    void 0,
+    () => {
+      if (!warnedTextureFailure) {
+        warnedTextureFailure = true;
+        console.warn("[Ground] Failed to load ground texture; using flat color.");
+      }
+      material.map = null;
+      material.needsUpdate = true;
+    }
+  );
+  texture.colorSpace = SRGBColorSpace;
+  texture.wrapS = texture.wrapT = RepeatWrapping;
+  texture.repeat.set(repeat, repeat);
+  return texture;
+}
+const CityGroundMaterial = new MeshStandardMaterial({
+  name: "CityGroundMaterial",
+  color: 13219740,
+  map: cityGroundTexture,
+  roughness: 0.6,
+  metalness: 0
+});
+CityGroundMaterial.userData.roadside = {
+  maskTexture: ROADSIDE_MASK_FALLBACK,
+  tint: new Color(1.08, 1.06, 1.04),
+  roughness: 0.75
+};
+CityGroundMaterial.onBeforeCompile = (shader) => {
+  shader.uniforms.uRoadsideMask = {
+    value: CityGroundMaterial.userData?.roadside?.maskTexture ?? ROADSIDE_MASK_FALLBACK
+  };
+  shader.uniforms.uRoadsideTint = {
+    value: CityGroundMaterial.userData?.roadside?.tint ?? new Color(1, 1, 1)
+  };
+  shader.uniforms.uRoadsideRoughness = {
+    value: CityGroundMaterial.userData?.roadside?.roughness ?? CityGroundMaterial.roughness
+  };
+  CityGroundMaterial.userData.roadsideUniforms = shader.uniforms;
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "#include <roughnessmap_fragment>",
+    `#include <roughnessmap_fragment>
+     float roadsideWeight = texture2D(uRoadsideMask, vUv).r;
+     roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);
+     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
+     roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
+  );
+};
+CityGroundMaterial.map = bindGroundTexture(
+  CityGroundMaterial,
+  "City",
+  CITY_GROUND_PNG_URL,
+  20
+);
+const InlandGroundMaterial = new MeshStandardMaterial({
+  name: "InlandGroundMaterial",
+  color: 9072462,
+  map: inlandGroundTexture,
+  roughness: 0.85,
+  metalness: 0
+});
+InlandGroundMaterial.map = bindGroundTexture(
+  InlandGroundMaterial,
+  "Inland",
+  INLAND_GROUND_PNG_URL,
+  32
+);
+const CoastalGroundMaterial = new MeshStandardMaterial({
+  name: "CoastalGroundMaterial",
+  color: 15127459,
+  map: coastalGroundTexture,
+  roughness: 0.75,
+  metalness: 0
+});
+CoastalGroundMaterial.map = bindGroundTexture(
+  CoastalGroundMaterial,
+  "Coastal",
+  COASTAL_GROUND_PNG_URL,
+  16
+);
 const SEA_SIDE = "east";
 const COAST_WIDTH = 120;
 const INLAND_RISE = 220;
@@ -45047,60 +43636,6 @@ const RIDGE_HEIGHT = 70;
 const CITY_SLOPE_MAX = 1.5;
 function validateTerrain(options) {
   return { valid: true };
-}
-const textureLoader$1 = new TextureLoader();
-function configureMapTexture(texture, options = {}) {
-  texture.wrapS = texture.wrapT = RepeatWrapping;
-  if (options.repeat) {
-    texture.repeat.set(options.repeat[0], options.repeat[1]);
-  }
-  if (options.colorSpace) {
-    texture.colorSpace = options.colorSpace;
-  }
-  if (typeof options.anisotropy === "number") {
-    texture.anisotropy = options.anisotropy;
-  }
-  texture.magFilter = LinearFilter;
-  texture.minFilter = LinearMipMapLinearFilter;
-  texture.needsUpdate = true;
-}
-function createFallbackDataTexture(color, options) {
-  const data = new Uint8Array(color);
-  const texture = new DataTexture(
-    data,
-    1,
-    1,
-    RGBFormat,
-    UnsignedByteType
-  );
-  configureMapTexture(texture, options);
-  return texture;
-}
-function loadTextureWithFallback(url, options, fallbackFactory) {
-  const fallbackTexture = fallbackFactory();
-  configureMapTexture(fallbackTexture, options);
-  try {
-    textureLoader$1.load(
-      url,
-      (loadedTexture) => {
-        if (!loadedTexture) return;
-        configureMapTexture(loadedTexture, options);
-        fallbackTexture.image = loadedTexture.image;
-        fallbackTexture.format = loadedTexture.format;
-        fallbackTexture.type = loadedTexture.type;
-        fallbackTexture.colorSpace = loadedTexture.colorSpace;
-        fallbackTexture.isDataTexture = false;
-        fallbackTexture.needsUpdate = true;
-      },
-      void 0,
-      (event) => {
-        console.warn(`Failed to load ground texture: ${url}`, event);
-      }
-    );
-  } catch (error) {
-    console.warn(`Failed to load ground texture: ${url}`, error);
-  }
-  return fallbackTexture;
 }
 function gradientNoise(x, z) {
   const x0 = Math.floor(x);
@@ -45336,6 +43871,9 @@ function createTerrain(scene2) {
   const colors = new Float32Array(vertexCount * 3);
   const colorAttribute = new BufferAttribute(colors, 3);
   geometry.setAttribute("color", colorAttribute);
+  const dSeaValues = new Float32Array(vertexCount);
+  const dSeaAttribute = new BufferAttribute(dSeaValues, 1);
+  geometry.setAttribute("dSea", dSeaAttribute);
   const seaLevel = getSeaLevelY();
   const color = new Color();
   const white = new Color(1, 1, 1);
@@ -45347,6 +43885,7 @@ function createTerrain(scene2) {
       const height = getElevation$1(x, z, seaLevel, coastData, noiseOffset);
       positionAttribute.setZ(i, height);
       baseHeights[i] = height;
+      dSeaValues[i] = coastData.dSea;
       const beachHeight = SAND_MAX_ELEV;
       const beachFade = Math.max(0.1, GRASS_MIN_ELEV - SAND_MAX_ELEV);
       const beachLimit = seaLevel + beachHeight;
@@ -45386,6 +43925,7 @@ function createTerrain(scene2) {
   }
   positionAttribute.needsUpdate = true;
   colorAttribute.needsUpdate = true;
+  dSeaAttribute.needsUpdate = true;
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
   geometry.userData.baseHeights = baseHeights;
@@ -45398,49 +43938,56 @@ function createTerrain(scene2) {
     );
     geometry.setAttribute("basePos", basePos);
   }
-  const baseUrl2 = resolveBaseUrl$5();
-  const textureOptions = {
-    repeat: [28, 24],
-    colorSpace: NoColorSpace,
-    anisotropy: 8
-  };
-  const sandNormal = loadTextureWithFallback(
-    joinPath(baseUrl2, "textures/sand/normal_gl.jpg"),
-    textureOptions,
-    () => createFallbackDataTexture([128, 128, 255], textureOptions)
-  );
-  const sandARM = loadTextureWithFallback(
-    joinPath(baseUrl2, "textures/sand/arm.jpg"),
-    textureOptions,
-    () => createFallbackDataTexture([255, 255, 0], textureOptions)
-  );
-  let terrainMaterial = new MeshStandardMaterial({
-    color: 16777215,
-    roughness: 0.8,
-    metalness: 0,
-    vertexColors: true,
-    side: FrontSide,
-    normalMap: sandNormal,
-    normalScale: new Vector2(0.5, 0.5),
-    aoMap: sandARM,
-    roughnessMap: sandARM,
-    aoMapIntensity: 0.6
-  });
-  terrainMaterial.userData.textureBudget = "skip";
-  const groundTextureState = createGroundTextureState(
-    terrainMaterial,
-    GROUND_TEXTURE_CONFIG
-  );
-  terrainMaterial.onBeforeCompile = (shader) => {
-    injectGroundTextureShader(shader, groundTextureState);
-    if (shader.uniforms.uSeaLevel) {
-      shader.uniforms.uSeaLevel.value = getSeaLevelY();
+  const coastalIndices = [];
+  const cityIndices = [];
+  const inlandIndices = [];
+  const indexArray = geometry.index.array;
+  for (let i = 0; i < indexArray.length; i += 3) {
+    const a = indexArray[i];
+    const b = indexArray[i + 1];
+    const c = indexArray[i + 2];
+    const dSea = (dSeaValues[a] + dSeaValues[b] + dSeaValues[c]) / 3;
+    const height = (positionAttribute.getZ(a) + positionAttribute.getZ(b) + positionAttribute.getZ(c)) / 3;
+    if (height > seaLevel && dSea < 0.15) {
+      coastalIndices.push(a, b, c);
+    } else if (dSea <= 0.55) {
+      cityIndices.push(a, b, c);
+    } else {
+      inlandIndices.push(a, b, c);
     }
+  }
+  const totalIndices = coastalIndices.length + cityIndices.length + inlandIndices.length;
+  const reorderedIndices = new Uint32Array(totalIndices);
+  geometry.clearGroups();
+  let offset = 0;
+  const addGroup = (indices, materialIndex) => {
+    if (!indices.length) return;
+    reorderedIndices.set(indices, offset);
+    geometry.addGroup(offset, indices.length, materialIndex);
+    offset += indices.length;
   };
-  terrainMaterial = applyTextureBudgetToMaterial(terrainMaterial, {
-    renderer: scene2?.userData?.renderer ?? null
-  });
-  const terrain = new Mesh(geometry, terrainMaterial);
+  addGroup(coastalIndices, 0);
+  addGroup(cityIndices, 1);
+  addGroup(inlandIndices, 2);
+  const coastalTriangles = coastalIndices.length / 3;
+  const cityTriangles = cityIndices.length / 3;
+  const inlandTriangles = inlandIndices.length / 3;
+  console.log(
+    `[Ground][Temp] Coastal ground material applied to ${coastalTriangles} triangles`
+  );
+  console.log(
+    `[Ground][Temp] City ground material applied to ${cityTriangles} triangles`
+  );
+  console.log(
+    `[Ground][Temp] Inland ground material applied to ${inlandTriangles} triangles`
+  );
+  geometry.setIndex(new BufferAttribute(reorderedIndices, 1));
+  const terrainMaterials = [
+    CoastalGroundMaterial,
+    CityGroundMaterial,
+    InlandGroundMaterial
+  ];
+  const terrain = new Mesh(geometry, terrainMaterials);
   terrain.rotation.x = -Math.PI / 2;
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
@@ -45478,7 +44025,6 @@ function createTerrain(scene2) {
     const h1 = h01 + (h11 - h01) * sx;
     return h0 + (h1 - h0) * sz;
   };
-  terrain.userData.groundTextureState = groundTextureState;
   return terrain;
 }
 function updateTerrain() {
@@ -45549,37 +44095,68 @@ function updateTerrainCoverageMask(terrain, options = {}) {
   const resolution = state.maskSize;
   const data = state.maskData;
   data.fill(0);
-  const paintCircle = (worldX, worldZ, radius) => {
+  const roadMaskResolution = resolution;
+  let roadMaskState = terrain.userData.roadsideMaskState;
+  if (!roadMaskState || roadMaskState.maskSize !== roadMaskResolution) {
+    const maskData = new Uint8Array(roadMaskResolution * roadMaskResolution);
+    const maskTexture = new DataTexture(
+      maskData,
+      roadMaskResolution,
+      roadMaskResolution,
+      RedFormat,
+      UnsignedByteType
+    );
+    maskTexture.needsUpdate = true;
+    maskTexture.colorSpace = LinearSRGBColorSpace;
+    maskTexture.magFilter = LinearFilter;
+    maskTexture.minFilter = LinearMipMapLinearFilter;
+    roadMaskState = {
+      maskData,
+      maskTexture,
+      maskSize: roadMaskResolution
+    };
+    terrain.userData.roadsideMaskState = roadMaskState;
+  }
+  roadMaskState.maskData.fill(0);
+  const paintCircle = (targetData, targetResolution, worldX, worldZ, radius) => {
     const u = (worldX + halfSize) / terrainSize;
     const v = (worldZ + halfSize) / terrainSize;
     if (u < 0 || u > 1 || v < 0 || v > 1) return;
-    const px2 = Math.round(u * (resolution - 1));
-    const py2 = Math.round(v * (resolution - 1));
-    const pr = Math.ceil(radius / terrainSize * resolution);
+    const px2 = Math.round(u * (targetResolution - 1));
+    const py2 = Math.round(v * (targetResolution - 1));
+    const pr = Math.ceil(radius / terrainSize * targetResolution);
     const r2 = pr * pr;
     const minX = Math.max(0, px2 - pr);
-    const maxX = Math.min(resolution - 1, px2 + pr);
+    const maxX = Math.min(targetResolution - 1, px2 + pr);
     const minY = Math.max(0, py2 - pr);
-    const maxY = Math.min(resolution - 1, py2 + pr);
+    const maxY = Math.min(targetResolution - 1, py2 + pr);
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         const dx = x - px2;
         const dy = y - py2;
         if (dx * dx + dy * dy <= r2) {
-          const index = y * resolution + x;
-          data[index] = 255;
+          const index = y * targetResolution + x;
+          targetData[index] = 255;
         }
       }
     }
   };
+  const roadBuffer = Number.isFinite(options?.roadBuffer) ? options.roadBuffer : 2;
   const paintCurve = (curve, width = 3) => {
     if (!curve?.getPoint) return;
     const samples = 160;
     for (let i = 0; i <= samples; i++) {
       const t = i / samples;
       const point = curve.getPoint(t);
-      const radius = Math.max(0.5, width * 0.65);
-      paintCircle(point.x, point.z, radius);
+      const radius = Math.max(0.5, width * 0.65 + roadBuffer);
+      paintCircle(data, resolution, point.x, point.z, radius);
+      paintCircle(
+        roadMaskState.maskData,
+        roadMaskState.maskSize,
+        point.x,
+        point.z,
+        radius
+      );
     }
   };
   const buildingPlacements = Array.isArray(options?.buildingPlacements) ? options.buildingPlacements : [];
@@ -45587,7 +44164,7 @@ function updateTerrainCoverageMask(terrain, options = {}) {
     const { x, z, width, depth } = placement;
     if (!Number.isFinite(x) || !Number.isFinite(z)) return;
     const radius = Math.max(1.2, Math.hypot(width ?? 1, depth ?? 1) * 0.6);
-    paintCircle(x, z, radius);
+    paintCircle(data, resolution, x, z, radius);
   });
   const mainRoad = options?.mainRoadCurve ?? null;
   if (mainRoad) {
@@ -45601,6 +44178,12 @@ function updateTerrainCoverageMask(terrain, options = {}) {
   }
   if (state.uniforms?.maskStrength) {
     state.uniforms.maskStrength.value = state.maskStrength ?? 1;
+  }
+  roadMaskState.maskTexture.needsUpdate = true;
+  CityGroundMaterial.userData.roadside.maskTexture = roadMaskState.maskTexture;
+  const roadsideUniforms = CityGroundMaterial.userData.roadsideUniforms;
+  if (roadsideUniforms?.uRoadsideMask) {
+    roadsideUniforms.uRoadsideMask.value = roadMaskState.maskTexture;
   }
 }
 const DEFAULT_HORIZON_RADIUS = 1700;
@@ -46336,7 +44919,7 @@ function sanitizeRelativePath$3(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^public\//i, "").replace(/^docs\//i, "").replace(/^athens-game-starter\//i, "").replace(/^\.\//, "").replace(/^\/+/, "");
 }
-function getDefaultWaterNormalCandidates(base = resolveBaseUrl$5()) {
+function getDefaultWaterNormalCandidates(base = resolveBaseUrl$4()) {
   return HARBOR_WATER_NORMAL_CANDIDATES.map((relative) => {
     const sanitized = sanitizeRelativePath$3(relative);
     if (!sanitized) {
@@ -46439,7 +45022,7 @@ async function resolveWaterNormalsTexture(options) {
       candidates.push(...options.urls);
     }
   }
-  const base = resolveBaseUrl$5();
+  const base = resolveBaseUrl$4();
   const defaultCandidates = getDefaultWaterNormalCandidates(base);
   candidates.push(...defaultCandidates.map((candidate) => {
     if (typeof candidate === "string") {
@@ -46910,7 +45493,7 @@ function createHarborPad(harborGroundY) {
     );
   }
   const textureLoader2 = new TextureLoader();
-  const baseUrl2 = resolveBaseUrl$5();
+  const baseUrl2 = resolveBaseUrl$4();
   const sandDiffuse = textureLoader2.load(
     joinPath(baseUrl2, "textures/sand/albedo.jpg")
   );
@@ -47782,7 +46365,7 @@ function normalizeBaseUrl(value) {
 }
 class AssetLoader {
   constructor({
-    baseUrl: baseUrl2 = resolveBaseUrl$5(),
+    baseUrl: baseUrl2 = resolveBaseUrl$4(),
     forceProcedural = false,
     districtRuleCandidates = [],
     enableGlbMode = true
@@ -47799,7 +46382,7 @@ class AssetLoader {
   } = {}) {
     const ENABLE_GLB_MODE2 = this.enableGlbMode;
     if (!ENABLE_GLB_MODE2) return;
-    const base = this.baseUrl ?? resolveBaseUrl$5();
+    const base = this.baseUrl ?? resolveBaseUrl$4();
     if (IS_DEV) console.log("[base:resolved]", base);
     const manifestProbes = getManifestProbes();
     const probes = [
@@ -47913,7 +46496,7 @@ class AssetLoader {
     throw new Error("No candidate asset reachable: " + candidates.join(", "));
   }
   async runAssetQuickChecks() {
-    const baseUrl2 = this.baseUrl ?? resolveBaseUrl$5();
+    const baseUrl2 = this.baseUrl ?? resolveBaseUrl$4();
     const districtCandidates = [];
     for (const candidate of this.districtRuleCandidates) {
       if (typeof candidate !== "string") continue;
@@ -49702,6 +48285,523 @@ function toCreasedNormals(geometry, creaseAngle = Math.PI / 3) {
   resultGeometry.setAttribute("normal", normAttr);
   return resultGeometry;
 }
+const DEFAULT_HARDWARE_LIMIT = 8;
+const LOW_TIER_LIMIT = 10;
+const SAFE_MODE_FRAME_LIMIT = 24;
+let processedMaterials = /* @__PURE__ */ new WeakMap();
+const CORE_TEXTURE_SLOTS = ["map", "normalMap", "roughnessMap"];
+const OPTIONAL_TEXTURE_PRIORITY = [
+  "aoMap",
+  "emissiveMap",
+  "lightMap",
+  "specularIntensityMap",
+  "specularColorMap",
+  "clearcoatMap",
+  "clearcoatRoughnessMap",
+  "clearcoatNormalMap",
+  "sheenColorMap",
+  "sheenRoughnessMap",
+  "transmissionMap",
+  "thicknessMap",
+  "iridescenceMap",
+  "iridescenceThicknessMap",
+  "anisotropyMap",
+  "metalnessMap",
+  "bumpMap",
+  "displacementMap",
+  "alphaMap",
+  "envMap"
+];
+const MAP_RESETTERS = {
+  aoMap: (material) => {
+    if ("aoMapIntensity" in material) {
+      material.aoMapIntensity = 0;
+    }
+  },
+  emissiveMap: (material) => {
+    if ("emissiveIntensity" in material) {
+      material.emissiveIntensity = 0;
+    }
+  },
+  lightMap: (material) => {
+    if ("lightMapIntensity" in material) {
+      material.lightMapIntensity = 0;
+    }
+  },
+  clearcoatMap: (material) => {
+    if ("clearcoat" in material) {
+      material.clearcoat = 0;
+    }
+  },
+  clearcoatNormalMap: (material) => {
+    if ("clearcoat" in material) {
+      material.clearcoat = 0;
+    }
+  },
+  clearcoatRoughnessMap: (material) => {
+    if ("clearcoat" in material) {
+      material.clearcoat = 0;
+    }
+    if ("clearcoatRoughness" in material) {
+      material.clearcoatRoughness = 0;
+    }
+  },
+  sheenColorMap: (material) => {
+    if ("sheen" in material) {
+      material.sheen = 0;
+    }
+    if (material.sheenColor?.isColor) {
+      material.sheenColor.setRGB(0, 0, 0);
+    }
+  },
+  sheenRoughnessMap: (material) => {
+    if ("sheen" in material) {
+      material.sheen = 0;
+    }
+  },
+  transmissionMap: (material) => {
+    if ("transmission" in material) {
+      material.transmission = 0;
+    }
+  },
+  thicknessMap: (material) => {
+    if ("thickness" in material) {
+      material.thickness = 0;
+    }
+  },
+  specularIntensityMap: (material) => {
+    if ("specularIntensity" in material) {
+      material.specularIntensity = 1;
+    }
+  },
+  specularColorMap: (material) => {
+    if (material.specularColor?.isColor) {
+      material.specularColor.setRGB(1, 1, 1);
+    }
+  },
+  iridescenceMap: (material) => {
+    if ("iridescence" in material) {
+      material.iridescence = 0;
+    }
+  },
+  iridescenceThicknessMap: (material) => {
+    if ("iridescence" in material) {
+      material.iridescence = 0;
+    }
+  },
+  anisotropyMap: (material) => {
+    if ("anisotropy" in material) {
+      material.anisotropy = 0;
+    }
+  }
+};
+const SAFE_MODE_DISTANCE_THRESHOLD = 160;
+const SAFE_MODE_SMALL_SCALE_THRESHOLD = 0.45;
+const SAFE_MODE_SMALL_WORLD_RADIUS = 0.8;
+const _safeModeTempPosition = new Vector3();
+const _safeModeTempScale = new Vector3();
+function isNodeMarkedDistant(node) {
+  const tag = node?.userData?.textureBudget;
+  if (typeof tag === "string") {
+    const lower = tag.toLowerCase();
+    return lower === "distant" || lower === "far";
+  }
+  return Boolean(node?.userData?.textureBudgetDistant);
+}
+function isNodeMarkedSmall(node) {
+  return Boolean(node?.userData?.textureBudgetSmall || node?.userData?.smallObject);
+}
+function isNodeDistant(node) {
+  if (!node) return false;
+  if (isNodeMarkedDistant(node)) {
+    return true;
+  }
+  const hintedDistance = node?.userData?.distanceToCamera;
+  if (Number.isFinite(hintedDistance)) {
+    return hintedDistance > SAFE_MODE_DISTANCE_THRESHOLD;
+  }
+  try {
+    if (typeof node.getWorldPosition === "function") {
+      node.getWorldPosition(_safeModeTempPosition);
+      return _safeModeTempPosition.length() > SAFE_MODE_DISTANCE_THRESHOLD;
+    }
+    if (node.matrixWorld) {
+      _safeModeTempPosition.setFromMatrixPosition(node.matrixWorld);
+      return _safeModeTempPosition.length() > SAFE_MODE_DISTANCE_THRESHOLD;
+    }
+  } catch {
+  }
+  return false;
+}
+function isNodeVerySmall(node) {
+  if (!node) return false;
+  if (isNodeMarkedSmall(node)) {
+    return true;
+  }
+  try {
+    if (typeof node.getWorldScale === "function") {
+      node.getWorldScale(_safeModeTempScale);
+    } else if (node.scale) {
+      _safeModeTempScale.copy(node.scale);
+    } else {
+      _safeModeTempScale.set(1, 1, 1);
+    }
+    const avgScale = (Math.abs(_safeModeTempScale.x) + Math.abs(_safeModeTempScale.y) + Math.abs(_safeModeTempScale.z)) / 3;
+    if (avgScale < SAFE_MODE_SMALL_SCALE_THRESHOLD) {
+      return true;
+    }
+    if (node.isMesh && node.geometry) {
+      const geometry = node.geometry;
+      let radius = geometry.boundingSphere?.radius;
+      if (!Number.isFinite(radius) && typeof geometry.computeBoundingSphere === "function") {
+        geometry.computeBoundingSphere();
+        radius = geometry.boundingSphere?.radius;
+      }
+      if (Number.isFinite(radius)) {
+        const worldRadius = radius * avgScale;
+        if (worldRadius < SAFE_MODE_SMALL_WORLD_RADIUS) {
+          return true;
+        }
+      }
+    }
+  } catch {
+  }
+  return false;
+}
+function computeSafeModePriority(node, slot) {
+  const distant = isNodeDistant(node);
+  const tiny = isNodeVerySmall(node);
+  if (slot === "map") {
+    return Number.POSITIVE_INFINITY;
+  }
+  if (slot === "roughnessMap" || slot === "aoMap") {
+    return distant ? 1 : 6;
+  }
+  if (slot === "normalMap") {
+    return tiny ? 2 : 8;
+  }
+  if (slot === "metalnessMap" || slot === "specularIntensityMap") {
+    return 10;
+  }
+  if (slot === "displacementMap" || slot === "bumpMap" || slot === "lightMap") {
+    return 12;
+  }
+  if (slot === "emissiveMap") {
+    return 14;
+  }
+  return 20;
+}
+function isTexture(value) {
+  return Boolean(value && typeof value === "object" && value.isTexture);
+}
+function resolveRenderer(options) {
+  if (!options) return null;
+  if (options.renderer) {
+    return options.renderer;
+  }
+  if (options.scene?.userData?.renderer) {
+    return options.scene.userData.renderer;
+  }
+  return null;
+}
+function resolveTextureLimit(options) {
+  const renderer2 = resolveRenderer(options);
+  if (Number.isFinite(options?.maxTextures)) {
+    return Math.max(1, Math.floor(options.maxTextures));
+  }
+  const capabilities = renderer2?.capabilities;
+  if (capabilities) {
+    const maxTextures = capabilities.maxTextures ?? capabilities.maxTextureUnits ?? capabilities.maxFragmentTextures ?? capabilities.maxFragmentUniforms;
+    if (Number.isFinite(maxTextures)) {
+      return Math.max(1, Math.floor(maxTextures));
+    }
+  }
+  return DEFAULT_HARDWARE_LIMIT;
+}
+function gatherTextureSlots(material) {
+  const slots = new Set(CORE_TEXTURE_SLOTS.concat(OPTIONAL_TEXTURE_PRIORITY));
+  for (const key in material) {
+    if (key && key.endsWith("Map")) {
+      slots.add(key);
+    }
+  }
+  return Array.from(slots);
+}
+function getActiveTextureSlots(material) {
+  const slots = gatherTextureSlots(material);
+  const active = [];
+  for (const slot of slots) {
+    if (isTexture(material[slot])) {
+      active.push(slot);
+    }
+  }
+  return active;
+}
+function registerMaterialForSafeMode(material, node, state) {
+  if (!state || !material) {
+    return;
+  }
+  const activeSlots = getActiveTextureSlots(material);
+  const firstEncounter = !state.countedMaterials.has(material);
+  if (firstEncounter) {
+    state.countedMaterials.add(material);
+    state.active += activeSlots.length;
+  }
+  for (const slot of activeSlots) {
+    if (slot === "map") {
+      continue;
+    }
+    const priority = computeSafeModePriority(node, slot);
+    if (!Number.isFinite(priority)) {
+      continue;
+    }
+    const key = `${material.uuid}:${slot}`;
+    const existing = state.candidates.get(key);
+    if (!existing || priority < existing.priority) {
+      state.candidates.set(key, {
+        material,
+        slot,
+        priority,
+        key
+      });
+    }
+  }
+}
+function enforceSafeModeLimit(state) {
+  if (!state || state.active <= state.limit) {
+    return;
+  }
+  const candidates = Array.from(state.candidates.values());
+  candidates.sort((a, b) => {
+    if (a.priority === b.priority) {
+      return a.slot.localeCompare(b.slot);
+    }
+    return a.priority - b.priority;
+  });
+  for (const candidate of candidates) {
+    if (state.active <= state.limit) {
+      break;
+    }
+    const { material, slot, key } = candidate;
+    if (!material || !isTexture(material[slot])) {
+      state.candidates.delete(key);
+      continue;
+    }
+    if (removeTexture(material, slot)) {
+      state.candidates.delete(key);
+      state.active = Math.max(0, state.active - 1);
+    }
+  }
+}
+function removeTexture(material, slot) {
+  if (!slot || !isTexture(material[slot])) {
+    return false;
+  }
+  material[slot] = null;
+  const reset = MAP_RESETTERS[slot];
+  if (reset) {
+    reset(material);
+  }
+  if (material.needsUpdate !== true) {
+    material.needsUpdate = true;
+  }
+  return true;
+}
+function usesPhysicalExtensions(material) {
+  if (!material?.isMeshPhysicalMaterial) {
+    return false;
+  }
+  const clearcoatActive = (material.clearcoat ?? 0) > 1e-3 || isTexture(material.clearcoatMap) || isTexture(material.clearcoatNormalMap) || isTexture(material.clearcoatRoughnessMap);
+  const sheenActive = (material.sheen ?? 0) > 1e-3 || material.sheenColor?.isColor && material.sheenColor.getHex() !== 0 || isTexture(material.sheenColorMap) || isTexture(material.sheenRoughnessMap);
+  const transmissionActive = (material.transmission ?? 0) > 1e-3 || isTexture(material.transmissionMap) || (material.thickness ?? 0) > 1e-3 || isTexture(material.thicknessMap);
+  const iridescenceActive = (material.iridescence ?? 0) > 1e-3 || isTexture(material.iridescenceMap) || isTexture(material.iridescenceThicknessMap);
+  return clearcoatActive || sheenActive || transmissionActive || iridescenceActive;
+}
+function maybeDowngradePhysicalMaterial(material, options, trimmed) {
+  if (!material?.isMeshPhysicalMaterial) {
+    return null;
+  }
+  const limit = resolveTextureLimit(options);
+  const lowTierDevice = limit <= LOW_TIER_LIMIT;
+  if (!trimmed && !lowTierDevice) {
+    return null;
+  }
+  if (usesPhysicalExtensions(material)) {
+    return null;
+  }
+  const downgraded = new MeshStandardMaterial();
+  downgraded.copy(material);
+  downgraded.name = material.name;
+  downgraded.userData = { ...material.userData || {} };
+  downgraded.onBeforeCompile = material.onBeforeCompile;
+  if (typeof material.customProgramCacheKey === "function") {
+    downgraded.customProgramCacheKey = () => material.customProgramCacheKey.call(downgraded);
+  }
+  downgraded.needsUpdate = true;
+  return downgraded;
+}
+function budgetSingleMaterial(material, options) {
+  if (!material) {
+    return material;
+  }
+  const cached = processedMaterials.get(material);
+  if (cached) {
+    return cached;
+  }
+  if (material.userData?.textureBudget === "skip" || material.userData?.textureBudgetSkip) {
+    processedMaterials.set(material, material);
+    return material;
+  }
+  const activeSlots = getActiveTextureSlots(material);
+  const limit = Math.max(3, resolveTextureLimit(options));
+  if (activeSlots.length <= limit) {
+    processedMaterials.set(material, material);
+    return material;
+  }
+  const active = new Set(activeSlots);
+  let trimmed = false;
+  for (const slot of OPTIONAL_TEXTURE_PRIORITY) {
+    if (!active.has(slot)) continue;
+    if (CORE_TEXTURE_SLOTS.includes(slot)) continue;
+    if (removeTexture(material, slot)) {
+      active.delete(slot);
+      trimmed = true;
+      if (active.size <= limit) {
+        break;
+      }
+    }
+  }
+  if (active.size > limit) {
+    for (const slot of activeSlots) {
+      if (!active.has(slot)) continue;
+      if (CORE_TEXTURE_SLOTS.includes(slot)) {
+        continue;
+      }
+      if (removeTexture(material, slot)) {
+        active.delete(slot);
+        trimmed = true;
+        if (active.size <= limit) {
+          break;
+        }
+      }
+    }
+  }
+  if (active.size > limit) {
+    for (const slot of CORE_TEXTURE_SLOTS.filter((name) => name !== "map")) {
+      if (!active.has(slot)) continue;
+      if (removeTexture(material, slot)) {
+        active.delete(slot);
+        trimmed = true;
+        if (active.size <= limit) {
+          break;
+        }
+      }
+    }
+  }
+  if (active.size > limit) {
+    processedMaterials.set(material, material);
+    return material;
+  }
+  const replacement = maybeDowngradePhysicalMaterial(material, options, trimmed);
+  if (replacement && replacement !== material) {
+    processedMaterials.set(material, replacement);
+    processedMaterials.set(replacement, replacement);
+    return replacement;
+  }
+  processedMaterials.set(material, material);
+  return material;
+}
+function applyTextureBudgetToMaterial(material, options = {}) {
+  if (!material) return material;
+  if (Array.isArray(material)) {
+    return material.map((mat) => applyTextureBudgetToMaterial(mat, options));
+  }
+  return budgetSingleMaterial(material, options);
+}
+function applyTextureBudgetToObject(object, options = {}) {
+  if (!object || typeof object.traverse !== "function") {
+    return;
+  }
+  const safeMode = options.safeMode === true;
+  const safeState = safeMode ? {
+    limit: Math.max(
+      1,
+      Math.floor(
+        Number.isFinite(options.safeModeLimit) ? Math.min(options.safeModeLimit, SAFE_MODE_FRAME_LIMIT) : SAFE_MODE_FRAME_LIMIT
+      )
+    ),
+    active: 0,
+    countedMaterials: /* @__PURE__ */ new WeakSet(),
+    candidates: /* @__PURE__ */ new Map()
+  } : null;
+  object.traverse((node) => {
+    const materials = node.material;
+    if (!materials) return;
+    if (Array.isArray(materials)) {
+      let replaced = false;
+      const updated = materials.map((material) => {
+        const result = applyTextureBudgetToMaterial(material, options);
+        if (result && result !== material) {
+          replaced = true;
+        }
+        return result;
+      });
+      if (replaced) {
+        node.material = updated;
+      }
+      const finalMaterials = Array.isArray(node.material) ? node.material : [node.material];
+      for (const material of finalMaterials) {
+        registerMaterialForSafeMode(material, node, safeState);
+      }
+    } else {
+      const result = applyTextureBudgetToMaterial(materials, options);
+      if (result && result !== materials) {
+        node.material = result;
+        registerMaterialForSafeMode(result, node, safeState);
+      } else {
+        registerMaterialForSafeMode(materials, node, safeState);
+      }
+    }
+  });
+  if (safeState) {
+    enforceSafeModeLimit(safeState);
+  }
+}
+function resetTextureBudgetCache() {
+  processedMaterials = /* @__PURE__ */ new WeakMap();
+}
+const __vite_import_meta_env__$3 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+function resolveBaseUrl$3() {
+  const base = typeof import.meta !== "undefined" && __vite_import_meta_env__$3 && true ? "/athens-game-starter/" : "/";
+  return base.endsWith("/") ? base : `${base}/`;
+}
+function joinBase$1(base, relativePath) {
+  const safeBase = base.endsWith("/") ? base : `${base}/`;
+  const safePath = relativePath.replace(/^\/+/, "");
+  return `${safeBase}${safePath}`;
+}
+const BASE_URL = resolveBaseUrl$3();
+const MATERIALS = {
+  sand: {
+    albedo: joinBase$1(BASE_URL, "textures/sand/albedo.jpg"),
+    normal: joinBase$1(BASE_URL, "textures/sand/normal_gl.jpg"),
+    arm: joinBase$1(BASE_URL, "textures/sand/arm.jpg")
+  },
+  grass: {
+    albedo: joinBase$1(BASE_URL, "textures/grass/albedo.jpg"),
+    normal: joinBase$1(BASE_URL, "textures/grass/normal_dx.jpg"),
+    roughness: joinBase$1(BASE_URL, "textures/grass/roughness.jpg"),
+    metallic: joinBase$1(BASE_URL, "textures/grass/metallic.jpg"),
+    ao: joinBase$1(BASE_URL, "textures/grass/ao.jpg"),
+    height: joinBase$1(BASE_URL, "textures/grass/height.jpg")
+  },
+  stoneFallback: {
+    albedo: joinBase$1(BASE_URL, "textures/marble_base.jpg")
+  },
+  dirt: {
+    albedo: joinBase$1(BASE_URL, "textures/ground/dirt-albedo.jpg")
+  }
+};
 function shouldFlipNormalGreen(url) {
   if (typeof url !== "string") return false;
   return url.includes("normal_dx") || url.includes("normal-dx");
@@ -50306,7 +49406,7 @@ function createHillCity(scene2, terrain, curve, opts = {}) {
 }
 const TILE_SIZE = 40;
 const TILE_RADIUS = 1;
-const BLADES_PER_TILE = 1800;
+const BLADES_PER_TILE = 200;
 const MAX_TILE_COUNT = (TILE_RADIUS * 2 + 1) ** 2;
 const BLADE_HEIGHT_MIN = 0.75;
 const BLADE_HEIGHT_MAX = 1.6;
@@ -51515,7 +50615,7 @@ function createAthensLayoutConfig(environment = getRuntimeEnvironment(), overrid
     )
   );
 }
-const baseUrl$1 = (path) => joinPath(resolveBaseUrl$5(), path);
+const baseUrl$1 = (path) => joinPath(resolveBaseUrl$4(), path);
 function normalizeDistrictRuleCandidate(value) {
   if (typeof value !== "string") return "";
   return value.trim().replace(/^\.\//, "");
@@ -51542,7 +50642,7 @@ function buildDistrictRuleUrlCandidates(resolvedBase) {
   return Array.from(urls);
 }
 async function loadDistrictRules(baseUrlStr = "") {
-  const resolvedBase = typeof baseUrlStr === "string" && baseUrlStr.length > 0 ? baseUrlStr : resolveBaseUrl$5();
+  const resolvedBase = typeof baseUrlStr === "string" && baseUrlStr.length > 0 ? baseUrlStr : resolveBaseUrl$4();
   const tried = [];
   for (const url of buildDistrictRuleUrlCandidates(resolvedBase)) {
     tried.push(url);
@@ -52121,7 +51221,7 @@ async function createCivicDistrict(scene2, options = {}) {
   };
   const tl = new TextureLoader();
   const baseUrl2 = typeof scene2?.userData?.baseUrl === "string" ? scene2.userData.baseUrl : "";
-  const resolvedBase = baseUrl2 || resolveBaseUrl$5();
+  const resolvedBase = baseUrl2 || resolveBaseUrl$4();
   let plazaMat;
   try {
     const baseMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
@@ -52163,7 +51263,7 @@ async function createCivicDistrict(scene2, options = {}) {
     if (cell.type === "road") {
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 8943462 : 6710886);
-      roadMesh.position.set(localX, localY, localZ);
+      roadMesh.position.set(localX, localY - 0.02, localZ);
       group.add(roadMesh);
     } else if (cell.type === "plaza") {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 11184810);
@@ -60156,7 +59256,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D_pnaO7k.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C7-lWy5c.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60771,6 +59871,22 @@ class GLTFMeshStandardSGMaterial extends MeshStandardMaterial {
     } = params || {};
     this.setValues(safeParams);
   }
+  setValues(values) {
+    if (values && typeof values === "object") {
+      const {
+        metalness,
+        roughness,
+        metalnessMap,
+        roughnessMap,
+        ...safeValues
+      } = values;
+      return MeshStandardMaterial.prototype.setValues.call(
+        this,
+        safeValues
+      );
+    }
+    return MeshStandardMaterial.prototype.setValues.call(this, values);
+  }
   copy(source) {
     super.copy(source);
     this.specularMap = source.specularMap;
@@ -60875,7 +59991,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C0HMVXYM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BKicydVV.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60947,7 +60063,7 @@ async function loadGLBWithFallbacks(loader, urls, options = {}) {
   if (!ENABLE_GLB_MODE$2 && !options.allowSingleModel) {
     return null;
   }
-  const baseUrl2 = resolveBaseUrl$5();
+  const baseUrl2 = resolveBaseUrl$4();
   const seen2 = /* @__PURE__ */ new Set();
   try {
     for (const candidate of urls) {
@@ -61247,7 +60363,7 @@ async function spawnGLBNPCs(scene2, pathCurve, options = {}) {
   if (!scene2 || !pathCurve) {
     return { npcs: [], updaters: [] };
   }
-  const baseUrl2 = resolveBaseUrl$5();
+  const baseUrl2 = resolveBaseUrl$4();
   const manifestUrl = joinPath(baseUrl2, "models/npcs/manifest.json");
   let manifest = null;
   try {
@@ -61812,7 +60928,7 @@ function safeUrlSearchParams() {
   }
 }
 const DEFAULT_ENGINE_CONFIG = ({
-  baseUrl: baseUrl2 = resolveBaseUrl$5(),
+  baseUrl: baseUrl2 = resolveBaseUrl$4(),
   queryParams = safeUrlSearchParams()
 } = {}) => {
   const forceGlb = queryParams.has("glb") ? queryParams.get("glb") !== "0" : true;
@@ -61823,8 +60939,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-30T05:42:52.871Z" : "",
-      sha: true ? "" : ""
+      time: true ? "2025-12-31T02:43:04.637Z" : "",
+      sha: true ? "a1f2000d9d26580153d4873a6a789b8199f793c2" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -64959,7 +64075,7 @@ function isInsideBuilding(x, z, placements, padding = 1.2) {
 }
 function scatterGroundProps(scene2, terrain, options = {}) {
   if (!scene2 || !terrain) return null;
-  const count = options.count ?? 520;
+  const count = options.count ?? 50;
   const seaLevel = Number.isFinite(options?.seaLevel) ? options.seaLevel : getSeaLevelY();
   const placements = options.buildingPlacements || [];
   const roadCurves = Array.isArray(options.roadCurves) ? options.roadCurves : [];
@@ -66151,7 +65267,7 @@ if (void 0) {
     lightingConfig = mod?.createLightingConfig ? mod.createLightingConfig(getRuntimeEnvironment()) : createLightingConfig(getRuntimeEnvironment());
   });
 }
-const baseUrl = resolveBaseUrl$5();
+const baseUrl = resolveBaseUrl$4();
 const skyboxLightingConfig = {
   // Load the custom Athens sunset skybox shipped in public/assets/skyboxes.
   skyboxUrl: joinPath(baseUrl, "assets/skyboxes/athens_sunset_360.png"),
@@ -70368,14 +69484,7 @@ class LightingSystem {
         this.applyLookProfile(name, { forceReapply: true, source: "debug" });
       };
       debugWindow.cycleLightingPreset = () => {
-        const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
-          (preset) => !!LIGHTING_PRESETS$1[preset]
-        );
-        if (!presets.length) return;
-        const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
-        const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % presets.length : 0;
-        const nextPreset = presets[nextIndex];
-        this.applyLookProfile(nextPreset, { forceReapply: true, source: "debug" });
+        this.cycleLightingPreset();
       };
     }
     const initialPreset = "Bright Noon";
@@ -70643,6 +69752,16 @@ class LightingSystem {
       this._setMoonState({ azimuthDeg: this._mirroredMoonAzimuth() });
       this.sceneContext.renderFrame();
     }
+  };
+  cycleLightingPreset = () => {
+    const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
+      (preset) => !!LIGHTING_PRESETS$1[preset]
+    );
+    if (!presets.length) return;
+    const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % presets.length : 0;
+    const nextPreset = presets[nextIndex];
+    this.applyLookProfile(nextPreset, { forceReapply: true, source: "debug" });
   };
   applyLookProfile = (profileName, options = {}) => {
     const { immediate = false, forceReapply = false, source = "manual" } = options;
@@ -71437,7 +70556,7 @@ class PlayerSystem {
     this.playerMovementEnabled = enabled;
   }
 }
-const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$5();
+const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$4();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES = engineConfig.districtRuleCandidates || [];
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 const ENABLE_GLB_MODE = true;
@@ -71908,8 +71027,15 @@ class Application {
       roadCurves: roadCurves ?? [],
       mainRoadCurve: mainRoad ?? null,
       mainRoadWidth: MAIN_ROAD_WIDTH,
-      roadWidth: 3.2
+      roadWidth: 3.2,
+      roadBuffer: 2
     });
+    if (!scene2.userData?.roadsideBufferLogged) {
+      scene2.userData = scene2.userData || {};
+      scene2.userData.roadsideBufferLogged = true;
+      console.info("[Roads] Roadside buffer zone active");
+      console.info("[Roads] City ground applied under roads");
+    }
     scatterGroundProps(worldRoot, terrain, {
       buildingPlacements: harborCity?.userData?.["buildingPlacements"] ?? [],
       roadCurves: roadCurves ?? [],
@@ -72445,4 +71571,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BN0mkz_y.js.map
+//# sourceMappingURL=index-DwT8pPtb.js.map
