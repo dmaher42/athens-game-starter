@@ -516,18 +516,29 @@ export function createTerrain(scene) {
   // Ensure terrain renders on top of transparent water layers via explicit renderOrder
   terrain.renderOrder = RENDER_LAYERS.TERRAIN;
   
-  // Confirm terrain mesh has UVs (required for roadside shader)
-  console.log('[Debug] terrain.geometry.attributes.uv:', terrain.geometry.attributes.uv);
-  
-  // If missing, regenerate UVs (fallback for safety)
+  // ✅ STEP 1: Validate and ensure UVs exist (required for city ground texture)
   if (!terrain.geometry.attributes.uv) {
-    terrain.geometry.computeBoundingBox();
-    terrain.geometry.computeBoundingSphere();
-    terrain.geometry.computeVertexNormals();
+    console.warn('[Terrain] ⚠️ City mesh is missing UVs. Adding fallback.');
+    const uvCount = terrain.geometry.attributes.position.count;
+    const uvAttr = new Float32Array(uvCount * 2);
     
-    const uvAttr = new THREE.Float32BufferAttribute(terrain.geometry.attributes.position.count * 2, 2);
-    terrain.geometry.setAttribute('uv', uvAttr);
-    console.warn('[Terrain] UVs were missing – dummy UVs injected');
+    // Generate simple planar UVs based on position
+    const positions = terrain.geometry.attributes.position;
+    const terrainSize = TERRAIN_SIZE;
+    for (let i = 0; i < uvCount; i++) {
+      const x = positions.getX(i);
+      const z = positions.getY(i); // Y is used because geometry is rotated
+      uvAttr[i * 2] = (x + terrainSize / 2) / terrainSize;
+      uvAttr[i * 2 + 1] = (z + terrainSize / 2) / terrainSize;
+    }
+    
+    terrain.geometry.setAttribute('uv', new THREE.BufferAttribute(uvAttr, 2));
+    console.log('[Terrain] ✅ Fallback UVs generated for', uvCount, 'vertices');
+  } else {
+    console.log('[Terrain] ✅ UV attributes confirmed:', {
+      uvCount: terrain.geometry.attributes.uv.count,
+      itemSize: terrain.geometry.attributes.uv.itemSize
+    });
   }
   
   // Register terrain mesh so ground material loader can trigger updates

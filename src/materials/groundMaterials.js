@@ -72,7 +72,7 @@ const fallbackDiffuseTexture = (() => {
 })();
 
 function bindGroundTexture(material, label, url, repeat) {
-  console.log(`[Ground] Loading ${label} texture from: ${url}`);
+  console.log(`[Ground] 🔄 Loading ${label} texture from: ${url}`);
   
   // Create a simple canvas placeholder while loading
   const canvas = document.createElement('canvas');
@@ -98,48 +98,76 @@ function bindGroundTexture(material, label, url, repeat) {
   // Set placeholder immediately
   material.map = placeholderTexture;
   material.needsUpdate = true;
-  console.log(`[Ground] ${label} placeholder texture set while loading...`);
+  console.log(`[Ground] 📋 ${label} placeholder texture set while loading...`);
   
-  // Load actual texture asynchronously
+  // ✅ STEP 2: Validate texture loading with comprehensive callbacks
   textureLoader.load(
     url,
     (loadedTex) => {
-      console.log(`[Ground] ✓ ${label} texture loaded successfully`, {
+      console.log(`[Ground] ✅ ${label} texture loaded successfully`, {
         url,
         width: loadedTex.source.data.width,
         height: loadedTex.source.data.height,
+        format: loadedTex.format,
+        type: loadedTex.type,
         material: material.name
       });
+      
+      // ✅ STEP 3: Rebuild texture with correct settings
       loadedTex.colorSpace = THREE.SRGBColorSpace;
       loadedTex.wrapS = loadedTex.wrapT = THREE.RepeatWrapping;
       loadedTex.repeat.set(repeat, repeat);
+      loadedTex.needsUpdate = true;
+      
       // Replace placeholder with actual texture
       material.map = loadedTex;
       material.map.needsUpdate = true;
       material.needsUpdate = true;
       triggerTerrainUpdate(); // Force terrain to update
-      console.log(`[Ground] ✓ ${label} texture applied to material`, {
+      
+      console.log(`[Ground] ✅ ${label} texture applied to material`, {
         materialHasMap: !!material.map,
+        mapIsValid: material.map?.image?.width > 0,
         repeat: repeat,
-        mapSource: material.map?.source?.currentSrc
+        wrapS: material.map?.wrapS,
+        wrapT: material.map?.wrapT
       });
     },
-    undefined,
+    (progress) => {
+      if (progress.lengthComputable) {
+        const percentComplete = (progress.loaded / progress.total) * 100;
+        console.log(`[Ground] 📥 ${label} loading... ${percentComplete.toFixed(1)}%`);
+      }
+    },
     (error) => {
-      console.error(`[Ground] ✗ Failed to load ${label} texture from ${url}`, error);
-      console.warn(`[Ground] Using placeholder texture for ${label}`);
+      console.error(`[Ground] ❌ Failed to load ${label} texture from ${url}`, error);
+      console.warn(`[Ground] ⚠️ Using placeholder texture for ${label}`);
+      console.error('[Ground] Error details:', {
+        message: error.message,
+        type: error.type,
+        target: error.target
+      });
       // Keep placeholder if load fails
     },
   );
 }
 
 export function createCityGroundMaterial() {
+  // ✅ STEP 3: Rebuild the material with explicit texture support
   const material = new THREE.MeshStandardMaterial({
     name: "CityGroundMaterial",
-    color: 0xffffff, // White to let texture show through
-    roughness: 0.9, // Higher roughness for less glossy ground
-    metalness: 0,
+    color: 0xffffff, // White to let texture show through clearly
+    roughness: 1.0,  // Maximum roughness for matte ground appearance
+    metalness: 0.0,  // No metallic reflection
     aoMapIntensity: 0, // Disable AO so texture is clearly visible
+    map: null, // Will be set by bindGroundTexture
+  });
+  
+  console.log('[Ground] 🏗️ CityGroundMaterial created:', {
+    name: material.name,
+    color: material.color.getHexString(),
+    roughness: material.roughness,
+    metalness: material.metalness
   });
 
   const roadsideMaskTexture = new THREE.DataTexture(
@@ -157,17 +185,24 @@ export function createCityGroundMaterial() {
   material.userData.roadsideTint = new THREE.Color(0.8, 0.7, 0.6);
   material.userData.roadsideRoughness = 0.9;
 
+  // ✅ STEP 4: onBeforeCompile is scoped to this material instance only
+  // This shader modification only applies to CityGroundMaterial, not other materials
   const baseOnBeforeCompile = material.onBeforeCompile;
   material.onBeforeCompile = (shader) => {
+    // Preserve any existing onBeforeCompile behavior
     if (typeof baseOnBeforeCompile === "function") {
       baseOnBeforeCompile.call(material, shader);
     }
 
+    // Validate shader object before proceeding
     if (!shader?.fragmentShader || !shader.uniforms) {
+      console.warn('[Ground] Shader compilation skipped - invalid shader object');
       return;
     }
 
+    // Ensure material has a valid texture map
     if (!material.map) {
+      console.warn('[Ground] No texture map found, using fallback');
       material.map = fallbackDiffuseTexture;
       material.needsUpdate = true;
     }
