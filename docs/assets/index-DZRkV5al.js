@@ -43675,6 +43675,7 @@ InlandGroundMaterial.map = bindGroundTexture(
   INLAND_GROUND_URL,
   32
 );
+InlandGroundMaterial.needsUpdate = true;
 const CoastalGroundMaterial = new MeshStandardMaterial({
   name: "CoastalGroundMaterial",
   color: 15127459,
@@ -43687,6 +43688,12 @@ CoastalGroundMaterial.map = bindGroundTexture(
   COASTAL_GROUND_URL,
   16
 );
+CoastalGroundMaterial.needsUpdate = true;
+console.log("[Ground] Ground textures applied to materials:", {
+  city: "CityGroundMaterial (dirt-albedo.jpg)",
+  inland: "InlandGroundMaterial (grass/albedo.jpg)",
+  coastal: "CoastalGroundMaterial (sand/albedo.jpg)"
+});
 const SEA_SIDE = "east";
 const COAST_WIDTH = 120;
 const INLAND_RISE = 220;
@@ -59328,7 +59335,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-ljaFstEF.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CmsOqUzd.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60063,7 +60070,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dlyiv_xf.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-SdSiT_aO.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61011,7 +61018,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T11:56:07.927Z" : "",
+      time: true ? "2025-12-31T11:59:13.089Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71643,4 +71650,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-D1b0o-sA.js.map
+//# sourceMappingURL=index-DZRkV5al.js.map

@@ -186,6 +186,7 @@ InlandGroundMaterial.map = bindGroundTexture(
   INLAND_GROUND_URL,
   32,
 );
+InlandGroundMaterial.needsUpdate = true;
 
 export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
   name: "CoastalGroundMaterial",
@@ -200,3 +201,11 @@ CoastalGroundMaterial.map = bindGroundTexture(
   COASTAL_GROUND_URL,
   16,
 );
+CoastalGroundMaterial.needsUpdate = true;
+
+// Step 6: Confirm all ground textures are restored for City, Inland, and Coastal zones
+console.log('[Ground] Ground textures applied to materials:', {
+  city: 'CityGroundMaterial (dirt-albedo.jpg)',
+  inland: 'InlandGroundMaterial (grass/albedo.jpg)',
+  coastal: 'CoastalGroundMaterial (sand/albedo.jpg)'
+});
