@@ -43708,6 +43708,23 @@ function createCityGroundMaterial() {
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
       roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
     );
+    const DEBUG_CITY_MASK = false;
+    if (DEBUG_CITY_MASK) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <dithering_fragment>",
+        `
+        // City mask debug visualization
+        vec2 debugUV = vUv;
+        
+        // Sample city mask
+        float cityWeight = texture2D(uRoadsideMask, debugUV).r;
+        
+        // Map cityWeight to RGB: red = masked, green = unmasked, blue = blend
+        gl_FragColor = vec4(vec3(cityWeight, 1.0 - cityWeight, cityWeight * 0.5), 1.0);
+        `
+      );
+      console.log("[Ground] DEBUG: City mask visualization enabled - red=masked, green=unmasked");
+    }
   };
   material.map = bindGroundTexture(
     material,
@@ -43769,10 +43786,17 @@ function diagnoseMaterialState() {
   console.log("[Ground] Material diagnostics:", diagnostics);
   return diagnostics;
 }
+function enableCityMaskDebug() {
+  const DEBUG_CITY_MASK = true;
+  console.log("[Ground] City mask debug enabled - recompile materials to see visualization");
+  console.log("[Ground] Red = city mask active, Green = unmasked areas");
+  return DEBUG_CITY_MASK;
+}
 console.log("[Ground] Ground texture materials initialized:", {
   city: "CityGroundMaterial (dirt-albedo.jpg)",
   inland: "InlandGroundMaterial (grass/albedo.jpg)",
-  coastal: "CoastalGroundMaterial (sand/albedo.jpg)"
+  coastal: "CoastalGroundMaterial (sand/albedo.jpg)",
+  debug: "Call window.enableCityMaskDebug() to visualize city mask blending"
 });
 const SEA_SIDE = "east";
 const COAST_WIDTH = 120;
@@ -59416,7 +59440,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-gx4JRvax.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D2RIFtRK.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60151,7 +60175,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-GKZfG4U-.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Bn8-KIhk.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61099,7 +61123,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T12:21:13.393Z" : "",
+      time: true ? "2025-12-31T12:25:23.036Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71731,4 +71755,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BOylxgFx.js.map
+//# sourceMappingURL=index-a_pIgiqc.js.map

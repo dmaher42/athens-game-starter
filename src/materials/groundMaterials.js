@@ -227,6 +227,26 @@ export function createCityGroundMaterial() {
       roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
     );
 
+    // 👀 DEBUG: City mask visualization (uncomment to enable)
+    // Visualize city mask as red/green overlay to see where blending occurs
+    const DEBUG_CITY_MASK = false; // Set to true to enable visualization
+    if (DEBUG_CITY_MASK) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <dithering_fragment>',
+        `
+        // City mask debug visualization
+        vec2 debugUV = vUv;
+        
+        // Sample city mask
+        float cityWeight = texture2D(uRoadsideMask, debugUV).r;
+        
+        // Map cityWeight to RGB: red = masked, green = unmasked, blue = blend
+        gl_FragColor = vec4(vec3(cityWeight, 1.0 - cityWeight, cityWeight * 0.5), 1.0);
+        `
+      );
+      console.log('[Ground] DEBUG: City mask visualization enabled - red=masked, green=unmasked');
+    }
+
   };
 
   // City ground texture
@@ -297,9 +317,18 @@ export function diagnoseMaterialState() {
   return diagnostics;
 }
 
+// Debug utility: Enable city mask visualization
+export function enableCityMaskDebug() {
+  const DEBUG_CITY_MASK = true;
+  console.log('[Ground] City mask debug enabled - recompile materials to see visualization');
+  console.log('[Ground] Red = city mask active, Green = unmasked areas');
+  return DEBUG_CITY_MASK;
+}
+
 // Step 6: Confirm all ground textures are restored for City, Inland, and Coastal zones
 console.log('[Ground] Ground texture materials initialized:', {
   city: 'CityGroundMaterial (dirt-albedo.jpg)',
   inland: 'InlandGroundMaterial (grass/albedo.jpg)',
-  coastal: 'CoastalGroundMaterial (sand/albedo.jpg)'
+  coastal: 'CoastalGroundMaterial (sand/albedo.jpg)',
+  debug: 'Call window.enableCityMaskDebug() to visualize city mask blending'
 });
