@@ -747,6 +747,17 @@ export function updateTerrainCoverageMask(terrain, options = {}) {
   secondaryRoads.forEach((curve) => paintCurve(curve, options.roadWidth ?? 3));
 
   state.maskTexture.needsUpdate = true;
+  const terrainMaterials = Array.isArray(terrain.material)
+    ? terrain.material
+    : [terrain.material];
+  const cityMaterial = terrainMaterials.find(
+    (material) => material?.name === "CityGroundMaterial",
+  );
+  if (cityMaterial) {
+    cityMaterial.userData = cityMaterial.userData || {};
+    cityMaterial.userData.roadsideMask = roadMaskState.maskTexture;
+    cityMaterial.needsUpdate = true;
+  }
   if (state.uniforms?.mask) {
     state.uniforms.mask.value = state.maskTexture;
   }
