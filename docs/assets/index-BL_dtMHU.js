@@ -43854,6 +43854,55 @@ function enableCityMaskDebug() {
   console.log("[Ground] Red = city mask active, Green = unmasked areas");
   return DEBUG_CITY_MASK;
 }
+function validateCityGroundMaterials(scene2) {
+  if (!scene2) {
+    console.warn("[Ground] validateCityGroundMaterials: No scene provided");
+    return;
+  }
+  let totalFound = 0;
+  let missingUVs = 0;
+  let missingMap = 0;
+  const issues = [];
+  scene2.traverse((obj) => {
+    if (obj.isMesh && obj.material) {
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      materials.forEach((mat, matIdx) => {
+        if (mat && mat.name === "CityGroundMaterial") {
+          totalFound++;
+          const meshName = obj.name || "unnamed";
+          const matLabel = materials.length > 1 ? `[${matIdx}]` : "";
+          if (!obj.geometry.attributes.uv) {
+            missingUVs++;
+            const issue = `Mesh "${meshName}"${matLabel} using CityGroundMaterial but missing UVs`;
+            console.warn(`[Ground] ⚠️ ${issue}`, obj);
+            issues.push({ type: "missing-uv", mesh: meshName, object: obj });
+          }
+          if (!mat.map) {
+            missingMap++;
+            const issue = `Mesh "${meshName}"${matLabel} has CityGroundMaterial with NO map`;
+            console.warn(`[Ground] ⚠️ ${issue}`, obj);
+            issues.push({ type: "missing-map", mesh: meshName, object: obj });
+          }
+        }
+      });
+    }
+  });
+  const summary = {
+    totalMeshes: totalFound,
+    missingUVs,
+    missingMap,
+    allValid: missingUVs === 0 && missingMap === 0,
+    issues
+  };
+  if (totalFound === 0) {
+    console.info("[Ground] ℹ️ No meshes found using CityGroundMaterial");
+  } else if (summary.allValid) {
+    console.log(`[Ground] ✅ All ${totalFound} CityGroundMaterial meshes validated successfully`);
+  } else {
+    console.warn(`[Ground] ⚠️ Found ${missingUVs} UV issues and ${missingMap} map issues in ${totalFound} meshes`);
+  }
+  return summary;
+}
 console.log("[Ground] Ground texture materials initialized:", {
   city: "CityGroundMaterial (dirt-albedo.jpg)",
   inland: "InlandGroundMaterial (grass/albedo.jpg)",
@@ -59513,7 +59562,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CEEQS_kc.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CM01xctk.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60248,7 +60297,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-EoxtxsHq.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-U5t9ADot.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61196,7 +61245,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T22:11:29.103Z" : "",
+      time: true ? "2025-12-31T22:18:07.535Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71277,6 +71326,7 @@ class Application {
       foundationPadMaterial: harborCity?.userData?.["foundationPadMaterial"] ?? null
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
+    validateCityGroundMaterials(scene2);
     applyGravelToRoads({ scene: scene2, baseUrl: BASE_URL2, repeat: [6, 6] }).catch(() => {
     });
     updateTerrainCoverageMask(terrain, {
@@ -71828,4 +71878,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DQmd9CDT.js.map
+//# sourceMappingURL=index-BL_dtMHU.js.map

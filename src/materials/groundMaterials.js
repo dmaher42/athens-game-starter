@@ -451,6 +451,69 @@ export function enableCityMaskDebug() {
   return DEBUG_CITY_MASK;
 }
 
+// Diagnostic utility: Validate CityGroundMaterial usage in scene
+export function validateCityGroundMaterials(scene) {
+  if (!scene) {
+    console.warn('[Ground] validateCityGroundMaterials: No scene provided');
+    return;
+  }
+
+  let totalFound = 0;
+  let missingUVs = 0;
+  let missingMap = 0;
+  const issues = [];
+
+  scene.traverse((obj) => {
+    if (obj.isMesh && obj.material) {
+      // Handle both single material and material arrays
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      
+      materials.forEach((mat, matIdx) => {
+        if (mat && mat.name === 'CityGroundMaterial') {
+          totalFound++;
+          
+          const meshName = obj.name || 'unnamed';
+          const matLabel = materials.length > 1 ? `[${matIdx}]` : '';
+          
+          // Check for UVs
+          if (!obj.geometry.attributes.uv) {
+            missingUVs++;
+            const issue = `Mesh "${meshName}"${matLabel} using CityGroundMaterial but missing UVs`;
+            console.warn(`[Ground] ⚠️ ${issue}`, obj);
+            issues.push({ type: 'missing-uv', mesh: meshName, object: obj });
+          }
+          
+          // Check for texture map
+          if (!mat.map) {
+            missingMap++;
+            const issue = `Mesh "${meshName}"${matLabel} has CityGroundMaterial with NO map`;
+            console.warn(`[Ground] ⚠️ ${issue}`, obj);
+            issues.push({ type: 'missing-map', mesh: meshName, object: obj });
+          }
+        }
+      });
+    }
+  });
+
+  const summary = {
+    totalMeshes: totalFound,
+    missingUVs,
+    missingMap,
+    allValid: missingUVs === 0 && missingMap === 0,
+    issues
+  };
+
+  if (totalFound === 0) {
+    console.info('[Ground] ℹ️ No meshes found using CityGroundMaterial');
+  } else if (summary.allValid) {
+    console.log(`[Ground] ✅ All ${totalFound} CityGroundMaterial meshes validated successfully`);
+  } else {
+    console.warn(`[Ground] ⚠️ Found ${missingUVs} UV issues and ${missingMap} map issues in ${totalFound} meshes`);
+  }
+
+  return summary;
+}
+
 // Step 6: Confirm all ground textures are restored for City, Inland, and Coastal zones
 console.log('[Ground] Ground texture materials initialized:', {
   city: 'CityGroundMaterial (dirt-albedo.jpg)',

@@ -26,6 +26,7 @@ import {
   createHillCity,
   createCity,
 } from "../world/city.js";
+import { validateCityGroundMaterials } from "../materials/groundMaterials.js";
 import {
   mount as mountGrass,
   update as updateGrass,
@@ -652,6 +653,9 @@ export class Application {
           harborCity?.userData?.['foundationPadMaterial'] ?? null,
       });
       updateLoadingStatus("Raising temples, homes, and harbors...");
+
+      // Validate ground material setup after scene initialization
+      validateCityGroundMaterials(scene);
 
       applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch(() => {});
 
