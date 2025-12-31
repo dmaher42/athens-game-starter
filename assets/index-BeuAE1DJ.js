@@ -43533,6 +43533,15 @@ const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}
 const CITY_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 const INLAND_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 const COASTAL_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
+const ROADSIDE_MASK_FALLBACK = new DataTexture(
+  new Uint8Array([0]),
+  1,
+  1,
+  RedFormat,
+  UnsignedByteType
+);
+ROADSIDE_MASK_FALLBACK.needsUpdate = true;
+ROADSIDE_MASK_FALLBACK.colorSpace = LinearSRGBColorSpace;
 let warnedTextureFailure = false;
 function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader$1.load(
@@ -43562,6 +43571,31 @@ const CityGroundMaterial = new MeshStandardMaterial({
   roughness: 0.6,
   metalness: 0
 });
+CityGroundMaterial.userData.roadside = {
+  maskTexture: ROADSIDE_MASK_FALLBACK,
+  tint: new Color(1.08, 1.06, 1.04),
+  roughness: 0.75
+};
+CityGroundMaterial.onBeforeCompile = (shader) => {
+  shader.uniforms.uRoadsideMask = {
+    value: CityGroundMaterial.userData?.roadside?.maskTexture ?? ROADSIDE_MASK_FALLBACK
+  };
+  shader.uniforms.uRoadsideTint = {
+    value: CityGroundMaterial.userData?.roadside?.tint ?? new Color(1, 1, 1)
+  };
+  shader.uniforms.uRoadsideRoughness = {
+    value: CityGroundMaterial.userData?.roadside?.roughness ?? CityGroundMaterial.roughness
+  };
+  CityGroundMaterial.userData.roadsideUniforms = shader.uniforms;
+  shader.fragmentShader = shader.fragmentShader.replace(
+    "#include <roughnessmap_fragment>",
+    `#include <roughnessmap_fragment>
+     float roadsideWeight = texture2D(uRoadsideMask, vUv).r;
+     roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);
+     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
+     roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
+  );
+};
 CityGroundMaterial.map = bindGroundTexture(
   CityGroundMaterial,
   "City",
@@ -44061,25 +44095,48 @@ function updateTerrainCoverageMask(terrain, options = {}) {
   const resolution = state.maskSize;
   const data = state.maskData;
   data.fill(0);
-  const paintCircle = (worldX, worldZ, radius) => {
+  const roadMaskResolution = resolution;
+  let roadMaskState = terrain.userData.roadsideMaskState;
+  if (!roadMaskState || roadMaskState.maskSize !== roadMaskResolution) {
+    const maskData = new Uint8Array(roadMaskResolution * roadMaskResolution);
+    const maskTexture = new DataTexture(
+      maskData,
+      roadMaskResolution,
+      roadMaskResolution,
+      RedFormat,
+      UnsignedByteType
+    );
+    maskTexture.needsUpdate = true;
+    maskTexture.colorSpace = LinearSRGBColorSpace;
+    maskTexture.magFilter = LinearFilter;
+    maskTexture.minFilter = LinearMipMapLinearFilter;
+    roadMaskState = {
+      maskData,
+      maskTexture,
+      maskSize: roadMaskResolution
+    };
+    terrain.userData.roadsideMaskState = roadMaskState;
+  }
+  roadMaskState.maskData.fill(0);
+  const paintCircle = (targetData, targetResolution, worldX, worldZ, radius) => {
     const u = (worldX + halfSize) / terrainSize;
     const v = (worldZ + halfSize) / terrainSize;
     if (u < 0 || u > 1 || v < 0 || v > 1) return;
-    const px2 = Math.round(u * (resolution - 1));
-    const py2 = Math.round(v * (resolution - 1));
-    const pr = Math.ceil(radius / terrainSize * resolution);
+    const px2 = Math.round(u * (targetResolution - 1));
+    const py2 = Math.round(v * (targetResolution - 1));
+    const pr = Math.ceil(radius / terrainSize * targetResolution);
     const r2 = pr * pr;
     const minX = Math.max(0, px2 - pr);
-    const maxX = Math.min(resolution - 1, px2 + pr);
+    const maxX = Math.min(targetResolution - 1, px2 + pr);
     const minY = Math.max(0, py2 - pr);
-    const maxY = Math.min(resolution - 1, py2 + pr);
+    const maxY = Math.min(targetResolution - 1, py2 + pr);
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         const dx = x - px2;
         const dy = y - py2;
         if (dx * dx + dy * dy <= r2) {
-          const index = y * resolution + x;
-          data[index] = 255;
+          const index = y * targetResolution + x;
+          targetData[index] = 255;
         }
       }
     }
@@ -44092,7 +44149,14 @@ function updateTerrainCoverageMask(terrain, options = {}) {
       const t = i / samples;
       const point = curve.getPoint(t);
       const radius = Math.max(0.5, width * 0.65 + roadBuffer);
-      paintCircle(point.x, point.z, radius);
+      paintCircle(data, resolution, point.x, point.z, radius);
+      paintCircle(
+        roadMaskState.maskData,
+        roadMaskState.maskSize,
+        point.x,
+        point.z,
+        radius
+      );
     }
   };
   const buildingPlacements = Array.isArray(options?.buildingPlacements) ? options.buildingPlacements : [];
@@ -44100,7 +44164,7 @@ function updateTerrainCoverageMask(terrain, options = {}) {
     const { x, z, width, depth } = placement;
     if (!Number.isFinite(x) || !Number.isFinite(z)) return;
     const radius = Math.max(1.2, Math.hypot(width ?? 1, depth ?? 1) * 0.6);
-    paintCircle(x, z, radius);
+    paintCircle(data, resolution, x, z, radius);
   });
   const mainRoad = options?.mainRoadCurve ?? null;
   if (mainRoad) {
@@ -44114,6 +44178,12 @@ function updateTerrainCoverageMask(terrain, options = {}) {
   }
   if (state.uniforms?.maskStrength) {
     state.uniforms.maskStrength.value = state.maskStrength ?? 1;
+  }
+  roadMaskState.maskTexture.needsUpdate = true;
+  CityGroundMaterial.userData.roadside.maskTexture = roadMaskState.maskTexture;
+  const roadsideUniforms = CityGroundMaterial.userData.roadsideUniforms;
+  if (roadsideUniforms?.uRoadsideMask) {
+    roadsideUniforms.uRoadsideMask.value = roadMaskState.maskTexture;
   }
 }
 const DEFAULT_HORIZON_RADIUS = 1700;
@@ -59186,7 +59256,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BndnkCbA.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DNFZ5fWn.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59921,7 +59991,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-1s6F6Qgs.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Bq86KgCK.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60869,8 +60939,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T00:02:53.737Z" : "",
-      sha: true ? "8b6b77e9680428d038074defa67ccf2e9ad6f6fe" : ""
+      time: true ? "2025-12-31T00:13:44.351Z" : "",
+      sha: true ? "09908486c2d6e76b13624e8b2ae0dbfec69c3fa6" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71495,4 +71565,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Y33wZ9l7.js.map
+//# sourceMappingURL=index-BeuAE1DJ.js.map
