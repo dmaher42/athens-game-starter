@@ -93,9 +93,7 @@ function bindGroundTexture(material, label, url, repeat) {
   const placeholderTexture = new THREE.CanvasTexture(canvas);
   placeholderTexture.colorSpace = THREE.SRGBColorSpace;
   placeholderTexture.wrapS = placeholderTexture.wrapT = THREE.RepeatWrapping;
-  // Use higher repeat for better detail
-  const repeatScale = repeat * 3; // Increase tiling for more detail
-  placeholderTexture.repeat.set(repeatScale, repeatScale);
+  placeholderTexture.repeat.set(repeat, repeat);
   
   // Set placeholder immediately
   material.map = placeholderTexture;
@@ -114,9 +112,7 @@ function bindGroundTexture(material, label, url, repeat) {
       });
       loadedTex.colorSpace = THREE.SRGBColorSpace;
       loadedTex.wrapS = loadedTex.wrapT = THREE.RepeatWrapping;
-      // Use higher repeat for better detail visibility
-      const repeatScale = repeat * 3;
-      loadedTex.repeat.set(repeatScale, repeatScale);
+      loadedTex.repeat.set(repeat, repeat);
       // Replace placeholder with actual texture
       material.map = loadedTex;
       material.map.needsUpdate = true;
@@ -124,7 +120,7 @@ function bindGroundTexture(material, label, url, repeat) {
       triggerTerrainUpdate(); // Force terrain to update
       console.log(`[Ground] ✓ ${label} texture applied to material`, {
         materialHasMap: !!material.map,
-        repeatScale: repeatScale,
+        repeat: repeat,
         mapSource: material.map?.source?.currentSrc
       });
     },
@@ -269,7 +265,7 @@ export function createCityGroundMaterial() {
     material,
     "City",
     CITY_GROUND_URL,
-    32,
+    120, // UV tiling scale for city ground
   );
 
   material.needsUpdate = true;
@@ -313,7 +309,7 @@ InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
   INLAND_GROUND_URL,
-  32,
+  80, // UV tiling scale for inland ground
 );
 InlandGroundMaterial.needsUpdate = true;
 
