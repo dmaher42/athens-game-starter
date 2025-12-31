@@ -43660,8 +43660,11 @@ const CityGroundMaterial = (() => {
     // No metallic reflection
     aoMapIntensity: 0,
     // Disable AO so texture is clearly visible
-    map: null
+    map: null,
     // Will be set by bindGroundTexture
+    envMapIntensity: 0,
+    // Disable environment reflections completely
+    flatShading: false
   });
   console.log("[Ground] 🏗️ CityGroundMaterial created:", {
     name: material.name,
@@ -43740,8 +43743,8 @@ const CityGroundMaterial = (() => {
       "#include <map_fragment>",
       `
       #include <map_fragment>
-      // Boost contrast slightly to enhance texture visibility
-      diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.15));
+      // Light contrast boost to enhance texture visibility without darkening
+      diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.05));
       `
     );
   };
@@ -59494,7 +59497,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BIQHMDJv.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CWQ2Cjfk.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60229,7 +60232,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DH25_EB5.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D2ayOlHP.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61177,8 +61180,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T21:38:09.572Z" : "",
-      sha: true ? "e28d0a29fdf9d89b4831c21f2443a9b2e81ccc4a" : ""
+      time: true ? "2025-12-31T21:48:24.460Z" : "",
+      sha: true ? "c2f47540f0c0186a6e8c12f7ed9885bbdef838c0" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71809,4 +71812,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Db4E-VNe.js.map
+//# sourceMappingURL=index-CuYtd9w5.js.map
