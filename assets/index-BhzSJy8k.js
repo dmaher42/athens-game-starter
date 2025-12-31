@@ -44051,6 +44051,15 @@ function createTerrain(scene2) {
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
   terrain.renderOrder = RENDER_LAYERS.TERRAIN;
+  console.log("[Debug] terrain.geometry.attributes.uv:", terrain.geometry.attributes.uv);
+  if (!terrain.geometry.attributes.uv) {
+    terrain.geometry.computeBoundingBox();
+    terrain.geometry.computeBoundingSphere();
+    terrain.geometry.computeVertexNormals();
+    const uvAttr = new Float32BufferAttribute(terrain.geometry.attributes.position.count * 2, 2);
+    terrain.geometry.setAttribute("uv", uvAttr);
+    console.warn("[Terrain] UVs were missing – dummy UVs injected");
+  }
   scene2.add(terrain);
   const stride = segments + 1;
   terrain.userData.getHeightAt = (worldX, worldZ) => {
@@ -59319,7 +59328,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-89Rr1mGn.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DbV32gYx.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60054,7 +60063,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C18CVIAa.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DWC5aSIb.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61002,8 +61011,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T11:50:56.156Z" : "",
-      sha: true ? "c10d04789cfc9a7cddd65565a9b334479f6bb7a2" : ""
+      time: true ? "2025-12-31T11:59:19.915Z" : "",
+      sha: true ? "12e0d4cae7dbca84075410a54588e0717569dd9f" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71634,4 +71643,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DQHg8ME8.js.map
+//# sourceMappingURL=index-BhzSJy8k.js.map
