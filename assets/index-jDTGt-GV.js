@@ -43854,6 +43854,55 @@ function enableCityMaskDebug() {
   console.log("[Ground] Red = city mask active, Green = unmasked areas");
   return DEBUG_CITY_MASK;
 }
+function validateCityGroundMaterials(scene2) {
+  if (!scene2) {
+    console.warn("[Ground] validateCityGroundMaterials: No scene provided");
+    return;
+  }
+  let totalFound = 0;
+  let missingUVs = 0;
+  let missingMap = 0;
+  const issues = [];
+  scene2.traverse((obj) => {
+    if (obj.isMesh && obj.material) {
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      materials.forEach((mat, matIdx) => {
+        if (mat && mat.name === "CityGroundMaterial") {
+          totalFound++;
+          const meshName = obj.name || "unnamed";
+          const matLabel = materials.length > 1 ? `[${matIdx}]` : "";
+          if (!obj.geometry.attributes.uv) {
+            missingUVs++;
+            const issue = `Mesh "${meshName}"${matLabel} using CityGroundMaterial but missing UVs`;
+            console.warn(`[Ground] ⚠️ ${issue}`, obj);
+            issues.push({ type: "missing-uv", mesh: meshName, object: obj });
+          }
+          if (!mat.map) {
+            missingMap++;
+            const issue = `Mesh "${meshName}"${matLabel} has CityGroundMaterial with NO map`;
+            console.warn(`[Ground] ⚠️ ${issue}`, obj);
+            issues.push({ type: "missing-map", mesh: meshName, object: obj });
+          }
+        }
+      });
+    }
+  });
+  const summary = {
+    totalMeshes: totalFound,
+    missingUVs,
+    missingMap,
+    allValid: missingUVs === 0 && missingMap === 0,
+    issues
+  };
+  if (totalFound === 0) {
+    console.info("[Ground] ℹ️ No meshes found using CityGroundMaterial");
+  } else if (summary.allValid) {
+    console.log(`[Ground] ✅ All ${totalFound} CityGroundMaterial meshes validated successfully`);
+  } else {
+    console.warn(`[Ground] ⚠️ Found ${missingUVs} UV issues and ${missingMap} map issues in ${totalFound} meshes`);
+  }
+  return summary;
+}
 console.log("[Ground] Ground texture materials initialized:", {
   city: "CityGroundMaterial (dirt-albedo.jpg)",
   inland: "InlandGroundMaterial (grass/albedo.jpg)",
@@ -59513,7 +59562,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D3mu165-.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-5FSS7UJH.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60248,7 +60297,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CqvgtvsO.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CgUyEYUE.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61196,8 +61245,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T22:12:25.573Z" : "",
-      sha: true ? "f734783c18610d23b12664f96263f2ca55bb86df" : ""
+      time: true ? "2025-12-31T22:20:23.007Z" : "",
+      sha: true ? "7a1f796d0a076a828778db2183a6d67f5409821d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71277,6 +71326,7 @@ class Application {
       foundationPadMaterial: harborCity?.userData?.["foundationPadMaterial"] ?? null
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
+    validateCityGroundMaterials(scene2);
     applyGravelToRoads({ scene: scene2, baseUrl: BASE_URL2, repeat: [6, 6] }).catch(() => {
     });
     updateTerrainCoverageMask(terrain, {
@@ -71828,4 +71878,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-w6W5ayg_.js.map
+//# sourceMappingURL=index-jDTGt-GV.js.map
