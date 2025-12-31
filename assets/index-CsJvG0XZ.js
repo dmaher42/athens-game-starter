@@ -59256,7 +59256,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DCF394IR.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DwYvRxAY.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59991,7 +59991,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cyb8J45W.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BRcYbGN2.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60939,8 +60939,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T00:16:13.043Z" : "",
-      sha: true ? "56ed35fac37d05cd9e4c84a5027d71d29718ca97" : ""
+      time: true ? "2025-12-31T02:47:12.672Z" : "",
+      sha: true ? "e257a36c407c571ed6f6ee2cb1d03f915bec78b2" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71030,6 +71030,12 @@ class Application {
       roadWidth: 3.2,
       roadBuffer: 2
     });
+    if (!scene2.userData?.["roadsideBufferLogged"]) {
+      scene2.userData = scene2.userData || {};
+      scene2.userData["roadsideBufferLogged"] = true;
+      console.info("[Roads] Roadside buffer zone active");
+      console.info("[Roads] City ground applied under roads");
+    }
     scatterGroundProps(worldRoot, terrain, {
       buildingPlacements: harborCity?.userData?.["buildingPlacements"] ?? [],
       roadCurves: roadCurves ?? [],
@@ -71565,4 +71571,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Dg4_iZNn.js.map
+//# sourceMappingURL=index-CsJvG0XZ.js.map
