@@ -43535,7 +43535,14 @@ function setTerrainMeshForUpdates(terrain) {
 function triggerTerrainUpdate() {
   if (terrainMeshReference && terrainMeshReference.material) {
     if (Array.isArray(terrainMeshReference.material)) {
-      terrainMeshReference.material.forEach((mat) => {
+      terrainMeshReference.material.forEach((mat, idx) => {
+        console.log(`[Ground] Material[${idx}] state:`, {
+          name: mat.name,
+          hasMap: !!mat.map,
+          color: mat.color?.getHexString(),
+          roughness: mat.roughness,
+          metalness: mat.metalness
+        });
         mat.needsUpdate = true;
       });
     } else {
@@ -43629,9 +43636,12 @@ function bindGroundTexture(material, label, url, repeat) {
 function createCityGroundMaterial() {
   const material = new MeshStandardMaterial({
     name: "CityGroundMaterial",
-    color: 13219740,
+    color: 16777215,
+    // White to let texture show through
     roughness: 0.6,
-    metalness: 0
+    metalness: 0,
+    aoMapIntensity: 0
+    // Disable AO so texture is clearly visible
   });
   const roadsideMaskTexture = new DataTexture(
     new Uint8Array([255]),
@@ -43710,9 +43720,11 @@ function createCityGroundMaterial() {
 }
 const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
-  color: 9072462,
+  color: 16777215,
+  // White to let texture show
   roughness: 0.85,
-  metalness: 0
+  metalness: 0,
+  aoMapIntensity: 0
 });
 InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
@@ -43723,9 +43735,11 @@ InlandGroundMaterial.map = bindGroundTexture(
 InlandGroundMaterial.needsUpdate = true;
 const CoastalGroundMaterial = new MeshStandardMaterial({
   name: "CoastalGroundMaterial",
-  color: 15127459,
+  color: 16777215,
+  // White to let texture show
   roughness: 0.75,
-  metalness: 0
+  metalness: 0,
+  aoMapIntensity: 0
 });
 CoastalGroundMaterial.map = bindGroundTexture(
   CoastalGroundMaterial,
@@ -59402,7 +59416,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-b5atFfRv.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-gx4JRvax.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60137,7 +60151,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DzGErJcp.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-GKZfG4U-.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61085,7 +61099,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T12:16:53.147Z" : "",
+      time: true ? "2025-12-31T12:21:13.393Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71717,4 +71731,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CynpsuQq.js.map
+//# sourceMappingURL=index-BOylxgFx.js.map

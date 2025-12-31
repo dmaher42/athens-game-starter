@@ -11,7 +11,14 @@ function triggerTerrainUpdate() {
   if (terrainMeshReference && terrainMeshReference.material) {
     // Force all materials to update
     if (Array.isArray(terrainMeshReference.material)) {
-      terrainMeshReference.material.forEach(mat => {
+      terrainMeshReference.material.forEach((mat, idx) => {
+        console.log(`[Ground] Material[${idx}] state:`, {
+          name: mat.name,
+          hasMap: !!mat.map,
+          color: mat.color?.getHexString(),
+          roughness: mat.roughness,
+          metalness: mat.metalness
+        });
         mat.needsUpdate = true;
       });
     } else {
@@ -128,9 +135,10 @@ function bindGroundTexture(material, label, url, repeat) {
 export function createCityGroundMaterial() {
   const material = new THREE.MeshStandardMaterial({
     name: "CityGroundMaterial",
-    color: 0xc9b79c,
+    color: 0xffffff, // White to let texture show through
     roughness: 0.6,
     metalness: 0,
+    aoMapIntensity: 0, // Disable AO so texture is clearly visible
   });
 
   const roadsideMaskTexture = new THREE.DataTexture(
@@ -235,9 +243,10 @@ export function createCityGroundMaterial() {
 
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
-  color: 0x8a6f4e,
+  color: 0xffffff, // White to let texture show
   roughness: 0.85,
   metalness: 0,
+  aoMapIntensity: 0,
 });
 // Inland ground texture
 InlandGroundMaterial.map = bindGroundTexture(
@@ -250,9 +259,10 @@ InlandGroundMaterial.needsUpdate = true;
 
 export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
   name: "CoastalGroundMaterial",
-  color: 0xe6d3a3,
+  color: 0xffffff, // White to let texture show
   roughness: 0.75,
   metalness: 0,
+  aoMapIntensity: 0,
 });
 // Coastal ground texture
 CoastalGroundMaterial.map = bindGroundTexture(
