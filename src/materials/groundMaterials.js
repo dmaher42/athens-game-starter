@@ -47,7 +47,6 @@ export function createCityGroundMaterial() {
 
   // Force-clear shader hooks to prevent legacy roadside injection
   material.onBeforeCompile = null;
-  material.customProgramCacheKey = () => "CityGroundMaterial_v2";
   delete material.userData;
 
   // City ground texture
