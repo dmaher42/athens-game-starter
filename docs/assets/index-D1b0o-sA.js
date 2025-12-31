@@ -44051,6 +44051,15 @@ function createTerrain(scene2) {
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
   terrain.renderOrder = RENDER_LAYERS.TERRAIN;
+  console.log("[Debug] terrain.geometry.attributes.uv:", terrain.geometry.attributes.uv);
+  if (!terrain.geometry.attributes.uv) {
+    terrain.geometry.computeBoundingBox();
+    terrain.geometry.computeBoundingSphere();
+    terrain.geometry.computeVertexNormals();
+    const uvAttr = new Float32BufferAttribute(terrain.geometry.attributes.position.count * 2, 2);
+    terrain.geometry.setAttribute("uv", uvAttr);
+    console.warn("[Terrain] UVs were missing – dummy UVs injected");
+  }
   scene2.add(terrain);
   const stride = segments + 1;
   terrain.userData.getHeightAt = (worldX, worldZ) => {
@@ -59319,7 +59328,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C-dzjlve.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-ljaFstEF.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60054,7 +60063,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Du2XrBNE.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dlyiv_xf.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61002,7 +61011,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T11:49:25.517Z" : "",
+      time: true ? "2025-12-31T11:56:07.927Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71634,4 +71643,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CUbXKLUN.js.map
+//# sourceMappingURL=index-D1b0o-sA.js.map

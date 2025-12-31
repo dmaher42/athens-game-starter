@@ -514,6 +514,21 @@ export function createTerrain(scene) {
   terrain.name = "Terrain";
   // Ensure terrain renders on top of transparent water layers via explicit renderOrder
   terrain.renderOrder = RENDER_LAYERS.TERRAIN;
+  
+  // Confirm terrain mesh has UVs (required for roadside shader)
+  console.log('[Debug] terrain.geometry.attributes.uv:', terrain.geometry.attributes.uv);
+  
+  // If missing, regenerate UVs (fallback for safety)
+  if (!terrain.geometry.attributes.uv) {
+    terrain.geometry.computeBoundingBox();
+    terrain.geometry.computeBoundingSphere();
+    terrain.geometry.computeVertexNormals();
+    
+    const uvAttr = new THREE.Float32BufferAttribute(terrain.geometry.attributes.position.count * 2, 2);
+    terrain.geometry.setAttribute('uv', uvAttr);
+    console.warn('[Terrain] UVs were missing – dummy UVs injected');
+  }
+  
   scene.add(terrain);
 
   const stride = segments + 1;
