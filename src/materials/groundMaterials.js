@@ -74,6 +74,21 @@ export function createCityGroundMaterial() {
     metalness: 0,
   });
 
+  const roadsideMaskTexture = new THREE.DataTexture(
+    new Uint8Array([255]),
+    1,
+    1,
+    THREE.RedFormat,
+    THREE.UnsignedByteType,
+  );
+  roadsideMaskTexture.needsUpdate = true;
+  roadsideMaskTexture.colorSpace = THREE.LinearSRGBColorSpace;
+
+  material.userData = material.userData || {};
+  material.userData.roadsideMask = roadsideMaskTexture;
+  material.userData.roadsideTint = new THREE.Color(0.8, 0.7, 0.6);
+  material.userData.roadsideRoughness = 0.9;
+
   const baseOnBeforeCompile = material.onBeforeCompile;
   material.onBeforeCompile = (shader) => {
     if (typeof baseOnBeforeCompile === "function") {
@@ -117,14 +132,23 @@ export function createCityGroundMaterial() {
     const varyingDeclarations = "varying vec2 vUv;";
 
     // Patch vertex shader to declare and set vUv
-    shader.vertexShader = varyingDeclarations + "\n" + shader.vertexShader;
+    if (!shader.vertexShader.includes(varyingDeclarations)) {
+      shader.vertexShader = varyingDeclarations + "\n" + shader.vertexShader;
+    }
     shader.vertexShader = shader.vertexShader.replace(
       "#include <uv_vertex>",
-      "#include <uv_vertex>\n  vUv = uv;"
+      "#include <uv_vertex>\n  vUv = uv;",
     );
 
     // Patch fragment shader to declare uniforms and vUv
-    shader.fragmentShader = uniformDeclarations + "\n" + varyingDeclarations + "\n" + shader.fragmentShader;
+    if (!shader.fragmentShader.includes(uniformDeclarations.trim())) {
+      shader.fragmentShader =
+        uniformDeclarations + "\n" + shader.fragmentShader;
+    }
+    if (!shader.fragmentShader.includes(varyingDeclarations)) {
+      shader.fragmentShader =
+        varyingDeclarations + "\n" + shader.fragmentShader;
+    }
 
     // Inject the roadside effect logic into the fragment shader
     if (!shader.fragmentShader.includes(ROADSIDE_SNIPPET_SENTINEL)) {
