@@ -10,6 +10,7 @@ const BASE_URL =
 const RESOLVED_BASE_URL = BASE_URL.endsWith("/") ? BASE_URL : `${BASE_URL}/`;
 const INLAND_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 const COASTAL_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
+const CITY_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
 const ROADSIDE_MASK_FALLBACK = new THREE.DataTexture(
   new Uint8Array([0]),
   1,
@@ -50,6 +51,13 @@ export const CityGroundMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.6,
   metalness: 0,
 });
+// City ground texture
+CityGroundMaterial.map = bindGroundTexture(
+  CityGroundMaterial,
+  "City",
+  CITY_GROUND_PNG_URL,
+  32,
+);
 CityGroundMaterial.userData.roadside = {
   maskTexture: ROADSIDE_MASK_FALLBACK,
   tint: new THREE.Color(1.08, 1.06, 1.04),
@@ -80,7 +88,6 @@ CityGroundMaterial.onBeforeCompile = (shader) => {
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 0x8a6f4e,
-  map: inlandGroundTexture,
   roughness: 0.85,
   metalness: 0,
 });
@@ -95,7 +102,6 @@ InlandGroundMaterial.map = bindGroundTexture(
 export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
   name: "CoastalGroundMaterial",
   color: 0xe6d3a3,
-  map: coastalGroundTexture,
   roughness: 0.75,
   metalness: 0,
 });
