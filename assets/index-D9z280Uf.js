@@ -43708,7 +43708,7 @@ function createCityGroundMaterial() {
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
       roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
     );
-    const DEBUG_CITY_MASK = false;
+    const DEBUG_CITY_MASK = true;
     if (DEBUG_CITY_MASK) {
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <dithering_fragment>",
@@ -59440,7 +59440,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-ff-IH3Yr.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BrwYMM2t.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60175,7 +60175,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-H06crdn0.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CtK5_QYK.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61123,8 +61123,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T12:26:21.861Z" : "",
-      sha: true ? "43837339e1131a5210d154f091272c5e8376df29" : ""
+      time: true ? "2025-12-31T12:36:42.233Z" : "",
+      sha: true ? "1a49f3a7a17796f01acf4b11e74b8f0bff76aac8" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71755,4 +71755,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DHoriTMa.js.map
+//# sourceMappingURL=index-D9z280Uf.js.map
