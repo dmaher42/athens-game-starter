@@ -273,25 +273,24 @@ const CityGroundMaterial = (() => {
       `
     );
 
-    // 👀 DEBUG: City mask visualization (set to true to enable)
-    // Visualize city mask as red/green overlay to see where blending occurs
-    const DEBUG_CITY_MASK = false; // Set to true to enable debug visualization
-    if (DEBUG_CITY_MASK) {
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <dithering_fragment>',
-        `
-        // City mask debug visualization
-        vec2 debugUV = vUv;
-        
-        // Sample city mask
-        float cityWeight = texture2D(uRoadsideMask, debugUV).r;
-        
-        // Map cityWeight to RGB: red = masked, green = unmasked, blue = blend
-        gl_FragColor = vec4(vec3(cityWeight, 1.0 - cityWeight, cityWeight * 0.5), 1.0);
-        `
-      );
-      console.log('[Ground] DEBUG: City mask visualization enabled - red=masked, green=unmasked');
-    }
+    // Debug visualization disabled - set to true and rebuild to enable
+    // const DEBUG_CITY_MASK = false;
+    // if (DEBUG_CITY_MASK) {
+    //   shader.fragmentShader = shader.fragmentShader.replace(
+    //     '#include <dithering_fragment>',
+    //     `
+    //     // City mask debug visualization
+    //     vec2 debugUV = vUv;
+    //     
+    //     // Sample city mask
+    //     float cityWeight = texture2D(uRoadsideMask, debugUV).r;
+    //     
+    //     // Map cityWeight to RGB: red = masked, green = unmasked, blue = blend
+    //     gl_FragColor = vec4(vec3(cityWeight, 1.0 - cityWeight, cityWeight * 0.5), 1.0);
+    //     `
+    //   );
+    //   console.log('[Ground] DEBUG: City mask visualization enabled - red=masked, green=unmasked');
+    // }
 
   };
 
