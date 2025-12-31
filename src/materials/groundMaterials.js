@@ -37,19 +37,29 @@ function bindGroundTexture(material, label, url, repeat) {
   return texture;
 }
 
-export const CityGroundMaterial = new THREE.MeshStandardMaterial({
-  name: "CityGroundMaterial",
-  color: 0xc9b79c,
-  roughness: 0.6,
-  metalness: 0,
-});
-// City ground texture
-CityGroundMaterial.map = bindGroundTexture(
-  CityGroundMaterial,
-  "City",
-  CITY_GROUND_URL,
-  32,
-);
+export function createCityGroundMaterial() {
+  const material = new THREE.MeshStandardMaterial({
+    name: "CityGroundMaterial",
+    color: 0xc9b79c,
+    roughness: 0.6,
+    metalness: 0,
+  });
+
+  // Force-clear shader hooks to prevent legacy roadside injection
+  material.onBeforeCompile = function() {};
+  delete material.userData;
+
+  // City ground texture
+  material.map = bindGroundTexture(
+    material,
+    "City",
+    CITY_GROUND_URL,
+    32,
+  );
+
+  material.needsUpdate = true;
+  return material;
+}
 
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
