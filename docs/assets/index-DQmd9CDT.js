@@ -43675,12 +43675,9 @@ function bindGroundTexture(material, label, url, repeat) {
 const CityGroundMaterial = (() => {
   const material = new MeshStandardMaterial({
     name: "CityGroundMaterial",
-    color: 16777215,
-    // White to let texture show through clearly
-    roughness: 1,
-    // Maximum roughness for matte ground appearance
-    metalness: 0,
-    // No metallic reflection
+    color: preset.city.color,
+    roughness: preset.city.roughness,
+    metalness: preset.city.metalness,
     aoMapIntensity: 0,
     // Disable AO so texture is clearly visible
     map: null,
@@ -43693,7 +43690,8 @@ const CityGroundMaterial = (() => {
     name: material.name,
     color: material.color.getHexString(),
     roughness: material.roughness,
-    metalness: material.metalness
+    metalness: material.metalness,
+    preset: ACTIVE_PRESET
   });
   const roadsideMaskTexture = new DataTexture(
     new Uint8Array([0]),
@@ -43776,19 +43774,16 @@ const CityGroundMaterial = (() => {
     material,
     "City",
     CITY_GROUND_URL,
-    120
-    // UV tiling scale for city ground
+    preset.city.repeat
   );
   material.needsUpdate = true;
   return material;
 })();
 const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
-  color: 16777215,
-  // White to let texture show
-  roughness: 0.9,
-  // Higher roughness for natural ground
-  metalness: 0,
+  color: preset.inland.color,
+  roughness: preset.inland.roughness,
+  metalness: preset.inland.metalness,
   aoMapIntensity: 0
 });
 InlandGroundMaterial.onBeforeCompile = (shader) => {
@@ -43815,24 +43810,21 @@ InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
   INLAND_GROUND_URL,
-  80
-  // UV tiling scale for inland ground
+  preset.inland.repeat
 );
 InlandGroundMaterial.needsUpdate = true;
 const CoastalGroundMaterial = new MeshStandardMaterial({
   name: "CoastalGroundMaterial",
-  color: 16777215,
-  // White to let texture show
-  roughness: 0.9,
-  // Higher roughness for sandy ground
-  metalness: 0,
+  color: preset.coastal.color,
+  roughness: preset.coastal.roughness,
+  metalness: preset.coastal.metalness,
   aoMapIntensity: 0
 });
 CoastalGroundMaterial.map = bindGroundTexture(
   CoastalGroundMaterial,
   "Coastal",
   COASTAL_GROUND_URL,
-  16
+  preset.coastal.repeat
 );
 CoastalGroundMaterial.needsUpdate = true;
 function diagnoseMaterialState() {
@@ -57663,39 +57655,39 @@ function mountDevHUD(options = {}) {
         presetStatus.textContent = "Select a preset to apply";
       }
     };
-    for (const preset of availablePresets) {
-      const presetMeta = lightingPresets?.[preset.name] || {};
+    for (const preset2 of availablePresets) {
+      const presetMeta = lightingPresets?.[preset2.name] || {};
       const button = document.createElement("button");
       button.type = "button";
       button.className = "dev-hud-btn";
-      const displayLabel = presetMeta.label || preset.label;
+      const displayLabel = presetMeta.label || preset2.label;
       button.textContent = displayLabel;
       const hotkeyLabel = presetMeta.hotkey || defaultPresetHotkeys[presetButtons.size] || "";
       if (hotkeyLabel) {
         button.title = `Set ${displayLabel} lighting (Hotkey ${hotkeyLabel})`;
         button.setAttribute("aria-keyshortcuts", hotkeyLabel);
-        presetKeyBindings.set(hotkeyLabel, preset.name);
+        presetKeyBindings.set(hotkeyLabel, preset2.name);
         const simpleKey = hotkeyLabel.startsWith("Digit") ? hotkeyLabel.replace("Digit", "") : hotkeyLabel;
-        presetKeyBindings.set(simpleKey, preset.name);
+        presetKeyBindings.set(simpleKey, preset2.name);
       } else {
         button.title = `Set ${displayLabel} lighting`;
       }
       button.addEventListener("pointerdown", (event) => {
         event.preventDefault();
         if (typeof onSetLightingPreset === "function") {
-          onSetLightingPreset(preset.name);
+          onSetLightingPreset(preset2.name);
         }
-        setActivePresetFn?.(preset.name);
+        setActivePresetFn?.(preset2.name);
       });
       buttonRow.appendChild(button);
-      presetButtons.set(preset.name, button);
+      presetButtons.set(preset2.name, button);
     }
     section.appendChild(buttonRow);
     content.appendChild(section);
     wrap._presetKeyBindings = presetKeyBindings;
     cyclePreset = () => {
       if (!availablePresets.length) return;
-      const names = availablePresets.map((preset) => preset.name);
+      const names = availablePresets.map((preset2) => preset2.name);
       const currentIndex = activePresetName ? names.indexOf(activePresetName) : -1;
       const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % names.length : 0;
       const nextName = names[nextIndex];
@@ -59521,7 +59513,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BAfWGKD9.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CEEQS_kc.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60256,7 +60248,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-87fg_yMm.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-EoxtxsHq.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61204,7 +61196,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T22:08:04.468Z" : "",
+      time: true ? "2025-12-31T22:11:29.103Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -64783,16 +64775,16 @@ class DynamicSky {
     this.azimuthOffset = MathUtils.degToRad(deg ?? 0);
   }
   applyPreset(key) {
-    const preset = SKY_PRESETS$1[key] || SKY_PRESETS$1.high_noon;
+    const preset2 = SKY_PRESETS$1[key] || SKY_PRESETS$1.high_noon;
     const uniforms = this.sky.material.uniforms;
-    uniforms.turbidity.value = preset.turbidity;
-    uniforms.rayleigh.value = preset.rayleigh;
-    uniforms.mieCoefficient.value = preset.mieCoefficient;
-    uniforms.mieDirectionalG.value = preset.mieDirectionalG;
+    uniforms.turbidity.value = preset2.turbidity;
+    uniforms.rayleigh.value = preset2.rayleigh;
+    uniforms.mieCoefficient.value = preset2.mieCoefficient;
+    uniforms.mieDirectionalG.value = preset2.mieDirectionalG;
     uniforms.sunPosition.value.copy(this.sunDirection);
     this.sky.material.needsUpdate = true;
-    this.settings.horizon = preset.horizon;
-    this.settings.zenith = preset.zenith;
+    this.settings.horizon = preset2.horizon;
+    this.settings.zenith = preset2.zenith;
   }
   setSunDirection(direction2) {
     if (!direction2) return;
@@ -65162,8 +65154,8 @@ function createSky(scene2) {
 }
 function updateSky(scene2, presetName) {
   const sky = scene2?.userData?.sky;
-  const preset = SKY_PRESETS[presetName] || SKY_PRESETS.high_noon;
-  applySkySettings(sky, preset);
+  const preset2 = SKY_PRESETS[presetName] || SKY_PRESETS.high_noon;
+  applySkySettings(sky, preset2);
 }
 function setTimeOfDayPhase(state, phase01) {
   if (!state || typeof state !== "object") return 0;
@@ -65203,29 +65195,29 @@ function updateSkyForTimeOfDay(scene2, phase01) {
   const sky = scene2?.userData?.sky;
   if (!sky) return;
   const phase = clamp01(phase01);
-  let preset, t;
+  let preset2, t;
   if (phase < 0.2) {
     t = phase / 0.2;
-    preset = interpolatePresets(SKY_PRESETS.night_sky, SKY_PRESETS.blue_hour, t);
+    preset2 = interpolatePresets(SKY_PRESETS.night_sky, SKY_PRESETS.blue_hour, t);
   } else if (phase < 0.3) {
     t = (phase - 0.2) / 0.1;
-    preset = interpolatePresets(SKY_PRESETS.blue_hour, SKY_PRESETS.golden_hour, t);
+    preset2 = interpolatePresets(SKY_PRESETS.blue_hour, SKY_PRESETS.golden_hour, t);
   } else if (phase < 0.45) {
     t = (phase - 0.3) / 0.15;
-    preset = interpolatePresets(SKY_PRESETS.golden_hour, SKY_PRESETS.high_noon, t);
+    preset2 = interpolatePresets(SKY_PRESETS.golden_hour, SKY_PRESETS.high_noon, t);
   } else if (phase < 0.55) {
-    preset = SKY_PRESETS.high_noon;
+    preset2 = SKY_PRESETS.high_noon;
   } else if (phase < 0.7) {
     t = (phase - 0.55) / 0.15;
-    preset = interpolatePresets(SKY_PRESETS.high_noon, SKY_PRESETS.golden_hour, t);
+    preset2 = interpolatePresets(SKY_PRESETS.high_noon, SKY_PRESETS.golden_hour, t);
   } else if (phase < 0.8) {
     t = (phase - 0.7) / 0.1;
-    preset = interpolatePresets(SKY_PRESETS.golden_hour, SKY_PRESETS.blue_hour, t);
+    preset2 = interpolatePresets(SKY_PRESETS.golden_hour, SKY_PRESETS.blue_hour, t);
   } else {
     t = (phase - 0.8) / 0.2;
-    preset = interpolatePresets(SKY_PRESETS.blue_hour, SKY_PRESETS.night_sky, t);
+    preset2 = interpolatePresets(SKY_PRESETS.blue_hour, SKY_PRESETS.night_sky, t);
   }
-  applySkySettings(sky, preset);
+  applySkySettings(sky, preset2);
   updateSkySunPosition(scene2, phase);
 }
 const LIGHTING_PRESETS$1 = {
@@ -65496,23 +65488,23 @@ const ENVIRONMENT_OVERRIDES = {
     }
   }
 };
-function validatePreset(name, preset) {
-  assert(preset && typeof preset === "object", `lighting preset ${name} must be an object`);
-  assert(Number.isFinite(preset.phase), `lighting preset ${name} requires numeric phase`);
-  assert(Number.isFinite(preset.exposure), `lighting preset ${name} requires numeric exposure`);
-  assert(typeof preset.label === "string" && preset.label.trim() !== "", `lighting preset ${name} requires label`);
-  if (preset.hotkey != null) {
-    assert(typeof preset.hotkey === "string", `lighting preset ${name} hotkey must be string`);
+function validatePreset(name, preset2) {
+  assert(preset2 && typeof preset2 === "object", `lighting preset ${name} must be an object`);
+  assert(Number.isFinite(preset2.phase), `lighting preset ${name} requires numeric phase`);
+  assert(Number.isFinite(preset2.exposure), `lighting preset ${name} requires numeric exposure`);
+  assert(typeof preset2.label === "string" && preset2.label.trim() !== "", `lighting preset ${name} requires label`);
+  if (preset2.hotkey != null) {
+    assert(typeof preset2.hotkey === "string", `lighting preset ${name} hotkey must be string`);
   }
-  if (preset.skyboxExposure != null) {
-    assert(Number.isFinite(preset.skyboxExposure), `lighting preset ${name} skyboxExposure must be numeric`);
+  if (preset2.skyboxExposure != null) {
+    assert(Number.isFinite(preset2.skyboxExposure), `lighting preset ${name} skyboxExposure must be numeric`);
   }
 }
 function validateLightingConfig(config) {
   assert(config && typeof config === "object", "lighting config must be an object");
   const presets = config.presets || {};
-  for (const [name, preset] of Object.entries(presets)) {
-    validatePreset(name, preset);
+  for (const [name, preset2] of Object.entries(presets)) {
+    validatePreset(name, preset2);
   }
   return config;
 }
@@ -70020,7 +70012,7 @@ class LightingSystem {
   };
   cycleLightingPreset = () => {
     const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
-      (preset) => !!LIGHTING_PRESETS$1[preset]
+      (preset2) => !!LIGHTING_PRESETS$1[preset2]
     );
     if (!presets.length) return;
     const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
@@ -71836,4 +71828,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-B97zeE4u.js.map
+//# sourceMappingURL=index-DQmd9CDT.js.map

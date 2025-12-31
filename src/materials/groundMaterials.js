@@ -207,9 +207,9 @@ function bindGroundTexture(material, label, url, repeat) {
 const CityGroundMaterial = (() => {
   const material = new THREE.MeshStandardMaterial({
     name: "CityGroundMaterial",
-    color: 0xffffff, // White to let texture show through clearly
-    roughness: 1.0,  // Maximum roughness for matte ground appearance
-    metalness: 0.0,  // No metallic reflection
+    color: preset.city.color,
+    roughness: preset.city.roughness,
+    metalness: preset.city.metalness,
     aoMapIntensity: 0, // Disable AO so texture is clearly visible
     map: null, // Will be set by bindGroundTexture
     envMapIntensity: 0.0, // Disable environment reflections completely
@@ -220,7 +220,8 @@ const CityGroundMaterial = (() => {
     name: material.name,
     color: material.color.getHexString(),
     roughness: material.roughness,
-    metalness: material.metalness
+    metalness: material.metalness,
+    preset: ACTIVE_PRESET
   });
 
   const roadsideMaskTexture = new THREE.DataTexture(
@@ -352,7 +353,7 @@ const CityGroundMaterial = (() => {
     material,
     "City",
     CITY_GROUND_URL,
-    120, // UV tiling scale for city ground
+    preset.city.repeat,
   );
 
   material.needsUpdate = true;
@@ -363,9 +364,9 @@ export { CityGroundMaterial };
 
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
-  color: 0xffffff, // White to let texture show
-  roughness: 0.9, // Higher roughness for natural ground
-  metalness: 0,
+  color: preset.inland.color,
+  roughness: preset.inland.roughness,
+  metalness: preset.inland.metalness,
   aoMapIntensity: 0,
 });
 
@@ -398,15 +399,15 @@ InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
   INLAND_GROUND_URL,
-  80, // UV tiling scale for inland ground
+  preset.inland.repeat,
 );
 InlandGroundMaterial.needsUpdate = true;
 
 export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
   name: "CoastalGroundMaterial",
-  color: 0xffffff, // White to let texture show
-  roughness: 0.9, // Higher roughness for sandy ground
-  metalness: 0,
+  color: preset.coastal.color,
+  roughness: preset.coastal.roughness,
+  metalness: preset.coastal.metalness,
   aoMapIntensity: 0,
 });
 // Coastal ground texture
@@ -414,7 +415,7 @@ CoastalGroundMaterial.map = bindGroundTexture(
   CoastalGroundMaterial,
   "Coastal",
   COASTAL_GROUND_URL,
-  16,
+  preset.coastal.repeat,
 );
 CoastalGroundMaterial.needsUpdate = true;
 
