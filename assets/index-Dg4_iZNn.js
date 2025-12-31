@@ -51263,7 +51263,7 @@ async function createCivicDistrict(scene2, options = {}) {
     if (cell.type === "road") {
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 8943462 : 6710886);
-      roadMesh.position.set(localX, localY, localZ);
+      roadMesh.position.set(localX, localY - 0.02, localZ);
       group.add(roadMesh);
     } else if (cell.type === "plaza") {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 11184810);
@@ -59256,7 +59256,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DNFZ5fWn.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DCF394IR.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59991,7 +59991,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Bq86KgCK.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cyb8J45W.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60939,8 +60939,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T00:13:44.351Z" : "",
-      sha: true ? "09908486c2d6e76b13624e8b2ae0dbfec69c3fa6" : ""
+      time: true ? "2025-12-31T00:16:13.043Z" : "",
+      sha: true ? "56ed35fac37d05cd9e4c84a5027d71d29718ca97" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71565,4 +71565,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BeuAE1DJ.js.map
+//# sourceMappingURL=index-Dg4_iZNn.js.map
