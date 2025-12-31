@@ -229,7 +229,7 @@ export function createCityGroundMaterial() {
 
     // 👀 DEBUG: City mask visualization (uncomment to enable)
     // Visualize city mask as red/green overlay to see where blending occurs
-    const DEBUG_CITY_MASK = false; // Set to true to enable visualization
+    const DEBUG_CITY_MASK = true; // Set to true to enable visualization
     if (DEBUG_CITY_MASK) {
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <dithering_fragment>',
