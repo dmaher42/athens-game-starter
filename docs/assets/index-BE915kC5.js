@@ -43673,7 +43673,8 @@ const CityGroundMaterial = (() => {
     metalness: material.metalness
   });
   const roadsideMaskTexture = new DataTexture(
-    new Uint8Array([255]),
+    new Uint8Array([0]),
+    // Set to 0 to disable roadside tint overlay
     1,
     1,
     RedFormat,
@@ -43683,8 +43684,8 @@ const CityGroundMaterial = (() => {
   roadsideMaskTexture.colorSpace = LinearSRGBColorSpace;
   material.userData = material.userData || {};
   material.userData.roadsideMask = roadsideMaskTexture;
-  material.userData.roadsideTint = new Color(0.8, 0.7, 0.6);
-  material.userData.roadsideRoughness = 0.9;
+  material.userData.roadsideTint = new Color(1, 1, 1);
+  material.userData.roadsideRoughness = 1;
   const baseOnBeforeCompile = material.onBeforeCompile;
   material.onBeforeCompile = (shader) => {
     if (typeof baseOnBeforeCompile === "function") {
@@ -59497,7 +59498,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C-kJhnMl.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DM-J7YLU.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60232,7 +60233,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DBYiB9OO.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-F1MZwqRz.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61180,7 +61181,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T21:47:28.811Z" : "",
+      time: true ? "2025-12-31T21:56:43.285Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71812,4 +71813,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-PXRag-ay.js.map
+//# sourceMappingURL=index-BE915kC5.js.map

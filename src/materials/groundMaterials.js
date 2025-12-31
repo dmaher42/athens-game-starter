@@ -173,7 +173,7 @@ const CityGroundMaterial = (() => {
   });
 
   const roadsideMaskTexture = new THREE.DataTexture(
-    new Uint8Array([255]),
+    new Uint8Array([0]), // Set to 0 to disable roadside tint overlay
     1,
     1,
     THREE.RedFormat,
@@ -184,8 +184,8 @@ const CityGroundMaterial = (() => {
 
   material.userData = material.userData || {};
   material.userData.roadsideMask = roadsideMaskTexture;
-  material.userData.roadsideTint = new THREE.Color(0.8, 0.7, 0.6);
-  material.userData.roadsideRoughness = 0.9;
+  material.userData.roadsideTint = new THREE.Color(1.0, 1.0, 1.0); // Neutral white tint
+  material.userData.roadsideRoughness = 1.0; // Match base material roughness
 
   // ✅ STEP 4: onBeforeCompile is scoped to this material instance only
   // This shader modification only applies to CityGroundMaterial, not other materials
