@@ -43527,6 +43527,23 @@ const RENDER_LAYERS = Object.freeze({
   DETAIL: 2
 });
 const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+let terrainMeshReference = null;
+function setTerrainMeshForUpdates(terrain) {
+  terrainMeshReference = terrain;
+  console.log("[Ground] Terrain mesh registered for material updates");
+}
+function triggerTerrainUpdate() {
+  if (terrainMeshReference && terrainMeshReference.material) {
+    if (Array.isArray(terrainMeshReference.material)) {
+      terrainMeshReference.material.forEach((mat) => {
+        mat.needsUpdate = true;
+      });
+    } else {
+      terrainMeshReference.material.needsUpdate = true;
+    }
+    console.log("[Ground] Terrain materials flagged for update");
+  }
+}
 const textureLoader$1 = new TextureLoader();
 const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
 const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
@@ -43594,8 +43611,13 @@ function bindGroundTexture(material, label, url, repeat) {
       loadedTex.wrapS = loadedTex.wrapT = RepeatWrapping;
       loadedTex.repeat.set(repeat, repeat);
       material.map = loadedTex;
+      material.map.needsUpdate = true;
       material.needsUpdate = true;
-      console.log(`[Ground] ✓ ${label} texture applied to material`);
+      triggerTerrainUpdate();
+      console.log(`[Ground] ✓ ${label} texture applied to material`, {
+        materialHasMap: !!material.map,
+        mapSource: material.map?.source?.currentSrc
+      });
     },
     void 0,
     (error) => {
@@ -44111,6 +44133,7 @@ function createTerrain(scene2) {
     terrain.geometry.setAttribute("uv", uvAttr);
     console.warn("[Terrain] UVs were missing – dummy UVs injected");
   }
+  setTerrainMeshForUpdates(terrain);
   scene2.add(terrain);
   const stride = segments + 1;
   terrain.userData.getHeightAt = (worldX, worldZ) => {
@@ -59379,7 +59402,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-sVzZjnbo.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BKPa4a6_.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60114,7 +60137,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-FqbWYuvZ.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-J4gGNNNg.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61062,8 +61085,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T12:11:40.362Z" : "",
-      sha: true ? "0a3ffe2c7df8dcd52656d396fe0c3d76b3adcef9" : ""
+      time: true ? "2025-12-31T12:18:02.321Z" : "",
+      sha: true ? "d4af8515237715238c92bc59188b2a77d09c7692" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71694,4 +71717,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-B8gqOA-9.js.map
+//# sourceMappingURL=index-B90pDF9P.js.map
