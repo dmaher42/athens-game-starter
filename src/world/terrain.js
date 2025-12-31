@@ -655,32 +655,58 @@ export function updateTerrainCoverageMask(terrain, options = {}) {
   const data = state.maskData;
   data.fill(0);
 
-  const paintCircle = (worldX, worldZ, radius) => {
+  const roadMaskResolution = resolution;
+  let roadMaskState = terrain.userData.roadsideMaskState;
+  if (!roadMaskState || roadMaskState.maskSize !== roadMaskResolution) {
+    const maskData = new Uint8Array(roadMaskResolution * roadMaskResolution);
+    const maskTexture = new THREE.DataTexture(
+      maskData,
+      roadMaskResolution,
+      roadMaskResolution,
+      THREE.RedFormat,
+      THREE.UnsignedByteType,
+    );
+    maskTexture.needsUpdate = true;
+    maskTexture.colorSpace = THREE.LinearSRGBColorSpace;
+    maskTexture.magFilter = THREE.LinearFilter;
+    maskTexture.minFilter = THREE.LinearMipMapLinearFilter;
+    roadMaskState = {
+      maskData,
+      maskTexture,
+      maskSize: roadMaskResolution,
+    };
+    terrain.userData.roadsideMaskState = roadMaskState;
+  }
+  roadMaskState.maskData.fill(0);
+
+  const paintCircle = (targetData, targetResolution, worldX, worldZ, radius) => {
     const u = (worldX + halfSize) / terrainSize;
     const v = (worldZ + halfSize) / terrainSize;
     if (u < 0 || u > 1 || v < 0 || v > 1) return;
 
-    const px = Math.round(u * (resolution - 1));
-    const py = Math.round(v * (resolution - 1));
-    const pr = Math.ceil((radius / terrainSize) * resolution);
+    const px = Math.round(u * (targetResolution - 1));
+    const py = Math.round(v * (targetResolution - 1));
+    const pr = Math.ceil((radius / terrainSize) * targetResolution);
     const r2 = pr * pr;
 
     const minX = Math.max(0, px - pr);
-    const maxX = Math.min(resolution - 1, px + pr);
+    const maxX = Math.min(targetResolution - 1, px + pr);
     const minY = Math.max(0, py - pr);
-    const maxY = Math.min(resolution - 1, py + pr);
+    const maxY = Math.min(targetResolution - 1, py + pr);
 
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         const dx = x - px;
         const dy = y - py;
         if (dx * dx + dy * dy <= r2) {
-          const index = y * resolution + x;
-          data[index] = 255;
+          const index = y * targetResolution + x;
+          targetData[index] = 255;
         }
       }
     }
   };
+
+  const roadBuffer = Number.isFinite(options?.roadBuffer) ? options.roadBuffer : 2;
 
   const paintCurve = (curve, width = 3) => {
     if (!curve?.getPoint) return;
@@ -688,8 +714,15 @@ export function updateTerrainCoverageMask(terrain, options = {}) {
     for (let i = 0; i <= samples; i++) {
       const t = i / samples;
       const point = curve.getPoint(t);
-      const radius = Math.max(0.5, width * 0.65);
-      paintCircle(point.x, point.z, radius);
+      const radius = Math.max(0.5, width * 0.65 + roadBuffer);
+      paintCircle(data, resolution, point.x, point.z, radius);
+      paintCircle(
+        roadMaskState.maskData,
+        roadMaskState.maskSize,
+        point.x,
+        point.z,
+        radius,
+      );
     }
   };
 
@@ -700,7 +733,7 @@ export function updateTerrainCoverageMask(terrain, options = {}) {
     const { x, z, width, depth } = placement;
     if (!Number.isFinite(x) || !Number.isFinite(z)) return;
     const radius = Math.max(1.2, Math.hypot(width ?? 1, depth ?? 1) * 0.6);
-    paintCircle(x, z, radius);
+    paintCircle(data, resolution, x, z, radius);
   });
 
   const mainRoad = options?.mainRoadCurve ?? null;
@@ -719,5 +752,12 @@ export function updateTerrainCoverageMask(terrain, options = {}) {
   }
   if (state.uniforms?.maskStrength) {
     state.uniforms.maskStrength.value = state.maskStrength ?? 1;
+  }
+
+  roadMaskState.maskTexture.needsUpdate = true;
+  CityGroundMaterial.userData.roadside.maskTexture = roadMaskState.maskTexture;
+  const roadsideUniforms = CityGroundMaterial.userData.roadsideUniforms;
+  if (roadsideUniforms?.uRoadsideMask) {
+    roadsideUniforms.uRoadsideMask.value = roadMaskState.maskTexture;
   }
 }

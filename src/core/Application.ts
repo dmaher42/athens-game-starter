@@ -661,7 +661,14 @@ export class Application {
         mainRoadCurve: mainRoad ?? null,
         mainRoadWidth: MAIN_ROAD_WIDTH,
         roadWidth: 3.2,
+        roadBuffer: 2,
       });
+      if (!scene.userData?.roadsideBufferLogged) {
+        scene.userData = scene.userData || {};
+        scene.userData.roadsideBufferLogged = true;
+        console.info("[Roads] Roadside buffer zone active");
+        console.info("[Roads] City ground applied under roads");
+      }
 
       scatterGroundProps(worldRoot, terrain, {
         buildingPlacements: harborCity?.userData?.['buildingPlacements'] ?? [],
