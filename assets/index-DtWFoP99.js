@@ -43530,18 +43530,9 @@ const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV":
 const textureLoader$1 = new TextureLoader();
 const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
 const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
-const INLAND_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-const COASTAL_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-const CITY_GROUND_PNG_URL = `${RESOLVED_BASE_URL}textures/ground/shader.png`;
-const ROADSIDE_MASK_FALLBACK = new DataTexture(
-  new Uint8Array([0]),
-  1,
-  1,
-  RedFormat,
-  UnsignedByteType
-);
-ROADSIDE_MASK_FALLBACK.needsUpdate = true;
-ROADSIDE_MASK_FALLBACK.colorSpace = LinearSRGBColorSpace;
+const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
+const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
+const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
 let warnedTextureFailure = false;
 function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader$1.load(
@@ -43570,6 +43561,12 @@ const CityGroundMaterial = new MeshStandardMaterial({
   roughness: 0.6,
   metalness: 0
 });
+CityGroundMaterial.map = bindGroundTexture(
+  CityGroundMaterial,
+  "City",
+  CITY_GROUND_URL,
+  32
+);
 const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 9072462,
@@ -43579,7 +43576,7 @@ const InlandGroundMaterial = new MeshStandardMaterial({
 InlandGroundMaterial.map = bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
-  INLAND_GROUND_PNG_URL,
+  INLAND_GROUND_URL,
   32
 );
 const CoastalGroundMaterial = new MeshStandardMaterial({
@@ -43591,7 +43588,7 @@ const CoastalGroundMaterial = new MeshStandardMaterial({
 CoastalGroundMaterial.map = bindGroundTexture(
   CoastalGroundMaterial,
   "Coastal",
-  COASTAL_GROUND_PNG_URL,
+  COASTAL_GROUND_URL,
   16
 );
 const SEA_SIDE = "east";
@@ -44146,11 +44143,6 @@ function updateTerrainCoverageMask(terrain, options = {}) {
     state.uniforms.maskStrength.value = state.maskStrength ?? 1;
   }
   roadMaskState.maskTexture.needsUpdate = true;
-  CityGroundMaterial.userData.roadside.maskTexture = roadMaskState.maskTexture;
-  const roadsideUniforms = CityGroundMaterial.userData.roadsideUniforms;
-  if (roadsideUniforms?.uRoadsideMask) {
-    roadsideUniforms.uRoadsideMask.value = roadMaskState.maskTexture;
-  }
 }
 const DEFAULT_HORIZON_RADIUS = 1700;
 const DEFAULT_FADE_WIDTH = 320;
@@ -59222,7 +59214,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D6SJ-bue.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D9uqmrVW.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59957,7 +59949,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DWpggfDp.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BvDs92VL.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60905,8 +60897,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T03:57:17.521Z" : "",
-      sha: true ? "bcc0a0a684b97be0e59eebb1f3d2b68891a56ead" : ""
+      time: true ? "2025-12-31T04:36:16.198Z" : "",
+      sha: true ? "b094d556899f041ed3681af0ed351c636d5a447c" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71537,4 +71529,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DnlkomQc.js.map
+//# sourceMappingURL=index-DtWFoP99.js.map
