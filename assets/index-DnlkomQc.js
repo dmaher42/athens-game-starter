@@ -43570,37 +43570,6 @@ const CityGroundMaterial = new MeshStandardMaterial({
   roughness: 0.6,
   metalness: 0
 });
-CityGroundMaterial.map = bindGroundTexture(
-  CityGroundMaterial,
-  "City",
-  CITY_GROUND_PNG_URL,
-  32
-);
-CityGroundMaterial.userData.roadside = {
-  maskTexture: ROADSIDE_MASK_FALLBACK,
-  tint: new Color(1.08, 1.06, 1.04),
-  roughness: 0.75
-};
-CityGroundMaterial.onBeforeCompile = (shader) => {
-  shader.uniforms.uRoadsideMask = {
-    value: CityGroundMaterial.userData?.roadside?.maskTexture ?? ROADSIDE_MASK_FALLBACK
-  };
-  shader.uniforms.uRoadsideTint = {
-    value: CityGroundMaterial.userData?.roadside?.tint ?? new Color(1, 1, 1)
-  };
-  shader.uniforms.uRoadsideRoughness = {
-    value: CityGroundMaterial.userData?.roadside?.roughness ?? CityGroundMaterial.roughness
-  };
-  CityGroundMaterial.userData.roadsideUniforms = shader.uniforms;
-  shader.fragmentShader = shader.fragmentShader.replace(
-    "#include <roughnessmap_fragment>",
-    `#include <roughnessmap_fragment>
-     float roadsideWeight = texture2D(uRoadsideMask, vUv).r;
-     roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);
-     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
-     roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
-  );
-};
 const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
   color: 9072462,
@@ -59253,7 +59222,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DFpALKfq.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D6SJ-bue.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59988,7 +59957,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BSC_yCL5.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DWpggfDp.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60936,8 +60905,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T03:43:23.500Z" : "",
-      sha: true ? "973eba662551b0c6e128b2affd35c88f80af8571" : ""
+      time: true ? "2025-12-31T03:57:17.521Z" : "",
+      sha: true ? "bcc0a0a684b97be0e59eebb1f3d2b68891a56ead" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71568,4 +71537,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-r9bgIEod.js.map
+//# sourceMappingURL=index-DnlkomQc.js.map
