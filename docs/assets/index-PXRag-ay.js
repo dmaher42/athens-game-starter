@@ -43660,8 +43660,11 @@ const CityGroundMaterial = (() => {
     // No metallic reflection
     aoMapIntensity: 0,
     // Disable AO so texture is clearly visible
-    map: null
+    map: null,
     // Will be set by bindGroundTexture
+    envMapIntensity: 0,
+    // Disable environment reflections completely
+    flatShading: false
   });
   console.log("[Ground] 🏗️ CityGroundMaterial created:", {
     name: material.name,
@@ -43740,8 +43743,8 @@ const CityGroundMaterial = (() => {
       "#include <map_fragment>",
       `
       #include <map_fragment>
-      // Boost contrast slightly to enhance texture visibility
-      diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.15));
+      // Light contrast boost to enhance texture visibility without darkening
+      diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.05));
       `
     );
   };
@@ -59494,7 +59497,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-9diEOnV6.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C-kJhnMl.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60229,7 +60232,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BMR3u-al.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DBYiB9OO.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61177,7 +61180,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T21:37:10.831Z" : "",
+      time: true ? "2025-12-31T21:47:28.811Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71809,4 +71812,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BaVyWmtb.js.map
+//# sourceMappingURL=index-PXRag-ay.js.map

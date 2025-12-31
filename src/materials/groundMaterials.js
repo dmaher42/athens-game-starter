@@ -161,6 +161,8 @@ const CityGroundMaterial = (() => {
     metalness: 0.0,  // No metallic reflection
     aoMapIntensity: 0, // Disable AO so texture is clearly visible
     map: null, // Will be set by bindGroundTexture
+    envMapIntensity: 0.0, // Disable environment reflections completely
+    flatShading: false,
   });
   
   console.log('[Ground] 🏗️ CityGroundMaterial created:', {
@@ -263,13 +265,13 @@ const CityGroundMaterial = (() => {
       roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
     );
 
-    // Add contrast boost to make textures more visible
+    // Reduce contrast boost for better texture visibility
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <map_fragment>',
       `
       #include <map_fragment>
-      // Boost contrast slightly to enhance texture visibility
-      diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.15));
+      // Light contrast boost to enhance texture visibility without darkening
+      diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.05));
       `
     );
 
