@@ -59573,7 +59573,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BwHu8FOT.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BZL8Omrb.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60100,11 +60100,11 @@ class GLTFMeshStandardSGMaterial extends MeshStandardMaterial {
     const lightPhysicalFragmentChunk = [
       "PhysicalMaterial material;",
       "material.diffuseColor = diffuseColor.rgb * ( 1. - max( specularFactor.r, max( specularFactor.g, specularFactor.b ) ) );",
-      "vec3 dxy = max( abs( dFdx( geometryNormal ) ), abs( dFdy( geometryNormal ) ) );",
+      "vec3 dxy = max( abs( dFdx( vNormal ) ), abs( dFdy( vNormal ) ) );",
       "float geometryRoughness = max( max( dxy.x, dxy.y ), dxy.z );",
-      "material.specularRoughness = max( 1.0 - glossinessFactor, 0.0525 ); // 0.0525 corresponds to the base mip of a 256 cubemap.",
-      "material.specularRoughness += geometryRoughness;",
-      "material.specularRoughness = min( material.specularRoughness, 1.0 );",
+      "material.roughness = max( 1.0 - glossinessFactor, 0.0525 );",
+      "material.roughness += geometryRoughness;",
+      "material.roughness = min( material.roughness, 1.0 );",
       "material.specularColor = specularFactor;"
     ].join("\n");
     const uniforms = {
@@ -60308,7 +60308,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B6UodC-D.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CEXi2T4G.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61262,7 +61262,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T10:53:49.164Z" : "",
+      time: true ? "2026-01-01T10:58:44.195Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71909,4 +71909,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BUx9Xlx5.js.map
+//# sourceMappingURL=index-BTRW2rdH.js.map

@@ -65,11 +65,11 @@ class GLTFMeshStandardSGMaterial extends THREE.MeshStandardMaterial {
     const lightPhysicalFragmentChunk = [
       "PhysicalMaterial material;",
       "material.diffuseColor = diffuseColor.rgb * ( 1. - max( specularFactor.r, max( specularFactor.g, specularFactor.b ) ) );",
-      "vec3 dxy = max( abs( dFdx( geometryNormal ) ), abs( dFdy( geometryNormal ) ) );",
+      "vec3 dxy = max( abs( dFdx( vNormal ) ), abs( dFdy( vNormal ) ) );",
       "float geometryRoughness = max( max( dxy.x, dxy.y ), dxy.z );",
-      "material.specularRoughness = max( 1.0 - glossinessFactor, 0.0525 ); // 0.0525 corresponds to the base mip of a 256 cubemap.",
-      "material.specularRoughness += geometryRoughness;",
-      "material.specularRoughness = min( material.specularRoughness, 1.0 );",
+      "material.roughness = max( 1.0 - glossinessFactor, 0.0525 );",
+      "material.roughness += geometryRoughness;",
+      "material.roughness = min( material.roughness, 1.0 );",
       "material.specularColor = specularFactor;",
     ].join("\n");
 
