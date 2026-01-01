@@ -43562,26 +43562,26 @@ const GROUND_MATERIAL_PRESETS = {
     city: {
       color: new Color(16777215),
       // Pure white for no tinting
-      roughness: 0.95,
+      roughness: 0.65,
+      // Reduced from 0.95 - allows texture detail to show
       metalness: 0,
       repeat: 12
-      // Increased repeat for more visible texture detail
     },
     inland: {
       color: new Color(16777215),
       // Pure white for no tinting
-      roughness: 1,
+      roughness: 0.7,
+      // Reduced from 1.0
       metalness: 0,
       repeat: 12
-      // Increased repeat for more visible texture detail
     },
     coastal: {
       color: new Color(16777215),
       // Pure white for no tinting
-      roughness: 1,
+      roughness: 0.7,
+      // Reduced from 1.0
       metalness: 0,
       repeat: 10
-      // Increased repeat for more visible texture detail
     }
   }
 };
@@ -43710,6 +43710,9 @@ const CityGroundMaterial = (() => {
     preset: ACTIVE_PRESET
   });
   material.onBeforeCompile = (shader) => {
+    if (material.map) {
+      material.needsUpdate = true;
+    }
   };
   bindGroundTexture(
     material,
@@ -59571,7 +59574,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DP9hXk0g.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-6hmwrghI.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60306,7 +60309,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-C5Bh4O6R.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-a4HAljfL.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61254,7 +61257,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T09:33:05.707Z" : "",
+      time: true ? "2026-01-01T09:45:02.725Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71901,4 +71904,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CttItXU7.js.map
+//# sourceMappingURL=index-IT0HETH7.js.map

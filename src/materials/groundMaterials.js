@@ -65,21 +65,21 @@ const GROUND_MATERIAL_PRESETS = {
   default: {
     city: {
       color: new THREE.Color(0xffffff), // Pure white for no tinting
-      roughness: 0.95,
+      roughness: 0.65, // Reduced from 0.95 - allows texture detail to show
       metalness: 0.0,
-      repeat: 12, // Increased repeat for more visible texture detail
+      repeat: 12,
     },
     inland: {
       color: new THREE.Color(0xffffff), // Pure white for no tinting
-      roughness: 1.0,
+      roughness: 0.7, // Reduced from 1.0
       metalness: 0.0,
-      repeat: 12, // Increased repeat for more visible texture detail
+      repeat: 12,
     },
     coastal: {
       color: new THREE.Color(0xffffff), // Pure white for no tinting
-      roughness: 1.0,
+      roughness: 0.7, // Reduced from 1.0
       metalness: 0.0,
-      repeat: 10, // Increased repeat for more visible texture detail
+      repeat: 10,
     },
   },
 };
@@ -233,8 +233,13 @@ const CityGroundMaterial = (() => {
 
   // Add shader hook to ensure texture sampling is enabled
   material.onBeforeCompile = (shader) => {
-    // Just mark that this material should sample its texture
-    // The Three.js standard shader will automatically use material.map if it exists
+    // Ensure the standard shader samples the texture if it exists
+    // This is necessary because the texture might be loaded after shader compilation
+    if (material.map) {
+      // The standard Three.js shader will use material.map if it exists
+      // We just need to ensure it's flagged for update
+      material.needsUpdate = true;
+    }
   };
 
   // Load texture - simpler, no shader modification
