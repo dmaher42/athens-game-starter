@@ -43527,13 +43527,15 @@ const RENDER_LAYERS = Object.freeze({
   DETAIL: 2
 });
 const textureLoader$1 = new TextureLoader();
+const BASE_PATH = "/athens-game-starter/";
 function loadTexture$1(url) {
-  console.log(`[Ground] Loading texture: ${url}`);
+  const fullUrl = BASE_PATH + url;
+  console.log(`[Ground] Loading texture: ${fullUrl}`);
   const texture = textureLoader$1.load(
-    url,
-    (tex) => console.log(`[Ground] ✅ Loaded: ${url}`),
+    fullUrl,
+    (tex) => console.log(`[Ground] ✅ Loaded: ${fullUrl}`),
     void 0,
-    (err2) => console.error(`[Ground] ❌ Failed: ${url}`, err2)
+    (err2) => console.error(`[Ground] ❌ Failed: ${fullUrl}`, err2)
   );
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
@@ -59211,7 +59213,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-RBHUp690.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CQpSrNKb.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59946,7 +59948,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-W6NDsQuI.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Co-Dtbsu.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60900,8 +60902,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T11:52:22.144Z" : "",
-      sha: true ? "33e4eafb41b74d89880d50acea9590a9fe08dc0d" : ""
+      time: true ? "2026-01-01T11:59:10.451Z" : "",
+      sha: true ? "c9fb7656e7c6f6d86148bf7a727f3659c6704efc" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71551,4 +71553,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-3yd93PBq.js.map
+//# sourceMappingURL=index-51jXwc3c.js.map
