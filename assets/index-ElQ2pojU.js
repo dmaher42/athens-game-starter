@@ -59573,7 +59573,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DAK8X4Pq.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BVezEvkY.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60308,7 +60308,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BWq6UyxG.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CSHbwfbp.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61262,8 +61262,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T10:59:40.740Z" : "",
-      sha: true ? "f6dcd0ca0f26c780f013ead8ae7d4a7289d9992a" : ""
+      time: true ? "2026-01-01T11:10:50.257Z" : "",
+      sha: true ? "a51c5480ce51ab56880f71e5d04676abd61aa73a" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -70832,12 +70832,17 @@ class PlayerSystem {
           throw new Error("No hero GLB candidates reachable");
         }
         const { root, gltf } = loadedHero;
-        root.scale.set(1, 1, 1);
         root.position.set(0, 0, 0);
+        root.updateMatrixWorld(true);
         root.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+            child.frustumCulled = false;
+            if (child.geometry) {
+              child.geometry.computeBoundingBox();
+              child.geometry.computeBoundingSphere();
+            }
           }
         });
         character.initializeFromGLTF(root, gltf.animations);
@@ -71909,4 +71914,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-ByCUxY39.js.map
+//# sourceMappingURL=index-ElQ2pojU.js.map
