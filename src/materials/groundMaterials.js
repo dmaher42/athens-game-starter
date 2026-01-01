@@ -203,6 +203,7 @@ function bindGroundTexture(material, label, url, repeat) {
       console.log(`[Ground] ✅ ${label} texture applied to material`, {
         materialHasMap: !!material.map,
         mapIsValid: material.map?.image?.width > 0,
+        materialColor: material.color?.getHexString(),
         repeat: repeat,
         wrapS: material.map?.wrapS,
         wrapT: material.map?.wrapT

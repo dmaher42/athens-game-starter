@@ -43675,6 +43675,7 @@ function bindGroundTexture(material, label, url, repeat) {
       console.log(`[Ground] ✅ ${label} texture applied to material`, {
         materialHasMap: !!material.map,
         mapIsValid: material.map?.image?.width > 0,
+        materialColor: material.color?.getHexString(),
         repeat,
         wrapS: material.map?.wrapS,
         wrapT: material.map?.wrapT
@@ -59603,7 +59604,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-1Sb4Kmqd.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CU-37glh.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60338,7 +60339,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DJsiEK5p.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DC-gA5aa.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61286,7 +61287,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T00:22:30.749Z" : "",
+      time: true ? "2026-01-01T00:27:36.788Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71933,4 +71934,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-D0KfiwvE.js.map
+//# sourceMappingURL=index-C9Wk7sk-.js.map
