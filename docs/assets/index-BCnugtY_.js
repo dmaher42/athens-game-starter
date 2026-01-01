@@ -42158,7 +42158,7 @@ const __vitePreload = function preload(baseModule, deps, importerUrl) {
     return baseModule().catch(handlePreloadError);
   });
 };
-const __vite_import_meta_env__$5 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const REPO_SEGMENT$1 = "athens-game-starter";
 function normalizeAbsoluteBaseUrl(value) {
   if (typeof value !== "string") return value;
@@ -42184,7 +42184,7 @@ function normalizeRelativeBaseUrl(value) {
 }
 function resolveBaseUrl$4() {
   let base = "/";
-  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$5 && true) {
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true) {
     base = "/athens-game-starter/";
   }
   if (/^(?:[a-z]+:)?\/\//i.test(base)) {
@@ -43526,7 +43526,6 @@ const RENDER_LAYERS = Object.freeze({
   TERRAIN: 1,
   DETAIL: 2
 });
-const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 let terrainMeshReference = null;
 function setTerrainMeshForUpdates(terrain) {
   terrainMeshReference = terrain;
@@ -43552,26 +43551,14 @@ function triggerTerrainUpdate() {
   }
 }
 const textureLoader$1 = new TextureLoader();
-const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
-const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
-const finalBaseUrl = (() => {
-  if (RESOLVED_BASE_URL !== "/" && RESOLVED_BASE_URL !== "") return RESOLVED_BASE_URL;
-  if (typeof window !== "undefined" && window.location.pathname.includes("/athens-game-starter/")) {
-    return "/athens-game-starter/";
-  }
-  return RESOLVED_BASE_URL;
-})();
-const CITY_GROUND_URL = `${finalBaseUrl}textures/ground/dirt-albedo.jpg`;
-const INLAND_GROUND_URL = `${finalBaseUrl}textures/grass/albedo.jpg`;
-const COASTAL_GROUND_URL = `${finalBaseUrl}textures/sand/albedo.jpg`;
+const CITY_GROUND_URL = "/athens-game-starter/textures/ground/dirt-albedo.jpg";
+const INLAND_GROUND_URL = "/athens-game-starter/textures/grass/albedo.jpg";
+const COASTAL_GROUND_URL = "/athens-game-starter/textures/sand/albedo.jpg";
 console.log("[Ground] Texture URL Configuration:", {
-  BASE_URL: BASE_URL$1,
-  RESOLVED_BASE_URL,
-  finalBaseUrl,
   CITY_GROUND_URL,
   INLAND_GROUND_URL,
   COASTAL_GROUND_URL,
-  currentPathname: typeof window !== "undefined" ? window.location.pathname : "N/A"
+  currentLocation: typeof window !== "undefined" ? window.location.href : "N/A"
 });
 const GROUND_MATERIAL_PRESETS = {
   default: {
@@ -59622,7 +59609,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CQm9vUf-.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Cxy1fHKG.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60357,7 +60344,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BpmxC4Bo.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BjDxJ76z.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61311,7 +61298,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T11:30:46.883Z" : "",
+      time: true ? "2026-01-01T11:36:29.667Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71963,4 +71950,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BH3ywMs9.js.map
+//# sourceMappingURL=index-BCnugtY_.js.map

@@ -49,40 +49,18 @@ function triggerTerrainUpdate() {
 
 const textureLoader = new THREE.TextureLoader();
 
-// Vite automatically sets import.meta.env.BASE_URL from vite.config.ts base option
-const BASE_URL =
-  typeof import.meta !== "undefined" &&
-  import.meta.env &&
-  typeof import.meta.env.BASE_URL === "string"
-    ? import.meta.env.BASE_URL
-    : "/";
-const RESOLVED_BASE_URL = BASE_URL.endsWith("/") ? BASE_URL : `${BASE_URL}/`;
-
-// Fallback: if BASE_URL is still just "/", try to detect it from window location
-const finalBaseUrl = (() => {
-  if (RESOLVED_BASE_URL !== "/" && RESOLVED_BASE_URL !== "") return RESOLVED_BASE_URL;
-  
-  // Check if we're on GitHub Pages (contains /athens-game-starter/ in URL)
-  if (typeof window !== "undefined" && window.location.pathname.includes("/athens-game-starter/")) {
-    return "/athens-game-starter/";
-  }
-  return RESOLVED_BASE_URL;
-})();
-
-// Try multiple URL patterns - some sites have textures in public, some in docs, some at root
-const CITY_GROUND_URL = `${finalBaseUrl}textures/ground/dirt-albedo.jpg`;
-const INLAND_GROUND_URL = `${finalBaseUrl}textures/grass/albedo.jpg`;
-const COASTAL_GROUND_URL = `${finalBaseUrl}textures/sand/albedo.jpg`;
+// Use absolute paths with the GitHub Pages base path
+// This works on GitHub Pages: https://dmaher42.github.io/athens-game-starter/
+const CITY_GROUND_URL = "/athens-game-starter/textures/ground/dirt-albedo.jpg";
+const INLAND_GROUND_URL = "/athens-game-starter/textures/grass/albedo.jpg";
+const COASTAL_GROUND_URL = "/athens-game-starter/textures/sand/albedo.jpg";
 
 // Log the URL configuration for debugging
 console.log('[Ground] Texture URL Configuration:', {
-  BASE_URL: BASE_URL,
-  RESOLVED_BASE_URL: RESOLVED_BASE_URL,
-  finalBaseUrl: finalBaseUrl,
   CITY_GROUND_URL: CITY_GROUND_URL,
   INLAND_GROUND_URL: INLAND_GROUND_URL,
   COASTAL_GROUND_URL: COASTAL_GROUND_URL,
-  currentPathname: typeof window !== 'undefined' ? window.location.pathname : 'N/A',
+  currentLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
 });
 
 // Simple preset system for ground materials; defaults to "default"
