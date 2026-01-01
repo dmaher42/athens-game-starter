@@ -248,7 +248,7 @@ const preset = GROUND_MATERIAL_PRESETS[ACTIVE_PRESET] || GROUND_MATERIAL_PRESETS
 const CityGroundMaterial = (() => {
   const material = new THREE.MeshStandardMaterial({
     name: "CityGroundMaterial",
-    color: preset.city.color,
+    color: 0xffffff, // White so texture shows without tinting
     roughness: preset.city.roughness,
     metalness: preset.city.metalness,
     aoMapIntensity: 0, // Disable AO so texture is clearly visible
@@ -405,7 +405,7 @@ export { CityGroundMaterial };
 
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
-  color: preset.inland.color,
+  color: 0xffffff, // White so texture shows without tinting
   roughness: preset.inland.roughness,
   metalness: preset.inland.metalness,
   aoMapIntensity: 0,
@@ -446,7 +446,7 @@ InlandGroundMaterial.needsUpdate = true;
 
 export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
   name: "CoastalGroundMaterial",
-  color: preset.coastal.color,
+  color: 0xffffff, // White so texture shows without tinting
   roughness: preset.coastal.roughness,
   metalness: preset.coastal.metalness,
   aoMapIntensity: 0,
