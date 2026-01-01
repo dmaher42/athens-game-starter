@@ -43551,14 +43551,19 @@ function triggerTerrainUpdate() {
   }
 }
 const textureLoader$1 = new TextureLoader();
-const CITY_GROUND_URL = "/athens-game-starter/textures/ground/dirt-albedo.jpg";
-const INLAND_GROUND_URL = "/athens-game-starter/textures/grass/albedo.jpg";
-const COASTAL_GROUND_URL = "/athens-game-starter/textures/sand/albedo.jpg";
+const isGitHubPages = typeof window !== "undefined" && (window.location.hostname === "dmaher42.github.io" || window.location.pathname.startsWith("/athens-game-starter/"));
+const basePath = isGitHubPages ? "/athens-game-starter" : "";
+const CITY_GROUND_URL = `${basePath}/textures/ground/dirt-albedo.jpg`;
+const INLAND_GROUND_URL = `${basePath}/textures/grass/albedo.jpg`;
+const COASTAL_GROUND_URL = `${basePath}/textures/sand/albedo.jpg`;
 console.log("[Ground] Texture URL Configuration:", {
+  isGitHubPages,
+  basePath,
   CITY_GROUND_URL,
   INLAND_GROUND_URL,
   COASTAL_GROUND_URL,
-  currentLocation: typeof window !== "undefined" ? window.location.href : "N/A"
+  hostname: typeof window !== "undefined" ? window.location.hostname : "N/A",
+  pathname: typeof window !== "undefined" ? window.location.pathname : "N/A"
 });
 const GROUND_MATERIAL_PRESETS = {
   default: {
@@ -59609,7 +59614,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BJliN7c_.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CC8Ki0im.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60344,7 +60349,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B0vJL6uG.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DF9PHLTx.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61298,8 +61303,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T11:37:12.691Z" : "",
-      sha: true ? "9899b0d56bc96380b4f6b1ded9518c85192c6d10" : ""
+      time: true ? "2026-01-01T11:38:01.361Z" : "",
+      sha: true ? "f1aadca4696c894d1a58e36748bfa1be42087fb6" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71950,4 +71955,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-C8AkjWHQ.js.map
+//# sourceMappingURL=index-BpUaAHe1.js.map
