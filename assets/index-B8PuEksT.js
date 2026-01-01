@@ -43554,9 +43554,25 @@ function triggerTerrainUpdate() {
 const textureLoader$1 = new TextureLoader();
 const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
 const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
-const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
-const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
-const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
+const finalBaseUrl = (() => {
+  if (RESOLVED_BASE_URL !== "/" && RESOLVED_BASE_URL !== "") return RESOLVED_BASE_URL;
+  if (typeof window !== "undefined" && window.location.pathname.includes("/athens-game-starter/")) {
+    return "/athens-game-starter/";
+  }
+  return RESOLVED_BASE_URL;
+})();
+const CITY_GROUND_URL = `${finalBaseUrl}textures/ground/dirt-albedo.jpg`;
+const INLAND_GROUND_URL = `${finalBaseUrl}textures/grass/albedo.jpg`;
+const COASTAL_GROUND_URL = `${finalBaseUrl}textures/sand/albedo.jpg`;
+console.log("[Ground] Texture URL Configuration:", {
+  BASE_URL: BASE_URL$1,
+  RESOLVED_BASE_URL,
+  finalBaseUrl,
+  CITY_GROUND_URL,
+  INLAND_GROUND_URL,
+  COASTAL_GROUND_URL,
+  currentPathname: typeof window !== "undefined" ? window.location.pathname : "N/A"
+});
 const GROUND_MATERIAL_PRESETS = {
   default: {
     city: {
@@ -43617,6 +43633,17 @@ const fallbackDiffuseTexture = (() => {
 })();
 function bindGroundTexture(material, label, url, repeat) {
   console.log(`[Ground] 🔄 Loading ${label} texture from: ${url}`);
+  fetch(url, { method: "HEAD" }).then((r) => {
+    console.log(`[Ground] URL check for ${label}: ${r.status} ${r.statusText} - ${url}`);
+  }).catch((e) => {
+    console.error(`[Ground] URL fetch check FAILED for ${label}: ${e.message} - ${url}`);
+  });
+  console.log(`[Ground] Material info:`, {
+    materialName: material.name,
+    materialType: material.constructor.name,
+    hasMap: !!material.map,
+    mapColorSpace: material.map?.colorSpace
+  });
   const placeholderData = new Uint8Array(4).fill(192);
   const placeholderTex = new DataTexture(
     placeholderData,
@@ -43626,8 +43653,13 @@ function bindGroundTexture(material, label, url, repeat) {
     UnsignedByteType
   );
   placeholderTex.needsUpdate = true;
+  placeholderTex.colorSpace = SRGBColorSpace;
   material.map = placeholderTex;
   material.needsUpdate = true;
+  console.log(`[Ground] Placeholder set for ${label}:`, {
+    hasMap: !!material.map,
+    mapSize: material.map ? `${material.map.image?.width || "unknown"}x${material.map.image?.height || "unknown"}` : "none"
+  });
   textureLoader$1.load(
     url,
     (loadedTex) => {
@@ -43639,7 +43671,8 @@ function bindGroundTexture(material, label, url, repeat) {
         height,
         format: loadedTex.format,
         type: loadedTex.type,
-        material: material.name
+        material: material.name,
+        beforeColorSpace: loadedTex.colorSpace
       });
       const MIN_TEXTURE_SIZE = 256;
       const MAX_TEXTURE_SIZE = 4096;
@@ -43672,6 +43705,16 @@ function bindGroundTexture(material, label, url, repeat) {
       }
       material.map = loadedTex;
       material.needsUpdate = true;
+      console.log(`[Ground] ✅ ${label} material.map assigned:`, {
+        hasMap: !!material.map,
+        mapSize: `${material.map.image.width}x${material.map.image.height}`,
+        colorSpace: material.map.colorSpace,
+        repeat,
+        beforeTrigger: {
+          materialName: material.name,
+          materialColor: material.color?.getHexString()
+        }
+      });
       triggerTerrainUpdate();
       console.log(`[Ground] ✅ ${label} texture applied successfully`, {
         hasMap: !!material.map,
@@ -43687,7 +43730,13 @@ function bindGroundTexture(material, label, url, repeat) {
       }
     },
     (error) => {
-      console.error(`[Ground] ❌ Failed to load ${label} texture from ${url}`, error);
+      console.error(`[Ground] ❌ FAILED to load ${label} texture from ${url}`, error);
+      console.error(`[Ground] Error details:`, {
+        errorType: error.type,
+        errorMessage: error.message,
+        url,
+        material: material.name
+      });
       material.needsUpdate = true;
     }
   );
@@ -59573,7 +59622,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BVezEvkY.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-m9oNHh2t.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60308,7 +60357,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CSHbwfbp.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DkUkREbq.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61262,8 +61311,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T11:10:50.257Z" : "",
-      sha: true ? "a51c5480ce51ab56880f71e5d04676abd61aa73a" : ""
+      time: true ? "2026-01-01T11:31:44.089Z" : "",
+      sha: true ? "25262abc5c3f80989245570bc84a988a590cfb06" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71914,4 +71963,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-ElQ2pojU.js.map
+//# sourceMappingURL=index-B8PuEksT.js.map
