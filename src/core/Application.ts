@@ -655,7 +655,7 @@ export class Application {
       updateLoadingStatus("Raising temples, homes, and harbors...");
 
       // Validate ground material setup after scene initialization
-      validateCityGroundMaterials(scene);
+      // validateCityGroundMaterials(scene); // Disabled - simplified materials
 
       applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch(() => {});
 
