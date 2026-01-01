@@ -369,5 +369,109 @@ console.log('[Ground] Ground texture materials initialized:', {
   city: 'CityGroundMaterial (dirt-albedo.jpg)',
   inland: 'InlandGroundMaterial (grass/albedo.jpg)',
   coastal: 'CoastalGroundMaterial (sand/albedo.jpg)',
-  debug: 'Call window.enableCityMaskDebug() to visualize city mask blending'
+  debug: 'Call window.groundDiagnostics() to check texture loading'
 });
+
+// ============================================
+// COMPREHENSIVE DIAGNOSTIC FUNCTION
+// ============================================
+export function groundDiagnostics() {
+  console.log('\n========== GROUND TEXTURE DIAGNOSTICS ==========\n');
+  
+  const diagnostics = {
+    timestamp: new Date().toISOString(),
+    materials: {},
+    urls: {
+      city: CITY_GROUND_URL,
+      inland: INLAND_GROUND_URL,
+      coastal: COASTAL_GROUND_URL,
+    },
+    textureLoader: {
+      type: textureLoader.constructor.name,
+    }
+  };
+
+  // Check each material
+  const materials = [
+    { name: 'CityGroundMaterial', material: CityGroundMaterial },
+    { name: 'InlandGroundMaterial', material: InlandGroundMaterial },
+    { name: 'CoastalGroundMaterial', material: CoastalGroundMaterial },
+  ];
+
+  materials.forEach(({ name, material }) => {
+    diagnostics.materials[name] = {
+      exists: !!material,
+      color: material?.color?.getHexString?.(),
+      roughness: material?.roughness,
+      metalness: material?.metalness,
+      hasMap: !!material?.map,
+      mapDetails: material?.map ? {
+        type: material.map.constructor.name,
+        source: material.map.source?.data ? 'DataTexture or ImageTexture' : 'unknown',
+        width: material.map.source?.data?.width || material.map.image?.width,
+        height: material.map.source?.data?.height || material.map.image?.height,
+        wrapS: material.map.wrapS === THREE.RepeatWrapping ? 'RepeatWrapping' : material.map.wrapS,
+        wrapT: material.map.wrapT === THREE.RepeatWrapping ? 'RepeatWrapping' : material.map.wrapT,
+        repeat: { x: material.map.repeat?.x, y: material.map.repeat?.y },
+        colorSpace: material.map.colorSpace,
+        needsUpdate: material.map.needsUpdate,
+      } : null,
+      needsUpdate: material?.needsUpdate,
+    };
+  });
+
+  console.log('Material State:', diagnostics.materials);
+  console.log('Texture URLs:', diagnostics.urls);
+  
+  // Check texture file accessibility via fetch
+  console.log('\nChecking texture file accessibility...');
+  Promise.all([
+    CITY_GROUND_URL,
+    INLAND_GROUND_URL,
+    COASTAL_GROUND_URL,
+  ].map(url => 
+    fetch(url, { method: 'HEAD' })
+      .then(res => {
+        console.log(`✅ ${url}: ${res.status} ${res.statusText}`);
+        return { url, status: res.status };
+      })
+      .catch(err => {
+        console.error(`❌ ${url}: ${err.message}`);
+        return { url, error: err.message };
+      })
+  )).then(results => {
+    console.log('\nFetch Results:', results);
+  });
+
+  // Check terrain reference
+  console.log('\nTerrain Mesh Reference:', {
+    exists: !!terrainMeshReference,
+    hasGeometry: !!terrainMeshReference?.geometry,
+    hasMaterial: !!terrainMeshReference?.material,
+    isArray: Array.isArray(terrainMeshReference?.material),
+    materialCount: Array.isArray(terrainMeshReference?.material) ? terrainMeshReference.material.length : 1,
+  });
+
+  // Check if geometry has UVs
+  if (terrainMeshReference?.geometry?.attributes?.uv) {
+    const uv = terrainMeshReference.geometry.attributes.uv;
+    console.log('\nGeometry UVs:', {
+      hasUV: true,
+      itemSize: uv.itemSize,
+      count: uv.count,
+      array: uv.array.slice(0, 20), // First 20 values
+    });
+  } else {
+    console.warn('\n⚠️ Geometry has NO UVs! This is the problem!');
+  }
+
+  console.log('\n========== END DIAGNOSTICS ==========\n');
+  
+  return diagnostics;
+}
+
+// Expose to window for easy access in browser console
+if (typeof window !== 'undefined') {
+  window.groundDiagnostics = groundDiagnostics;
+  console.log('[Ground] Diagnostic function available: window.groundDiagnostics()');
+}

@@ -43820,8 +43820,92 @@ console.log("[Ground] Ground texture materials initialized:", {
   city: "CityGroundMaterial (dirt-albedo.jpg)",
   inland: "InlandGroundMaterial (grass/albedo.jpg)",
   coastal: "CoastalGroundMaterial (sand/albedo.jpg)",
-  debug: "Call window.enableCityMaskDebug() to visualize city mask blending"
+  debug: "Call window.groundDiagnostics() to check texture loading"
 });
+function groundDiagnostics() {
+  console.log("\n========== GROUND TEXTURE DIAGNOSTICS ==========\n");
+  const diagnostics = {
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    materials: {},
+    urls: {
+      city: CITY_GROUND_URL,
+      inland: INLAND_GROUND_URL,
+      coastal: COASTAL_GROUND_URL
+    },
+    textureLoader: {
+      type: textureLoader$1.constructor.name
+    }
+  };
+  const materials = [
+    { name: "CityGroundMaterial", material: CityGroundMaterial },
+    { name: "InlandGroundMaterial", material: InlandGroundMaterial },
+    { name: "CoastalGroundMaterial", material: CoastalGroundMaterial }
+  ];
+  materials.forEach(({ name, material }) => {
+    diagnostics.materials[name] = {
+      exists: !!material,
+      color: material?.color?.getHexString?.(),
+      roughness: material?.roughness,
+      metalness: material?.metalness,
+      hasMap: !!material?.map,
+      mapDetails: material?.map ? {
+        type: material.map.constructor.name,
+        source: material.map.source?.data ? "DataTexture or ImageTexture" : "unknown",
+        width: material.map.source?.data?.width || material.map.image?.width,
+        height: material.map.source?.data?.height || material.map.image?.height,
+        wrapS: material.map.wrapS === RepeatWrapping ? "RepeatWrapping" : material.map.wrapS,
+        wrapT: material.map.wrapT === RepeatWrapping ? "RepeatWrapping" : material.map.wrapT,
+        repeat: { x: material.map.repeat?.x, y: material.map.repeat?.y },
+        colorSpace: material.map.colorSpace,
+        needsUpdate: material.map.needsUpdate
+      } : null,
+      needsUpdate: material?.needsUpdate
+    };
+  });
+  console.log("Material State:", diagnostics.materials);
+  console.log("Texture URLs:", diagnostics.urls);
+  console.log("\nChecking texture file accessibility...");
+  Promise.all([
+    CITY_GROUND_URL,
+    INLAND_GROUND_URL,
+    COASTAL_GROUND_URL
+  ].map(
+    (url) => fetch(url, { method: "HEAD" }).then((res) => {
+      console.log(`✅ ${url}: ${res.status} ${res.statusText}`);
+      return { url, status: res.status };
+    }).catch((err2) => {
+      console.error(`❌ ${url}: ${err2.message}`);
+      return { url, error: err2.message };
+    })
+  )).then((results) => {
+    console.log("\nFetch Results:", results);
+  });
+  console.log("\nTerrain Mesh Reference:", {
+    exists: !!terrainMeshReference,
+    hasGeometry: !!terrainMeshReference?.geometry,
+    hasMaterial: !!terrainMeshReference?.material,
+    isArray: Array.isArray(terrainMeshReference?.material),
+    materialCount: Array.isArray(terrainMeshReference?.material) ? terrainMeshReference.material.length : 1
+  });
+  if (terrainMeshReference?.geometry?.attributes?.uv) {
+    const uv = terrainMeshReference.geometry.attributes.uv;
+    console.log("\nGeometry UVs:", {
+      hasUV: true,
+      itemSize: uv.itemSize,
+      count: uv.count,
+      array: uv.array.slice(0, 20)
+      // First 20 values
+    });
+  } else {
+    console.warn("\n⚠️ Geometry has NO UVs! This is the problem!");
+  }
+  console.log("\n========== END DIAGNOSTICS ==========\n");
+  return diagnostics;
+}
+if (typeof window !== "undefined") {
+  window.groundDiagnostics = groundDiagnostics;
+  console.log("[Ground] Diagnostic function available: window.groundDiagnostics()");
+}
 const SEA_SIDE = "east";
 const COAST_WIDTH = 120;
 const INLAND_RISE = 220;
@@ -59475,7 +59559,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CS9fzfau.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BW3C9bk8.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60210,7 +60294,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B-8Yz1GT.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BRd1GfEN.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61158,7 +61242,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T09:07:53.008Z" : "",
+      time: true ? "2026-01-01T09:16:45.354Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71805,4 +71889,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CVF2-J2Z.js.map
+//# sourceMappingURL=index-CN0SE9IP.js.map
