@@ -67,19 +67,19 @@ const GROUND_MATERIAL_PRESETS = {
       color: new THREE.Color(0xffffff), // Pure white for no tinting
       roughness: 0.65, // Reduced from 0.95 - allows texture detail to show
       metalness: 0.0,
-      repeat: 12,
+      repeat: 60,
     },
     inland: {
       color: new THREE.Color(0xffffff), // Pure white for no tinting
       roughness: 0.7, // Reduced from 1.0
       metalness: 0.0,
-      repeat: 12,
+      repeat: 40,
     },
     coastal: {
       color: new THREE.Color(0xffffff), // Pure white for no tinting
       roughness: 0.7, // Reduced from 1.0
       metalness: 0.0,
-      repeat: 10,
+      repeat: 16,
     },
   },
 };
