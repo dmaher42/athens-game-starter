@@ -43565,7 +43565,7 @@ const GROUND_MATERIAL_PRESETS = {
       roughness: 0.65,
       // Reduced from 0.95 - allows texture detail to show
       metalness: 0,
-      repeat: 12
+      repeat: 60
     },
     inland: {
       color: new Color(16777215),
@@ -43573,7 +43573,7 @@ const GROUND_MATERIAL_PRESETS = {
       roughness: 0.7,
       // Reduced from 1.0
       metalness: 0,
-      repeat: 12
+      repeat: 40
     },
     coastal: {
       color: new Color(16777215),
@@ -43581,7 +43581,7 @@ const GROUND_MATERIAL_PRESETS = {
       roughness: 0.7,
       // Reduced from 1.0
       metalness: 0,
-      repeat: 10
+      repeat: 16
     }
   }
 };
@@ -59557,7 +59557,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-JVOfQtqX.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-URmG8DT9.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60292,7 +60292,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DlXovGh5.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CTSsStCp.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61240,8 +61240,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T09:53:13.076Z" : "",
-      sha: true ? "d00a4deacebb853d76fa510061cbc6bb1dafb6e7" : ""
+      time: true ? "2026-01-01T10:37:21.392Z" : "",
+      sha: true ? "e1ded5a965f393b3dc0c495330dcdf6fe0fa43fb" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71887,4 +71887,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CQ6MGvge.js.map
+//# sourceMappingURL=index-BbQ2cBz3.js.map
