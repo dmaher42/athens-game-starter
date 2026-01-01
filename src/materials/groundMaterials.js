@@ -64,22 +64,22 @@ const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
 const GROUND_MATERIAL_PRESETS = {
   default: {
     city: {
-      color: new THREE.Color(0xc9b79c), // neutral tan
+      color: new THREE.Color(0xffffff), // Pure white for no tinting
       roughness: 0.95,
       metalness: 0.0,
-      repeat: 6,
+      repeat: 12, // Increased repeat for more visible texture detail
     },
     inland: {
-      color: new THREE.Color(0x8a6f4e), // warm brown
+      color: new THREE.Color(0xffffff), // Pure white for no tinting
       roughness: 1.0,
       metalness: 0.0,
-      repeat: 6,
+      repeat: 12, // Increased repeat for more visible texture detail
     },
     coastal: {
-      color: new THREE.Color(0xe6d3a3), // sandy light tone
+      color: new THREE.Color(0xffffff), // Pure white for no tinting
       roughness: 1.0,
       metalness: 0.0,
-      repeat: 5,
+      repeat: 10, // Increased repeat for more visible texture detail
     },
   },
 };
@@ -117,33 +117,6 @@ const fallbackDiffuseTexture = (() => {
 function bindGroundTexture(material, label, url, repeat) {
   console.log(`[Ground] 🔄 Loading ${label} texture from: ${url}`);
   
-  // Create a simple canvas placeholder while loading
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  
-  // Use label to determine placeholder color
-  if (label === 'City') {
-    ctx.fillStyle = '#c9b79c'; // City tan
-  } else if (label === 'Inland') {
-    ctx.fillStyle = '#8a6f4e'; // Inland brown
-  } else if (label === 'Coastal') {
-    ctx.fillStyle = '#e6d3a3'; // Coastal light
-  }
-  ctx.fillRect(0, 0, 128, 128);
-  
-  const placeholderTexture = new THREE.CanvasTexture(canvas);
-  placeholderTexture.colorSpace = THREE.SRGBColorSpace;
-  placeholderTexture.wrapS = placeholderTexture.wrapT = THREE.RepeatWrapping;
-  placeholderTexture.repeat.set(repeat, repeat);
-  
-  // Set placeholder immediately
-  material.map = placeholderTexture;
-  material.needsUpdate = true;
-  console.log(`[Ground] 📋 ${label} placeholder texture set while loading...`);
-  
-  // ✅ STEP 2: Validate texture loading with comprehensive callbacks
   textureLoader.load(
     url,
     (loadedTex) => {
@@ -159,54 +132,40 @@ function bindGroundTexture(material, label, url, repeat) {
         material: material.name
       });
       
-      // ✅ STEP 6: Validate texture dimensions
+      // Validate texture dimensions
       const MIN_TEXTURE_SIZE = 256;
       const MAX_TEXTURE_SIZE = 4096;
-      const RECOMMENDED_MIN = 512;
-      const RECOMMENDED_MAX = 2048;
       
       if (width < MIN_TEXTURE_SIZE || height < MIN_TEXTURE_SIZE) {
-        console.warn(`[Ground] ⚠️ ${label} texture is very small (${width}x${height}). Minimum: ${MIN_TEXTURE_SIZE}px. May appear blurry.`);
-      } else if (width < RECOMMENDED_MIN || height < RECOMMENDED_MIN) {
-        console.info(`[Ground] ℹ️ ${label} texture is below recommended size (${width}x${height}). Recommended minimum: ${RECOMMENDED_MIN}px for best quality.`);
+        console.warn(`[Ground] ⚠️ ${label} texture is very small (${width}x${height}). Minimum: ${MIN_TEXTURE_SIZE}px.`);
       }
       
       if (width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE) {
-        console.warn(`[Ground] ⚠️ ${label} texture is very large (${width}x${height}). Maximum recommended: ${MAX_TEXTURE_SIZE}px. May impact performance.`);
-      } else if (width > RECOMMENDED_MAX || height > RECOMMENDED_MAX) {
-        console.info(`[Ground] ℹ️ ${label} texture exceeds recommended size (${width}x${height}). Consider ${RECOMMENDED_MAX}px for better performance.`);
+        console.warn(`[Ground] ⚠️ ${label} texture is very large (${width}x${height}). Maximum recommended: ${MAX_TEXTURE_SIZE}px.`);
       }
       
-      // Check if texture is square (recommended for tiling)
-      if (width !== height) {
-        console.info(`[Ground] ℹ️ ${label} texture is non-square (${width}x${height}). Square textures tile more naturally.`);
-      }
-      
-      // Check if texture is power-of-two (optimal for GPU)
-      const isPowerOfTwo = (n) => n > 0 && (n & (n - 1)) === 0;
-      if (!isPowerOfTwo(width) || !isPowerOfTwo(height)) {
-        console.info(`[Ground] ℹ️ ${label} texture dimensions are not power-of-two (${width}x${height}). May use more GPU memory.`);
-      }
-      
-      // ✅ STEP 3: Rebuild texture with correct settings
+      // Configure texture properly for display
       loadedTex.colorSpace = THREE.SRGBColorSpace;
-      loadedTex.wrapS = loadedTex.wrapT = THREE.RepeatWrapping;
+      loadedTex.wrapS = THREE.RepeatWrapping;
+      loadedTex.wrapT = THREE.RepeatWrapping;
       loadedTex.repeat.set(repeat, repeat);
+      loadedTex.anisotropy = Math.min(16, material.renderer?.capabilities?.maxAnisotropy || 16);
+      loadedTex.magFilter = THREE.LinearFilter;
+      loadedTex.minFilter = THREE.LinearMipmapLinearFilter;
       loadedTex.needsUpdate = true;
       
-      // Replace placeholder with actual texture
+      // Apply texture to material
       material.map = loadedTex;
-      material.map.needsUpdate = true;
       material.needsUpdate = true;
-      triggerTerrainUpdate(); // Force terrain to update
       
-      console.log(`[Ground] ✅ ${label} texture applied to material`, {
-        materialHasMap: !!material.map,
-        mapIsValid: material.map?.image?.width > 0,
-        materialColor: material.color?.getHexString(),
+      // Force terrain update
+      triggerTerrainUpdate();
+      
+      console.log(`[Ground] ✅ ${label} texture applied successfully`, {
+        hasMap: !!material.map,
         repeat: repeat,
-        wrapS: material.map?.wrapS,
-        wrapT: material.map?.wrapT
+        wrapS: 'RepeatWrapping',
+        wrapT: 'RepeatWrapping'
       });
     },
     (progress) => {
@@ -217,18 +176,11 @@ function bindGroundTexture(material, label, url, repeat) {
     },
     (error) => {
       console.error(`[Ground] ❌ Failed to load ${label} texture from ${url}`, error);
-      console.warn(`[Ground] ⚠️ Using placeholder texture for ${label}`);
-      console.error('[Ground] Error details:', {
-        message: error.message,
-        type: error.type,
-        target: error.target
-      });
-      // Keep placeholder if load fails
+      // Don't use a fallback - let material render without texture
+      material.map = null;
+      material.needsUpdate = true;
     },
   );
-  
-  // Return the placeholder texture immediately so material.map is set synchronously
-  return placeholderTexture;
 }
 
 // ✅ STEP 2: Determine active preset and fetch configuration
@@ -249,13 +201,14 @@ const preset = GROUND_MATERIAL_PRESETS[ACTIVE_PRESET] || GROUND_MATERIAL_PRESETS
 const CityGroundMaterial = (() => {
   const material = new THREE.MeshStandardMaterial({
     name: "CityGroundMaterial",
-    color: 0xffffff, // White so texture shows without tinting
+    color: 0xcccccc, // Light gray - neutral, shows texture well
     roughness: preset.city.roughness,
-    metalness: preset.city.metalness,
-    aoMapIntensity: 0, // Disable AO so texture is clearly visible
+    metalness: 0.0,
+    aoMapIntensity: 0,
     map: null, // Will be set by bindGroundTexture
-    envMapIntensity: 0.0, // Disable environment reflections completely
+    envMapIntensity: 0.0,
     flatShading: false,
+    side: THREE.FrontSide,
   });
   
   console.log('[Ground] 🏗️ CityGroundMaterial created:', {
@@ -266,132 +219,8 @@ const CityGroundMaterial = (() => {
     preset: ACTIVE_PRESET
   });
 
-  const roadsideMaskTexture = new THREE.DataTexture(
-    new Uint8Array([0]), // Set to 0 to disable roadside tint overlay
-    1,
-    1,
-    THREE.RedFormat,
-    THREE.UnsignedByteType,
-  );
-  roadsideMaskTexture.needsUpdate = true;
-  roadsideMaskTexture.colorSpace = THREE.LinearSRGBColorSpace;
-
-  material.userData = material.userData || {};
-  material.userData.roadsideMask = roadsideMaskTexture;
-  material.userData.roadsideTint = new THREE.Color(1.0, 1.0, 1.0); // Neutral white tint
-  material.userData.roadsideRoughness = 1.0; // Match base material roughness
-
-  // ✅ STEP 4: onBeforeCompile is scoped to this material instance only
-  // This shader modification only applies to CityGroundMaterial, not other materials
-  const baseOnBeforeCompile = material.onBeforeCompile;
-  material.onBeforeCompile = (shader) => {
-    // Preserve any existing onBeforeCompile behavior
-    if (typeof baseOnBeforeCompile === "function") {
-      baseOnBeforeCompile.call(material, shader);
-    }
-
-    // Validate shader object before proceeding
-    if (!shader?.fragmentShader || !shader.uniforms) {
-      console.warn('[Ground] Shader compilation skipped - invalid shader object');
-      return;
-    }
-
-    // Ensure material has a valid texture map
-    if (!material.map) {
-      console.warn('[Ground] No texture map found, using fallback');
-      material.map = fallbackDiffuseTexture;
-      material.needsUpdate = true;
-    }
-
-    material.userData = material.userData || {};
-    material.userData.roadsideMask =
-      material.userData.roadsideMask || fallbackRoadsideMask;
-    material.userData.roadsideTint =
-      material.userData.roadsideTint || new THREE.Color(0x9e8b70);
-    material.userData.roadsideRoughness =
-      typeof material.userData.roadsideRoughness === "number"
-        ? material.userData.roadsideRoughness
-        : 0.85;
-
-    shader.uniforms.uRoadsideMask = shader.uniforms.uRoadsideMask || {
-      value: material.userData.roadsideMask,
-    };
-    shader.uniforms.uRoadsideTint = shader.uniforms.uRoadsideTint || {
-      value: material.userData.roadsideTint,
-    };
-    shader.uniforms.uRoadsideRoughness = shader.uniforms.uRoadsideRoughness || {
-      value: material.userData.roadsideRoughness,
-    };
-
-    const uniformDeclarations = `
-      uniform sampler2D uRoadsideMask;
-      uniform vec3 uRoadsideTint;
-      uniform float uRoadsideRoughness;
-    `;
-    const varyingDeclarations = "varying vec2 vUv;";
-
-    // Patch vertex shader to declare and set vUv
-    if (!shader.vertexShader.includes(varyingDeclarations)) {
-      shader.vertexShader = varyingDeclarations + "\n" + shader.vertexShader;
-    }
-    shader.vertexShader = shader.vertexShader.replace(
-      "#include <uv_vertex>",
-      "#include <uv_vertex>\n  vUv = uv;",
-    );
-
-    // Patch fragment shader to declare uniforms and vUv
-    if (!shader.fragmentShader.includes(uniformDeclarations.trim())) {
-      shader.fragmentShader =
-        uniformDeclarations + "\n" + shader.fragmentShader;
-    }
-    if (!shader.fragmentShader.includes(varyingDeclarations)) {
-      shader.fragmentShader =
-        varyingDeclarations + "\n" + shader.fragmentShader;
-    }
-
-    // Inject the roadside effect logic into the fragment shader
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <roughnessmap_fragment>",
-      `#include <roughnessmap_fragment>
-      float roadsideWeight = texture2D(uRoadsideMask, vUv).r;
-      roadsideWeight = clamp(roadsideWeight, 0.0, 1.0);
-      diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * uRoadsideTint, roadsideWeight);
-      roughnessFactor = mix(roughnessFactor, uRoadsideRoughness, roadsideWeight);`
-    );
-
-    // Reduce contrast boost for better texture visibility
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <map_fragment>',
-      `
-      #include <map_fragment>
-      // Light contrast boost to enhance texture visibility without darkening
-      diffuseColor.rgb = pow(diffuseColor.rgb, vec3(1.05));
-      `
-    );
-
-    // Debug visualization disabled - set to true and rebuild to enable
-    // const DEBUG_CITY_MASK = false;
-    // if (DEBUG_CITY_MASK) {
-    //   shader.fragmentShader = shader.fragmentShader.replace(
-    //     '#include <dithering_fragment>',
-    //     `
-    //     // City mask debug visualization
-    //     vec2 debugUV = vUv;
-    //     
-    //     // Sample city mask
-    //     float cityWeight = texture2D(uRoadsideMask, debugUV).r;
-    //     
-    //     // Map cityWeight to RGB: red = masked, green = unmasked, blue = blend
-    //     gl_FragColor = vec4(vec3(cityWeight, 1.0 - cityWeight, cityWeight * 0.5), 1.0);
-    //     `
-    //   );
-    //   console.log('[Ground] DEBUG: City mask visualization enabled - red=masked, green=unmasked');
-    // }
-
-  };
-
-  // City ground texture
-  material.map = bindGroundTexture(
+  // Load texture - simpler, no shader modification
+  bindGroundTexture(
     material,
     "City",
     CITY_GROUND_URL,
@@ -406,38 +235,15 @@ export { CityGroundMaterial };
 
 export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
   name: "InlandGroundMaterial",
-  color: 0xffffff, // White so texture shows without tinting
+  color: 0xcccccc, // Light gray - neutral
   roughness: preset.inland.roughness,
-  metalness: preset.inland.metalness,
+  metalness: 0.0,
   aoMapIntensity: 0,
+  side: THREE.FrontSide,
 });
 
-// Add shore blending effect based on elevation
-InlandGroundMaterial.onBeforeCompile = (shader) => {
-  shader.fragmentShader = `
-    uniform float uShoreHeight;
-    uniform float uShoreFade;
-  ` + shader.fragmentShader;
-
-  shader.uniforms.uShoreHeight = { value: 0.0 };
-  shader.uniforms.uShoreFade = { value: 20.0 };
-
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <dithering_fragment>',
-    `
-    // Compute blend factor by world Y height
-    float blendFactor = clamp((vViewPosition.y + uShoreHeight) / uShoreFade, 0.0, 1.0);
-
-    // Fade to coastal color near shore (assumes coastal is sandy bright)
-    diffuseColor.rgb = mix(vec3(0.96, 0.85, 0.72), diffuseColor.rgb, blendFactor);
-
-    #include <dithering_fragment>
-    `
-  );
-};
-
 // Inland ground texture
-InlandGroundMaterial.map = bindGroundTexture(
+bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
   INLAND_GROUND_URL,
@@ -447,13 +253,15 @@ InlandGroundMaterial.needsUpdate = true;
 
 export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
   name: "CoastalGroundMaterial",
-  color: 0xffffff, // White so texture shows without tinting
+  color: 0xcccccc, // Light gray - neutral
   roughness: preset.coastal.roughness,
-  metalness: preset.coastal.metalness,
+  metalness: 0.0,
   aoMapIntensity: 0,
+  side: THREE.FrontSide,
 });
+
 // Coastal ground texture
-CoastalGroundMaterial.map = bindGroundTexture(
+bindGroundTexture(
   CoastalGroundMaterial,
   "Coastal",
   COASTAL_GROUND_URL,
