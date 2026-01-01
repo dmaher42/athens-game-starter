@@ -43586,6 +43586,9 @@ const GROUND_MATERIAL_PRESETS = {
   }
 };
 let warnedTextureFailure = false;
+let cityMap = null;
+let inlandMap = null;
+let coastalMap = null;
 const fallbackRoadsideMask = (() => {
   const data = new Uint8Array([0]);
   const texture = new DataTexture(
@@ -43654,6 +43657,19 @@ function bindGroundTexture(material, label, url, repeat) {
       loadedTex.magFilter = LinearFilter;
       loadedTex.minFilter = LinearMipmapLinearFilter;
       loadedTex.needsUpdate = true;
+      if (label === "City") {
+        cityMap = loadedTex;
+        cityMap.minFilter = LinearMipmapLinearFilter;
+        cityMap.magFilter = LinearFilter;
+      } else if (label === "Inland") {
+        inlandMap = loadedTex;
+        inlandMap.minFilter = LinearMipmapLinearFilter;
+        inlandMap.magFilter = LinearFilter;
+      } else if (label === "Coastal") {
+        coastalMap = loadedTex;
+        coastalMap.minFilter = LinearMipmapLinearFilter;
+        coastalMap.magFilter = LinearFilter;
+      }
       material.map = loadedTex;
       material.needsUpdate = true;
       triggerTerrainUpdate();
@@ -59557,7 +59573,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-URmG8DT9.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Viw4Hqw2.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60292,7 +60308,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CTSsStCp.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BYj8PDSc.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61240,8 +61256,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T10:37:21.392Z" : "",
-      sha: true ? "e1ded5a965f393b3dc0c495330dcdf6fe0fa43fb" : ""
+      time: true ? "2026-01-01T10:40:52.396Z" : "",
+      sha: true ? "4c8abe90e807c214b20342682eca9591845b4af1" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71887,4 +71903,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BbQ2cBz3.js.map
+//# sourceMappingURL=index-B9Ur_oep.js.map
