@@ -43689,31 +43689,18 @@ const ACTIVE_PRESET = (() => {
 })();
 const preset = GROUND_MATERIAL_PRESETS[ACTIVE_PRESET] || GROUND_MATERIAL_PRESETS.default;
 const CityGroundMaterial = (() => {
-  const material = new MeshStandardMaterial({
+  const material = new MeshPhongMaterial({
     name: "CityGroundMaterial",
-    color: 13421772,
-    // Light gray - neutral, shows texture well
-    roughness: preset.city.roughness,
-    metalness: 0,
-    aoMapIntensity: 0,
+    color: 16777215,
     map: null,
-    // Will be set by bindGroundTexture
-    envMapIntensity: 0,
-    flatShading: false,
+    shininess: 30,
     side: FrontSide
   });
   console.log("[Ground] 🏗️ CityGroundMaterial created:", {
     name: material.name,
     color: material.color.getHexString(),
-    roughness: material.roughness,
-    metalness: material.metalness,
-    preset: ACTIVE_PRESET
+    type: material.constructor.name
   });
-  material.onBeforeCompile = (shader) => {
-    if (material.map) {
-      material.needsUpdate = true;
-    }
-  };
   bindGroundTexture(
     material,
     "City",
@@ -43723,13 +43710,11 @@ const CityGroundMaterial = (() => {
   material.needsUpdate = true;
   return material;
 })();
-const InlandGroundMaterial = new MeshStandardMaterial({
+const InlandGroundMaterial = new MeshPhongMaterial({
   name: "InlandGroundMaterial",
-  color: 13421772,
-  // Light gray - neutral
-  roughness: preset.inland.roughness,
-  metalness: 0,
-  aoMapIntensity: 0,
+  color: 16777215,
+  map: null,
+  shininess: 20,
   side: FrontSide
 });
 bindGroundTexture(
@@ -43739,13 +43724,11 @@ bindGroundTexture(
   preset.inland.repeat
 );
 InlandGroundMaterial.needsUpdate = true;
-const CoastalGroundMaterial = new MeshStandardMaterial({
+const CoastalGroundMaterial = new MeshPhongMaterial({
   name: "CoastalGroundMaterial",
-  color: 13421772,
-  // Light gray - neutral
-  roughness: preset.coastal.roughness,
-  metalness: 0,
-  aoMapIntensity: 0,
+  color: 16777215,
+  map: null,
+  shininess: 20,
   side: FrontSide
 });
 bindGroundTexture(
@@ -59574,7 +59557,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-6hmwrghI.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-dUDVJatw.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60309,7 +60292,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-a4HAljfL.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-8yGOQCCA.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61257,7 +61240,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T09:45:02.725Z" : "",
+      time: true ? "2026-01-01T09:52:26.129Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71904,4 +71887,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-IT0HETH7.js.map
+//# sourceMappingURL=index-FotlOTDs.js.map

@@ -211,38 +211,22 @@ const preset = GROUND_MATERIAL_PRESETS[ACTIVE_PRESET] || GROUND_MATERIAL_PRESETS
 
 // ✅ STEP 3: Create CityGroundMaterial as singleton (cached instance)
 const CityGroundMaterial = (() => {
-  const material = new THREE.MeshStandardMaterial({
+  // Use MeshPhongMaterial instead of MeshStandardMaterial - simpler, more reliable for textures
+  const material = new THREE.MeshPhongMaterial({
     name: "CityGroundMaterial",
-    color: 0xcccccc, // Light gray - neutral, shows texture well
-    roughness: preset.city.roughness,
-    metalness: 0.0,
-    aoMapIntensity: 0,
-    map: null, // Will be set by bindGroundTexture
-    envMapIntensity: 0.0,
-    flatShading: false,
+    color: 0xffffff,
+    map: null,
+    shininess: 30,
     side: THREE.FrontSide,
   });
   
   console.log('[Ground] 🏗️ CityGroundMaterial created:', {
     name: material.name,
     color: material.color.getHexString(),
-    roughness: material.roughness,
-    metalness: material.metalness,
-    preset: ACTIVE_PRESET
+    type: material.constructor.name,
   });
 
-  // Add shader hook to ensure texture sampling is enabled
-  material.onBeforeCompile = (shader) => {
-    // Ensure the standard shader samples the texture if it exists
-    // This is necessary because the texture might be loaded after shader compilation
-    if (material.map) {
-      // The standard Three.js shader will use material.map if it exists
-      // We just need to ensure it's flagged for update
-      material.needsUpdate = true;
-    }
-  };
-
-  // Load texture - simpler, no shader modification
+  // Load texture
   bindGroundTexture(
     material,
     "City",
@@ -256,16 +240,14 @@ const CityGroundMaterial = (() => {
 
 export { CityGroundMaterial };
 
-export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
+export const InlandGroundMaterial = new THREE.MeshPhongMaterial({
   name: "InlandGroundMaterial",
-  color: 0xcccccc, // Light gray - neutral
-  roughness: preset.inland.roughness,
-  metalness: 0.0,
-  aoMapIntensity: 0,
+  color: 0xffffff,
+  map: null,
+  shininess: 20,
   side: THREE.FrontSide,
 });
 
-// Inland ground texture
 bindGroundTexture(
   InlandGroundMaterial,
   "Inland",
@@ -274,16 +256,14 @@ bindGroundTexture(
 );
 InlandGroundMaterial.needsUpdate = true;
 
-export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
+export const CoastalGroundMaterial = new THREE.MeshPhongMaterial({
   name: "CoastalGroundMaterial",
-  color: 0xcccccc, // Light gray - neutral
-  roughness: preset.coastal.roughness,
-  metalness: 0.0,
-  aoMapIntensity: 0,
+  color: 0xffffff,
+  map: null,
+  shininess: 20,
   side: THREE.FrontSide,
 });
 
-// Coastal ground texture
 bindGroundTexture(
   CoastalGroundMaterial,
   "Coastal",
