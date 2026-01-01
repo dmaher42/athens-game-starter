@@ -85,6 +85,9 @@ const GROUND_MATERIAL_PRESETS = {
 };
 
 let warnedTextureFailure = false;
+let cityMap = null;
+let inlandMap = null;
+let coastalMap = null;
 
 const fallbackRoadsideMask = (() => {
   const data = new Uint8Array([0]);
@@ -166,6 +169,20 @@ function bindGroundTexture(material, label, url, repeat) {
       loadedTex.magFilter = THREE.LinearFilter;
       loadedTex.minFilter = THREE.LinearMipmapLinearFilter;
       loadedTex.needsUpdate = true;
+
+      if (label === "City") {
+        cityMap = loadedTex;
+        cityMap.minFilter = THREE.LinearMipmapLinearFilter;
+        cityMap.magFilter = THREE.LinearFilter;
+      } else if (label === "Inland") {
+        inlandMap = loadedTex;
+        inlandMap.minFilter = THREE.LinearMipmapLinearFilter;
+        inlandMap.magFilter = THREE.LinearFilter;
+      } else if (label === "Coastal") {
+        coastalMap = loadedTex;
+        coastalMap.minFilter = THREE.LinearMipmapLinearFilter;
+        coastalMap.magFilter = THREE.LinearFilter;
+      }
       
       // Replace placeholder with actual texture
       material.map = loadedTex;
