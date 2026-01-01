@@ -225,6 +225,9 @@ function bindGroundTexture(material, label, url, repeat) {
       // Keep placeholder if load fails
     },
   );
+  
+  // Return the placeholder texture immediately so material.map is set synchronously
+  return placeholderTexture;
 }
 
 // ✅ STEP 2: Determine active preset and fetch configuration
