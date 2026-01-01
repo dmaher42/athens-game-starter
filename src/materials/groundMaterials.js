@@ -48,6 +48,8 @@ function triggerTerrainUpdate() {
 }
 
 const textureLoader = new THREE.TextureLoader();
+
+// Vite automatically sets import.meta.env.BASE_URL from vite.config.ts base option
 const BASE_URL =
   typeof import.meta !== "undefined" &&
   import.meta.env &&
@@ -56,9 +58,32 @@ const BASE_URL =
     : "/";
 const RESOLVED_BASE_URL = BASE_URL.endsWith("/") ? BASE_URL : `${BASE_URL}/`;
 
-const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
-const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
-const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
+// Fallback: if BASE_URL is still just "/", try to detect it from window location
+const finalBaseUrl = (() => {
+  if (RESOLVED_BASE_URL !== "/" && RESOLVED_BASE_URL !== "") return RESOLVED_BASE_URL;
+  
+  // Check if we're on GitHub Pages (contains /athens-game-starter/ in URL)
+  if (typeof window !== "undefined" && window.location.pathname.includes("/athens-game-starter/")) {
+    return "/athens-game-starter/";
+  }
+  return RESOLVED_BASE_URL;
+})();
+
+// Try multiple URL patterns - some sites have textures in public, some in docs, some at root
+const CITY_GROUND_URL = `${finalBaseUrl}textures/ground/dirt-albedo.jpg`;
+const INLAND_GROUND_URL = `${finalBaseUrl}textures/grass/albedo.jpg`;
+const COASTAL_GROUND_URL = `${finalBaseUrl}textures/sand/albedo.jpg`;
+
+// Log the URL configuration for debugging
+console.log('[Ground] Texture URL Configuration:', {
+  BASE_URL: BASE_URL,
+  RESOLVED_BASE_URL: RESOLVED_BASE_URL,
+  finalBaseUrl: finalBaseUrl,
+  CITY_GROUND_URL: CITY_GROUND_URL,
+  INLAND_GROUND_URL: INLAND_GROUND_URL,
+  COASTAL_GROUND_URL: COASTAL_GROUND_URL,
+  currentPathname: typeof window !== 'undefined' ? window.location.pathname : 'N/A',
+});
 
 // Simple preset system for ground materials; defaults to "default"
 const GROUND_MATERIAL_PRESETS = {
@@ -120,6 +145,20 @@ const fallbackDiffuseTexture = (() => {
 function bindGroundTexture(material, label, url, repeat) {
   console.log(`[Ground] 🔄 Loading ${label} texture from: ${url}`);
   
+  // Test if URL is accessible
+  fetch(url, { method: 'HEAD' }).then(r => {
+    console.log(`[Ground] URL check for ${label}: ${r.status} ${r.statusText} - ${url}`);
+  }).catch(e => {
+    console.error(`[Ground] URL fetch check FAILED for ${label}: ${e.message} - ${url}`);
+  });
+  
+  console.log(`[Ground] Material info:`, {
+    materialName: material.name,
+    materialType: material.constructor.name,
+    hasMap: !!material.map,
+    mapColorSpace: material.map?.colorSpace,
+  });
+  
   // Create a temporary placeholder texture so material shader knows to expect a map
   const placeholderData = new Uint8Array(4).fill(192); // Gray
   const placeholderTex = new THREE.DataTexture(
@@ -130,8 +169,13 @@ function bindGroundTexture(material, label, url, repeat) {
     THREE.UnsignedByteType,
   );
   placeholderTex.needsUpdate = true;
+  placeholderTex.colorSpace = THREE.SRGBColorSpace;
   material.map = placeholderTex;
   material.needsUpdate = true;
+  console.log(`[Ground] Placeholder set for ${label}:`, {
+    hasMap: !!material.map,
+    mapSize: material.map ? `${material.map.image?.width || 'unknown'}x${material.map.image?.height || 'unknown'}` : 'none'
+  });
   
   textureLoader.load(
     url,
@@ -145,7 +189,8 @@ function bindGroundTexture(material, label, url, repeat) {
         height,
         format: loadedTex.format,
         type: loadedTex.type,
-        material: material.name
+        material: material.name,
+        beforeColorSpace: loadedTex.colorSpace,
       });
       
       // Validate texture dimensions
@@ -188,6 +233,17 @@ function bindGroundTexture(material, label, url, repeat) {
       material.map = loadedTex;
       material.needsUpdate = true;
       
+      console.log(`[Ground] ✅ ${label} material.map assigned:`, {
+        hasMap: !!material.map,
+        mapSize: `${material.map.image.width}x${material.map.image.height}`,
+        colorSpace: material.map.colorSpace,
+        repeat: repeat,
+        beforeTrigger: {
+          materialName: material.name,
+          materialColor: material.color?.getHexString(),
+        }
+      });
+      
       // Force terrain update
       triggerTerrainUpdate();
       
@@ -205,7 +261,13 @@ function bindGroundTexture(material, label, url, repeat) {
       }
     },
     (error) => {
-      console.error(`[Ground] ❌ Failed to load ${label} texture from ${url}`, error);
+      console.error(`[Ground] ❌ FAILED to load ${label} texture from ${url}`, error);
+      console.error(`[Ground] Error details:`, {
+        errorType: error.type,
+        errorMessage: error.message,
+        url: url,
+        material: material.name,
+      });
       // Keep placeholder texture visible instead of null
       material.needsUpdate = true;
     },
