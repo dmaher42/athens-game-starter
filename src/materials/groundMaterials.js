@@ -117,6 +117,19 @@ const fallbackDiffuseTexture = (() => {
 function bindGroundTexture(material, label, url, repeat) {
   console.log(`[Ground] 🔄 Loading ${label} texture from: ${url}`);
   
+  // Create a temporary placeholder texture so material shader knows to expect a map
+  const placeholderData = new Uint8Array(4).fill(192); // Gray
+  const placeholderTex = new THREE.DataTexture(
+    placeholderData,
+    1,
+    1,
+    THREE.RGBAFormat,
+    THREE.UnsignedByteType,
+  );
+  placeholderTex.needsUpdate = true;
+  material.map = placeholderTex;
+  material.needsUpdate = true;
+  
   textureLoader.load(
     url,
     (loadedTex) => {
@@ -154,22 +167,9 @@ function bindGroundTexture(material, label, url, repeat) {
       loadedTex.minFilter = THREE.LinearMipmapLinearFilter;
       loadedTex.needsUpdate = true;
       
-      // Apply texture to material
+      // Replace placeholder with actual texture
       material.map = loadedTex;
       material.needsUpdate = true;
-      
-      // CRITICAL: Three.js may not recompile shader when map is added after material creation
-      // Force recompilation by temporarily changing a material property
-      const originalMap = material.map;
-      material.map = null;
-      material.needsUpdate = true;
-      
-      // Restore map in next frame to force shader recompilation
-      requestAnimationFrame(() => {
-        material.map = originalMap;
-        material.needsUpdate = true;
-        console.log(`[Ground] 🔄 Forcing shader recompilation for ${label} material`);
-      });
       
       // Force terrain update
       triggerTerrainUpdate();
@@ -189,8 +189,7 @@ function bindGroundTexture(material, label, url, repeat) {
     },
     (error) => {
       console.error(`[Ground] ❌ Failed to load ${label} texture from ${url}`, error);
-      // Don't use a fallback - let material render without texture
-      material.map = null;
+      // Keep placeholder texture visible instead of null
       material.needsUpdate = true;
     },
   );
@@ -231,6 +230,12 @@ const CityGroundMaterial = (() => {
     metalness: material.metalness,
     preset: ACTIVE_PRESET
   });
+
+  // Add shader hook to ensure texture sampling is enabled
+  material.onBeforeCompile = (shader) => {
+    // Just mark that this material should sample its texture
+    // The Three.js standard shader will automatically use material.map if it exists
+  };
 
   // Load texture - simpler, no shader modification
   bindGroundTexture(
