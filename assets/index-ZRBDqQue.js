@@ -43713,7 +43713,8 @@ const preset = GROUND_MATERIAL_PRESETS[ACTIVE_PRESET] || GROUND_MATERIAL_PRESETS
 const CityGroundMaterial = (() => {
   const material = new MeshStandardMaterial({
     name: "CityGroundMaterial",
-    color: preset.city.color,
+    color: 16777215,
+    // White so texture shows without tinting
     roughness: preset.city.roughness,
     metalness: preset.city.metalness,
     aoMapIntensity: 0,
@@ -43819,7 +43820,8 @@ const CityGroundMaterial = (() => {
 })();
 const InlandGroundMaterial = new MeshStandardMaterial({
   name: "InlandGroundMaterial",
-  color: preset.inland.color,
+  color: 16777215,
+  // White so texture shows without tinting
   roughness: preset.inland.roughness,
   metalness: preset.inland.metalness,
   aoMapIntensity: 0
@@ -43853,7 +43855,8 @@ InlandGroundMaterial.map = bindGroundTexture(
 InlandGroundMaterial.needsUpdate = true;
 const CoastalGroundMaterial = new MeshStandardMaterial({
   name: "CoastalGroundMaterial",
-  color: preset.coastal.color,
+  color: 16777215,
+  // White so texture shows without tinting
   roughness: preset.coastal.roughness,
   metalness: preset.coastal.metalness,
   aoMapIntensity: 0
@@ -59600,7 +59603,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D4PExT8M.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C5rh44rj.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60335,7 +60338,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CzF0IT4t.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DKazTh0S.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61283,8 +61286,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T00:18:35.664Z" : "",
-      sha: true ? "d78985b0477a8efcc9b1fc9d2a64514ba7c60987" : ""
+      time: true ? "2026-01-01T00:23:37.398Z" : "",
+      sha: true ? "0b55982ed8be4077e4297b2c395d6f27829c999c" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71930,4 +71933,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Czs3uyxs.js.map
+//# sourceMappingURL=index-ZRBDqQue.js.map
