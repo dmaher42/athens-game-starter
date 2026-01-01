@@ -1,14 +1,16 @@
 import * as THREE from "three";
 
 const textureLoader = new THREE.TextureLoader();
+const BASE_PATH = import.meta.env.BASE_URL || "/athens-game-starter/";
 
 function loadTexture(url) {
-  console.log(`[Ground] Loading texture: ${url}`);
+  const fullUrl = BASE_PATH + url;
+  console.log(`[Ground] Loading texture: ${fullUrl}`);
   const texture = textureLoader.load(
-    url,
-    (tex) => console.log(`[Ground] ✅ Loaded: ${url}`),
+    fullUrl,
+    (tex) => console.log(`[Ground] ✅ Loaded: ${fullUrl}`),
     undefined,
-    (err) => console.error(`[Ground] ❌ Failed: ${url}`, err)
+    (err) => console.error(`[Ground] ❌ Failed: ${fullUrl}`, err)
   );
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
