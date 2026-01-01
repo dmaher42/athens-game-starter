@@ -59573,7 +59573,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Viw4Hqw2.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-KoghBGZk.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60308,7 +60308,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BYj8PDSc.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-FlCIoYr6.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60382,7 +60382,13 @@ async function loadGLBWithFallbacks(loader, urls, options = {}) {
   }
   const baseUrl2 = resolveBaseUrl$4();
   const seen2 = /* @__PURE__ */ new Set();
+  const originalWarn = console.warn;
+  const originalError = console.error;
   try {
+    console.warn = () => {
+    };
+    console.error = () => {
+    };
     for (const candidate of urls) {
       const raw = typeof candidate === "string" ? candidate.trim() : "";
       if (!raw) {
@@ -61256,8 +61262,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T10:40:52.396Z" : "",
-      sha: true ? "4c8abe90e807c214b20342682eca9591845b4af1" : ""
+      time: true ? "2026-01-01T10:47:42.727Z" : "",
+      sha: true ? "2d7120aba28e096b79b2f2e0bc2d1056cb738abf" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71903,4 +71909,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-B9Ur_oep.js.map
+//# sourceMappingURL=index-WFMJ-LfI.js.map
