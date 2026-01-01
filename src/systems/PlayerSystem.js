@@ -155,13 +155,14 @@ export class PlayerSystem {
   async loadCharacter() {
     const character = new Character();
     const heroRootPath = "models/character/hero.glb";
+    const absolutePath = "/athens-game-starter/models/character/hero.glb";
     const bundledHeroName = encodeURIComponent("astronaut.glb");
     const characterDir = joinPath(this.baseUrl, "models/character");
     const bundledHeroPath = joinPath(characterDir, bundledHeroName);
     const bundledHeroRootPath = `models/character/${bundledHeroName}`;
     const heroCandidates = Array.from(
       new Set(
-        [heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean),
+        [absolutePath, heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean),
       ),
     );
 
@@ -184,9 +185,27 @@ export class PlayerSystem {
 
         const { root, gltf } = loadedHero;
 
+        // Ensure proper scale and position
+        root.scale.set(1, 1, 1);
+        root.position.set(0, 0, 0);
+        
+        // Enable shadow casting for all meshes
+        root.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
         character.initializeFromGLTF(root, gltf.animations);
         this.player.attachCharacter(character);
+        
+        // Hide fallback capsule if it exists
+        if (this.fallbackAvatar) {
+          this.fallbackAvatar.visible = false;
+        }
       } catch (error) {
+        console.warn('[PlayerSystem] Failed to load hero GLB, using fallback avatar:', error);
         this.attachFallbackAvatar();
       }
     } else {
@@ -196,6 +215,7 @@ export class PlayerSystem {
 
   attachFallbackAvatar() {
     const fallbackAvatar = this.createFallbackAvatar();
+    this.fallbackAvatar = fallbackAvatar;
     this.player.object.add(fallbackAvatar);
     fallbackAvatar.position.set(0, 0, 0);
   }

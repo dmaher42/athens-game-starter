@@ -59600,7 +59600,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-GOIcGCF0.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DEuQxKer.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60335,7 +60335,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-COUp-emQ.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Yi6mED3D.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61283,7 +61283,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T00:09:59.572Z" : "",
+      time: true ? "2026-01-01T00:17:14.873Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -70827,13 +70827,14 @@ class PlayerSystem {
   async loadCharacter() {
     const character = new Character();
     const heroRootPath = "models/character/hero.glb";
+    const absolutePath = "/athens-game-starter/models/character/hero.glb";
     const bundledHeroName = encodeURIComponent("astronaut.glb");
     const characterDir = joinPath(this.baseUrl, "models/character");
     const bundledHeroPath = joinPath(characterDir, bundledHeroName);
     const bundledHeroRootPath = `models/character/${bundledHeroName}`;
     const heroCandidates = Array.from(
       new Set(
-        [heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
+        [absolutePath, heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
       )
     );
     if (ENABLE_HERO_GLB) {
@@ -70852,9 +70853,21 @@ class PlayerSystem {
           throw new Error("No hero GLB candidates reachable");
         }
         const { root, gltf } = loadedHero;
+        root.scale.set(1, 1, 1);
+        root.position.set(0, 0, 0);
+        root.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
         character.initializeFromGLTF(root, gltf.animations);
         this.player.attachCharacter(character);
+        if (this.fallbackAvatar) {
+          this.fallbackAvatar.visible = false;
+        }
       } catch (error) {
+        console.warn("[PlayerSystem] Failed to load hero GLB, using fallback avatar:", error);
         this.attachFallbackAvatar();
       }
     } else {
@@ -70863,6 +70876,7 @@ class PlayerSystem {
   }
   attachFallbackAvatar() {
     const fallbackAvatar = this.createFallbackAvatar();
+    this.fallbackAvatar = fallbackAvatar;
     this.player.object.add(fallbackAvatar);
     fallbackAvatar.position.set(0, 0, 0);
   }
@@ -71916,4 +71930,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Dssp6oy6.js.map
+//# sourceMappingURL=index-HE8uAUXQ.js.map
