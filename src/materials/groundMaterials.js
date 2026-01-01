@@ -158,6 +158,19 @@ function bindGroundTexture(material, label, url, repeat) {
       material.map = loadedTex;
       material.needsUpdate = true;
       
+      // CRITICAL: Three.js may not recompile shader when map is added after material creation
+      // Force recompilation by temporarily changing a material property
+      const originalMap = material.map;
+      material.map = null;
+      material.needsUpdate = true;
+      
+      // Restore map in next frame to force shader recompilation
+      requestAnimationFrame(() => {
+        material.map = originalMap;
+        material.needsUpdate = true;
+        console.log(`[Ground] 🔄 Forcing shader recompilation for ${label} material`);
+      });
+      
       // Force terrain update
       triggerTerrainUpdate();
       
