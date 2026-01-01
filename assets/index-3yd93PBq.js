@@ -43526,440 +43526,37 @@ const RENDER_LAYERS = Object.freeze({
   TERRAIN: 1,
   DETAIL: 2
 });
-let terrainMeshReference = null;
-function setTerrainMeshForUpdates(terrain) {
-  terrainMeshReference = terrain;
-  console.log("[Ground] Terrain mesh registered for material updates");
-}
-function triggerTerrainUpdate() {
-  if (terrainMeshReference && terrainMeshReference.material) {
-    if (Array.isArray(terrainMeshReference.material)) {
-      terrainMeshReference.material.forEach((mat, idx) => {
-        console.log(`[Ground] Material[${idx}] state:`, {
-          name: mat.name,
-          hasMap: !!mat.map,
-          color: mat.color?.getHexString(),
-          roughness: mat.roughness,
-          metalness: mat.metalness
-        });
-        mat.needsUpdate = true;
-      });
-    } else {
-      terrainMeshReference.material.needsUpdate = true;
-    }
-    console.log("[Ground] Terrain materials flagged for update");
-  }
-}
 const textureLoader$1 = new TextureLoader();
-const isGitHubPages = typeof window !== "undefined" && (window.location.hostname === "dmaher42.github.io" || window.location.pathname.startsWith("/athens-game-starter/"));
-const basePath = isGitHubPages ? "/athens-game-starter" : "";
-const CITY_GROUND_URL = `${basePath}/textures/ground/dirt-albedo.jpg`;
-const INLAND_GROUND_URL = `${basePath}/textures/grass/albedo.jpg`;
-const COASTAL_GROUND_URL = `${basePath}/textures/sand/albedo.jpg`;
-console.log("[Ground] Texture URL Configuration:", {
-  isGitHubPages,
-  basePath,
-  CITY_GROUND_URL,
-  INLAND_GROUND_URL,
-  COASTAL_GROUND_URL,
-  hostname: typeof window !== "undefined" ? window.location.hostname : "N/A",
-  pathname: typeof window !== "undefined" ? window.location.pathname : "N/A"
-});
-const GROUND_MATERIAL_PRESETS = {
-  default: {
-    city: {
-      color: new Color(16777215),
-      // Pure white for no tinting
-      roughness: 0.65,
-      // Reduced from 0.95 - allows texture detail to show
-      metalness: 0,
-      repeat: 60
-    },
-    inland: {
-      color: new Color(16777215),
-      // Pure white for no tinting
-      roughness: 0.7,
-      // Reduced from 1.0
-      metalness: 0,
-      repeat: 40
-    },
-    coastal: {
-      color: new Color(16777215),
-      // Pure white for no tinting
-      roughness: 0.7,
-      // Reduced from 1.0
-      metalness: 0,
-      repeat: 16
-    }
-  }
-};
-let warnedTextureFailure = false;
-let cityMap = null;
-let inlandMap = null;
-let coastalMap = null;
-const fallbackRoadsideMask = (() => {
-  const data = new Uint8Array([0]);
-  const texture = new DataTexture(
-    data,
-    1,
-    1,
-    RedFormat,
-    UnsignedByteType
-  );
-  texture.needsUpdate = true;
-  texture.colorSpace = LinearSRGBColorSpace;
-  return texture;
-})();
-const fallbackDiffuseTexture = (() => {
-  const data = new Uint8Array([255, 255, 255, 255]);
-  const texture = new DataTexture(
-    data,
-    1,
-    1,
-    RGBAFormat,
-    UnsignedByteType
-  );
-  texture.needsUpdate = true;
-  texture.colorSpace = SRGBColorSpace;
-  return texture;
-})();
-function bindGroundTexture(material, label, url, repeat) {
-  console.log(`[Ground] 🔄 Loading ${label} texture from: ${url}`);
-  fetch(url, { method: "HEAD" }).then((r) => {
-    console.log(`[Ground] URL check for ${label}: ${r.status} ${r.statusText} - ${url}`);
-  }).catch((e) => {
-    console.error(`[Ground] URL fetch check FAILED for ${label}: ${e.message} - ${url}`);
-  });
-  console.log(`[Ground] Material info:`, {
-    materialName: material.name,
-    materialType: material.constructor.name,
-    hasMap: !!material.map,
-    mapColorSpace: material.map?.colorSpace
-  });
-  const placeholderData = new Uint8Array(4).fill(192);
-  const placeholderTex = new DataTexture(
-    placeholderData,
-    1,
-    1,
-    RGBAFormat,
-    UnsignedByteType
-  );
-  placeholderTex.needsUpdate = true;
-  placeholderTex.colorSpace = SRGBColorSpace;
-  material.map = placeholderTex;
-  material.needsUpdate = true;
-  console.log(`[Ground] Placeholder set for ${label}:`, {
-    hasMap: !!material.map,
-    mapSize: material.map ? `${material.map.image?.width || "unknown"}x${material.map.image?.height || "unknown"}` : "none"
-  });
-  textureLoader$1.load(
+function loadTexture$1(url) {
+  console.log(`[Ground] Loading texture: ${url}`);
+  const texture = textureLoader$1.load(
     url,
-    (loadedTex) => {
-      const width = loadedTex.source.data.width;
-      const height = loadedTex.source.data.height;
-      console.log(`[Ground] ✅ ${label} texture loaded successfully`, {
-        url,
-        width,
-        height,
-        format: loadedTex.format,
-        type: loadedTex.type,
-        material: material.name,
-        beforeColorSpace: loadedTex.colorSpace
-      });
-      const MIN_TEXTURE_SIZE = 256;
-      const MAX_TEXTURE_SIZE = 4096;
-      if (width < MIN_TEXTURE_SIZE || height < MIN_TEXTURE_SIZE) {
-        console.warn(`[Ground] ⚠️ ${label} texture is very small (${width}x${height}). Minimum: ${MIN_TEXTURE_SIZE}px.`);
-      }
-      if (width > MAX_TEXTURE_SIZE || height > MAX_TEXTURE_SIZE) {
-        console.warn(`[Ground] ⚠️ ${label} texture is very large (${width}x${height}). Maximum recommended: ${MAX_TEXTURE_SIZE}px.`);
-      }
-      loadedTex.colorSpace = SRGBColorSpace;
-      loadedTex.wrapS = RepeatWrapping;
-      loadedTex.wrapT = RepeatWrapping;
-      loadedTex.repeat.set(repeat, repeat);
-      loadedTex.anisotropy = Math.min(16, material.renderer?.capabilities?.maxAnisotropy || 16);
-      loadedTex.magFilter = LinearFilter;
-      loadedTex.minFilter = LinearMipmapLinearFilter;
-      loadedTex.needsUpdate = true;
-      if (label === "City") {
-        cityMap = loadedTex;
-        cityMap.minFilter = LinearMipmapLinearFilter;
-        cityMap.magFilter = LinearFilter;
-      } else if (label === "Inland") {
-        inlandMap = loadedTex;
-        inlandMap.minFilter = LinearMipmapLinearFilter;
-        inlandMap.magFilter = LinearFilter;
-      } else if (label === "Coastal") {
-        coastalMap = loadedTex;
-        coastalMap.minFilter = LinearMipmapLinearFilter;
-        coastalMap.magFilter = LinearFilter;
-      }
-      material.map = loadedTex;
-      material.needsUpdate = true;
-      console.log(`[Ground] ✅ ${label} material.map assigned:`, {
-        hasMap: !!material.map,
-        mapSize: `${material.map.image.width}x${material.map.image.height}`,
-        colorSpace: material.map.colorSpace,
-        repeat,
-        beforeTrigger: {
-          materialName: material.name,
-          materialColor: material.color?.getHexString()
-        }
-      });
-      triggerTerrainUpdate();
-      console.log(`[Ground] ✅ ${label} texture applied successfully`, {
-        hasMap: !!material.map,
-        repeat,
-        wrapS: "RepeatWrapping",
-        wrapT: "RepeatWrapping"
-      });
-    },
-    (progress) => {
-      if (progress.lengthComputable) {
-        const percentComplete = progress.loaded / progress.total * 100;
-        console.log(`[Ground] 📥 ${label} loading... ${percentComplete.toFixed(1)}%`);
-      }
-    },
-    (error) => {
-      console.error(`[Ground] ❌ FAILED to load ${label} texture from ${url}`, error);
-      console.error(`[Ground] Error details:`, {
-        errorType: error.type,
-        errorMessage: error.message,
-        url,
-        material: material.name
-      });
-      material.needsUpdate = true;
-    }
+    (tex) => console.log(`[Ground] ✅ Loaded: ${url}`),
+    void 0,
+    (err2) => console.error(`[Ground] ❌ Failed: ${url}`, err2)
   );
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.repeat.set(10, 10);
+  return texture;
 }
-const ACTIVE_PRESET = (() => {
-  try {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const fromQuery = params.get("groundPreset");
-      if (fromQuery && GROUND_MATERIAL_PRESETS[fromQuery]) return fromQuery;
-    }
-  } catch {
-  }
-  return "default";
-})();
-const preset = GROUND_MATERIAL_PRESETS[ACTIVE_PRESET] || GROUND_MATERIAL_PRESETS.default;
-const CityGroundMaterial = (() => {
-  const material = new MeshPhongMaterial({
-    name: "CityGroundMaterial",
-    color: 16777215,
-    map: null,
-    shininess: 30,
-    side: FrontSide
-  });
-  console.log("[Ground] 🏗️ CityGroundMaterial created:", {
-    name: material.name,
-    color: material.color.getHexString(),
-    type: material.constructor.name
-  });
-  bindGroundTexture(
-    material,
-    "City",
-    CITY_GROUND_URL,
-    preset.city.repeat
-  );
-  material.needsUpdate = true;
-  return material;
-})();
-const InlandGroundMaterial = new MeshPhongMaterial({
+const CityGroundMaterial = new MeshBasicMaterial({
+  name: "CityGroundMaterial",
+  map: loadTexture$1("textures/ground/dirt-albedo.jpg")
+});
+const InlandGroundMaterial = new MeshBasicMaterial({
   name: "InlandGroundMaterial",
-  color: 16777215,
-  map: null,
-  shininess: 20,
-  side: FrontSide
+  map: loadTexture$1("textures/grass/albedo.jpg")
 });
-bindGroundTexture(
-  InlandGroundMaterial,
-  "Inland",
-  INLAND_GROUND_URL,
-  preset.inland.repeat
-);
-InlandGroundMaterial.needsUpdate = true;
-const CoastalGroundMaterial = new MeshPhongMaterial({
+const CoastalGroundMaterial = new MeshBasicMaterial({
   name: "CoastalGroundMaterial",
-  color: 16777215,
-  map: null,
-  shininess: 20,
-  side: FrontSide
+  map: loadTexture$1("textures/sand/albedo.jpg")
 });
-bindGroundTexture(
-  CoastalGroundMaterial,
-  "Coastal",
-  COASTAL_GROUND_URL,
-  preset.coastal.repeat
-);
-CoastalGroundMaterial.needsUpdate = true;
+function setTerrainMeshForUpdates() {
+}
 function diagnoseMaterialState() {
-  const diagnostics = {
-    city: {
-      material: "CityGroundMaterial",
-      hasMap: !!CityGroundMaterial.map,
-      colorSpace: CityGroundMaterial.map?.colorSpace
-    },
-    inland: {
-      material: "InlandGroundMaterial",
-      hasMap: !!InlandGroundMaterial.map,
-      mapURL: InlandGroundMaterial.map?.source?.data?.currentSrc || "unknown"
-    },
-    coastal: {
-      material: "CoastalGroundMaterial",
-      hasMap: !!CoastalGroundMaterial.map,
-      mapURL: CoastalGroundMaterial.map?.source?.data?.currentSrc || "unknown"
-    }
-  };
-  console.log("[Ground] Material diagnostics:", diagnostics);
-  return diagnostics;
 }
-function enableCityMaskDebug() {
-  const DEBUG_CITY_MASK = true;
-  console.log("[Ground] City mask debug enabled - recompile materials to see visualization");
-  console.log("[Ground] Red = city mask active, Green = unmasked areas");
-  return DEBUG_CITY_MASK;
-}
-function validateCityGroundMaterials(scene2) {
-  if (!scene2) {
-    console.warn("[Ground] validateCityGroundMaterials: No scene provided");
-    return;
-  }
-  let totalFound = 0;
-  let missingUVs = 0;
-  let missingMap = 0;
-  const issues = [];
-  scene2.traverse((obj) => {
-    if (obj.isMesh && obj.material) {
-      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-      materials.forEach((mat, matIdx) => {
-        if (mat && mat.name === "CityGroundMaterial") {
-          totalFound++;
-          const meshName = obj.name || "unnamed";
-          const matLabel = materials.length > 1 ? `[${matIdx}]` : "";
-          if (!obj.geometry.attributes.uv) {
-            missingUVs++;
-            const issue = `Mesh "${meshName}"${matLabel} using CityGroundMaterial but missing UVs`;
-            console.warn(`[Ground] ⚠️ ${issue}`, obj);
-            issues.push({ type: "missing-uv", mesh: meshName, object: obj });
-          }
-          if (!mat.map) {
-            missingMap++;
-            const issue = `Mesh "${meshName}"${matLabel} has CityGroundMaterial with NO map`;
-            console.warn(`[Ground] ⚠️ ${issue}`, obj);
-            issues.push({ type: "missing-map", mesh: meshName, object: obj });
-          }
-        }
-      });
-    }
-  });
-  const summary = {
-    totalMeshes: totalFound,
-    missingUVs,
-    missingMap,
-    allValid: missingUVs === 0 && missingMap === 0,
-    issues
-  };
-  if (totalFound === 0) {
-    console.info("[Ground] ℹ️ No meshes found using CityGroundMaterial");
-  } else if (summary.allValid) {
-    console.log(`[Ground] ✅ All ${totalFound} CityGroundMaterial meshes validated successfully`);
-  } else {
-    console.warn(`[Ground] ⚠️ Found ${missingUVs} UV issues and ${missingMap} map issues in ${totalFound} meshes`);
-  }
-  return summary;
-}
-console.log("[Ground] Ground texture materials initialized:", {
-  city: "CityGroundMaterial (dirt-albedo.jpg)",
-  inland: "InlandGroundMaterial (grass/albedo.jpg)",
-  coastal: "CoastalGroundMaterial (sand/albedo.jpg)",
-  debug: "Call window.groundDiagnostics() to check texture loading"
-});
-function groundDiagnostics() {
-  console.log("\n========== GROUND TEXTURE DIAGNOSTICS ==========\n");
-  const diagnostics = {
-    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    materials: {},
-    urls: {
-      city: CITY_GROUND_URL,
-      inland: INLAND_GROUND_URL,
-      coastal: COASTAL_GROUND_URL
-    },
-    textureLoader: {
-      type: textureLoader$1.constructor.name
-    }
-  };
-  const materials = [
-    { name: "CityGroundMaterial", material: CityGroundMaterial },
-    { name: "InlandGroundMaterial", material: InlandGroundMaterial },
-    { name: "CoastalGroundMaterial", material: CoastalGroundMaterial }
-  ];
-  materials.forEach(({ name, material }) => {
-    diagnostics.materials[name] = {
-      exists: !!material,
-      color: material?.color?.getHexString?.(),
-      roughness: material?.roughness,
-      metalness: material?.metalness,
-      hasMap: !!material?.map,
-      mapDetails: material?.map ? {
-        type: material.map.constructor.name,
-        source: material.map.source?.data ? "DataTexture or ImageTexture" : "unknown",
-        width: material.map.source?.data?.width || material.map.image?.width,
-        height: material.map.source?.data?.height || material.map.image?.height,
-        wrapS: material.map.wrapS === RepeatWrapping ? "RepeatWrapping" : material.map.wrapS,
-        wrapT: material.map.wrapT === RepeatWrapping ? "RepeatWrapping" : material.map.wrapT,
-        repeat: { x: material.map.repeat?.x, y: material.map.repeat?.y },
-        colorSpace: material.map.colorSpace,
-        needsUpdate: material.map.needsUpdate
-      } : null,
-      needsUpdate: material?.needsUpdate
-    };
-  });
-  console.log("Material State:", diagnostics.materials);
-  console.log("Texture URLs:", diagnostics.urls);
-  console.log("\nChecking texture file accessibility...");
-  Promise.all([
-    CITY_GROUND_URL,
-    INLAND_GROUND_URL,
-    COASTAL_GROUND_URL
-  ].map(
-    (url) => fetch(url, { method: "HEAD" }).then((res) => {
-      console.log(`✅ ${url}: ${res.status} ${res.statusText}`);
-      return { url, status: res.status };
-    }).catch((err2) => {
-      console.error(`❌ ${url}: ${err2.message}`);
-      return { url, error: err2.message };
-    })
-  )).then((results) => {
-    console.log("\nFetch Results:", results);
-  });
-  console.log("\nTerrain Mesh Reference:", {
-    exists: !!terrainMeshReference,
-    hasGeometry: !!terrainMeshReference?.geometry,
-    hasMaterial: !!terrainMeshReference?.material,
-    isArray: Array.isArray(terrainMeshReference?.material),
-    materialCount: Array.isArray(terrainMeshReference?.material) ? terrainMeshReference.material.length : 1
-  });
-  if (terrainMeshReference?.geometry?.attributes?.uv) {
-    const uv = terrainMeshReference.geometry.attributes.uv;
-    console.log("\nGeometry UVs:", {
-      hasUV: true,
-      itemSize: uv.itemSize,
-      count: uv.count,
-      array: uv.array.slice(0, 20)
-      // First 20 values
-    });
-  } else {
-    console.warn("\n⚠️ Geometry has NO UVs! This is the problem!");
-  }
-  console.log("\n========== END DIAGNOSTICS ==========\n");
-  return diagnostics;
-}
-if (typeof window !== "undefined") {
-  window.groundDiagnostics = groundDiagnostics;
-  console.log("[Ground] Diagnostic function available: window.groundDiagnostics()");
+function validateCityGroundMaterials() {
 }
 const SEA_SIDE = "east";
 const COAST_WIDTH = 120;
@@ -57756,39 +57353,39 @@ function mountDevHUD(options = {}) {
         presetStatus.textContent = "Select a preset to apply";
       }
     };
-    for (const preset2 of availablePresets) {
-      const presetMeta = lightingPresets?.[preset2.name] || {};
+    for (const preset of availablePresets) {
+      const presetMeta = lightingPresets?.[preset.name] || {};
       const button = document.createElement("button");
       button.type = "button";
       button.className = "dev-hud-btn";
-      const displayLabel = presetMeta.label || preset2.label;
+      const displayLabel = presetMeta.label || preset.label;
       button.textContent = displayLabel;
       const hotkeyLabel = presetMeta.hotkey || defaultPresetHotkeys[presetButtons.size] || "";
       if (hotkeyLabel) {
         button.title = `Set ${displayLabel} lighting (Hotkey ${hotkeyLabel})`;
         button.setAttribute("aria-keyshortcuts", hotkeyLabel);
-        presetKeyBindings.set(hotkeyLabel, preset2.name);
+        presetKeyBindings.set(hotkeyLabel, preset.name);
         const simpleKey = hotkeyLabel.startsWith("Digit") ? hotkeyLabel.replace("Digit", "") : hotkeyLabel;
-        presetKeyBindings.set(simpleKey, preset2.name);
+        presetKeyBindings.set(simpleKey, preset.name);
       } else {
         button.title = `Set ${displayLabel} lighting`;
       }
       button.addEventListener("pointerdown", (event) => {
         event.preventDefault();
         if (typeof onSetLightingPreset === "function") {
-          onSetLightingPreset(preset2.name);
+          onSetLightingPreset(preset.name);
         }
-        setActivePresetFn?.(preset2.name);
+        setActivePresetFn?.(preset.name);
       });
       buttonRow.appendChild(button);
-      presetButtons.set(preset2.name, button);
+      presetButtons.set(preset.name, button);
     }
     section.appendChild(buttonRow);
     content.appendChild(section);
     wrap._presetKeyBindings = presetKeyBindings;
     cyclePreset = () => {
       if (!availablePresets.length) return;
-      const names = availablePresets.map((preset2) => preset2.name);
+      const names = availablePresets.map((preset) => preset.name);
       const currentIndex = activePresetName ? names.indexOf(activePresetName) : -1;
       const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % names.length : 0;
       const nextName = names[nextIndex];
@@ -59614,7 +59211,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CC8Ki0im.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-RBHUp690.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60349,7 +59946,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DF9PHLTx.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-W6NDsQuI.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61303,8 +60900,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T11:38:01.361Z" : "",
-      sha: true ? "f1aadca4696c894d1a58e36748bfa1be42087fb6" : ""
+      time: true ? "2026-01-01T11:52:22.144Z" : "",
+      sha: true ? "33e4eafb41b74d89880d50acea9590a9fe08dc0d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -64882,16 +64479,16 @@ class DynamicSky {
     this.azimuthOffset = MathUtils.degToRad(deg ?? 0);
   }
   applyPreset(key) {
-    const preset2 = SKY_PRESETS$1[key] || SKY_PRESETS$1.high_noon;
+    const preset = SKY_PRESETS$1[key] || SKY_PRESETS$1.high_noon;
     const uniforms = this.sky.material.uniforms;
-    uniforms.turbidity.value = preset2.turbidity;
-    uniforms.rayleigh.value = preset2.rayleigh;
-    uniforms.mieCoefficient.value = preset2.mieCoefficient;
-    uniforms.mieDirectionalG.value = preset2.mieDirectionalG;
+    uniforms.turbidity.value = preset.turbidity;
+    uniforms.rayleigh.value = preset.rayleigh;
+    uniforms.mieCoefficient.value = preset.mieCoefficient;
+    uniforms.mieDirectionalG.value = preset.mieDirectionalG;
     uniforms.sunPosition.value.copy(this.sunDirection);
     this.sky.material.needsUpdate = true;
-    this.settings.horizon = preset2.horizon;
-    this.settings.zenith = preset2.zenith;
+    this.settings.horizon = preset.horizon;
+    this.settings.zenith = preset.zenith;
   }
   setSunDirection(direction2) {
     if (!direction2) return;
@@ -65261,8 +64858,8 @@ function createSky(scene2) {
 }
 function updateSky(scene2, presetName) {
   const sky = scene2?.userData?.sky;
-  const preset2 = SKY_PRESETS[presetName] || SKY_PRESETS.high_noon;
-  applySkySettings(sky, preset2);
+  const preset = SKY_PRESETS[presetName] || SKY_PRESETS.high_noon;
+  applySkySettings(sky, preset);
 }
 function setTimeOfDayPhase(state, phase01) {
   if (!state || typeof state !== "object") return 0;
@@ -65302,29 +64899,29 @@ function updateSkyForTimeOfDay(scene2, phase01) {
   const sky = scene2?.userData?.sky;
   if (!sky) return;
   const phase = clamp01(phase01);
-  let preset2, t;
+  let preset, t;
   if (phase < 0.2) {
     t = phase / 0.2;
-    preset2 = interpolatePresets(SKY_PRESETS.night_sky, SKY_PRESETS.blue_hour, t);
+    preset = interpolatePresets(SKY_PRESETS.night_sky, SKY_PRESETS.blue_hour, t);
   } else if (phase < 0.3) {
     t = (phase - 0.2) / 0.1;
-    preset2 = interpolatePresets(SKY_PRESETS.blue_hour, SKY_PRESETS.golden_hour, t);
+    preset = interpolatePresets(SKY_PRESETS.blue_hour, SKY_PRESETS.golden_hour, t);
   } else if (phase < 0.45) {
     t = (phase - 0.3) / 0.15;
-    preset2 = interpolatePresets(SKY_PRESETS.golden_hour, SKY_PRESETS.high_noon, t);
+    preset = interpolatePresets(SKY_PRESETS.golden_hour, SKY_PRESETS.high_noon, t);
   } else if (phase < 0.55) {
-    preset2 = SKY_PRESETS.high_noon;
+    preset = SKY_PRESETS.high_noon;
   } else if (phase < 0.7) {
     t = (phase - 0.55) / 0.15;
-    preset2 = interpolatePresets(SKY_PRESETS.high_noon, SKY_PRESETS.golden_hour, t);
+    preset = interpolatePresets(SKY_PRESETS.high_noon, SKY_PRESETS.golden_hour, t);
   } else if (phase < 0.8) {
     t = (phase - 0.7) / 0.1;
-    preset2 = interpolatePresets(SKY_PRESETS.golden_hour, SKY_PRESETS.blue_hour, t);
+    preset = interpolatePresets(SKY_PRESETS.golden_hour, SKY_PRESETS.blue_hour, t);
   } else {
     t = (phase - 0.8) / 0.2;
-    preset2 = interpolatePresets(SKY_PRESETS.blue_hour, SKY_PRESETS.night_sky, t);
+    preset = interpolatePresets(SKY_PRESETS.blue_hour, SKY_PRESETS.night_sky, t);
   }
-  applySkySettings(sky, preset2);
+  applySkySettings(sky, preset);
   updateSkySunPosition(scene2, phase);
 }
 const LIGHTING_PRESETS$1 = {
@@ -65595,23 +65192,23 @@ const ENVIRONMENT_OVERRIDES = {
     }
   }
 };
-function validatePreset(name, preset2) {
-  assert(preset2 && typeof preset2 === "object", `lighting preset ${name} must be an object`);
-  assert(Number.isFinite(preset2.phase), `lighting preset ${name} requires numeric phase`);
-  assert(Number.isFinite(preset2.exposure), `lighting preset ${name} requires numeric exposure`);
-  assert(typeof preset2.label === "string" && preset2.label.trim() !== "", `lighting preset ${name} requires label`);
-  if (preset2.hotkey != null) {
-    assert(typeof preset2.hotkey === "string", `lighting preset ${name} hotkey must be string`);
+function validatePreset(name, preset) {
+  assert(preset && typeof preset === "object", `lighting preset ${name} must be an object`);
+  assert(Number.isFinite(preset.phase), `lighting preset ${name} requires numeric phase`);
+  assert(Number.isFinite(preset.exposure), `lighting preset ${name} requires numeric exposure`);
+  assert(typeof preset.label === "string" && preset.label.trim() !== "", `lighting preset ${name} requires label`);
+  if (preset.hotkey != null) {
+    assert(typeof preset.hotkey === "string", `lighting preset ${name} hotkey must be string`);
   }
-  if (preset2.skyboxExposure != null) {
-    assert(Number.isFinite(preset2.skyboxExposure), `lighting preset ${name} skyboxExposure must be numeric`);
+  if (preset.skyboxExposure != null) {
+    assert(Number.isFinite(preset.skyboxExposure), `lighting preset ${name} skyboxExposure must be numeric`);
   }
 }
 function validateLightingConfig(config) {
   assert(config && typeof config === "object", "lighting config must be an object");
   const presets = config.presets || {};
-  for (const [name, preset2] of Object.entries(presets)) {
-    validatePreset(name, preset2);
+  for (const [name, preset] of Object.entries(presets)) {
+    validatePreset(name, preset);
   }
   return config;
 }
@@ -70119,7 +69716,7 @@ class LightingSystem {
   };
   cycleLightingPreset = () => {
     const presets = ["Bright Noon", "Golden Hour", "Blue Hour", "Night"].filter(
-      (preset2) => !!LIGHTING_PRESETS$1[preset2]
+      (preset) => !!LIGHTING_PRESETS$1[preset]
     );
     if (!presets.length) return;
     const currentIndex = presets.indexOf(this.lastAppliedLightingPreset ?? "");
@@ -71403,7 +71000,6 @@ class Application {
       foundationPadMaterial: harborCity?.userData?.["foundationPadMaterial"] ?? null
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
-    validateCityGroundMaterials(scene2);
     applyGravelToRoads({ scene: scene2, baseUrl: BASE_URL2, repeat: [6, 6] }).catch(() => {
     });
     updateTerrainCoverageMask(terrain, {
@@ -71955,4 +71551,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BpUaAHe1.js.map
+//# sourceMappingURL=index-3yd93PBq.js.map
