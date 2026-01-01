@@ -43614,6 +43614,17 @@ const fallbackDiffuseTexture = (() => {
 })();
 function bindGroundTexture(material, label, url, repeat) {
   console.log(`[Ground] 🔄 Loading ${label} texture from: ${url}`);
+  const placeholderData = new Uint8Array(4).fill(192);
+  const placeholderTex = new DataTexture(
+    placeholderData,
+    1,
+    1,
+    RGBAFormat,
+    UnsignedByteType
+  );
+  placeholderTex.needsUpdate = true;
+  material.map = placeholderTex;
+  material.needsUpdate = true;
   textureLoader$1.load(
     url,
     (loadedTex) => {
@@ -43645,14 +43656,6 @@ function bindGroundTexture(material, label, url, repeat) {
       loadedTex.needsUpdate = true;
       material.map = loadedTex;
       material.needsUpdate = true;
-      const originalMap = material.map;
-      material.map = null;
-      material.needsUpdate = true;
-      requestAnimationFrame(() => {
-        material.map = originalMap;
-        material.needsUpdate = true;
-        console.log(`[Ground] 🔄 Forcing shader recompilation for ${label} material`);
-      });
       triggerTerrainUpdate();
       console.log(`[Ground] ✅ ${label} texture applied successfully`, {
         hasMap: !!material.map,
@@ -43669,7 +43672,6 @@ function bindGroundTexture(material, label, url, repeat) {
     },
     (error) => {
       console.error(`[Ground] ❌ Failed to load ${label} texture from ${url}`, error);
-      material.map = null;
       material.needsUpdate = true;
     }
   );
@@ -43707,6 +43709,8 @@ const CityGroundMaterial = (() => {
     metalness: material.metalness,
     preset: ACTIVE_PRESET
   });
+  material.onBeforeCompile = (shader) => {
+  };
   bindGroundTexture(
     material,
     "City",
@@ -59567,7 +59571,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-_sr1k9xc.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BD2tiQVu.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60302,7 +60306,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-14401ush.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DCZOO8C2.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61250,8 +61254,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T09:21:22.840Z" : "",
-      sha: true ? "ac1d9ac6dd3b19316083cff5862c1b30bfd1b681" : ""
+      time: true ? "2026-01-01T09:35:13.486Z" : "",
+      sha: true ? "5abe9507069f2774b600a3ac448be4771e021cef" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71897,4 +71901,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Csux8Eir.js.map
+//# sourceMappingURL=index-BAjbohFy.js.map
