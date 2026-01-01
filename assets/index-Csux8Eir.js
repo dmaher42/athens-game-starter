@@ -43645,6 +43645,14 @@ function bindGroundTexture(material, label, url, repeat) {
       loadedTex.needsUpdate = true;
       material.map = loadedTex;
       material.needsUpdate = true;
+      const originalMap = material.map;
+      material.map = null;
+      material.needsUpdate = true;
+      requestAnimationFrame(() => {
+        material.map = originalMap;
+        material.needsUpdate = true;
+        console.log(`[Ground] 🔄 Forcing shader recompilation for ${label} material`);
+      });
       triggerTerrainUpdate();
       console.log(`[Ground] ✅ ${label} texture applied successfully`, {
         hasMap: !!material.map,
@@ -59559,7 +59567,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C4ZufNsO.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-_sr1k9xc.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60294,7 +60302,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Cvs81NBo.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-14401ush.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61242,8 +61250,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T09:17:35.146Z" : "",
-      sha: true ? "4e27c77b426b72ca460f7df24c02022a1c60ab6d" : ""
+      time: true ? "2026-01-01T09:21:22.840Z" : "",
+      sha: true ? "ac1d9ac6dd3b19316083cff5862c1b30bfd1b681" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71889,4 +71897,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DNaVG9BB.js.map
+//# sourceMappingURL=index-Csux8Eir.js.map
