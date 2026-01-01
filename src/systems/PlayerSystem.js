@@ -185,15 +185,24 @@ export class PlayerSystem {
 
         const { root, gltf } = loadedHero;
 
-        // Ensure proper scale and position
-        root.scale.set(1, 1, 1);
+        // Don't reset scale - it was already scaled to targetHeight in loadGLBWithFallbacks
+        // root.scale.set(1, 1, 1);  // REMOVED - this was undoing the scaling!
         root.position.set(0, 0, 0);
         
-        // Enable shadow casting for all meshes
+        // Update matrix world to ensure proper bounding box calculations
+        root.updateMatrixWorld(true);
+        
+        // Enable shadow casting for all meshes and update bounding spheres
         root.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+            child.frustumCulled = false;  // Disable frustum culling for character meshes
+            // Update geometry bounds
+            if (child.geometry) {
+              child.geometry.computeBoundingBox();
+              child.geometry.computeBoundingSphere();
+            }
           }
         });
 

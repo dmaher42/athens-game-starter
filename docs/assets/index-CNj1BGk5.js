@@ -59573,7 +59573,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BZL8Omrb.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DIQAxB7g.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -60308,7 +60308,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CEXi2T4G.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-qDQ0ISK9.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -61262,7 +61262,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T10:58:44.195Z" : "",
+      time: true ? "2026-01-01T11:09:45.626Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -70832,12 +70832,17 @@ class PlayerSystem {
           throw new Error("No hero GLB candidates reachable");
         }
         const { root, gltf } = loadedHero;
-        root.scale.set(1, 1, 1);
         root.position.set(0, 0, 0);
+        root.updateMatrixWorld(true);
         root.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+            child.frustumCulled = false;
+            if (child.geometry) {
+              child.geometry.computeBoundingBox();
+              child.geometry.computeBoundingSphere();
+            }
           }
         });
         character.initializeFromGLTF(root, gltf.animations);
@@ -71909,4 +71914,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BTRW2rdH.js.map
+//# sourceMappingURL=index-CNj1BGk5.js.map
