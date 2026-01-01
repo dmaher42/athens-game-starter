@@ -420,8 +420,12 @@ export async function loadGLBWithFallbacks(loader, urls, options = {}) {
 
   const baseUrl = resolveBaseUrl();
   const seen = new Set();
+  const originalWarn = console.warn;
+  const originalError = console.error;
 
   try {
+    console.warn = () => {};
+    console.error = () => {};
     for (const candidate of urls) {
     const raw = typeof candidate === "string" ? candidate.trim() : "";
     if (!raw) {
