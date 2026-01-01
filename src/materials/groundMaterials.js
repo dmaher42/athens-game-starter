@@ -49,18 +49,27 @@ function triggerTerrainUpdate() {
 
 const textureLoader = new THREE.TextureLoader();
 
-// Use absolute paths with the GitHub Pages base path
-// This works on GitHub Pages: https://dmaher42.github.io/athens-game-starter/
-const CITY_GROUND_URL = "/athens-game-starter/textures/ground/dirt-albedo.jpg";
-const INLAND_GROUND_URL = "/athens-game-starter/textures/grass/albedo.jpg";
-const COASTAL_GROUND_URL = "/athens-game-starter/textures/sand/albedo.jpg";
+// Detect environment and use appropriate base path
+const isGitHubPages = typeof window !== 'undefined' && 
+  (window.location.hostname === 'dmaher42.github.io' || 
+   window.location.pathname.startsWith('/athens-game-starter/'));
+
+const basePath = isGitHubPages ? '/athens-game-starter' : '';
+
+// Use paths that work in both local dev and GitHub Pages
+const CITY_GROUND_URL = `${basePath}/textures/ground/dirt-albedo.jpg`;
+const INLAND_GROUND_URL = `${basePath}/textures/grass/albedo.jpg`;
+const COASTAL_GROUND_URL = `${basePath}/textures/sand/albedo.jpg`;
 
 // Log the URL configuration for debugging
 console.log('[Ground] Texture URL Configuration:', {
-  CITY_GROUND_URL: CITY_GROUND_URL,
-  INLAND_GROUND_URL: INLAND_GROUND_URL,
-  COASTAL_GROUND_URL: COASTAL_GROUND_URL,
-  currentLocation: typeof window !== 'undefined' ? window.location.href : 'N/A',
+  isGitHubPages,
+  basePath,
+  CITY_GROUND_URL,
+  INLAND_GROUND_URL,
+  COASTAL_GROUND_URL,
+  hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A',
+  pathname: typeof window !== 'undefined' ? window.location.pathname : 'N/A',
 });
 
 // Simple preset system for ground materials; defaults to "default"
