@@ -59213,7 +59213,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Babbs5Wn.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Dt1esNWN.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59948,7 +59948,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D1IkyAtc.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-mGIMvvTD.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60902,7 +60902,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T11:58:27.344Z" : "",
+      time: true ? "2026-01-02T08:15:41.184Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -70538,6 +70538,8 @@ class PlayerSystem {
     this.playerMovementEnabled = enabled;
   }
 }
+window.THREE = THREE;
+console.log("✅ THREE exposed globally for debugging");
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$4();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES = engineConfig.districtRuleCandidates || [];
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
@@ -70636,6 +70638,15 @@ class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
+    const debugGlobalScope = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : null;
+    if (debugGlobalScope) {
+      debugGlobalScope.THREE = debugGlobalScope.THREE || THREE;
+      if (typeof window !== "undefined") {
+        window.THREE = THREE;
+      }
+      const threeLogTarget = typeof window !== "undefined" ? window : debugGlobalScope;
+      console.log("✅ THREE exposed:", threeLogTarget?.THREE);
+    }
     showLoadingScreen({
       initialStatus: "Preparing the experience..."
     });
@@ -70793,6 +70804,15 @@ class Application {
     updateLoadingStatus("Sculpting the Attic landscape...");
     const terrain = createTerrain(scene2);
     this.terrain = terrain;
+    const terrainDebugScope = debugGlobalScope ?? (typeof window !== "undefined" ? window : null);
+    if (terrainDebugScope && terrain) {
+      terrainDebugScope.terrainMesh = terrain;
+      if (typeof window !== "undefined") {
+        window.terrainMesh = terrain;
+      }
+      const terrainLogTarget = typeof window !== "undefined" ? window : terrainDebugScope;
+      console.log("✅ TerrainMesh exposed:", terrainLogTarget?.terrainMesh);
+    }
     const terrainSize = terrain?.geometry?.userData?.["size"];
     const seaLevel = getSeaLevelY();
     const oceanRadius = Math.max(
@@ -71437,6 +71457,8 @@ function bootApplication$1(handlers = defaultBootHandlers) {
     throw error;
   });
 }
+window.THREE = THREE;
+console.log("✅ THREE exposed globally for debugging (main.ts)");
 const applicationBootConfig = applicationBootConfig$1;
 const _bootOptions = {
   baseUrl: applicationBootConfig.baseUrl,
@@ -71553,4 +71575,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-j7XZQpIG.js.map
+//# sourceMappingURL=index-KtHWCqiS.js.map
