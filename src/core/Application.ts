@@ -95,6 +95,10 @@ import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
 import { PlayerSystem } from "../systems/PlayerSystem.js";
 
+// Expose THREE globally for debugging in devtools.
+(window as any).THREE = THREE;
+console.log("✅ THREE exposed globally for debugging");
+
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
   engineConfig.districtRuleCandidates || [];
