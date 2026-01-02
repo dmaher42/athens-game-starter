@@ -394,6 +394,13 @@ export class Application {
     this.scene = scene;
     setFogEnabled(false);
 
+    // Expose scene and camera to window for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).scene = scene;
+      (window as any).camera = camera;
+      console.log('✅ Scene and camera exposed to window for debugging');
+    }
+
     const lightingSystem = new LightingSystem({
         scene,
         renderer,
@@ -949,6 +956,67 @@ export class Application {
       }
       if (devHud?.setStatusLine) {
         devHud.setStatusLine("proc", proceduralStatus);
+      }
+
+      // Add debug water visibility controls
+      if (typeof window !== 'undefined') {
+        (window as any).toggleWater = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isWater = 
+              obj.name === 'AegeanOcean' ||
+              obj.name === 'FarOceanPlane' ||
+              obj.name === 'HarborLowPolyWater' ||
+              obj.name?.toLowerCase().includes('water') ||
+              obj.name?.toLowerCase().includes('ocean') ||
+              obj.userData?.isWater ||
+              (obj.renderOrder === -1 && obj.material?.transparent);
+            if (isWater) {
+              obj.visible = !obj.visible;
+              count++;
+            }
+          });
+          console.log(`🌊 Toggled ${count} water objects`);
+        };
+        
+        (window as any).hideWater = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isWater = 
+              obj.name === 'AegeanOcean' ||
+              obj.name === 'FarOceanPlane' ||
+              obj.name === 'HarborLowPolyWater' ||
+              obj.name?.toLowerCase().includes('water') ||
+              obj.name?.toLowerCase().includes('ocean') ||
+              obj.userData?.isWater ||
+              (obj.renderOrder === -1 && obj.material?.transparent);
+            if (isWater && obj.visible) {
+              obj.visible = false;
+              count++;
+            }
+          });
+          console.log(`👻 Hidden ${count} water objects`);
+        };
+        
+        (window as any).showWater = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isWater = 
+              obj.name === 'AegeanOcean' ||
+              obj.name === 'FarOceanPlane' ||
+              obj.name === 'HarborLowPolyWater' ||
+              obj.name?.toLowerCase().includes('water') ||
+              obj.name?.toLowerCase().includes('ocean') ||
+              obj.userData?.isWater;
+            if (isWater && !obj.visible) {
+              obj.visible = true;
+              count++;
+            }
+          });
+          console.log(`👁️ Shown ${count} water objects`);
+        };
+        
+        console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
       }
 
       renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
