@@ -1016,7 +1016,41 @@ export class Application {
           console.log(`👁️ Shown ${count} water objects`);
         };
         
+        (window as any).hideRoads = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isRoad = 
+              obj.name?.toLowerCase().includes('road') ||
+              obj.name?.toLowerCase().includes('street') ||
+              obj.name?.toLowerCase().includes('path') ||
+              obj.userData?.type === 'road';
+            if (isRoad && obj.visible) {
+              obj.visible = false;
+              count++;
+            }
+          });
+          console.log(`🚫 Hidden ${count} road objects`);
+        };
+        
+        (window as any).showRoads = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isRoad = 
+              obj.name?.toLowerCase().includes('road') ||
+              obj.name?.toLowerCase().includes('street') ||
+              obj.name?.toLowerCase().includes('path') ||
+              obj.userData?.type === 'road';
+            if (isRoad && !obj.visible) {
+              obj.visible = true;
+              count++;
+            }
+          });
+          console.log(`✅ Shown ${count} road objects`);
+        };
+        
         console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
+        console.log('✅ Road controls available: hideRoads(), showRoads()');
+      }
       }
 
       renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {

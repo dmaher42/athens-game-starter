@@ -408,9 +408,9 @@ export async function createOcean(scene, terrain, options = {}) {
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */ `
       // Clipping Logic for Mainland: Remove water from the West (inland) side
-      // Ocean mesh now starts at x=0, but we add safety margin to clip any inland overflow
-      // Harbor is at x=120, city extends west to about x=-200
-      if (vWorldPosition.x < -50.0) {
+      // Aggressively clip ocean to prevent overlap with city and terrain
+      // City is west of x=0, harbor is at x=120. Only show water east of x=100.
+      if (vWorldPosition.x < 100.0) {
         discard;
       }
 
