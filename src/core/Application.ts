@@ -224,6 +224,22 @@ export class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
+    const debugGlobalScope: any =
+      typeof globalThis !== "undefined"
+        ? globalThis
+        : typeof window !== "undefined"
+          ? window
+          : null;
+
+    if (debugGlobalScope) {
+      debugGlobalScope.THREE = debugGlobalScope.THREE || THREE;
+      if (typeof window !== "undefined") {
+        (window as any).THREE = THREE;
+      }
+      const threeLogTarget =
+        typeof window !== "undefined" ? (window as any) : debugGlobalScope;
+      console.log("✅ THREE exposed:", threeLogTarget?.THREE);
+    }
     showLoadingScreen({
       initialStatus: "Preparing the experience...",
     });
@@ -414,6 +430,16 @@ export class Application {
 
     const terrain = createTerrain(scene);
     this.terrain = terrain;
+    const terrainDebugScope = debugGlobalScope ?? (typeof window !== "undefined" ? window : null);
+    if (terrainDebugScope && terrain) {
+      terrainDebugScope.terrainMesh = terrain;
+      if (typeof window !== "undefined") {
+        (window as any).terrainMesh = terrain;
+      }
+      const terrainLogTarget =
+        typeof window !== "undefined" ? (window as any) : terrainDebugScope;
+      console.log("✅ TerrainMesh exposed:", terrainLogTarget?.terrainMesh);
+    }
     const terrainSize = terrain?.geometry?.userData?.['size'];
 
     const seaLevel = getSeaLevelY();
