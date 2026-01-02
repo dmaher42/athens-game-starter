@@ -59213,7 +59213,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CQpSrNKb.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-ey3XtzZ_.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59948,7 +59948,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Co-Dtbsu.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CPknCJZ8.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60902,8 +60902,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-01T11:59:10.451Z" : "",
-      sha: true ? "c9fb7656e7c6f6d86148bf7a727f3659c6704efc" : ""
+      time: true ? "2026-01-02T04:19:52.834Z" : "",
+      sha: true ? "17606c2db715ce3fe5682384051c7bea5eef9951" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -70636,6 +70636,15 @@ class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
+    const debugGlobalScope = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : null;
+    if (debugGlobalScope) {
+      debugGlobalScope.THREE = debugGlobalScope.THREE || THREE;
+      if (typeof window !== "undefined") {
+        window.THREE = THREE;
+      }
+      const threeLogTarget = typeof window !== "undefined" ? window : debugGlobalScope;
+      console.log("✅ THREE exposed:", threeLogTarget?.THREE);
+    }
     showLoadingScreen({
       initialStatus: "Preparing the experience..."
     });
@@ -70793,6 +70802,15 @@ class Application {
     updateLoadingStatus("Sculpting the Attic landscape...");
     const terrain = createTerrain(scene2);
     this.terrain = terrain;
+    const terrainDebugScope = debugGlobalScope ?? (typeof window !== "undefined" ? window : null);
+    if (terrainDebugScope && terrain) {
+      terrainDebugScope.terrainMesh = terrain;
+      if (typeof window !== "undefined") {
+        window.terrainMesh = terrain;
+      }
+      const terrainLogTarget = typeof window !== "undefined" ? window : terrainDebugScope;
+      console.log("✅ TerrainMesh exposed:", terrainLogTarget?.terrainMesh);
+    }
     const terrainSize = terrain?.geometry?.userData?.["size"];
     const seaLevel = getSeaLevelY();
     const oceanRadius = Math.max(
@@ -71553,4 +71571,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-51jXwc3c.js.map
+//# sourceMappingURL=index-oKxXul7r.js.map
