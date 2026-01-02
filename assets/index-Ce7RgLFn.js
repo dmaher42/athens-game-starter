@@ -59213,7 +59213,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D7KaNqnH.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-5gCgO7F5.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59948,7 +59948,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DpJGG_Qc.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BL6UG_iW.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60902,8 +60902,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-02T08:16:35.666Z" : "",
-      sha: true ? "43e44299b2187085fdda5261623c73bc1138bda4" : ""
+      time: true ? "2026-01-02T23:48:03.927Z" : "",
+      sha: true ? "14b57c547788f247237d3ddb971472b53f4cfa37" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -70771,6 +70771,11 @@ class Application {
     } = sceneContext;
     this.scene = scene2;
     setFogEnabled(false);
+    if (typeof window !== "undefined") {
+      window.scene = scene2;
+      window.camera = camera2;
+      console.log("✅ Scene and camera exposed to window for debugging");
+    }
     const lightingSystem = new LightingSystem({
       scene: scene2,
       renderer: renderer2,
@@ -71240,6 +71245,42 @@ class Application {
     if (devHud2?.setStatusLine) {
       devHud2.setStatusLine("proc", proceduralStatus);
     }
+    if (typeof window !== "undefined") {
+      window.toggleWater = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isWater = obj.name === "AegeanOcean" || obj.name === "FarOceanPlane" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater || obj.renderOrder === -1 && obj.material?.transparent;
+          if (isWater) {
+            obj.visible = !obj.visible;
+            count++;
+          }
+        });
+        console.log(`🌊 Toggled ${count} water objects`);
+      };
+      window.hideWater = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isWater = obj.name === "AegeanOcean" || obj.name === "FarOceanPlane" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater || obj.renderOrder === -1 && obj.material?.transparent;
+          if (isWater && obj.visible) {
+            obj.visible = false;
+            count++;
+          }
+        });
+        console.log(`👻 Hidden ${count} water objects`);
+      };
+      window.showWater = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isWater = obj.name === "AegeanOcean" || obj.name === "FarOceanPlane" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater;
+          if (isWater && !obj.visible) {
+            obj.visible = true;
+            count++;
+          }
+        });
+        console.log(`👁️ Shown ${count} water objects`);
+      };
+      console.log("✅ Water controls available: hideWater(), showWater(), toggleWater()");
+    }
     renderer2.domElement.addEventListener("pointerdown", (event) => {
       if (event.button === 0) {
         interactor.useObject();
@@ -71575,4 +71616,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-W8ljF7p7.js.map
+//# sourceMappingURL=index-Ce7RgLFn.js.map
