@@ -59213,7 +59213,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CTiEZSXg.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D7KaNqnH.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59948,7 +59948,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Ds0hypSV.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DpJGG_Qc.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60902,8 +60902,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-02T08:07:41.457Z" : "",
-      sha: true ? "2dc6260010dbfcae6b9d2acd9784f503eb13a10c" : ""
+      time: true ? "2026-01-02T08:16:35.666Z" : "",
+      sha: true ? "43e44299b2187085fdda5261623c73bc1138bda4" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71457,6 +71457,8 @@ function bootApplication$1(handlers = defaultBootHandlers) {
     throw error;
   });
 }
+window.THREE = THREE;
+console.log("✅ THREE exposed globally for debugging (main.ts)");
 const applicationBootConfig = applicationBootConfig$1;
 const _bootOptions = {
   baseUrl: applicationBootConfig.baseUrl,
@@ -71573,4 +71575,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-8dC8WgN2.js.map
+//# sourceMappingURL=index-W8ljF7p7.js.map
