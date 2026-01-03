@@ -59147,7 +59147,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BTrNW6pw.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-AH6lnH.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59882,7 +59882,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CYUI6vGM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CqF5vs7U.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60836,8 +60836,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T05:17:25.695Z" : "",
-      sha: true ? "75173bbd09cdb54ad682507270fa0b40e08caea4" : ""
+      time: true ? "2026-01-03T05:26:28.598Z" : "",
+      sha: true ? "5098951f0ac888dc40e702407dcfa9d79f6ee3c0" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71249,10 +71249,37 @@ class Application {
         });
         console.log(`  Total: ${roadCount} roads, ${footpathCount} footpaths, ${plazaCount} plazas`);
       };
+      window.findBrightObjects = () => {
+        console.log("💡 Finding bright/white objects in scene:");
+        const brightObjects = [];
+        scene2.traverse((obj) => {
+          if (obj.material?.color) {
+            const hex = obj.material.color.getHexString();
+            const r = obj.material.color.r;
+            const g = obj.material.color.g;
+            const b = obj.material.color.b;
+            const brightness = (r + g + b) / 3;
+            if (brightness > 0.8) {
+              brightObjects.push({
+                name: obj.name || "unnamed",
+                type: obj.geometry?.type || "unknown",
+                position: `(${obj.position.x.toFixed(1)}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)})`,
+                color: `#${hex}`,
+                visible: obj.visible,
+                brightness: brightness.toFixed(2)
+              });
+            }
+          }
+        });
+        console.table(brightObjects);
+        console.log(`Found ${brightObjects.length} bright objects (brightness > 0.8)`);
+        return brightObjects;
+      };
       console.log("✅ Water controls available: hideWater(), showWater(), toggleWater()");
       console.log("✅ Road controls available: hideRoads(), showRoads()");
       console.log("✅ Debug: debugOcean() to check ocean position");
       console.log("✅ Debug: debugCivicDistrict() to inspect civic district elements");
+      console.log("✅ Debug: findBrightObjects() to locate white/bright meshes");
       renderer2.domElement.addEventListener("pointerdown", (event) => {
         if (event.button === 0) {
           interactor.useObject();
@@ -71589,4 +71616,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DhirGYAG.js.map
+//# sourceMappingURL=index-ByrL4ofO.js.map
