@@ -27,9 +27,9 @@ export const HARBOR_GROUND_HEIGHT = 2;
 // SINGLE SOURCE OF TRUTH for the harbor's world position.
 // All other systems (terrain, placement, etc.) should derive from this.
 export const HARBOR_CENTER_3D = new THREE.Vector3(
-  -20,
+  310.73,
   resolveSeaLevelY() + HARBOR_GROUND_HEIGHT,
-  -40,
+  1.31,
 );
 
 // All districts now sit on the same flat plane

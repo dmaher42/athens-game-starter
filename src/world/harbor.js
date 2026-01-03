@@ -174,6 +174,25 @@ function createPierLine(startX, z, sectionCount, seaLevel) {
   return { pier, sections };
 }
 
+function createVerticalPierLine(x, startZ, sectionCount, seaLevel) {
+  const pier = new THREE.Group();
+  pier.name = "HarborPier";
+  const sections = [];
+
+  let cursorZ = startZ;
+  for (let i = 0; i < sectionCount; i++) {
+    const section = createDockSection(seaLevel);
+    // Rotate 90 degrees for north-south orientation
+    section.rotation.y = Math.PI / 2;
+    section.position.set(x, seaLevel - HARBOR_GROUND_HEIGHT, cursorZ);
+    pier.add(section);
+    sections.push(section);
+    cursorZ -= section.userData.length - DOCK_GAP;
+  }
+
+  return { pier, sections };
+}
+
 function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f6bb4, accent = 0xf2a541 }) {
   const boat = new THREE.Group();
   boat.name = "HarborBoat";
@@ -663,22 +682,22 @@ export function createHarbor(scene, options = {}) {
       pierPositions.push({ x: localX, z: localZ });
     }
   } else {
-    // Fallback to default pier positions
-    if (IS_DEV) console.log('[Harbor] Using default pier positions (no terrain sampler)');
-    const pierStartX = 70 + 1.1;
-    const pierRows = [
-      { z: -18, sections: 4 },
-      { z: -2, sections: 5 },
-      { z: 16, sections: 4 },
+    // Fallback to default pier positions - vertical (north-south) orientation
+    if (IS_DEV) console.log('[Harbor] Using default vertical pier positions (north-south)');
+    const pierStartZ = 40;
+    const pierColumns = [
+      { x: -15, sections: 4 },
+      { x: 0, sections: 5 },
+      { x: 15, sections: 4 },
     ];
 
-    for (const row of pierRows) {
-      const { pier, sections } = createPierLine(pierStartX, row.z, row.sections, seaLevel);
+    for (const col of pierColumns) {
+      const { pier, sections } = createVerticalPierLine(col.x, pierStartZ, col.sections, seaLevel);
       allSections.push(...sections);
       piersGroup.add(pier);
       
       // Store pier position for boat placement
-      pierPositions.push({ x: pierStartX, z: row.z });
+      pierPositions.push({ x: col.x, z: pierStartZ });
     }
   }
   
