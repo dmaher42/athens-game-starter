@@ -409,9 +409,14 @@ export async function createOcean(scene, terrain, options = {}) {
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // Clipping: Only discard if terrain is significantly above sea level
-      // The ocean mesh geometry naturally limits visible area
-      if (terrainHeight > uSeaLevel + 2.0) {
+      // Clipping: Discard if we're inland (west of x=1300) or terrain is above water level
+      // Ocean is positioned at x≈1900, size 800x800 (x: 1500-2300)
+      if (vWorldPosition.x < 1300.0) {
+        discard;
+      }
+      
+      // If terrain is above sea level, skip water to avoid shimmer
+      if (terrainHeight > uSeaLevel) {
         discard;
       }
 

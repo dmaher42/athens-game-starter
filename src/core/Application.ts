@@ -1019,9 +1019,25 @@ export class Application {
           console.log(`✅ Shown ${count} road objects`);
         };
         
+        (window as any).debugOcean = () => {
+          const oceanObj = scene.getObjectByName('AegeanOcean');
+          if (!oceanObj) {
+            console.log('❌ Ocean not found');
+            return;
+          }
+          console.log('🌊 Ocean Debug Info:');
+          console.log('  Position:', oceanObj.position);
+          console.log('  Scale:', oceanObj.scale);
+          console.log('  Name:', oceanObj.name);
+          console.log('  Visible:', oceanObj.visible);
+          console.log('  Expected bounds: X=[1500, 2300], Z=[-400, 400]');
+          const playerPos = playerSystem?.player?.object?.position;
+          console.log('  Player position:', playerPos ? `X=${playerPos.x.toFixed(1)}, Y=${playerPos.y.toFixed(1)}, Z=${playerPos.z.toFixed(1)}` : 'unknown');
+        };
+        
         console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
         console.log('✅ Road controls available: hideRoads(), showRoads()');
-      }
+        console.log('✅ Debug: debugOcean() to check ocean position');
 
       renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
         if (event.button === 0) {
