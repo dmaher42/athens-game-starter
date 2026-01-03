@@ -42158,7 +42158,7 @@ const __vitePreload = function preload(baseModule, deps, importerUrl) {
     return baseModule().catch(handlePreloadError);
   });
 };
-const __vite_import_meta_env__$5 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
+const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const REPO_SEGMENT$1 = "athens-game-starter";
 function normalizeAbsoluteBaseUrl(value) {
   if (typeof value !== "string") return value;
@@ -42184,7 +42184,7 @@ function normalizeRelativeBaseUrl(value) {
 }
 function resolveBaseUrl$4() {
   let base = "/";
-  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$5 && true) {
+  if (typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true) {
     base = "/athens-game-starter/";
   }
   if (/^(?:[a-z]+:)?\/\//i.test(base)) {
@@ -43526,75 +43526,34 @@ const RENDER_LAYERS = Object.freeze({
   TERRAIN: 1,
   DETAIL: 2
 });
-const __vite_import_meta_env__$4 = { "BASE_URL": "/athens-game-starter/", "DEV": false, "MODE": "production", "PROD": true, "SSR": false };
 const textureLoader$1 = new TextureLoader();
-const BASE_URL$1 = typeof import.meta !== "undefined" && __vite_import_meta_env__$4 && true ? "/athens-game-starter/" : "/";
-const RESOLVED_BASE_URL = BASE_URL$1.endsWith("/") ? BASE_URL$1 : `${BASE_URL$1}/`;
-const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
-const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
-const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
-let warnedTextureFailure = false;
-function bindGroundTexture(material, label, url, repeat) {
-  const texture = textureLoader$1.load(
-    url,
-    () => {
-      console.log(`[Ground] ${label} texture bound to ${material.name}`);
-    },
-    void 0,
-    () => {
-      if (!warnedTextureFailure) {
-        warnedTextureFailure = true;
-        console.warn("[Ground] Failed to load ground texture; using flat color.");
-      }
-      material.map = null;
-      material.needsUpdate = true;
-    }
-  );
-  texture.colorSpace = SRGBColorSpace;
-  texture.wrapS = texture.wrapT = RepeatWrapping;
-  texture.repeat.set(repeat, repeat);
+const BASE_PATH = "/athens-game-starter/";
+function loadTexture$1(url) {
+  const fullUrl = BASE_PATH + url;
+  const texture = textureLoader$1.load(fullUrl);
+  texture.wrapS = RepeatWrapping;
+  texture.wrapT = RepeatWrapping;
+  texture.repeat.set(10, 10);
   return texture;
 }
-function createCityGroundMaterial() {
-  const material = new MeshStandardMaterial({
-    name: "CityGroundMaterial",
-    color: 13219740,
-    roughness: 0.6,
-    metalness: 0
-  });
-  material.map = bindGroundTexture(
-    material,
-    "City",
-    CITY_GROUND_URL,
-    32
-  );
-  material.needsUpdate = true;
-  return material;
-}
-const InlandGroundMaterial = new MeshStandardMaterial({
+const CityGroundMaterial = new MeshBasicMaterial({
+  name: "CityGroundMaterial",
+  map: loadTexture$1("textures/ground/dirt-albedo.jpg")
+});
+const InlandGroundMaterial = new MeshBasicMaterial({
   name: "InlandGroundMaterial",
-  color: 9072462,
-  roughness: 0.85,
-  metalness: 0
+  map: loadTexture$1("textures/grass/albedo.jpg")
 });
-InlandGroundMaterial.map = bindGroundTexture(
-  InlandGroundMaterial,
-  "Inland",
-  INLAND_GROUND_URL,
-  32
-);
-const CoastalGroundMaterial = new MeshStandardMaterial({
+const CoastalGroundMaterial = new MeshBasicMaterial({
   name: "CoastalGroundMaterial",
-  color: 15127459,
-  roughness: 0.75,
-  metalness: 0
+  map: loadTexture$1("textures/sand/albedo.jpg")
 });
-CoastalGroundMaterial.map = bindGroundTexture(
-  CoastalGroundMaterial,
-  "Coastal",
-  COASTAL_GROUND_URL,
-  16
-);
+function setTerrainMeshForUpdates() {
+}
+function diagnoseMaterialState() {
+}
+function validateCityGroundMaterials() {
+}
 const SEA_SIDE = "east";
 const COAST_WIDTH = 120;
 const INLAND_RISE = 220;
@@ -43951,7 +43910,7 @@ function createTerrain(scene2) {
   geometry.setIndex(new BufferAttribute(reorderedIndices, 1));
   const terrainMaterials = [
     CoastalGroundMaterial,
-    createCityGroundMaterial(),
+    CityGroundMaterial,
     InlandGroundMaterial
   ];
   const terrain = new Mesh(geometry, terrainMaterials);
@@ -43959,6 +43918,27 @@ function createTerrain(scene2) {
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
   terrain.renderOrder = RENDER_LAYERS.TERRAIN;
+  if (!terrain.geometry.attributes.uv) {
+    console.warn("[Terrain] ⚠️ City mesh is missing UVs. Adding fallback.");
+    const uvCount = terrain.geometry.attributes.position.count;
+    const uvAttr = new Float32Array(uvCount * 2);
+    const positions = terrain.geometry.attributes.position;
+    const terrainSize = TERRAIN_SIZE;
+    for (let i = 0; i < uvCount; i++) {
+      const x = positions.getX(i);
+      const z = positions.getY(i);
+      uvAttr[i * 2] = (x + terrainSize / 2) / terrainSize;
+      uvAttr[i * 2 + 1] = (z + terrainSize / 2) / terrainSize;
+    }
+    terrain.geometry.setAttribute("uv", new BufferAttribute(uvAttr, 2));
+    console.log("[Terrain] ✅ Fallback UVs generated for", uvCount, "vertices");
+  } else {
+    console.log("[Terrain] ✅ UV attributes confirmed:", {
+      uvCount: terrain.geometry.attributes.uv.count,
+      itemSize: terrain.geometry.attributes.uv.itemSize
+    });
+  }
+  setTerrainMeshForUpdates(terrain);
   scene2.add(terrain);
   const stride = segments + 1;
   terrain.userData.getHeightAt = (worldX, worldZ) => {
@@ -44140,6 +44120,15 @@ function updateTerrainCoverageMask(terrain, options = {}) {
   const secondaryRoads = Array.isArray(options?.roadCurves) ? options.roadCurves : [];
   secondaryRoads.forEach((curve) => paintCurve(curve, options.roadWidth ?? 3));
   state.maskTexture.needsUpdate = true;
+  const terrainMaterials = Array.isArray(terrain.material) ? terrain.material : [terrain.material];
+  const cityMaterial = terrainMaterials.find(
+    (material) => material?.name === "CityGroundMaterial"
+  );
+  if (cityMaterial) {
+    cityMaterial.userData = cityMaterial.userData || {};
+    cityMaterial.userData.roadsideMask = roadMaskState.maskTexture;
+    cityMaterial.needsUpdate = true;
+  }
   if (state.uniforms?.mask) {
     state.uniforms.mask.value = state.maskTexture;
   }
@@ -44861,16 +44850,6 @@ class Water extends Mesh {
     };
   }
 }
-function mountWaterBoundsDebug(scene2, center, size) {
-  const box = new Box3(
-    new Vector3(center.x - size.x / 2, center.y, center.z - size.y / 2),
-    new Vector3(center.x + size.x / 2, center.y, center.z + size.y / 2)
-  );
-  const helper = new Box3Helper(box, 65433);
-  helper.name = "WaterBoundsDebug";
-  scene2.add(helper);
-  return helper;
-}
 function generateNormalComponent(x, y, octave) {
   const frequency = Math.pow(2, octave);
   const angle = (x * frequency + y * frequency * 1.3) * 0.12;
@@ -45108,8 +45087,9 @@ async function createOcean(scene2, terrain, options = {}) {
     options.waterNormalsCandidates || HARBOR_WATER_NORMAL_CANDIDATES
   );
   const seaLevel = Number.isFinite(options.seaLevel) ? options.seaLevel : Number.isFinite(getSeaLevelY()) ? getSeaLevelY() : SEA_LEVEL_Y$1;
-  const oceanSize = 8e3;
-  const geometry = new PlaneGeometry(oceanSize, oceanSize, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
+  const oceanWidth = 800;
+  const oceanDepth = 800;
+  const geometry = new PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
   const water = new Water(geometry, {
     textureWidth: 512,
     textureHeight: 512,
@@ -45133,8 +45113,8 @@ async function createOcean(scene2, terrain, options = {}) {
     const heightMap = new DataTexture(heightData, terrain.geometry.parameters.widthSegments + 1, terrain.geometry.parameters.heightSegments + 1, RedFormat, FloatType);
     heightMap.needsUpdate = true;
     shader.uniforms.uHeightMap = { value: heightMap };
-    shader.uniforms.uFadeStart = { value: 800 };
-    shader.uniforms.uFadeEnd = { value: 3900 };
+    shader.uniforms.uFadeStart = { value: 500 };
+    shader.uniforms.uFadeEnd = { value: 3e3 };
     const vertexHead = "void main() {";
     const vertexBody = `
       varying vec3 vWorldPosition;
@@ -45175,15 +45155,20 @@ async function createOcean(scene2, terrain, options = {}) {
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */
       `
-      // Clipping Logic for Mainland: Remove water from the West (inland) side
-      // Harbor water ends at x = -120. We clip further west to be safe.
-      if (vWorldPosition.x < -180.0) {
-        discard;
-      }
-
       vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
+
+      // Clipping: Discard if we're inland (west of x=1300) or terrain is above water level
+      // Ocean is positioned at x≈1900, size 800x800 (x: 1500-2300)
+      if (vWorldPosition.x < 1300.0) {
+        discard;
+      }
+      
+      // If terrain is above sea level, skip water to avoid shimmer
+      if (terrainHeight > uSeaLevel) {
+        discard;
+      }
 
       vec3 finalColor = color;
 
@@ -45225,63 +45210,26 @@ async function createOcean(scene2, terrain, options = {}) {
   water.rotation.x = -Math.PI / 2;
   const horizonOffset = Number.isFinite(options.horizonOffset) ? options.horizonOffset : 0;
   const horizonY = seaLevel + horizonOffset;
-  water.position.set(0, horizonY, 0);
+  const oceanStartX = 1500;
+  const oceanCenterX = oceanStartX + oceanWidth * 0.5;
+  water.position.set(oceanCenterX, horizonY, 0);
   water.name = "AegeanOcean";
   water.userData.isWater = true;
   water.userData.seaLevel = seaLevel;
-  water.userData.oceanSize = oceanSize;
+  water.userData.oceanSize = { width: oceanWidth, depth: oceanDepth };
   water.userData.horizonY = horizonY;
   water.renderOrder = RENDER_LAYERS.WATER;
   if (waterNormals) {
     waterNormals.wrapS = waterNormals.wrapT = RepeatWrapping;
-    const repeat = Math.max(oceanSize / 180, 8);
-    waterNormals.repeat.set(repeat, repeat);
+    const repeatX = Math.max(oceanWidth / 180, 8);
+    const repeatZ = Math.max(oceanDepth / 180, 8);
+    waterNormals.repeat.set(repeatX, repeatZ);
   }
   scene2.add(water);
   if (false) {
-    console.info(`[ocean] Created Global Ocean at Y=${seaLevel} with size ${oceanSize}`);
+    console.info(`[ocean] Created Global Ocean at Y=${seaLevel}, centered at X=${oceanCenterX}, size ${oceanWidth}x${oceanDepth}`);
   }
   return water;
-}
-function createBoundsLoop(bounds, color = 16777215, yOffset = 0) {
-  if (!bounds) return null;
-  const { west, east, north, south } = bounds;
-  const geometry = new BufferGeometry().setFromPoints([
-    new Vector3(west, 0, north),
-    new Vector3(east, 0, north),
-    new Vector3(east, 0, south),
-    new Vector3(west, 0, south)
-  ]);
-  const material = new LineBasicMaterial({
-    color,
-    transparent: true,
-    opacity: 0.85,
-    depthWrite: false,
-    depthTest: false
-  });
-  const loop = new LineLoop(geometry, material);
-  loop.position.y = yOffset;
-  return loop;
-}
-function mountWaterClipDebug(scene2, rawBounds, clipBounds, seaLevel = getSeaLevelY()) {
-  const group = new Group();
-  group.name = "WaterClipDebug";
-  const baseY = seaLevel + 0.01;
-  const rawLoop = createBoundsLoop(rawBounds, 16757575, baseY);
-  if (rawLoop) {
-    rawLoop.name = "WaterClipDebug:raw";
-    group.add(rawLoop);
-  }
-  const clipLoop = createBoundsLoop(clipBounds, 5161983, baseY + 0.01);
-  if (clipLoop) {
-    clipLoop.name = "WaterClipDebug:clip";
-    group.add(clipLoop);
-  }
-  if (group.children.length === 0) {
-    return null;
-  }
-  scene2.add(group);
-  return group;
 }
 function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor, haze = {}) {
   if (!ocean) return;
@@ -45415,31 +45363,6 @@ const BOAT_STYLES = [
 function enableShadows(mesh) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-}
-function createReflectiveWaterMaterial() {
-  const normalMap = waterTextureLoader.load(
-    "textures/water/normals.png",
-    (tex) => {
-      tex.wrapS = tex.wrapT = RepeatWrapping;
-      tex.repeat.set(6, 6);
-      if ("colorSpace" in tex && LinearSRGBColorSpace !== void 0) {
-        tex.colorSpace = LinearSRGBColorSpace;
-      }
-    }
-  );
-  return new MeshPhysicalMaterial({
-    color: new Color(52945),
-    // Mediterranean turquoise
-    transparent: true,
-    opacity: 0.5,
-    metalness: 0.05,
-    roughness: 0.25,
-    transmission: 0.95,
-    envMapIntensity: 1.2,
-    normalMap,
-    normalScale: new Vector2(0.3, 0.3)
-    // Subtler waves
-  });
 }
 function createHarborPad(harborGroundY) {
   const width = 60;
@@ -59218,7 +59141,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-fssdIGNF.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BACinzna.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59745,11 +59668,11 @@ class GLTFMeshStandardSGMaterial extends MeshStandardMaterial {
     const lightPhysicalFragmentChunk = [
       "PhysicalMaterial material;",
       "material.diffuseColor = diffuseColor.rgb * ( 1. - max( specularFactor.r, max( specularFactor.g, specularFactor.b ) ) );",
-      "vec3 dxy = max( abs( dFdx( geometryNormal ) ), abs( dFdy( geometryNormal ) ) );",
+      "vec3 dxy = max( abs( dFdx( vNormal ) ), abs( dFdy( vNormal ) ) );",
       "float geometryRoughness = max( max( dxy.x, dxy.y ), dxy.z );",
-      "material.specularRoughness = max( 1.0 - glossinessFactor, 0.0525 ); // 0.0525 corresponds to the base mip of a 256 cubemap.",
-      "material.specularRoughness += geometryRoughness;",
-      "material.specularRoughness = min( material.specularRoughness, 1.0 );",
+      "material.roughness = max( 1.0 - glossinessFactor, 0.0525 );",
+      "material.roughness += geometryRoughness;",
+      "material.roughness = min( material.roughness, 1.0 );",
       "material.specularColor = specularFactor;"
     ].join("\n");
     const uniforms = {
@@ -59953,7 +59876,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Bx7mUfiw.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CVKOs0X3.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60027,7 +59950,13 @@ async function loadGLBWithFallbacks(loader, urls, options = {}) {
   }
   const baseUrl2 = resolveBaseUrl$4();
   const seen2 = /* @__PURE__ */ new Set();
+  const originalWarn = console.warn;
+  const originalError = console.error;
   try {
+    console.warn = () => {
+    };
+    console.error = () => {
+    };
     for (const candidate of urls) {
       const raw = typeof candidate === "string" ? candidate.trim() : "";
       if (!raw) {
@@ -60901,7 +60830,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2025-12-31T09:40:52.695Z" : "",
+      time: true ? "2026-01-03T03:02:07.356Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -70445,13 +70374,14 @@ class PlayerSystem {
   async loadCharacter() {
     const character = new Character();
     const heroRootPath = "models/character/hero.glb";
+    const absolutePath = "/athens-game-starter/models/character/hero.glb";
     const bundledHeroName = encodeURIComponent("astronaut.glb");
     const characterDir = joinPath(this.baseUrl, "models/character");
     const bundledHeroPath = joinPath(characterDir, bundledHeroName);
     const bundledHeroRootPath = `models/character/${bundledHeroName}`;
     const heroCandidates = Array.from(
       new Set(
-        [heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
+        [absolutePath, heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean)
       )
     );
     if (ENABLE_HERO_GLB) {
@@ -70470,9 +70400,26 @@ class PlayerSystem {
           throw new Error("No hero GLB candidates reachable");
         }
         const { root, gltf } = loadedHero;
+        root.position.set(0, 0, 0);
+        root.updateMatrixWorld(true);
+        root.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+            child.frustumCulled = false;
+            if (child.geometry) {
+              child.geometry.computeBoundingBox();
+              child.geometry.computeBoundingSphere();
+            }
+          }
+        });
         character.initializeFromGLTF(root, gltf.animations);
         this.player.attachCharacter(character);
+        if (this.fallbackAvatar) {
+          this.fallbackAvatar.visible = false;
+        }
       } catch (error) {
+        console.warn("[PlayerSystem] Failed to load hero GLB, using fallback avatar:", error);
         this.attachFallbackAvatar();
       }
     } else {
@@ -70481,6 +70428,7 @@ class PlayerSystem {
   }
   attachFallbackAvatar() {
     const fallbackAvatar = this.createFallbackAvatar();
+    this.fallbackAvatar = fallbackAvatar;
     this.player.object.add(fallbackAvatar);
     fallbackAvatar.position.set(0, 0, 0);
   }
@@ -70518,6 +70466,8 @@ class PlayerSystem {
     this.playerMovementEnabled = enabled;
   }
 }
+window.THREE = THREE;
+console.log("✅ THREE exposed globally for debugging");
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl$4();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES = engineConfig.districtRuleCandidates || [];
 const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
@@ -70527,26 +70477,6 @@ if (!ENABLE_GLB_MODE) {
 }
 const DEFAULT_FORCE_GLB = ENABLE_GLB_MODE && typeof engineConfig.featureFlags?.forceGlb === "boolean" ? engineConfig.featureFlags.forceGlb : false;
 const DEFAULT_FORCE_PROC = typeof engineConfig.featureFlags?.forceProcedural === "boolean" ? engineConfig.featureFlags.forceProcedural : !DEFAULT_FORCE_GLB || !ENABLE_GLB_MODE;
-function createFarOceanPlane(scene2, seaLevel, terrainSize) {
-  const radius = Math.max(terrainSize * 2.4, 3200);
-  const geometry = new CircleGeometry(radius, 64);
-  geometry.rotateX(-Math.PI / 2);
-  geometry.translate(terrainSize * 0.45, 0, 0);
-  const material = new MeshStandardMaterial({
-    color: 670282,
-    roughness: 0.9,
-    metalness: 0,
-    transparent: true,
-    opacity: 0.65
-  });
-  const plane = new Mesh(geometry, material);
-  plane.name = "FarOceanPlane";
-  plane.position.y = seaLevel + 0.05;
-  plane.receiveShadow = false;
-  plane.renderOrder = -4;
-  scene2.add(plane);
-  return plane;
-}
 class Application {
   baseUrl;
   districtRuleCandidates;
@@ -70561,7 +70491,6 @@ class Application {
   ocean;
   pendingOceanStatus;
   coastalSkirt;
-  farOceanPlane;
   shoreTermination;
   skyboxTexture;
   npcUpdaters;
@@ -70598,7 +70527,6 @@ class Application {
     this.ocean = null;
     this.pendingOceanStatus = null;
     this.coastalSkirt = null;
-    this.farOceanPlane = null;
     this.shoreTermination = null;
     this.skyboxTexture = null;
     this.npcUpdaters = [];
@@ -70616,6 +70544,15 @@ class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
+    const debugGlobalScope = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : null;
+    if (debugGlobalScope) {
+      debugGlobalScope.THREE = debugGlobalScope.THREE || THREE;
+      if (typeof window !== "undefined") {
+        window.THREE = THREE;
+      }
+      const threeLogTarget = typeof window !== "undefined" ? window : debugGlobalScope;
+      console.log("✅ THREE exposed:", threeLogTarget?.THREE);
+    }
     showLoadingScreen({
       initialStatus: "Preparing the experience..."
     });
@@ -70740,6 +70677,11 @@ class Application {
     } = sceneContext;
     this.scene = scene2;
     setFogEnabled(false);
+    if (typeof window !== "undefined") {
+      window.scene = scene2;
+      window.camera = camera2;
+      console.log("✅ Scene and camera exposed to window for debugging");
+    }
     const lightingSystem = new LightingSystem({
       scene: scene2,
       renderer: renderer2,
@@ -70773,6 +70715,15 @@ class Application {
     updateLoadingStatus("Sculpting the Attic landscape...");
     const terrain = createTerrain(scene2);
     this.terrain = terrain;
+    const terrainDebugScope = debugGlobalScope ?? (typeof window !== "undefined" ? window : null);
+    if (terrainDebugScope && terrain) {
+      terrainDebugScope.terrainMesh = terrain;
+      if (typeof window !== "undefined") {
+        window.terrainMesh = terrain;
+      }
+      const terrainLogTarget = typeof window !== "undefined" ? window : terrainDebugScope;
+      console.log("✅ TerrainMesh exposed:", terrainLogTarget?.terrainMesh);
+    }
     const terrainSize = terrain?.geometry?.userData?.["size"];
     const seaLevel = getSeaLevelY();
     const oceanRadius = Math.max(
@@ -70803,9 +70754,6 @@ class Application {
         waterColor: 677222
       });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
-    }
-    if (!this.farOceanPlane && Number.isFinite(terrainSize)) {
-      this.farOceanPlane = createFarOceanPlane(this.scene, seaLevel, terrainSize);
     }
     if (!this.shoreTermination) {
       this.shoreTermination = createShorelineTermination(this.scene, {
@@ -71200,34 +71148,109 @@ class Application {
     if (devHud2?.setStatusLine) {
       devHud2.setStatusLine("proc", proceduralStatus);
     }
-    renderer2.domElement.addEventListener("pointerdown", (event) => {
-      if (event.button === 0) {
-        interactor.useObject();
-      }
-    });
-    window.addEventListener("keydown", (event) => {
-      if (event.code === "KeyE") {
-        interactor.useObject();
-      } else if (event.code === "KeyG" && !event.repeat) {
-        toggleFog();
-      } else if (event.code === "KeyT" && !event.repeat) {
-        lightingSystem.cycleLightingPreset();
-      } else if (event.code === "F8" && !event.repeat) {
-        const position = playerSystem.player?.object?.position;
-        const x = position?.x;
-        const z = position?.z;
-        if (Number.isFinite(x) && Number.isFinite(z)) {
-          probeAt(x, z);
+    if (typeof window !== "undefined") {
+      window.toggleWater = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isWater = obj.name === "AegeanOcean" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater || obj.renderOrder === -1 && obj.material?.transparent;
+          if (isWater) {
+            obj.visible = !obj.visible;
+            count++;
+          }
+        });
+        console.log(`🌊 Toggled ${count} water objects`);
+      };
+      window.hideWater = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isWater = obj.name === "AegeanOcean" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater || obj.renderOrder === -1 && obj.material?.transparent;
+          if (isWater && obj.visible) {
+            obj.visible = false;
+            count++;
+          }
+        });
+        console.log(`👻 Hidden ${count} water objects`);
+      };
+      window.showWater = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isWater = obj.name === "AegeanOcean" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater;
+          if (isWater && !obj.visible) {
+            obj.visible = true;
+            count++;
+          }
+        });
+        console.log(`👁️ Shown ${count} water objects`);
+      };
+      window.hideRoads = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isRoad = obj.name?.toLowerCase().includes("road") || obj.name?.toLowerCase().includes("street") || obj.name?.toLowerCase().includes("path") || obj.userData?.type === "road";
+          if (isRoad && obj.visible) {
+            obj.visible = false;
+            count++;
+          }
+        });
+        console.log(`🚫 Hidden ${count} road objects`);
+      };
+      window.showRoads = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isRoad = obj.name?.toLowerCase().includes("road") || obj.name?.toLowerCase().includes("street") || obj.name?.toLowerCase().includes("path") || obj.userData?.type === "road";
+          if (isRoad && !obj.visible) {
+            obj.visible = true;
+            count++;
+          }
+        });
+        console.log(`✅ Shown ${count} road objects`);
+      };
+      window.debugOcean = () => {
+        const oceanObj = scene2.getObjectByName("AegeanOcean");
+        if (!oceanObj) {
+          console.log("❌ Ocean not found");
+          return;
         }
-      }
-    });
-    window.addEventListener("resize", () => {
-      camera2.aspect = window.innerWidth / window.innerHeight;
-      camera2.updateProjectionMatrix();
-      renderer2.setSize(window.innerWidth, window.innerHeight);
-      composer.setSize(window.innerWidth, window.innerHeight);
-      bloomPass.setSize(window.innerWidth, window.innerHeight);
-    });
+        console.log("🌊 Ocean Debug Info:");
+        console.log("  Position:", oceanObj.position);
+        console.log("  Scale:", oceanObj.scale);
+        console.log("  Name:", oceanObj.name);
+        console.log("  Visible:", oceanObj.visible);
+        console.log("  Expected bounds: X=[1500, 2300], Z=[-400, 400]");
+        const playerPos = playerSystem?.player?.object?.position;
+        console.log("  Player position:", playerPos ? `X=${playerPos.x.toFixed(1)}, Y=${playerPos.y.toFixed(1)}, Z=${playerPos.z.toFixed(1)}` : "unknown");
+      };
+      console.log("✅ Water controls available: hideWater(), showWater(), toggleWater()");
+      console.log("✅ Road controls available: hideRoads(), showRoads()");
+      console.log("✅ Debug: debugOcean() to check ocean position");
+      renderer2.domElement.addEventListener("pointerdown", (event) => {
+        if (event.button === 0) {
+          interactor.useObject();
+        }
+      });
+      window.addEventListener("keydown", (event) => {
+        if (event.code === "KeyE") {
+          interactor.useObject();
+        } else if (event.code === "KeyG" && !event.repeat) {
+          toggleFog();
+        } else if (event.code === "KeyT" && !event.repeat) {
+          lightingSystem.cycleLightingPreset();
+        } else if (event.code === "F8" && !event.repeat) {
+          const position = playerSystem.player?.object?.position;
+          const x = position?.x;
+          const z = position?.z;
+          if (Number.isFinite(x) && Number.isFinite(z)) {
+            probeAt(x, z);
+          }
+        }
+      });
+      window.addEventListener("resize", () => {
+        camera2.aspect = window.innerWidth / window.innerHeight;
+        camera2.updateProjectionMatrix();
+        renderer2.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight);
+        bloomPass.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
   }
   waitForAdvance(target = document.body) {
     return new Promise((resolve) => {
@@ -71417,6 +71440,8 @@ function bootApplication$1(handlers = defaultBootHandlers) {
     throw error;
   });
 }
+window.THREE = THREE;
+console.log("✅ THREE exposed globally for debugging (main.ts)");
 const applicationBootConfig = applicationBootConfig$1;
 const _bootOptions = {
   baseUrl: applicationBootConfig.baseUrl,
@@ -71533,4 +71558,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-bmMQZAHY.js.map
+//# sourceMappingURL=index-Cp1UdI5p.js.map
