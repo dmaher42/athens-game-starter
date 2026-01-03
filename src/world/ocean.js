@@ -355,9 +355,9 @@ export async function createOcean(scene, terrain, options = {}) {
     heightMap.needsUpdate = true;
     shader.uniforms.uHeightMap = { value: heightMap };
 
-    // Fade Constants
-    shader.uniforms.uFadeStart = { value: 800.0 };
-    shader.uniforms.uFadeEnd = { value: 3900.0 };
+    // Fade Constants - softer fade now that aggressive clipping is removed
+    shader.uniforms.uFadeStart = { value: 500.0 };
+    shader.uniforms.uFadeEnd = { value: 3000.0 };
 
     // VERTEX SHADER FIX: Ensure main exists and vWorldPosition is assigned
     // We try to replace the 'void main() {' string.
@@ -409,17 +409,9 @@ export async function createOcean(scene, terrain, options = {}) {
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // Clipping Logic: Ocean starts at x≈1500, NEVER render inland
-      // Aggressively discard everything west of 1400 and outside narrow Z bounds
-      if (vWorldPosition.x < 1400.0) {
-        discard;
-      }
-      if (abs(vWorldPosition.z) > 500.0) {
-        discard;
-      }
-
-      // If terrain is above sea level, skip water to avoid shimmer
-      if (terrainHeight > uSeaLevel - 0.25) {
+      // Clipping: Only discard if terrain is significantly above sea level
+      // The ocean mesh geometry naturally limits visible area
+      if (terrainHeight > uSeaLevel + 2.0) {
         discard;
       }
 
