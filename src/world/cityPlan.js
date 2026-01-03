@@ -531,6 +531,7 @@ export async function createCivicDistrict(scene, options = {}) {
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0x887766 : 0x666666);
       roadMesh.position.set(localX, localY - 0.02, localZ);
+      roadMesh.visible = false;  // Hide civic district roads
       group.add(roadMesh);
     } else if (cell.type === 'plaza') {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xaaaaaa);
@@ -585,6 +586,7 @@ export async function createCivicDistrict(scene, options = {}) {
       const pathColor = pathTile.type === 'connector' ? 0x998877 : 0xaa9988;
       const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
       pathMesh.position.set(localX, localY + 0.01, localZ); // Slight offset above ground
+      pathMesh.visible = false;  // Hide footpaths
       pathMesh.userData.isFootpath = true;
       group.add(pathMesh);
     }

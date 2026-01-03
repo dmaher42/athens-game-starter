@@ -994,13 +994,14 @@ export class Application {
               obj.name?.toLowerCase().includes('road') ||
               obj.name?.toLowerCase().includes('street') ||
               obj.name?.toLowerCase().includes('path') ||
-              obj.userData?.type === 'road';
+              obj.userData?.type === 'road' ||
+              obj.userData?.isFootpath;
             if (isRoad && obj.visible) {
               obj.visible = false;
               count++;
             }
           });
-          console.log(`🚫 Hidden ${count} road objects`);
+          console.log(`🚫 Hidden ${count} road objects (including footpaths)`);
         };
         
         (window as any).showRoads = () => {
@@ -1010,13 +1011,14 @@ export class Application {
               obj.name?.toLowerCase().includes('road') ||
               obj.name?.toLowerCase().includes('street') ||
               obj.name?.toLowerCase().includes('path') ||
-              obj.userData?.type === 'road';
+              obj.userData?.type === 'road' ||
+              obj.userData?.isFootpath;
             if (isRoad && !obj.visible) {
               obj.visible = true;
               count++;
             }
           });
-          console.log(`✅ Shown ${count} road objects`);
+          console.log(`✅ Shown ${count} road objects (including footpaths)`);
         };
         
         (window as any).debugOcean = () => {
@@ -1035,9 +1037,35 @@ export class Application {
           console.log('  Player position:', playerPos ? `X=${playerPos.x.toFixed(1)}, Y=${playerPos.y.toFixed(1)}, Z=${playerPos.z.toFixed(1)}` : 'unknown');
         };
         
+        (window as any).debugCivicDistrict = () => {
+          console.log('🏛️ Civic District Debug:');
+          let roadCount = 0;
+          let footpathCount = 0;
+          let plazaCount = 0;
+          scene.traverse((obj: any) => {
+            if (obj.userData?.isFootpath) {
+              footpathCount++;
+              console.log(`  Footpath at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}, color: ${obj.material?.color?.getHexString()}`);
+            }
+            if (obj.geometry?.type === 'BoxGeometry' && obj.position.y < 0.5 && obj.material?.color) {
+              const hex = obj.material.color.getHexString();
+              if (hex === '887766' || hex === '666666' || hex === '998877' || hex === 'aa9988') {
+                roadCount++;
+                console.log(`  Road/path at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}, color: #${hex}`);
+              }
+              if (hex === 'aaaaaa') {
+                plazaCount++;
+                console.log(`  Plaza at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}`);
+              }
+            }
+          });
+          console.log(`  Total: ${roadCount} roads, ${footpathCount} footpaths, ${plazaCount} plazas`);
+        };
+        
         console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
         console.log('✅ Road controls available: hideRoads(), showRoads()');
         console.log('✅ Debug: debugOcean() to check ocean position');
+        console.log('✅ Debug: debugCivicDistrict() to inspect civic district elements');
 
         renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
           if (event.button === 0) {
