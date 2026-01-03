@@ -45174,6 +45174,11 @@ async function createOcean(scene2, terrain, options = {}) {
         discard;
       }
 
+      // If terrain is above sea level, skip water to avoid inland shimmer/z-fighting
+      if (terrainHeight > uSeaLevel - 0.25) {
+        discard;
+      }
+
       vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
@@ -59214,7 +59219,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Cm1xFui1.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-m-AFO1E5.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59949,7 +59954,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BSiEUqQH.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DGhILxCp.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60903,8 +60908,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T00:23:04.715Z" : "",
-      sha: true ? "23e91ae700bb8b6cfc21223959109c764479b90c" : ""
+      time: true ? "2026-01-03T00:28:20.118Z" : "",
+      sha: true ? "9e8144b6ff49094c478684da0274eccd45ae915e" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71640,4 +71645,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CE-qzoLk.js.map
+//# sourceMappingURL=index-BdfKNFpw.js.map
