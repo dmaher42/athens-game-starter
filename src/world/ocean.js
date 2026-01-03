@@ -499,7 +499,7 @@ export async function createOcean(scene, terrain, options = {}) {
   return water;
 }
 
-function createBoundsLoop(bounds, color = 0xffffff, yOffset = 0) {
+export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor, haze = {}) {
   if (!ocean) return;
   const uniforms = ocean.uniforms ?? ocean.mesh?.material?.uniforms;
   if (!uniforms) return;
