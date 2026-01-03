@@ -59219,7 +59219,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-7dMrjGo0.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CjjnGw-J.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59954,7 +59954,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B7JnEZ7D.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DcaTBVpx.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60908,8 +60908,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T00:43:47.775Z" : "",
-      sha: true ? "3f7fe4b2f7774f1d3088864a8eed0521df18e160" : ""
+      time: true ? "2026-01-03T00:52:28.395Z" : "",
+      sha: true ? "9f3365bec2b025eb58bd12e5196ab0f9d482278d" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -70556,24 +70556,7 @@ if (!ENABLE_GLB_MODE) {
 const DEFAULT_FORCE_GLB = ENABLE_GLB_MODE && typeof engineConfig.featureFlags?.forceGlb === "boolean" ? engineConfig.featureFlags.forceGlb : false;
 const DEFAULT_FORCE_PROC = typeof engineConfig.featureFlags?.forceProcedural === "boolean" ? engineConfig.featureFlags.forceProcedural : !DEFAULT_FORCE_GLB || !ENABLE_GLB_MODE;
 function createFarOceanPlane(scene2, seaLevel, terrainSize) {
-  const radius = Math.max(terrainSize * 2.4, 3200);
-  const geometry = new CircleGeometry(radius, 64);
-  geometry.rotateX(-Math.PI / 2);
-  geometry.translate(terrainSize * 0.45, 0, 0);
-  const material = new MeshStandardMaterial({
-    color: 670282,
-    roughness: 0.9,
-    metalness: 0,
-    transparent: true,
-    opacity: 0.65
-  });
-  const plane = new Mesh(geometry, material);
-  plane.name = "FarOceanPlane";
-  plane.position.y = seaLevel + 0.05;
-  plane.receiveShadow = false;
-  plane.renderOrder = -4;
-  scene2.add(plane);
-  return plane;
+  return null;
 }
 class Application {
   baseUrl;
@@ -71645,4 +71628,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Bvj09YdD.js.map
+//# sourceMappingURL=index-DbbMTbWk.js.map
