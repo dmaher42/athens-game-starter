@@ -504,8 +504,8 @@ export function createTerrain(scene) {
   geometry.setIndex(new THREE.BufferAttribute(reorderedIndices, 1));
 
   const terrainMaterials = [
-    CoastalGroundMaterial,
-    InlandGroundMaterial,  // Use grass instead of city dirt
+    InlandGroundMaterial,  // Use grass for all zones
+    InlandGroundMaterial,  
     InlandGroundMaterial,
   ];
 
