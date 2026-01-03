@@ -1,5 +1,10 @@
+import * as THREE from "three";
 import type { ApplicationBootOptions } from "./core/Application.js";
 import type { Application } from "./core/Application.js";
+
+// Expose THREE globally for devtools debugging.
+(window as any).THREE = THREE;
+console.log("✅ THREE exposed globally for debugging (main.ts)");
 
 import {
   applicationBootConfig as runtimeApplicationBootConfig,

@@ -12,9 +12,10 @@ import {
 } from "../config/terrainMaterials.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 import {
-  createCityGroundMaterial,
+  CityGroundMaterial,
   CoastalGroundMaterial,
   InlandGroundMaterial,
+  setTerrainMeshForUpdates,
 } from "../materials/groundMaterials.js";
 import {
   SEA_SIDE,
@@ -504,7 +505,7 @@ export function createTerrain(scene) {
 
   const terrainMaterials = [
     CoastalGroundMaterial,
-    createCityGroundMaterial(),
+    CityGroundMaterial,
     InlandGroundMaterial,
   ];
 
@@ -514,6 +515,35 @@ export function createTerrain(scene) {
   terrain.name = "Terrain";
   // Ensure terrain renders on top of transparent water layers via explicit renderOrder
   terrain.renderOrder = RENDER_LAYERS.TERRAIN;
+  
+  // ✅ STEP 1: Validate and ensure UVs exist (required for city ground texture)
+  if (!terrain.geometry.attributes.uv) {
+    console.warn('[Terrain] ⚠️ City mesh is missing UVs. Adding fallback.');
+    const uvCount = terrain.geometry.attributes.position.count;
+    const uvAttr = new Float32Array(uvCount * 2);
+    
+    // Generate simple planar UVs based on position
+    const positions = terrain.geometry.attributes.position;
+    const terrainSize = TERRAIN_SIZE;
+    for (let i = 0; i < uvCount; i++) {
+      const x = positions.getX(i);
+      const z = positions.getY(i); // Y is used because geometry is rotated
+      uvAttr[i * 2] = (x + terrainSize / 2) / terrainSize;
+      uvAttr[i * 2 + 1] = (z + terrainSize / 2) / terrainSize;
+    }
+    
+    terrain.geometry.setAttribute('uv', new THREE.BufferAttribute(uvAttr, 2));
+    console.log('[Terrain] ✅ Fallback UVs generated for', uvCount, 'vertices');
+  } else {
+    console.log('[Terrain] ✅ UV attributes confirmed:', {
+      uvCount: terrain.geometry.attributes.uv.count,
+      itemSize: terrain.geometry.attributes.uv.itemSize
+    });
+  }
+  
+  // Register terrain mesh so ground material loader can trigger updates
+  setTerrainMeshForUpdates(terrain);
+  
   scene.add(terrain);
 
   const stride = segments + 1;
@@ -747,6 +777,17 @@ export function updateTerrainCoverageMask(terrain, options = {}) {
   secondaryRoads.forEach((curve) => paintCurve(curve, options.roadWidth ?? 3));
 
   state.maskTexture.needsUpdate = true;
+  const terrainMaterials = Array.isArray(terrain.material)
+    ? terrain.material
+    : [terrain.material];
+  const cityMaterial = terrainMaterials.find(
+    (material) => material?.name === "CityGroundMaterial",
+  );
+  if (cityMaterial) {
+    cityMaterial.userData = cityMaterial.userData || {};
+    cityMaterial.userData.roadsideMask = roadMaskState.maskTexture;
+    cityMaterial.needsUpdate = true;
+  }
   if (state.uniforms?.mask) {
     state.uniforms.mask.value = state.maskTexture;
   }

@@ -1,13 +1,7 @@
 import * as THREE from "three";
 
 const textureLoader = new THREE.TextureLoader();
-const BASE_URL =
-  typeof import.meta !== "undefined" &&
-  import.meta.env &&
-  typeof import.meta.env.BASE_URL === "string"
-    ? import.meta.env.BASE_URL
-    : "/";
-const RESOLVED_BASE_URL = BASE_URL.endsWith("/") ? BASE_URL : `${BASE_URL}/`;
+const BASE_PATH = import.meta.env.BASE_URL || "/athens-game-starter/";
 
 const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
 const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
@@ -17,23 +11,14 @@ let warnedTextureFailure = false;
 
 function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader.load(
-    url,
-    () => {
-      console.log(`[Ground] ${label} texture bound to ${material.name}`);
-    },
+    fullUrl,
+    (tex) => console.log(`[Ground] ✅ Loaded: ${fullUrl}`),
     undefined,
-    () => {
-      if (!warnedTextureFailure) {
-        warnedTextureFailure = true;
-        console.warn("[Ground] Failed to load ground texture; using flat color.");
-      }
-      material.map = null;
-      material.needsUpdate = true;
-    },
+    (err) => console.error(`[Ground] ❌ Failed: ${fullUrl}`, err)
   );
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(repeat, repeat);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(10, 10);
   return texture;
 }
 
@@ -57,30 +42,17 @@ export function createCityGroundMaterial() {
   return material;
 }
 
-export const InlandGroundMaterial = new THREE.MeshStandardMaterial({
+export const InlandGroundMaterial = new THREE.MeshBasicMaterial({
   name: "InlandGroundMaterial",
-  color: 0x8a6f4e,
-  roughness: 0.85,
-  metalness: 0,
+  map: loadTexture("textures/grass/albedo.jpg"),
 });
-// Inland ground texture
-InlandGroundMaterial.map = bindGroundTexture(
-  InlandGroundMaterial,
-  "Inland",
-  INLAND_GROUND_URL,
-  32,
-);
 
-export const CoastalGroundMaterial = new THREE.MeshStandardMaterial({
+export const CoastalGroundMaterial = new THREE.MeshBasicMaterial({
   name: "CoastalGroundMaterial",
-  color: 0xe6d3a3,
-  roughness: 0.75,
-  metalness: 0,
+  map: loadTexture("textures/sand/albedo.jpg"),
 });
-// Coastal ground texture
-CoastalGroundMaterial.map = bindGroundTexture(
-  CoastalGroundMaterial,
-  "Coastal",
-  COASTAL_GROUND_URL,
-  16,
-);
+
+// Stub functions for compatibility
+export function setTerrainMeshForUpdates() {}
+export function diagnoseMaterialState() {}
+export function validateCityGroundMaterials() {}

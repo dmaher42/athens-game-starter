@@ -26,6 +26,7 @@ import {
   createHillCity,
   createCity,
 } from "../world/city.js";
+import { validateCityGroundMaterials } from "../materials/groundMaterials.js";
 import {
   mount as mountGrass,
   update as updateGrass,
@@ -93,6 +94,10 @@ import { initCityDebugMode } from "../debug/cityDebug.js";
 import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
 import { PlayerSystem } from "../systems/PlayerSystem.js";
+
+// Expose THREE globally for debugging in devtools.
+(window as any).THREE = THREE;
+console.log("✅ THREE exposed globally for debugging");
 
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
@@ -223,6 +228,22 @@ export class Application {
     const FORCE_PROC = this.forceProc;
     const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
+    const debugGlobalScope: any =
+      typeof globalThis !== "undefined"
+        ? globalThis
+        : typeof window !== "undefined"
+          ? window
+          : null;
+
+    if (debugGlobalScope) {
+      debugGlobalScope.THREE = debugGlobalScope.THREE || THREE;
+      if (typeof window !== "undefined") {
+        (window as any).THREE = THREE;
+      }
+      const threeLogTarget =
+        typeof window !== "undefined" ? (window as any) : debugGlobalScope;
+      console.log("✅ THREE exposed:", threeLogTarget?.THREE);
+    }
     showLoadingScreen({
       initialStatus: "Preparing the experience...",
     });
@@ -373,6 +394,13 @@ export class Application {
     this.scene = scene;
     setFogEnabled(false);
 
+    // Expose scene and camera to window for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).scene = scene;
+      (window as any).camera = camera;
+      console.log('✅ Scene and camera exposed to window for debugging');
+    }
+
     const lightingSystem = new LightingSystem({
         scene,
         renderer,
@@ -413,6 +441,16 @@ export class Application {
 
     const terrain = createTerrain(scene);
     this.terrain = terrain;
+    const terrainDebugScope = debugGlobalScope ?? (typeof window !== "undefined" ? window : null);
+    if (terrainDebugScope && terrain) {
+      terrainDebugScope.terrainMesh = terrain;
+      if (typeof window !== "undefined") {
+        (window as any).terrainMesh = terrain;
+      }
+      const terrainLogTarget =
+        typeof window !== "undefined" ? (window as any) : terrainDebugScope;
+      console.log("✅ TerrainMesh exposed:", terrainLogTarget?.terrainMesh);
+    }
     const terrainSize = terrain?.geometry?.userData?.['size'];
 
     const seaLevel = getSeaLevelY();
@@ -652,6 +690,9 @@ export class Application {
           harborCity?.userData?.['foundationPadMaterial'] ?? null,
       });
       updateLoadingStatus("Raising temples, homes, and harbors...");
+
+      // Validate ground material setup after scene initialization
+      // validateCityGroundMaterials(scene); // Disabled - simplified materials
 
       applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch(() => {});
 
@@ -915,6 +956,100 @@ export class Application {
       }
       if (devHud?.setStatusLine) {
         devHud.setStatusLine("proc", proceduralStatus);
+      }
+
+      // Add debug water visibility controls
+      if (typeof window !== 'undefined') {
+        (window as any).toggleWater = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isWater = 
+              obj.name === 'AegeanOcean' ||
+              obj.name === 'FarOceanPlane' ||
+              obj.name === 'HarborLowPolyWater' ||
+              obj.name?.toLowerCase().includes('water') ||
+              obj.name?.toLowerCase().includes('ocean') ||
+              obj.userData?.isWater ||
+              (obj.renderOrder === -1 && obj.material?.transparent);
+            if (isWater) {
+              obj.visible = !obj.visible;
+              count++;
+            }
+          });
+          console.log(`🌊 Toggled ${count} water objects`);
+        };
+        
+        (window as any).hideWater = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isWater = 
+              obj.name === 'AegeanOcean' ||
+              obj.name === 'FarOceanPlane' ||
+              obj.name === 'HarborLowPolyWater' ||
+              obj.name?.toLowerCase().includes('water') ||
+              obj.name?.toLowerCase().includes('ocean') ||
+              obj.userData?.isWater ||
+              (obj.renderOrder === -1 && obj.material?.transparent);
+            if (isWater && obj.visible) {
+              obj.visible = false;
+              count++;
+            }
+          });
+          console.log(`👻 Hidden ${count} water objects`);
+        };
+        
+        (window as any).showWater = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isWater = 
+              obj.name === 'AegeanOcean' ||
+              obj.name === 'FarOceanPlane' ||
+              obj.name === 'HarborLowPolyWater' ||
+              obj.name?.toLowerCase().includes('water') ||
+              obj.name?.toLowerCase().includes('ocean') ||
+              obj.userData?.isWater;
+            if (isWater && !obj.visible) {
+              obj.visible = true;
+              count++;
+            }
+          });
+          console.log(`👁️ Shown ${count} water objects`);
+        };
+        
+        (window as any).hideRoads = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isRoad = 
+              obj.name?.toLowerCase().includes('road') ||
+              obj.name?.toLowerCase().includes('street') ||
+              obj.name?.toLowerCase().includes('path') ||
+              obj.userData?.type === 'road';
+            if (isRoad && obj.visible) {
+              obj.visible = false;
+              count++;
+            }
+          });
+          console.log(`🚫 Hidden ${count} road objects`);
+        };
+        
+        (window as any).showRoads = () => {
+          let count = 0;
+          scene.traverse((obj: any) => {
+            const isRoad = 
+              obj.name?.toLowerCase().includes('road') ||
+              obj.name?.toLowerCase().includes('street') ||
+              obj.name?.toLowerCase().includes('path') ||
+              obj.userData?.type === 'road';
+            if (isRoad && !obj.visible) {
+              obj.visible = true;
+              count++;
+            }
+          });
+          console.log(`✅ Shown ${count} road objects`);
+        };
+        
+        console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
+        console.log('✅ Road controls available: hideRoads(), showRoads()');
       }
 
       renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {

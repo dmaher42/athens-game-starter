@@ -323,10 +323,13 @@ export async function createOcean(scene, terrain, options = {}) {
       : SEA_LEVEL_Y;
 
   // 2. CREATE GEOMETRY
-  // The user says "Bigger than the terrain footprint", "Open and expansive".
-  // The terrain size is 2400. We will create a plane that is larger than that.
-  const oceanSize = 8000;
-  const geometry = new THREE.PlaneGeometry(oceanSize, oceanSize, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
+  // Ocean should only extend eastward (seaward) from the coast, not cover the entire mainland
+  // Terrain size is 2400. We create a rectangle that extends east from x=0 to the horizon.
+  // Width (X): 3000 units (extends far east into the Aegean)
+  // Depth (Z): 2400 units (matches terrain north-south extent)
+  const oceanWidth = 3000;  // East-west extent
+  const oceanDepth = 2400;  // North-south extent
+  const geometry = new THREE.PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
 
   // 3. CONFIGURE WATER SHADER
   const water = new Water(geometry, {
@@ -405,8 +408,9 @@ export async function createOcean(scene, terrain, options = {}) {
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */ `
       // Clipping Logic for Mainland: Remove water from the West (inland) side
-      // Harbor water ends at x = -120. We clip further west to be safe.
-      if (vWorldPosition.x < -180.0) {
+      // Aggressively clip ocean to prevent overlap with city and terrain
+      // City is west of x=0, harbor is at x=120. Only show water east of x=100.
+      if (vWorldPosition.x < 100.0) {
         discard;
       }
 
@@ -460,28 +464,33 @@ export async function createOcean(scene, terrain, options = {}) {
     ? options.horizonOffset
     : 0;
   const horizonY = seaLevel + horizonOffset;
-  water.position.set(0, horizonY, 0);
+  
+  // Position ocean to extend eastward from the coast (x=0)
+  // Center at x = oceanWidth/2 to start at x=0 and extend east to x=3000
+  const oceanCenterX = oceanWidth / 2;
+  water.position.set(oceanCenterX, horizonY, 0);
 
   water.name = "AegeanOcean";
   water.userData.isWater = true;
   water.userData.seaLevel = seaLevel;
-  water.userData.oceanSize = oceanSize;
+  water.userData.oceanSize = { width: oceanWidth, depth: oceanDepth };
   water.userData.horizonY = horizonY;
   // Transparent water renders before opaque terrain via renderOrder
   water.renderOrder = RENDER_LAYERS.WATER;
 
-  // Custom wave scaling keeps detail even on the circular expanse
+  // Custom wave scaling keeps detail even on the rectangular expanse
   if (waterNormals) {
     waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping;
-    const repeat = Math.max(oceanSize / 180, 8);
-    waterNormals.repeat.set(repeat, repeat);
+    const repeatX = Math.max(oceanWidth / 180, 8);
+    const repeatZ = Math.max(oceanDepth / 180, 8);
+    waterNormals.repeat.set(repeatX, repeatZ);
   }
 
   scene.add(water);
 
   // Debug info
   if (import.meta.env?.DEV) {
-    console.info(`[ocean] Created Global Ocean at Y=${seaLevel} with size ${oceanSize}`);
+    console.info(`[ocean] Created Global Ocean at Y=${seaLevel}, centered at X=${oceanCenterX}, size ${oceanWidth}x${oceanDepth}`);
   }
 
   return water;
