@@ -59149,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DCv3nZL5.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BRrmiIOA.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59884,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BnsINFkP.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DgmGvBs6.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60095,6 +60095,20 @@ class Character extends Object3D {
       action.clampWhenFinished = true;
       action.enable = true;
       this.actions.set(mapped, action);
+    }
+    if (this.actions.size === 0 && clips.length > 0) {
+      const fallbackClip = clips[0];
+      const fallbackAction = this.mixer.clipAction(fallbackClip);
+      fallbackAction.setLoop(LoopRepeat, Infinity);
+      fallbackAction.clampWhenFinished = false;
+      fallbackAction.enable = true;
+      for (const key of ["Idle", "Walk", "Run", "Swagger", "Jump"]) {
+        this.actions.set(key, fallbackAction);
+      }
+      console.warn(
+        "[Character] No named animations matched; falling back to first clip:",
+        fallbackClip.name || "(unnamed)"
+      );
     }
     if (!this.actions.get("Swagger") && this.actions.get("Walk")) {
       this.actions.set("Swagger", this.actions.get("Walk"));
@@ -60838,8 +60852,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T06:47:15.325Z" : "",
-      sha: true ? "ba24928f620be7780b77469d41353904a689a92b" : ""
+      time: true ? "2026-01-03T06:49:44.915Z" : "",
+      sha: true ? "aec9e1934bef4124a38e7e42bcf2395aaf5a559b" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72246,4 +72260,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-iaWSKAGm.js.map
+//# sourceMappingURL=index-Pm4dJVZ4.js.map
