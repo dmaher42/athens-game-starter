@@ -51153,6 +51153,7 @@ async function createCivicDistrict(scene2, options = {}) {
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 8943462 : 6710886);
       roadMesh.position.set(localX, localY - 0.02, localZ);
+      roadMesh.visible = false;
       group.add(roadMesh);
     } else if (cell.type === "plaza") {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 11184810);
@@ -51194,6 +51195,7 @@ async function createCivicDistrict(scene2, options = {}) {
       const pathColor = pathTile.type === "connector" ? 10061943 : 11180424;
       const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
       pathMesh.position.set(localX, localY + 0.01, localZ);
+      pathMesh.visible = false;
       pathMesh.userData.isFootpath = true;
       group.add(pathMesh);
     }
@@ -59145,7 +59147,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-13Id7tMr.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CQbY6WPa.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59880,7 +59882,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-ClbSxcDb.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-ZQNpkz51.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60834,8 +60836,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T05:00:05.805Z" : "",
-      sha: true ? "f6cac42f18c013bdcaa4d94d2b504986df655c89" : ""
+      time: true ? "2026-01-03T05:15:14.539Z" : "",
+      sha: true ? "e04eeab024b31d51df0dd5b749dbe51004dcb926" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71189,24 +71191,24 @@ class Application {
       window.hideRoads = () => {
         let count = 0;
         scene2.traverse((obj) => {
-          const isRoad = obj.name?.toLowerCase().includes("road") || obj.name?.toLowerCase().includes("street") || obj.name?.toLowerCase().includes("path") || obj.userData?.type === "road";
+          const isRoad = obj.name?.toLowerCase().includes("road") || obj.name?.toLowerCase().includes("street") || obj.name?.toLowerCase().includes("path") || obj.userData?.type === "road" || obj.userData?.isFootpath;
           if (isRoad && obj.visible) {
             obj.visible = false;
             count++;
           }
         });
-        console.log(`🚫 Hidden ${count} road objects`);
+        console.log(`🚫 Hidden ${count} road objects (including footpaths)`);
       };
       window.showRoads = () => {
         let count = 0;
         scene2.traverse((obj) => {
-          const isRoad = obj.name?.toLowerCase().includes("road") || obj.name?.toLowerCase().includes("street") || obj.name?.toLowerCase().includes("path") || obj.userData?.type === "road";
+          const isRoad = obj.name?.toLowerCase().includes("road") || obj.name?.toLowerCase().includes("street") || obj.name?.toLowerCase().includes("path") || obj.userData?.type === "road" || obj.userData?.isFootpath;
           if (isRoad && !obj.visible) {
             obj.visible = true;
             count++;
           }
         });
-        console.log(`✅ Shown ${count} road objects`);
+        console.log(`✅ Shown ${count} road objects (including footpaths)`);
       };
       window.debugOcean = () => {
         const oceanObj = scene2.getObjectByName("AegeanOcean");
@@ -71223,9 +71225,34 @@ class Application {
         const playerPos = playerSystem?.player?.object?.position;
         console.log("  Player position:", playerPos ? `X=${playerPos.x.toFixed(1)}, Y=${playerPos.y.toFixed(1)}, Z=${playerPos.z.toFixed(1)}` : "unknown");
       };
+      window.debugCivicDistrict = () => {
+        console.log("🏛️ Civic District Debug:");
+        let roadCount = 0;
+        let footpathCount = 0;
+        let plazaCount = 0;
+        scene2.traverse((obj) => {
+          if (obj.userData?.isFootpath) {
+            footpathCount++;
+            console.log(`  Footpath at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}, color: ${obj.material?.color?.getHexString()}`);
+          }
+          if (obj.geometry?.type === "BoxGeometry" && obj.position.y < 0.5 && obj.material?.color) {
+            const hex = obj.material.color.getHexString();
+            if (hex === "887766" || hex === "666666" || hex === "998877" || hex === "aa9988") {
+              roadCount++;
+              console.log(`  Road/path at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}, color: #${hex}`);
+            }
+            if (hex === "aaaaaa") {
+              plazaCount++;
+              console.log(`  Plaza at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}`);
+            }
+          }
+        });
+        console.log(`  Total: ${roadCount} roads, ${footpathCount} footpaths, ${plazaCount} plazas`);
+      };
       console.log("✅ Water controls available: hideWater(), showWater(), toggleWater()");
       console.log("✅ Road controls available: hideRoads(), showRoads()");
       console.log("✅ Debug: debugOcean() to check ocean position");
+      console.log("✅ Debug: debugCivicDistrict() to inspect civic district elements");
       renderer2.domElement.addEventListener("pointerdown", (event) => {
         if (event.button === 0) {
           interactor.useObject();
@@ -71562,4 +71589,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BKFuH-CK.js.map
+//# sourceMappingURL=index-B69s_ZRz.js.map
