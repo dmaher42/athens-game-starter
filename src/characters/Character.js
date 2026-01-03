@@ -89,6 +89,22 @@ export class Character extends THREE.Object3D {
       this.actions.set(mapped, action);
     }
 
+    if (this.actions.size === 0 && clips.length > 0) {
+      const fallbackClip = clips[0];
+      const fallbackAction = this.mixer.clipAction(fallbackClip);
+      fallbackAction.setLoop(THREE.LoopRepeat, Infinity);
+      fallbackAction.clampWhenFinished = false;
+      fallbackAction.enable = true;
+
+      for (const key of ['Idle', 'Walk', 'Run', 'Swagger', 'Jump']) {
+        this.actions.set(key, fallbackAction);
+      }
+      console.warn(
+        '[Character] No named animations matched; falling back to first clip:',
+        fallbackClip.name || '(unnamed)'
+      );
+    }
+
     if (!this.actions.get('Swagger') && this.actions.get('Walk')) {
       this.actions.set('Swagger', this.actions.get('Walk'));
     }
