@@ -59149,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DdPIyxQP.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Cdo6bcd7.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59884,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CjmChNg4.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-sjwKV6Ah.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60838,7 +60838,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T06:46:10.631Z" : "",
+      time: true ? "2026-01-03T07:03:36.366Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -70432,10 +70432,10 @@ const MOVEMENT_KEYS = createKeyGroups({
   right: ["KeyD"]
 });
 const LOOK_KEYS = createKeyGroups({
-  left: ["ArrowLeft", "KeyQ", "Comma"],
-  right: ["ArrowRight", "KeyE", "Period"],
-  up: ["ArrowUp", "KeyR"],
-  down: ["ArrowDown", "KeyX"]
+  left: ["ArrowLeft", "Comma"],
+  right: ["ArrowRight", "Period"],
+  up: ["ArrowUp"],
+  down: ["ArrowDown"]
 });
 const ALT_LOOK_KEYS = createKeyGroups({
   left: ["KeyJ"],
@@ -70452,9 +70452,9 @@ const ALL_LOOK_KEYS = createKeyGroups({
 const ACTION_KEYS = createKeyGroups({
   jump: ["Space"],
   sprint: ["ShiftLeft", "ShiftRight"],
-  flyToggle: ["KeyG"],
+  flyToggle: ["KeyF"],
   crouch: ["ControlLeft", "ControlRight", "KeyC"],
-  interact: ["KeyF"]
+  interact: ["KeyE"]
 });
 function flattenKeyGroups(groups) {
   const values = Object.values(groups);
@@ -70538,10 +70538,10 @@ class InputMap {
         return;
       }
       this.keys.add(event.code);
-      if (event.code === "KeyG" && !event.repeat) {
+      if (event.code === "KeyF" && !event.repeat) {
         this.flyToggleQueued = true;
       }
-      if (event.code === "KeyF" && !event.repeat) {
+      if (event.code === "KeyE" && !event.repeat) {
         this.interactQueued = true;
       }
       if (CONTROL_KEYS.has(event.code)) {
@@ -71540,12 +71540,12 @@ class Application {
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
     if (landmarksEnabled) {
-      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new Vector3(-12, 0, -14)), {
+      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new Vector3(-40, 0, -50)), {
         width: 22,
         depth: 40,
         rotationRad: MathUtils.degToRad(20)
       });
-      await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D.clone().add(new Vector3(0, 0, -6)), {
+      await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D.clone().add(new Vector3(0, 0, -10)), {
         width: 30,
         depth: 54,
         columnCountX: 8,
@@ -71555,7 +71555,7 @@ class Application {
       await placeLandmark(
         worldRoot,
         terrain,
-        AGORA_CENTER_3D.clone().add(new Vector3(28, 0, 18)),
+        AGORA_CENTER_3D.clone().add(new Vector3(80, 0, 60)),
         {
           width: 12,
           depth: 34,
@@ -72246,4 +72246,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-D5GUEXwg.js.map
+//# sourceMappingURL=index-B6OgMo3V.js.map

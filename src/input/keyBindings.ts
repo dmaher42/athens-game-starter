@@ -33,10 +33,10 @@ export const MOVEMENT_KEYS = createKeyGroups<MovementKey>({
 });
 
 export const LOOK_KEYS = createKeyGroups<LookKey>({
-  left: ["ArrowLeft", "KeyQ", "Comma"],
-  right: ["ArrowRight", "KeyE", "Period"],
-  up: ["ArrowUp", "KeyR"],
-  down: ["ArrowDown", "KeyX"],
+  left: ["ArrowLeft", "Comma"],
+  right: ["ArrowRight", "Period"],
+  up: ["ArrowUp"],
+  down: ["ArrowDown"],
 });
 
 export const ALT_LOOK_KEYS = createKeyGroups<LookKey>({
@@ -56,9 +56,9 @@ export const ALL_LOOK_KEYS = createKeyGroups<LookKey>({
 export const ACTION_KEYS = createKeyGroups<ActionKey>({
   jump: ["Space"],
   sprint: ["ShiftLeft", "ShiftRight"],
-  flyToggle: ["KeyG"],
+  flyToggle: ["KeyF"],
   crouch: ["ControlLeft", "ControlRight", "KeyC"],
-  interact: ["KeyF"],
+  interact: ["KeyE"],
 });
 
 export function flattenKeyGroups<T extends string>(
