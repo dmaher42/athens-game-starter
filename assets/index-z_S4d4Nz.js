@@ -45421,7 +45421,7 @@ function createHarborPad(harborGroundY) {
   );
   pad.receiveShadow = true;
   pad.renderOrder = RENDER_LAYERS.DETAIL;
-  pad.visible = false;
+  pad.visible = true;
   return pad;
 }
 function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOCK_SECTION_WIDTH } = {}) {
@@ -59149,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BRrmiIOA.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-YH65Uxcb.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59884,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DgmGvBs6.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CzXMSFiQ.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60852,8 +60852,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T06:49:44.915Z" : "",
-      sha: true ? "aec9e1934bef4124a38e7e42bcf2395aaf5a559b" : ""
+      time: true ? "2026-01-03T07:53:03.103Z" : "",
+      sha: true ? "72ecd8b64d78395161e1c03e363a8913cb2405c0" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -70446,10 +70446,10 @@ const MOVEMENT_KEYS = createKeyGroups({
   right: ["KeyD"]
 });
 const LOOK_KEYS = createKeyGroups({
-  left: ["ArrowLeft", "KeyQ", "Comma"],
-  right: ["ArrowRight", "KeyE", "Period"],
-  up: ["ArrowUp", "KeyR"],
-  down: ["ArrowDown", "KeyX"]
+  left: ["ArrowLeft", "Comma"],
+  right: ["ArrowRight", "Period"],
+  up: ["ArrowUp"],
+  down: ["ArrowDown"]
 });
 const ALT_LOOK_KEYS = createKeyGroups({
   left: ["KeyJ"],
@@ -70466,9 +70466,9 @@ const ALL_LOOK_KEYS = createKeyGroups({
 const ACTION_KEYS = createKeyGroups({
   jump: ["Space"],
   sprint: ["ShiftLeft", "ShiftRight"],
-  flyToggle: ["KeyG"],
+  flyToggle: ["KeyF"],
   crouch: ["ControlLeft", "ControlRight", "KeyC"],
-  interact: ["KeyF"]
+  interact: ["KeyE"]
 });
 function flattenKeyGroups(groups) {
   const values = Object.values(groups);
@@ -70552,10 +70552,10 @@ class InputMap {
         return;
       }
       this.keys.add(event.code);
-      if (event.code === "KeyG" && !event.repeat) {
+      if (event.code === "KeyF" && !event.repeat) {
         this.flyToggleQueued = true;
       }
-      if (event.code === "KeyF" && !event.repeat) {
+      if (event.code === "KeyE" && !event.repeat) {
         this.interactQueued = true;
       }
       if (CONTROL_KEYS.has(event.code)) {
@@ -71554,29 +71554,29 @@ class Application {
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
     if (landmarksEnabled) {
-      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new Vector3(-12, 0, -14)), {
+      await placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new Vector3(140, 0, 40)), {
         width: 22,
         depth: 40,
-        rotationRad: MathUtils.degToRad(20)
+        rotationRad: MathUtils.degToRad(25)
       });
-      await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D.clone().add(new Vector3(0, 0, -6)), {
+      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new Vector3(-160, 0, 120)), {
         width: 30,
         depth: 54,
         columnCountX: 8,
         columnCountZ: 17,
-        rotationRad: MathUtils.degToRad(20)
+        rotationRad: MathUtils.degToRad(-10)
       });
       await placeLandmark(
         worldRoot,
         terrain,
-        AGORA_CENTER_3D.clone().add(new Vector3(28, 0, 18)),
+        ACROPOLIS_PEAK_3D.clone().add(new Vector3(60, 0, -180)),
         {
           width: 12,
           depth: 34,
           columnCountX: 6,
           columnCountZ: 2,
           materialPreset: "plaster",
-          rotationRad: MathUtils.degToRad(110)
+          rotationRad: MathUtils.degToRad(95)
         }
       );
     }
@@ -72260,4 +72260,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Pm4dJVZ4.js.map
+//# sourceMappingURL=index-z_S4d4Nz.js.map
