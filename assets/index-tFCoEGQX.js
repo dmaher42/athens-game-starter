@@ -59141,7 +59141,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DXKmk0qn.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BzneYyWy.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59876,7 +59876,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DXmSEtGx.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Bu3uWsQS.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60830,8 +60830,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T02:22:44.414Z" : "",
-      sha: true ? "da781a9e8415188402655bba75367a37f7dee716" : ""
+      time: true ? "2026-01-03T02:53:23.106Z" : "",
+      sha: true ? "a617aa60568422edd3a0501c3eba8fc96312f5fd" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71222,35 +71222,35 @@ class Application {
       console.log("✅ Water controls available: hideWater(), showWater(), toggleWater()");
       console.log("✅ Road controls available: hideRoads(), showRoads()");
       console.log("✅ Debug: debugOcean() to check ocean position");
-    }
-    renderer2.domElement.addEventListener("pointerdown", (event) => {
-      if (event.button === 0) {
-        interactor.useObject();
-      }
-    });
-    window.addEventListener("keydown", (event) => {
-      if (event.code === "KeyE") {
-        interactor.useObject();
-      } else if (event.code === "KeyG" && !event.repeat) {
-        toggleFog();
-      } else if (event.code === "KeyT" && !event.repeat) {
-        lightingSystem.cycleLightingPreset();
-      } else if (event.code === "F8" && !event.repeat) {
-        const position = playerSystem.player?.object?.position;
-        const x = position?.x;
-        const z = position?.z;
-        if (Number.isFinite(x) && Number.isFinite(z)) {
-          probeAt(x, z);
+      renderer2.domElement.addEventListener("pointerdown", (event) => {
+        if (event.button === 0) {
+          interactor.useObject();
         }
-      }
-    });
-    window.addEventListener("resize", () => {
-      camera2.aspect = window.innerWidth / window.innerHeight;
-      camera2.updateProjectionMatrix();
-      renderer2.setSize(window.innerWidth, window.innerHeight);
-      composer.setSize(window.innerWidth, window.innerHeight);
-      bloomPass.setSize(window.innerWidth, window.innerHeight);
-    });
+      });
+      window.addEventListener("keydown", (event) => {
+        if (event.code === "KeyE") {
+          interactor.useObject();
+        } else if (event.code === "KeyG" && !event.repeat) {
+          toggleFog();
+        } else if (event.code === "KeyT" && !event.repeat) {
+          lightingSystem.cycleLightingPreset();
+        } else if (event.code === "F8" && !event.repeat) {
+          const position = playerSystem.player?.object?.position;
+          const x = position?.x;
+          const z = position?.z;
+          if (Number.isFinite(x) && Number.isFinite(z)) {
+            probeAt(x, z);
+          }
+        }
+      });
+      window.addEventListener("resize", () => {
+        camera2.aspect = window.innerWidth / window.innerHeight;
+        camera2.updateProjectionMatrix();
+        renderer2.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight);
+        bloomPass.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
   }
   waitForAdvance(target = document.body) {
     return new Promise((resolve) => {
@@ -71558,4 +71558,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-R83z9hQo.js.map
+//# sourceMappingURL=index-tFCoEGQX.js.map
