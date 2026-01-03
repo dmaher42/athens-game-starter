@@ -1062,10 +1062,39 @@ export class Application {
           console.log(`  Total: ${roadCount} roads, ${footpathCount} footpaths, ${plazaCount} plazas`);
         };
         
+        (window as any).findBrightObjects = () => {
+          console.log('💡 Finding bright/white objects in scene:');
+          const brightObjects: any[] = [];
+          scene.traverse((obj: any) => {
+            if (obj.material?.color) {
+              const hex = obj.material.color.getHexString();
+              const r = obj.material.color.r;
+              const g = obj.material.color.g;
+              const b = obj.material.color.b;
+              // Consider "bright" if average RGB > 0.8 (in 0-1 range)
+              const brightness = (r + g + b) / 3;
+              if (brightness > 0.8) {
+                brightObjects.push({
+                  name: obj.name || 'unnamed',
+                  type: obj.geometry?.type || 'unknown',
+                  position: `(${obj.position.x.toFixed(1)}, ${obj.position.y.toFixed(1)}, ${obj.position.z.toFixed(1)})`,
+                  color: `#${hex}`,
+                  visible: obj.visible,
+                  brightness: brightness.toFixed(2)
+                });
+              }
+            }
+          });
+          console.table(brightObjects);
+          console.log(`Found ${brightObjects.length} bright objects (brightness > 0.8)`);
+          return brightObjects;
+        };
+        
         console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
         console.log('✅ Road controls available: hideRoads(), showRoads()');
         console.log('✅ Debug: debugOcean() to check ocean position');
         console.log('✅ Debug: debugCivicDistrict() to inspect civic district elements');
+        console.log('✅ Debug: findBrightObjects() to locate white/bright meshes');
 
         renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
           if (event.button === 0) {
