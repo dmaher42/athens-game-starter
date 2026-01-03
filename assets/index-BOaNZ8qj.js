@@ -43910,7 +43910,8 @@ function createTerrain(scene2) {
   geometry.setIndex(new BufferAttribute(reorderedIndices, 1));
   const terrainMaterials = [
     CoastalGroundMaterial,
-    CityGroundMaterial,
+    InlandGroundMaterial,
+    // Use grass instead of city dirt
     InlandGroundMaterial
   ];
   const terrain = new Mesh(geometry, terrainMaterials);
@@ -59142,7 +59143,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DxuCYTv4.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BbHdJdjk.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59877,7 +59878,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B4o4jkca.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BVoXmuTe.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60831,8 +60832,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T03:05:53.047Z" : "",
-      sha: true ? "223eeff0c612f76c6399b9797c11e4d957966aab" : ""
+      time: true ? "2026-01-03T03:22:22.404Z" : "",
+      sha: true ? "3b6aeb6903bf3fe207182f548cac1190a901e595" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71559,4 +71560,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-C2pg1-Gz.js.map
+//# sourceMappingURL=index-BOaNZ8qj.js.map
