@@ -290,4 +290,213 @@ window.scene.getObjectByName('Terrain')      // Find terrain
 
 ---
 
+## City Layout System
+
+### Current Implementation: Grid-Based Layout
+
+**Problem:** The city currently uses an organized grid system which feels too modern and rigid for an ancient Greek city.
+
+### Files Involved:
+
+**Primary:**
+- `src/world/cityPlan.js` - District zones and building placement logic
+- `src/world/city.js` - Building geometry generation, house creation
+- `src/buildings/BuildingManager.js` - GLB model loading and placement
+- `public/config/districts.json` - District configuration (if exists)
+
+**Supporting:**
+- `src/world/locations.js` - City center and zone boundaries
+- `DISTRICT_SPACING_RULES.md` - Current spacing rules documentation
+
+### Current Layout Constraints:
+
+**Landmark Spacing Rules:**
+```javascript
+SPACING_RULES = {
+  LANDMARK_MIN_SPACING: 8 * BLOCK_SIZE,           // 384m between landmarks
+  CIVIC_CLUSTER_MAX_DISTANCE: 30 * BLOCK_SIZE,   // 1440m radius from center
+  LANDMARK_TYPES: ['parthenon', 'temple', 'monument', 'tholos', 'stoa']
+}
+```
+
+**District Types:**
+- Sacred (Parthenon placement)
+- Civic/Agora (near city center on flat terrain)
+- Residential
+- Commercial
+- Coastal
+
+### How to Change to Organic Layout:
+
+#### 1. Replace Grid with Organic Growth Algorithm
+
+**Current:** Regular grid with `BLOCK_SIZE` intervals
+**Target:** Radial growth from multiple seed points with irregular spacing
+
+**Approach:**
+```javascript
+// Instead of regular grid:
+for (x = 0; x < width; x += BLOCK_SIZE)
+  for (z = 0; z < depth; z += BLOCK_SIZE)
+    placeBuilding(x, z)
+
+// Use organic placement:
+- Start from Agora center (AGORA_CENTER_3D)
+- Create multiple district seeds (market, temples, residential quarters)
+- Grow outward along terrain contours
+- Follow natural paths (avoid steep slopes)
+- Vary building density by district
+- Add irregular spacing (Voronoi/Poisson disc sampling)
+```
+
+#### 2. Terrain-Following Roads
+
+**Current:** Straight grid roads
+**Target:** Roads follow terrain elevation, connect landmarks organically
+
+**Files to modify:**
+- Create `src/world/roads.js` (if doesn't exist)
+- Add pathfinding that respects terrain slope
+- Connect landmarks via natural paths
+- Use spline curves for organic feel
+
+**Algorithm suggestions:**
+- A* pathfinding with slope penalties
+- Bezier curves for smooth paths
+- Road width varies by district importance
+- Intersections at natural gathering points
+
+#### 3. Building Orientation and Clustering
+
+**Current:** Buildings aligned to grid axes
+**Target:** Buildings face roads, plazas, or downhill; cluster organically
+
+**Changes needed in `city.js`:**
+```javascript
+// Instead of fixed rotation:
+rotation = 0 or Math.PI/2
+
+// Calculate rotation based on:
+- Face toward nearest road/plaza
+- Align with terrain contours
+- Point downhill for drainage
+- Cluster around shared courtyards
+- Vary rotation by ±15° for irregularity
+```
+
+#### 4. District Character
+
+**Add to `cityPlan.js`:**
+```javascript
+const DISTRICT_CHARACTERISTICS = {
+  agora: {
+    buildingDensity: 'high',
+    spacing: 'tight',
+    pattern: 'radial',
+    plazaSize: 'large',
+    roadWidth: 'wide'
+  },
+  residential: {
+    buildingDensity: 'medium',
+    spacing: 'varied',
+    pattern: 'organic-cluster',
+    courtyards: true,
+    roadWidth: 'narrow'
+  },
+  sacred: {
+    buildingDensity: 'low',
+    spacing: 'wide',
+    pattern: 'formal-axial',
+    openSpace: 'maximum',
+    roadWidth: 'ceremonial'
+  }
+}
+```
+
+#### 5. Reference Implementation Steps:
+
+**Phase 1: Analysis**
+1. Study `cityPlan.js` to understand current district logic
+2. Map current landmark placement rules
+3. Identify building placement loops
+
+**Phase 2: Organic Algorithm**
+1. Implement Poisson disc sampling for building positions
+2. Add terrain-aware spacing (closer on flat, wider on slopes)
+3. Create district seed points (Agora, Sacred, Harbor)
+4. Grow from seeds with density falloff
+
+**Phase 3: Path Network**
+1. Generate primary roads connecting landmarks
+2. Add secondary streets following terrain
+3. Create irregular intersections and plazas
+4. Vary road width by hierarchy
+
+**Phase 4: Building Placement**
+1. Place buildings along roads
+2. Calculate orientation from road direction
+3. Add courtyards and shared spaces
+4. Vary setbacks and rotations
+
+**Phase 5: Polish**
+1. Add alleyways between building clusters
+2. Create stairs/ramps for elevation changes
+3. Place props (amphorae, crates) more naturally
+4. Add vegetation in irregular patches
+
+### Example: Converting One Block
+
+```javascript
+// OLD (Grid):
+const x = blockX * BLOCK_SIZE;
+const z = blockZ * BLOCK_SIZE;
+placeBuilding(x, z, 0);
+
+// NEW (Organic):
+const seedPoint = { x: AGORA_CENTER_3D.x, z: AGORA_CENTER_3D.z };
+const clusters = generateClusters(seedPoint, radius, minDensity, maxDensity);
+
+clusters.forEach(cluster => {
+  const buildings = poissonDiscSample(cluster, minSpacing, terrain);
+  buildings.forEach(pos => {
+    const rotation = calculateOrientationFromTerrain(pos, terrain);
+    const offset = randomOffset(-2, 2); // irregularity
+    placeBuilding(pos.x + offset.x, pos.z + offset.z, rotation);
+  });
+});
+```
+
+### Key Algorithms to Research:
+
+1. **Poisson Disc Sampling** - Even but irregular spacing
+2. **Voronoi Diagrams** - Natural territory division
+3. **Perlin Noise** - Organic density variation
+4. **A* Pathfinding** - Terrain-aware roads
+5. **Delaunay Triangulation** - Natural connection networks
+
+### Testing Organic Layout:
+
+```javascript
+// Add debug visualization in Application.ts:
+if (typeof window !== 'undefined') {
+  window.debugCityLayout = () => {
+    // Show district boundaries
+    // Visualize road network
+    // Display building density heatmap
+  };
+}
+```
+
+### Important Considerations:
+
+⚠️ **Performance:** Organic layouts may create more draw calls - consider instanced meshes for buildings
+
+⚠️ **Collision:** More complex layout needs better collision system for navigation
+
+⚠️ **Regeneration:** Seed-based generation ensures reproducibility - use `CITY_SEED` from locations.js
+
+⚠️ **Landmarks:** Keep spacing rules but make placement terrain-aware
+
+---
+
 Last Updated: January 3, 2026
