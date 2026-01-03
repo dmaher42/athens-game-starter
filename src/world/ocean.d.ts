@@ -73,13 +73,6 @@ export function getDefaultWaterNormalCandidates(base?: string): string[];
 
 export function createOcean(scene: Scene, options?: OceanOptions): Promise<OceanHandle>;
 
-export function mountWaterClipDebug(
-  scene: Scene,
-  rawBounds?: OceanBoundsOptions | null,
-  clipBounds?: OceanBoundsOptions | null,
-  seaLevel?: number | null,
-): Group | null;
-
 export function updateOcean(
   ocean: OceanHandle | null | undefined,
   deltaSeconds?: number,

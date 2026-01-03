@@ -14,7 +14,6 @@ import {
   HARBOR_WATER_RADIUS,
   ISLAND_RADIUS,
 } from "./locations.js";
-import { mountWaterBoundsDebug } from "./debug_waterBounds.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 
 function generateNormalComponent(x, y, octave) {
@@ -504,57 +503,6 @@ export async function createOcean(scene, terrain, options = {}) {
 }
 
 function createBoundsLoop(bounds, color = 0xffffff, yOffset = 0) {
-  if (!bounds) return null;
-  const { west, east, north, south } = bounds;
-  const geometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(west, 0, north),
-    new THREE.Vector3(east, 0, north),
-    new THREE.Vector3(east, 0, south),
-    new THREE.Vector3(west, 0, south),
-  ]);
-  const material = new THREE.LineBasicMaterial({
-    color,
-    transparent: true,
-    opacity: 0.85,
-    depthWrite: false,
-    depthTest: false,
-  });
-  const loop = new THREE.LineLoop(geometry, material);
-  loop.position.y = yOffset;
-  return loop;
-}
-
-export function mountWaterClipDebug(
-  scene,
-  rawBounds,
-  clipBounds,
-  seaLevel = getSeaLevelY(),
-) {
-  const group = new THREE.Group();
-  group.name = "WaterClipDebug";
-
-  const baseY = seaLevel + 0.01;
-  const rawLoop = createBoundsLoop(rawBounds, 0xffb347, baseY);
-  if (rawLoop) {
-    rawLoop.name = "WaterClipDebug:raw";
-    group.add(rawLoop);
-  }
-
-  const clipLoop = createBoundsLoop(clipBounds, 0x4ec3ff, baseY + 0.01);
-  if (clipLoop) {
-    clipLoop.name = "WaterClipDebug:clip";
-    group.add(clipLoop);
-  }
-
-  if (group.children.length === 0) {
-    return null;
-  }
-
-  scene.add(group);
-  return group;
-}
-
-export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor, haze = {}) {
   if (!ocean) return;
   const uniforms = ocean.uniforms ?? ocean.mesh?.material?.uniforms;
   if (!uniforms) return;
