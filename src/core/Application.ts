@@ -933,13 +933,16 @@ export class Application {
       const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: true, devDefault: true };
       const cameraHudToggle = engineConfig.debug?.overlays?.cameraSettings || { defaultValue: true, devDefault: true };
 
-      // Only mount dev overlays when running in development AND the explicit runtime
-      // debug render flag is enabled (URL localStorage or window.DEBUG_RENDER).
-      // This prevents noisy debug visuals from appearing by default.
-      const { isDebugRenderEnabled } = await import("../config/debugFlags.js");
-      const runtimeDebugAllowed = typeof isDebugRenderEnabled === "function" && isDebugRenderEnabled();
+      // Set window flags to enable HUD overlays based on feature toggles
+      if (typeof window !== "undefined") {
+        (window as any).SHOW_HUD = resolveFeatureToggle(devHudToggle);
+        (window as any).SHOW_CAMERA_HUD = resolveFeatureToggle(cameraHudToggle);
+        (window as any).SHOW_AUDIO_MIXER = resolveFeatureToggle((engineConfig.debug?.overlays as any)?.audioMixer);
+        (window as any).SHOW_EXPOSURE = resolveFeatureToggle((engineConfig.debug?.overlays as any)?.exposureSlider);
+        (window as any).SHOW_HOTKEYS = resolveFeatureToggle((engineConfig.debug?.overlays as any)?.hotkeyReference);
+      }
 
-      if (runtimeDebugAllowed && (resolveFeatureToggle(devHudToggle) || resolveFeatureToggle(cameraHudToggle))) {
+      if (resolveFeatureToggle(devHudToggle) || resolveFeatureToggle(cameraHudToggle)) {
         UIManager.init({
           renderer,
           soundscape,

@@ -44,6 +44,7 @@ const DEFAULT_HOTKEYS: readonly HotkeyDescriptor[] = [
   { keys: ["F"], description: "Toggle flight mode" },
   { keys: ["E"], description: "Interact with highlighted objects" },
   { keys: ["Arrow Keys"], description: "Look around" },
+  { keys: ["P"], description: "Drop pin at current location" },
   { keys: ["F9"], description: "Toggle exposure slider" },
 ];
 
