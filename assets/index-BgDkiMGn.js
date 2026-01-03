@@ -43530,13 +43530,7 @@ const textureLoader$1 = new TextureLoader();
 const BASE_PATH = "/athens-game-starter/";
 function loadTexture$1(url) {
   const fullUrl = BASE_PATH + url;
-  console.log(`[Ground] Loading texture: ${fullUrl}`);
-  const texture = textureLoader$1.load(
-    fullUrl,
-    (tex) => console.log(`[Ground] ✅ Loaded: ${fullUrl}`),
-    void 0,
-    (err2) => console.error(`[Ground] ❌ Failed: ${fullUrl}`, err2)
-  );
+  const texture = textureLoader$1.load(fullUrl);
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
   texture.repeat.set(10, 10);
@@ -45172,9 +45166,9 @@ async function createOcean(scene2, terrain, options = {}) {
       /* glsl */
       `
       // Clipping Logic for Mainland: Remove water from the West (inland) side
-      // Ocean mesh now starts at x=0, but we add safety margin to clip any inland overflow
-      // Harbor is at x=120, city extends west to about x=-200
-      if (vWorldPosition.x < -50.0) {
+      // Aggressively clip ocean to prevent overlap with city and terrain
+      // City is west of x=0, harbor is at x=120. Only show water east of x=100.
+      if (vWorldPosition.x < 100.0) {
         discard;
       }
 
@@ -59217,7 +59211,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-D2bUBoR9.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BbSsVyeU.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59952,7 +59946,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-cg-uStqD.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BxKABUsx.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60906,8 +60900,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-02T23:51:42.888Z" : "",
-      sha: true ? "21707f29f47a4b04cf5deade88ec4e461497aae2" : ""
+      time: true ? "2026-01-03T00:19:05.568Z" : "",
+      sha: true ? "35d3989e15f9f384d1c025cd58e2b56455797827" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71283,7 +71277,30 @@ class Application {
         });
         console.log(`👁️ Shown ${count} water objects`);
       };
+      window.hideRoads = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isRoad = obj.name?.toLowerCase().includes("road") || obj.name?.toLowerCase().includes("street") || obj.name?.toLowerCase().includes("path") || obj.userData?.type === "road";
+          if (isRoad && obj.visible) {
+            obj.visible = false;
+            count++;
+          }
+        });
+        console.log(`🚫 Hidden ${count} road objects`);
+      };
+      window.showRoads = () => {
+        let count = 0;
+        scene2.traverse((obj) => {
+          const isRoad = obj.name?.toLowerCase().includes("road") || obj.name?.toLowerCase().includes("street") || obj.name?.toLowerCase().includes("path") || obj.userData?.type === "road";
+          if (isRoad && !obj.visible) {
+            obj.visible = true;
+            count++;
+          }
+        });
+        console.log(`✅ Shown ${count} road objects`);
+      };
       console.log("✅ Water controls available: hideWater(), showWater(), toggleWater()");
+      console.log("✅ Road controls available: hideRoads(), showRoads()");
     }
     renderer2.domElement.addEventListener("pointerdown", (event) => {
       if (event.button === 0) {
@@ -71620,4 +71637,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CKPj3D5F.js.map
+//# sourceMappingURL=index-BgDkiMGn.js.map
