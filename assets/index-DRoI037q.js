@@ -43210,9 +43210,9 @@ const getCityGroundY = () => resolveSeaLevelY() + 2.5;
 const CITY_CENTER_ORIGIN = new Vector3(0, getCityGroundY(), 0);
 const HARBOR_GROUND_HEIGHT = 2;
 const HARBOR_CENTER_3D = new Vector3(
-  -20,
+  310.73,
   resolveSeaLevelY() + HARBOR_GROUND_HEIGHT,
-  -40
+  1.31
 );
 const AGORA_CENTER_3D = new Vector3(-80, getCityGroundY(), 40);
 const ACROPOLIS_PEAK_3D = new Vector3(-40, getCityGroundY(), 10);
@@ -45422,6 +45422,21 @@ function createPierLine(startX, z, sectionCount, seaLevel) {
   }
   return { pier, sections };
 }
+function createVerticalPierLine(x, startZ, sectionCount, seaLevel) {
+  const pier = new Group();
+  pier.name = "HarborPier";
+  const sections = [];
+  let cursorZ = startZ;
+  for (let i = 0; i < sectionCount; i++) {
+    const section = createDockSection(seaLevel);
+    section.rotation.y = Math.PI / 2;
+    section.position.set(x, seaLevel - HARBOR_GROUND_HEIGHT, cursorZ);
+    pier.add(section);
+    sections.push(section);
+    cursorZ -= section.userData.length - DOCK_GAP;
+  }
+  return { pier, sections };
+}
 function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 3107764, accent = 15902017 }) {
   const boat = new Group();
   boat.name = "HarborBoat";
@@ -45781,18 +45796,18 @@ function createHarbor(scene2, options = {}) {
       pierPositions.push({ x: localX, z: localZ });
     }
   } else {
-    if (IS_DEV) console.log("[Harbor] Using default pier positions (no terrain sampler)");
-    const pierStartX = 70 + 1.1;
-    const pierRows = [
-      { z: -18, sections: 4 },
-      { z: -2, sections: 5 },
-      { z: 16, sections: 4 }
+    if (IS_DEV) console.log("[Harbor] Using default vertical pier positions (north-south)");
+    const pierStartZ = 40;
+    const pierColumns = [
+      { x: -15, sections: 4 },
+      { x: 0, sections: 5 },
+      { x: 15, sections: 4 }
     ];
-    for (const row of pierRows) {
-      const { pier, sections } = createPierLine(pierStartX, row.z, row.sections, seaLevel);
+    for (const col of pierColumns) {
+      const { pier, sections } = createVerticalPierLine(col.x, pierStartZ, col.sections, seaLevel);
       allSections.push(...sections);
       piersGroup.add(pier);
-      pierPositions.push({ x: pierStartX, z: row.z });
+      pierPositions.push({ x: col.x, z: pierStartZ });
     }
   }
   harbor.add(piersGroup);
@@ -59150,7 +59165,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DXyOsTnQ.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bfesn-75.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59885,7 +59900,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dw1keaT3.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-itsB7dRG.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60853,8 +60868,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T23:04:18.767Z" : "",
-      sha: true ? "8acaf600d87dd7d475cba863d4c747c6f24999b5" : ""
+      time: true ? "2026-01-03T23:12:49.455Z" : "",
+      sha: true ? "544b6e2a6a00c78563995a78c5f9e0bcb97389ec" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -72263,4 +72278,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-C4QmZ9ze.js.map
+//# sourceMappingURL=index-DRoI037q.js.map
