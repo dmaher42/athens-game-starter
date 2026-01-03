@@ -45097,8 +45097,8 @@ async function createOcean(scene2, terrain, options = {}) {
     options.waterNormalsCandidates || HARBOR_WATER_NORMAL_CANDIDATES
   );
   const seaLevel = Number.isFinite(options.seaLevel) ? options.seaLevel : Number.isFinite(getSeaLevelY()) ? getSeaLevelY() : SEA_LEVEL_Y$1;
-  const oceanWidth = 1400;
-  const oceanDepth = 1200;
+  const oceanWidth = 800;
+  const oceanDepth = 800;
   const geometry = new PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
   const water = new Water(geometry, {
     textureWidth: 512,
@@ -45169,16 +45169,16 @@ async function createOcean(scene2, terrain, options = {}) {
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // Clipping Logic for Mainland: Remove water from inland and far north/south
-      // Ocean starts at x≈800; clip anything west of 760 and outside tighter Z bounds.
-      if (vWorldPosition.x < 760.0) {
+      // Clipping Logic: Ocean starts at x≈1500, NEVER render inland
+      // Aggressively discard everything west of 1400 and outside narrow Z bounds
+      if (vWorldPosition.x < 1400.0) {
         discard;
       }
-      if (abs(vWorldPosition.z) > 700.0) {
+      if (abs(vWorldPosition.z) > 500.0) {
         discard;
       }
 
-      // If terrain is above sea level, skip water to avoid inland shimmer/z-fighting
+      // If terrain is above sea level, skip water to avoid shimmer
       if (terrainHeight > uSeaLevel - 0.25) {
         discard;
       }
@@ -45223,7 +45223,7 @@ async function createOcean(scene2, terrain, options = {}) {
   water.rotation.x = -Math.PI / 2;
   const horizonOffset = Number.isFinite(options.horizonOffset) ? options.horizonOffset : 0;
   const horizonY = seaLevel + horizonOffset;
-  const oceanStartX = 800;
+  const oceanStartX = 1500;
   const oceanCenterX = oceanStartX + oceanWidth * 0.5;
   water.position.set(oceanCenterX, horizonY, 0);
   water.name = "AegeanOcean";
@@ -59219,7 +59219,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BA2T7ulN.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-7dMrjGo0.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59954,7 +59954,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Ctdnd6ZV.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B7JnEZ7D.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60908,8 +60908,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T00:34:14.044Z" : "",
-      sha: true ? "9e58e585723b7f0c5502d95a25e3f4ec3c92ed56" : ""
+      time: true ? "2026-01-03T00:43:47.775Z" : "",
+      sha: true ? "3f7fe4b2f7774f1d3088864a8eed0521df18e160" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71645,4 +71645,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BPOKl_hD.js.map
+//# sourceMappingURL=index-Bvj09YdD.js.map
