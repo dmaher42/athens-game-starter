@@ -59149,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Xpqbp6xH.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Duzi1tfq.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59884,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DnoSIgi-.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CM1jnP9p.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60838,8 +60838,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T06:09:04.953Z" : "",
-      sha: true ? "87a39fd534315a32b83e97f0d4a165d8fefd062c" : ""
+      time: true ? "2026-01-03T06:34:26.170Z" : "",
+      sha: true ? "9b663aee1fba921c15ad9be650f5030e1a94c3ce" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -60872,8 +60872,8 @@ const ENVIRONMENT_OVERRIDES$1 = {
         audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: true },
         exposureSlider: { defaultValue: false, devDefault: true },
         hotkeyReference: { devDefault: true, windowFlagKey: "SHOW_HOTKEYS" },
-        devHud: { defaultValue: false, devDefault: true },
-        cameraSettings: { defaultValue: false, devDefault: true }
+        devHud: { defaultValue: true, devDefault: true },
+        cameraSettings: { defaultValue: true, devDefault: true }
       },
       logLevel: queryParams.get("log") || "debug"
     }
@@ -71540,10 +71540,10 @@ class Application {
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
     if (landmarksEnabled) {
-      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new Vector3(-6, 0, -8)), {
+      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new Vector3(-12, 0, -14)), {
         width: 22,
         depth: 40,
-        rotationRad: MathUtils.degToRad(15)
+        rotationRad: MathUtils.degToRad(20)
       });
       await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D.clone().add(new Vector3(0, 0, -6)), {
         width: 30,
@@ -71555,14 +71555,14 @@ class Application {
       await placeLandmark(
         worldRoot,
         terrain,
-        AGORA_CENTER_3D.clone().add(new Vector3(24, 0, 8)),
+        AGORA_CENTER_3D.clone().add(new Vector3(28, 0, 18)),
         {
           width: 12,
           depth: 34,
           columnCountX: 6,
           columnCountZ: 2,
           materialPreset: "plaster",
-          rotationRad: MathUtils.degToRad(90)
+          rotationRad: MathUtils.degToRad(110)
         }
       );
     }
@@ -72246,4 +72246,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CB0M4AqB.js.map
+//# sourceMappingURL=index-BG0j2c1D.js.map
