@@ -129,6 +129,12 @@ export interface ApplicationBootOptions {
 }
 
 function createFarOceanPlane(scene: any, seaLevel: number, terrainSize: number) {
+  // DISABLED: This plane was covering the entire map including inland areas
+  // causing blue reflective shimmer on the ground where the player spawns.
+  // The ocean.js Water shader is sufficient for the eastern sea area.
+  return null;
+  
+  /* Original code disabled:
   const radius = Math.max(terrainSize * 2.4, 3200);
   const geometry = new THREE.CircleGeometry(radius, 64);
   geometry.rotateX(-Math.PI / 2);
@@ -149,6 +155,7 @@ function createFarOceanPlane(scene: any, seaLevel: number, terrainSize: number) 
   plane.renderOrder = -4;
   scene.add(plane);
   return plane;
+  */
 }
 
 export class Application {
