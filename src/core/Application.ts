@@ -75,6 +75,7 @@ import { InteractionSystem } from "../interactions/InteractionSystem.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "../features/aristotle-texture.js";
 import { applyGravelToRoads } from "../features/roads-gravel.js";
+import { buildTemple } from "../features/temples.js";
 import {
   AssetLoader,
   createProceduralMarbleTextures,
@@ -628,6 +629,22 @@ export class Application {
       const roadsVisible =
         engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
 
+      const landmarksEnabled = parseBooleanQuery("landmarks", true);
+
+      const placeLandmark = async (
+        sceneRef: THREE.Object3D,
+        terrainRef: any,
+        position: THREE.Vector3,
+        opts: any = {},
+      ) => {
+        const temple = await buildTemple({ materialPreset: "marble", ...opts });
+        const height = terrainRef?.userData?.getHeightAt?.(position.x, position.z);
+        const y = Number.isFinite(height) ? height : position.y ?? 0;
+        temple.position.set(position.x, y + 0.05, position.z);
+        sceneRef.add(temple);
+        return temple;
+      };
+
       const { group: roadGroup, curve: mainRoad } = createMainHillRoad(
         worldRoot,
         terrain,
@@ -664,6 +681,33 @@ export class Application {
           harborCity?.userData?.['foundationPadMaterial'] ?? null,
       });
       updateLoadingStatus("Raising temples, homes, and harbors...");
+
+      if (landmarksEnabled) {
+        await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D, {
+          width: 22,
+          depth: 40,
+        });
+
+        await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D, {
+          width: 30,
+          depth: 54,
+          columnCountX: 8,
+          columnCountZ: 17,
+        });
+
+        await placeLandmark(
+          worldRoot,
+          terrain,
+          AGORA_CENTER_3D.clone().add(new THREE.Vector3(18, 0, -10)),
+          {
+            width: 12,
+            depth: 34,
+            columnCountX: 6,
+            columnCountZ: 2,
+            materialPreset: "plaster",
+          },
+        );
+      }
 
       // Validate ground material setup after scene initialization
       // validateCityGroundMaterials(scene); // Disabled - simplified materials
