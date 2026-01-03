@@ -1,4 +1,6 @@
-Overview
+# Athens Game Starter
+
+## Overview
 
 This project is an experimental, walkable 3D interpretation of Athens as a coastal mainland city.
 
@@ -15,7 +17,13 @@ a living world-building experiment, and
 
 a testbed for AI-assisted development using tools like Codex and Jules.
 
-Core Vision (Authoritative)
+## Documentation for AI Assistants
+
+**📖 [ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete technical architecture, file structure, recent fixes, and common pitfalls. **READ THIS FIRST** before making any code changes.
+
+**📖 [GAME_OVERVIEW.md](./GAME_OVERVIEW.md)** - Design philosophy, creator profile, and game priorities.
+
+## Core Vision (Authoritative)
 
 This is NOT an island
 
