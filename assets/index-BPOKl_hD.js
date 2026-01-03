@@ -45097,8 +45097,8 @@ async function createOcean(scene2, terrain, options = {}) {
     options.waterNormalsCandidates || HARBOR_WATER_NORMAL_CANDIDATES
   );
   const seaLevel = Number.isFinite(options.seaLevel) ? options.seaLevel : Number.isFinite(getSeaLevelY()) ? getSeaLevelY() : SEA_LEVEL_Y$1;
-  const oceanWidth = 2e3;
-  const oceanDepth = 1600;
+  const oceanWidth = 1400;
+  const oceanDepth = 1200;
   const geometry = new PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
   const water = new Water(geometry, {
     textureWidth: 512,
@@ -45165,12 +45165,16 @@ async function createOcean(scene2, terrain, options = {}) {
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */
       `
+      vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
+      float terrainHeight = texture2D(uHeightMap, terrainUV).r;
+      float waterDepth = vWorldPosition.y - terrainHeight;
+
       // Clipping Logic for Mainland: Remove water from inland and far north/south
-      // Ocean starts at x≈400; clip anything west of 360 and outside Z bounds.
-      if (vWorldPosition.x < 360.0) {
+      // Ocean starts at x≈800; clip anything west of 760 and outside tighter Z bounds.
+      if (vWorldPosition.x < 760.0) {
         discard;
       }
-      if (abs(vWorldPosition.z) > 900.0) {
+      if (abs(vWorldPosition.z) > 700.0) {
         discard;
       }
 
@@ -45178,10 +45182,6 @@ async function createOcean(scene2, terrain, options = {}) {
       if (terrainHeight > uSeaLevel - 0.25) {
         discard;
       }
-
-      vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
-      float terrainHeight = texture2D(uHeightMap, terrainUV).r;
-      float waterDepth = vWorldPosition.y - terrainHeight;
 
       vec3 finalColor = color;
 
@@ -45223,7 +45223,7 @@ async function createOcean(scene2, terrain, options = {}) {
   water.rotation.x = -Math.PI / 2;
   const horizonOffset = Number.isFinite(options.horizonOffset) ? options.horizonOffset : 0;
   const horizonY = seaLevel + horizonOffset;
-  const oceanStartX = 400;
+  const oceanStartX = 800;
   const oceanCenterX = oceanStartX + oceanWidth * 0.5;
   water.position.set(oceanCenterX, horizonY, 0);
   water.name = "AegeanOcean";
@@ -59219,7 +59219,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-m-AFO1E5.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BA2T7ulN.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59954,7 +59954,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DGhILxCp.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Ctdnd6ZV.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60908,8 +60908,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T00:28:20.118Z" : "",
-      sha: true ? "9e8144b6ff49094c478684da0274eccd45ae915e" : ""
+      time: true ? "2026-01-03T00:34:14.044Z" : "",
+      sha: true ? "9e58e585723b7f0c5502d95a25e3f4ec3c92ed56" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71645,4 +71645,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BdfKNFpw.js.map
+//# sourceMappingURL=index-BPOKl_hD.js.map
