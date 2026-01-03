@@ -1051,7 +1051,6 @@ export class Application {
         console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
         console.log('✅ Road controls available: hideRoads(), showRoads()');
       }
-      }
 
       renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
         if (event.button === 0) {
