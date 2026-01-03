@@ -106,6 +106,7 @@ function createHarborPad(harborGroundY) {
   );
   pad.receiveShadow = true;
   pad.renderOrder = RENDER_LAYERS.DETAIL;
+  pad.visible = false;  // Hide harbor pad (white square)
   return pad;
 }
 

@@ -357,6 +357,7 @@ export async function createCity(scene, terrain, options = {}) {
     const roadMesh = new THREE.Mesh(mergedRoads, roadMaterial);
     roadMesh.receiveShadow = true;
     roadMesh.userData.noCollision = true;
+    roadMesh.visible = false;  // Hide harbor city road tubes
     city.add(roadMesh);
   }
 

@@ -633,7 +633,7 @@ export class Application {
         terrain,
       );
       if (roadGroup) {
-        roadGroup.visible = roadsVisible;
+        roadGroup.visible = false;  // Hide main hill road tubes
       }
 
       if (grassEnabled) {

@@ -45421,6 +45421,7 @@ function createHarborPad(harborGroundY) {
   );
   pad.receiveShadow = true;
   pad.renderOrder = RENDER_LAYERS.DETAIL;
+  pad.visible = false;
   return pad;
 }
 function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOCK_SECTION_WIDTH } = {}) {
@@ -49094,6 +49095,7 @@ async function createCity(scene2, terrain, options = {}) {
     const roadMesh = new Mesh(mergedRoads, roadMaterial);
     roadMesh.receiveShadow = true;
     roadMesh.userData.noCollision = true;
+    roadMesh.visible = false;
     city.add(roadMesh);
   }
   const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(60));
@@ -59147,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BxYZmDn9.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DCHGT8Vr.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59882,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-fmD9SqMw.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DALYoT8O.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60836,7 +60838,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T05:22:57.121Z" : "",
+      time: true ? "2026-01-03T05:37:17.479Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -70910,7 +70912,7 @@ class Application {
       terrain
     );
     if (roadGroup) {
-      roadGroup.visible = roadsVisible;
+      roadGroup.visible = false;
     }
     if (grassEnabled) {
       grassRoot = mount$1(scene2);
@@ -71616,4 +71618,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DYrShfg8.js.map
+//# sourceMappingURL=index-D13UolU6.js.map
