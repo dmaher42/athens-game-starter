@@ -45417,31 +45417,6 @@ function enableShadows(mesh) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
 }
-function createReflectiveWaterMaterial() {
-  const normalMap = waterTextureLoader.load(
-    "textures/water/normals.png",
-    (tex) => {
-      tex.wrapS = tex.wrapT = RepeatWrapping;
-      tex.repeat.set(6, 6);
-      if ("colorSpace" in tex && LinearSRGBColorSpace !== void 0) {
-        tex.colorSpace = LinearSRGBColorSpace;
-      }
-    }
-  );
-  return new MeshPhysicalMaterial({
-    color: new Color(52945),
-    // Mediterranean turquoise
-    transparent: true,
-    opacity: 0.5,
-    metalness: 0.05,
-    roughness: 0.25,
-    transmission: 0.95,
-    envMapIntensity: 1.2,
-    normalMap,
-    normalScale: new Vector2(0.3, 0.3)
-    // Subtler waves
-  });
-}
 function createHarborPad(harborGroundY) {
   const width = 60;
   const depth = 60;
@@ -59219,7 +59194,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BEa3Jt0V.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DmkDNZO8.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59954,7 +59929,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Brp8Msdg.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CH282LLE.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60908,8 +60883,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T00:56:29.008Z" : "",
-      sha: true ? "76e75021972eb2b9904d19c53ba85b6a8da4bdfb" : ""
+      time: true ? "2026-01-03T01:02:44.533Z" : "",
+      sha: true ? "d2bc51434784e69c2e1297b7c303c86c2e9b9069" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71620,4 +71595,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DMk2rWt7.js.map
+//# sourceMappingURL=index-CIltIfag.js.map
