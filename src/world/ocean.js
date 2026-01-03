@@ -325,9 +325,9 @@ export async function createOcean(scene, terrain, options = {}) {
   // 2. CREATE GEOMETRY
   // Ocean should only extend eastward (seaward) from the coast, not cover the entire mainland
   // Keep water safely away from the inland/city grid to avoid z-fighting.
-  // Width (X): 2000 units; Depth (Z): 1600 units
-  const oceanWidth = 2000;  // East-west extent
-  const oceanDepth = 1600;  // North-south extent
+  // Width (X): 1400 units; Depth (Z): 1200 units
+  const oceanWidth = 1400;  // East-west extent
+  const oceanDepth = 1200;  // North-south extent
   const geometry = new THREE.PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
 
   // 3. CONFIGURE WATER SHADER
@@ -406,12 +406,16 @@ export async function createOcean(scene, terrain, options = {}) {
     shader.fragmentShader = shader.fragmentShader.replace(
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */ `
+      vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
+      float terrainHeight = texture2D(uHeightMap, terrainUV).r;
+      float waterDepth = vWorldPosition.y - terrainHeight;
+
       // Clipping Logic for Mainland: Remove water from inland and far north/south
-      // Ocean starts at x≈400; clip anything west of 360 and outside Z bounds.
-      if (vWorldPosition.x < 360.0) {
+      // Ocean starts at x≈800; clip anything west of 760 and outside tighter Z bounds.
+      if (vWorldPosition.x < 760.0) {
         discard;
       }
-      if (abs(vWorldPosition.z) > 900.0) {
+      if (abs(vWorldPosition.z) > 700.0) {
         discard;
       }
 
@@ -419,10 +423,6 @@ export async function createOcean(scene, terrain, options = {}) {
       if (terrainHeight > uSeaLevel - 0.25) {
         discard;
       }
-
-      vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
-      float terrainHeight = texture2D(uHeightMap, terrainUV).r;
-      float waterDepth = vWorldPosition.y - terrainHeight;
 
       vec3 finalColor = color;
 
@@ -472,8 +472,8 @@ export async function createOcean(scene, terrain, options = {}) {
   const horizonY = seaLevel + horizonOffset;
   
   // Position ocean to extend eastward starting well beyond the city/harbor footprint
-  // Start water at x=400; center = start + width/2
-  const oceanStartX = 400;
+  // Start water at x=800; center = start + width/2
+  const oceanStartX = 800;
   const oceanCenterX = oceanStartX + oceanWidth * 0.5;
   water.position.set(oceanCenterX, horizonY, 0);
 
