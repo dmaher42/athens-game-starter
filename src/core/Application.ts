@@ -1071,6 +1071,7 @@ export class Application {
         bloomPass.setSize(window.innerWidth, window.innerHeight);
       });
     }
+  }
 
   waitForAdvance(target = document.body) {
     return new Promise<void>((resolve) => {
