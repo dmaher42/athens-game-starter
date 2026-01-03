@@ -3,9 +3,13 @@ import * as THREE from "three";
 const textureLoader = new THREE.TextureLoader();
 const BASE_PATH = import.meta.env.BASE_URL || "/athens-game-starter/";
 
-function loadTexture(url) {
-  const fullUrl = BASE_PATH + url;
-  console.log(`[Ground] Loading texture: ${fullUrl}`);
+const CITY_GROUND_URL = `${RESOLVED_BASE_URL}textures/ground/dirt-albedo.jpg`;
+const INLAND_GROUND_URL = `${RESOLVED_BASE_URL}textures/grass/albedo.jpg`;
+const COASTAL_GROUND_URL = `${RESOLVED_BASE_URL}textures/sand/albedo.jpg`;
+
+let warnedTextureFailure = false;
+
+function bindGroundTexture(material, label, url, repeat) {
   const texture = textureLoader.load(
     fullUrl,
     (tex) => console.log(`[Ground] ✅ Loaded: ${fullUrl}`),
@@ -18,11 +22,25 @@ function loadTexture(url) {
   return texture;
 }
 
-// Simple MeshBasicMaterial - just load JPG and display it
-export const CityGroundMaterial = new THREE.MeshBasicMaterial({
-  name: "CityGroundMaterial",
-  map: loadTexture("textures/ground/dirt-albedo.jpg"),
-});
+export function createCityGroundMaterial() {
+  const material = new THREE.MeshStandardMaterial({
+    name: "CityGroundMaterial",
+    color: 0xc9b79c,
+    roughness: 0.6,
+    metalness: 0,
+  });
+
+  // City ground texture
+  material.map = bindGroundTexture(
+    material,
+    "City",
+    CITY_GROUND_URL,
+    32,
+  );
+
+  material.needsUpdate = true;
+  return material;
+}
 
 export const InlandGroundMaterial = new THREE.MeshBasicMaterial({
   name: "InlandGroundMaterial",
