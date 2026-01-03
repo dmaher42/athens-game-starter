@@ -68,11 +68,11 @@ const ENVIRONMENT_OVERRIDES = {
   development: ({ queryParams }) => ({
     debug: {
       overlays: {
-        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: true },
-        exposureSlider: { defaultValue: false, devDefault: true },
-        hotkeyReference: { devDefault: true, windowFlagKey: "SHOW_HOTKEYS" },
-        devHud: { defaultValue: true, devDefault: true },
-        cameraSettings: { defaultValue: true, devDefault: true },
+        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: true, devDefault: true },
+        exposureSlider: { queryKey: "exposure", defaultValue: true, devDefault: true },
+        hotkeyReference: { queryKey: "hotkeys", defaultValue: true, devDefault: true, windowFlagKey: "SHOW_HOTKEYS" },
+        devHud: { queryKey: "hud", defaultValue: true, devDefault: true },
+        cameraSettings: { queryKey: "camerahud", defaultValue: true, devDefault: true },
       },
       logLevel: queryParams.get("log") || "debug",
     },

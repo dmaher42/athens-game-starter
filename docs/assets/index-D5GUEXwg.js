@@ -59149,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CkVPKxEf.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DdPIyxQP.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59884,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CfmKaEHM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CjmChNg4.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60838,7 +60838,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T06:33:24.070Z" : "",
+      time: true ? "2026-01-03T06:46:10.631Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -60869,11 +60869,11 @@ const ENVIRONMENT_OVERRIDES$1 = {
   development: ({ queryParams }) => ({
     debug: {
       overlays: {
-        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: true },
-        exposureSlider: { defaultValue: false, devDefault: true },
-        hotkeyReference: { devDefault: true, windowFlagKey: "SHOW_HOTKEYS" },
-        devHud: { defaultValue: true, devDefault: true },
-        cameraSettings: { defaultValue: true, devDefault: true }
+        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: true, devDefault: true },
+        exposureSlider: { queryKey: "exposure", defaultValue: true, devDefault: true },
+        hotkeyReference: { queryKey: "hotkeys", defaultValue: true, devDefault: true, windowFlagKey: "SHOW_HOTKEYS" },
+        devHud: { queryKey: "hud", defaultValue: true, devDefault: true },
+        cameraSettings: { queryKey: "camerahud", defaultValue: true, devDefault: true }
       },
       logLevel: queryParams.get("log") || "debug"
     }
@@ -72246,4 +72246,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CSzb_1Rv.js.map
+//# sourceMappingURL=index-D5GUEXwg.js.map
