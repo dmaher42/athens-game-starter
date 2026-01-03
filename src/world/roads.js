@@ -190,7 +190,7 @@ export function createRoad(parent, points, options = {}) {
     aoMap: _roadARM,
     roughnessMap: _roadARM,
     aoMapIntensity: 0.5,
-    color: 0xb8a890, // Slight warm tint for packed earth
+    color: 0x4a7c3f, // Grass green
     roughness: 0.9,
     metalness: 0.0,
     side: THREE.DoubleSide,
