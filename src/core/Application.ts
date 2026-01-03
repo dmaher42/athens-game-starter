@@ -1038,40 +1038,39 @@ export class Application {
         console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
         console.log('✅ Road controls available: hideRoads(), showRoads()');
         console.log('✅ Debug: debugOcean() to check ocean position');
-      }
 
-      renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
-        if (event.button === 0) {
-          interactor.useObject();
-        }
-      });
-
-      window.addEventListener("keydown", (event) => {
-        if (event.code === "KeyE") {
-          interactor.useObject();
-        } else if (event.code === "KeyG" && !event.repeat) {
-          toggleFog();
-        } else if (event.code === "KeyT" && !event.repeat) {
-            (lightingSystem as any).cycleLightingPreset();
-        } else if (event.code === "F8" && !event.repeat) {
-          const position = playerSystem.player?.object?.position;
-          const x = position?.x;
-          const z = position?.z;
-          if (Number.isFinite(x) && Number.isFinite(z)) {
-            probeAt(x, z);
+        renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
+          if (event.button === 0) {
+            interactor.useObject();
           }
-        }
-      });
+        });
 
-      window.addEventListener("resize", () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        composer.setSize(window.innerWidth, window.innerHeight);
-        bloomPass.setSize(window.innerWidth, window.innerHeight);
-      });
+        window.addEventListener("keydown", (event) => {
+          if (event.code === "KeyE") {
+            interactor.useObject();
+          } else if (event.code === "KeyG" && !event.repeat) {
+            toggleFog();
+          } else if (event.code === "KeyT" && !event.repeat) {
+              (lightingSystem as any).cycleLightingPreset();
+          } else if (event.code === "F8" && !event.repeat) {
+            const position = playerSystem.player?.object?.position;
+            const x = position?.x;
+            const z = position?.z;
+            if (Number.isFinite(x) && Number.isFinite(z)) {
+              probeAt(x, z);
+            }
+          }
+        });
+
+        window.addEventListener("resize", () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          composer.setSize(window.innerWidth, window.innerHeight);
+          bloomPass.setSize(window.innerWidth, window.innerHeight);
+        });
+      }
     }
-  }
 
   waitForAdvance(target = document.body) {
     return new Promise<void>((resolve) => {
