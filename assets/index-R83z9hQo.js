@@ -44850,16 +44850,6 @@ class Water extends Mesh {
     };
   }
 }
-function mountWaterBoundsDebug(scene2, center, size) {
-  const box = new Box3(
-    new Vector3(center.x - size.x / 2, center.y, center.z - size.y / 2),
-    new Vector3(center.x + size.x / 2, center.y, center.z + size.y / 2)
-  );
-  const helper = new Box3Helper(box, 65433);
-  helper.name = "WaterBoundsDebug";
-  scene2.add(helper);
-  return helper;
-}
 function generateNormalComponent(x, y, octave) {
   const frequency = Math.pow(2, octave);
   const angle = (x * frequency + y * frequency * 1.3) * 0.12;
@@ -45123,8 +45113,8 @@ async function createOcean(scene2, terrain, options = {}) {
     const heightMap = new DataTexture(heightData, terrain.geometry.parameters.widthSegments + 1, terrain.geometry.parameters.heightSegments + 1, RedFormat, FloatType);
     heightMap.needsUpdate = true;
     shader.uniforms.uHeightMap = { value: heightMap };
-    shader.uniforms.uFadeStart = { value: 800 };
-    shader.uniforms.uFadeEnd = { value: 3900 };
+    shader.uniforms.uFadeStart = { value: 500 };
+    shader.uniforms.uFadeEnd = { value: 3e3 };
     const vertexHead = "void main() {";
     const vertexBody = `
       varying vec3 vWorldPosition;
@@ -45169,17 +45159,14 @@ async function createOcean(scene2, terrain, options = {}) {
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // Clipping Logic: Ocean starts at x≈1500, NEVER render inland
-      // Aggressively discard everything west of 1400 and outside narrow Z bounds
-      if (vWorldPosition.x < 1400.0) {
+      // Clipping: Discard if we're inland (west of x=1300) or terrain is above water level
+      // Ocean is positioned at x≈1900, size 800x800 (x: 1500-2300)
+      if (vWorldPosition.x < 1300.0) {
         discard;
       }
-      if (abs(vWorldPosition.z) > 500.0) {
-        discard;
-      }
-
+      
       // If terrain is above sea level, skip water to avoid shimmer
-      if (terrainHeight > uSeaLevel - 0.25) {
+      if (terrainHeight > uSeaLevel) {
         discard;
       }
 
@@ -45243,46 +45230,6 @@ async function createOcean(scene2, terrain, options = {}) {
     console.info(`[ocean] Created Global Ocean at Y=${seaLevel}, centered at X=${oceanCenterX}, size ${oceanWidth}x${oceanDepth}`);
   }
   return water;
-}
-function createBoundsLoop(bounds, color = 16777215, yOffset = 0) {
-  if (!bounds) return null;
-  const { west, east, north, south } = bounds;
-  const geometry = new BufferGeometry().setFromPoints([
-    new Vector3(west, 0, north),
-    new Vector3(east, 0, north),
-    new Vector3(east, 0, south),
-    new Vector3(west, 0, south)
-  ]);
-  const material = new LineBasicMaterial({
-    color,
-    transparent: true,
-    opacity: 0.85,
-    depthWrite: false,
-    depthTest: false
-  });
-  const loop = new LineLoop(geometry, material);
-  loop.position.y = yOffset;
-  return loop;
-}
-function mountWaterClipDebug(scene2, rawBounds, clipBounds, seaLevel = getSeaLevelY()) {
-  const group = new Group();
-  group.name = "WaterClipDebug";
-  const baseY = seaLevel + 0.01;
-  const rawLoop = createBoundsLoop(rawBounds, 16757575, baseY);
-  if (rawLoop) {
-    rawLoop.name = "WaterClipDebug:raw";
-    group.add(rawLoop);
-  }
-  const clipLoop = createBoundsLoop(clipBounds, 5161983, baseY + 0.01);
-  if (clipLoop) {
-    clipLoop.name = "WaterClipDebug:clip";
-    group.add(clipLoop);
-  }
-  if (group.children.length === 0) {
-    return null;
-  }
-  scene2.add(group);
-  return group;
 }
 function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor, haze = {}) {
   if (!ocean) return;
@@ -59194,7 +59141,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DmkDNZO8.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DXKmk0qn.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59929,7 +59876,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CH282LLE.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DXmSEtGx.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60883,8 +60830,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T01:02:44.533Z" : "",
-      sha: true ? "d2bc51434784e69c2e1297b7c303c86c2e9b9069" : ""
+      time: true ? "2026-01-03T02:22:44.414Z" : "",
+      sha: true ? "da781a9e8415188402655bba75367a37f7dee716" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71257,8 +71204,24 @@ class Application {
         });
         console.log(`✅ Shown ${count} road objects`);
       };
+      window.debugOcean = () => {
+        const oceanObj = scene2.getObjectByName("AegeanOcean");
+        if (!oceanObj) {
+          console.log("❌ Ocean not found");
+          return;
+        }
+        console.log("🌊 Ocean Debug Info:");
+        console.log("  Position:", oceanObj.position);
+        console.log("  Scale:", oceanObj.scale);
+        console.log("  Name:", oceanObj.name);
+        console.log("  Visible:", oceanObj.visible);
+        console.log("  Expected bounds: X=[1500, 2300], Z=[-400, 400]");
+        const playerPos = playerSystem?.player?.object?.position;
+        console.log("  Player position:", playerPos ? `X=${playerPos.x.toFixed(1)}, Y=${playerPos.y.toFixed(1)}, Z=${playerPos.z.toFixed(1)}` : "unknown");
+      };
       console.log("✅ Water controls available: hideWater(), showWater(), toggleWater()");
       console.log("✅ Road controls available: hideRoads(), showRoads()");
+      console.log("✅ Debug: debugOcean() to check ocean position");
     }
     renderer2.domElement.addEventListener("pointerdown", (event) => {
       if (event.button === 0) {
@@ -71595,4 +71558,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-CIltIfag.js.map
+//# sourceMappingURL=index-R83z9hQo.js.map
