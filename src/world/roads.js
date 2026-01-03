@@ -206,6 +206,7 @@ export function createRoad(parent, points, options = {}) {
   mesh.userData.noCollision = options.noCollision ?? true;
   mesh.position.y += 0.015;
   mesh.renderOrder = RENDER_LAYERS.DETAIL;
+  mesh.visible = false;  // Hide roads by default
 
   if (parent) {
     parent.add(mesh);
