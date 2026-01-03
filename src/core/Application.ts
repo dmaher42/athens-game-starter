@@ -128,36 +128,6 @@ export interface ApplicationBootOptions {
   forceProc?: boolean;
 }
 
-function createFarOceanPlane(scene: any, seaLevel: number, terrainSize: number) {
-  // DISABLED: This plane was covering the entire map including inland areas
-  // causing blue reflective shimmer on the ground where the player spawns.
-  // The ocean.js Water shader is sufficient for the eastern sea area.
-  return null;
-  
-  /* Original code disabled:
-  const radius = Math.max(terrainSize * 2.4, 3200);
-  const geometry = new THREE.CircleGeometry(radius, 64);
-  geometry.rotateX(-Math.PI / 2);
-  geometry.translate(terrainSize * 0.45, 0, 0);
-
-  const material = new THREE.MeshStandardMaterial({
-    color: 0x0a3a4a,
-    roughness: 0.9,
-    metalness: 0.0,
-    transparent: true,
-    opacity: 0.65,
-  });
-
-  const plane = new THREE.Mesh(geometry, material);
-  plane.name = "FarOceanPlane";
-  plane.position.y = seaLevel + 0.05;
-  plane.receiveShadow = false;
-  plane.renderOrder = -4;
-  scene.add(plane);
-  return plane;
-  */
-}
-
 export class Application {
   baseUrl: string;
   districtRuleCandidates: string[];
@@ -172,7 +142,6 @@ export class Application {
   ocean: any;
   pendingOceanStatus: any;
   coastalSkirt: any;
-  farOceanPlane: any;
   shoreTermination: any;
   skyboxTexture: any;
   npcUpdaters: any[];
@@ -216,7 +185,6 @@ export class Application {
     this.ocean = null;
     this.pendingOceanStatus = null;
     this.coastalSkirt = null;
-    this.farOceanPlane = null;
     this.shoreTermination = null;
     this.skyboxTexture = null;
     this.npcUpdaters = [];
@@ -491,9 +459,8 @@ export class Application {
       });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
     }
-    if (!this.farOceanPlane && Number.isFinite(terrainSize)) {
-      this.farOceanPlane = createFarOceanPlane(this.scene, seaLevel, terrainSize);
-    }
+    // Far-ocean plane removed - was causing blue reflective shimmer on inland areas
+    // The ocean.js Water shader positioned far east is sufficient for the Aegean Sea
     if (!this.shoreTermination) {
       this.shoreTermination = createShorelineTermination(this.scene, {
         seaLevel,
@@ -972,7 +939,6 @@ export class Application {
           scene.traverse((obj: any) => {
             const isWater = 
               obj.name === 'AegeanOcean' ||
-              obj.name === 'FarOceanPlane' ||
               obj.name === 'HarborLowPolyWater' ||
               obj.name?.toLowerCase().includes('water') ||
               obj.name?.toLowerCase().includes('ocean') ||
@@ -991,7 +957,6 @@ export class Application {
           scene.traverse((obj: any) => {
             const isWater = 
               obj.name === 'AegeanOcean' ||
-              obj.name === 'FarOceanPlane' ||
               obj.name === 'HarborLowPolyWater' ||
               obj.name?.toLowerCase().includes('water') ||
               obj.name?.toLowerCase().includes('ocean') ||
@@ -1010,7 +975,6 @@ export class Application {
           scene.traverse((obj: any) => {
             const isWater = 
               obj.name === 'AegeanOcean' ||
-              obj.name === 'FarOceanPlane' ||
               obj.name === 'HarborLowPolyWater' ||
               obj.name?.toLowerCase().includes('water') ||
               obj.name?.toLowerCase().includes('ocean') ||
