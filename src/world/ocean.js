@@ -324,11 +324,10 @@ export async function createOcean(scene, terrain, options = {}) {
 
   // 2. CREATE GEOMETRY
   // Ocean should only extend eastward (seaward) from the coast, not cover the entire mainland
-  // Terrain size is 2400. We create a rectangle that extends east from x=0 to the horizon.
-  // Width (X): 3000 units (extends far east into the Aegean)
-  // Depth (Z): 2400 units (matches terrain north-south extent)
-  const oceanWidth = 3000;  // East-west extent
-  const oceanDepth = 2400;  // North-south extent
+  // Keep water safely away from the inland/city grid to avoid z-fighting.
+  // Width (X): 2000 units; Depth (Z): 1600 units
+  const oceanWidth = 2000;  // East-west extent
+  const oceanDepth = 1600;  // North-south extent
   const geometry = new THREE.PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
 
   // 3. CONFIGURE WATER SHADER
@@ -407,10 +406,12 @@ export async function createOcean(scene, terrain, options = {}) {
     shader.fragmentShader = shader.fragmentShader.replace(
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */ `
-      // Clipping Logic for Mainland: Remove water from the West (inland) side
-      // Aggressively clip ocean to prevent overlap with city and terrain
-      // City is west of x=0, harbor is at x=120. Only show water east of x=100.
-      if (vWorldPosition.x < 100.0) {
+      // Clipping Logic for Mainland: Remove water from inland and far north/south
+      // Ocean starts at x≈400; clip anything west of 360 and outside Z bounds.
+      if (vWorldPosition.x < 360.0) {
+        discard;
+      }
+      if (abs(vWorldPosition.z) > 900.0) {
         discard;
       }
 
@@ -465,9 +466,10 @@ export async function createOcean(scene, terrain, options = {}) {
     : 0;
   const horizonY = seaLevel + horizonOffset;
   
-  // Position ocean to extend eastward from the coast (x=0)
-  // Center at x = oceanWidth/2 to start at x=0 and extend east to x=3000
-  const oceanCenterX = oceanWidth / 2;
+  // Position ocean to extend eastward starting well beyond the city/harbor footprint
+  // Start water at x=400; center = start + width/2
+  const oceanStartX = 400;
+  const oceanCenterX = oceanStartX + oceanWidth * 0.5;
   water.position.set(oceanCenterX, horizonY, 0);
 
   water.name = "AegeanOcean";
