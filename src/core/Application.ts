@@ -637,10 +637,12 @@ export class Application {
         position: THREE.Vector3,
         opts: any = {},
       ) => {
-        const temple = await buildTemple({ materialPreset: "marble", ...opts });
+        const { rotationRad = 0, ...rest } = opts;
+        const temple = await buildTemple({ materialPreset: "marble", ...rest });
         const height = terrainRef?.userData?.getHeightAt?.(position.x, position.z);
         const y = Number.isFinite(height) ? height : position.y ?? 0;
         temple.position.set(position.x, y + 0.05, position.z);
+        if (rotationRad) temple.rotation.y = rotationRad;
         sceneRef.add(temple);
         return temple;
       };
@@ -683,28 +685,31 @@ export class Application {
       updateLoadingStatus("Raising temples, homes, and harbors...");
 
       if (landmarksEnabled) {
-        await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D, {
+        await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new THREE.Vector3(-6, 0, -8)), {
           width: 22,
           depth: 40,
+          rotationRad: THREE.MathUtils.degToRad(15),
         });
 
-        await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D, {
+        await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(0, 0, -6)), {
           width: 30,
           depth: 54,
           columnCountX: 8,
           columnCountZ: 17,
+          rotationRad: THREE.MathUtils.degToRad(20),
         });
 
         await placeLandmark(
           worldRoot,
           terrain,
-          AGORA_CENTER_3D.clone().add(new THREE.Vector3(18, 0, -10)),
+          AGORA_CENTER_3D.clone().add(new THREE.Vector3(24, 0, 8)),
           {
             width: 12,
             depth: 34,
             columnCountX: 6,
             columnCountZ: 2,
             materialPreset: "plaster",
+            rotationRad: THREE.MathUtils.degToRad(90),
           },
         );
       }
