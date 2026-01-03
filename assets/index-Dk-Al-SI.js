@@ -46533,7 +46533,7 @@ function fbm(x, y, { seed = 0, octaves = 5, persistence = 0.5, lacunarity = 2 } 
   }
   return value;
 }
-function createSolidDataTexture(color, { colorSpace = SRGBColorSpace } = {}) {
+function createSolidDataTexture$1(color, { colorSpace = SRGBColorSpace } = {}) {
   const data = new Uint8Array(4);
   data[0] = color >> 16 & 255;
   data[1] = color >> 8 & 255;
@@ -46553,16 +46553,16 @@ function createProceduralMarbleTextures() {
   }
   if (typeof document === "undefined" || !document.createElement) {
     cachedMonumentTextures = {
-      map: createSolidDataTexture(15723754, {
+      map: createSolidDataTexture$1(15723754, {
         colorSpace: SRGBColorSpace
       }),
-      normalMap: createSolidDataTexture(8421631, {
+      normalMap: createSolidDataTexture$1(8421631, {
         colorSpace: LinearSRGBColorSpace
       }),
-      roughnessMap: createSolidDataTexture(11776947, {
+      roughnessMap: createSolidDataTexture$1(11776947, {
         colorSpace: LinearSRGBColorSpace
       }),
-      aoMap: createSolidDataTexture(14737632, {
+      aoMap: createSolidDataTexture$1(14737632, {
         colorSpace: LinearSRGBColorSpace
       })
     };
@@ -59149,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B7a9K5_P.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BZqcXpJM.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59884,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dq34f0bC.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-JHQQlOnC.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60838,8 +60838,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T05:38:18.592Z" : "",
-      sha: true ? "c6403b3b8c682be46a32aa8f69c00aea7203b275" : ""
+      time: true ? "2026-01-03T05:52:35.870Z" : "",
+      sha: true ? "23d8d73a3558d64baa81e078cdddbbc5bc86e529" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -61243,6 +61243,596 @@ async function applyGravelToRoads({ scene: scene2 } = {}) {
       resolve();
     });
   });
+}
+function createSolidDataTexture(color, { colorSpace = SRGBColorSpace } = {}) {
+  const data = new Uint8Array(4);
+  data[0] = color >> 16 & 255;
+  data[1] = color >> 8 & 255;
+  data[2] = color & 255;
+  data[3] = 255;
+  const texture = new DataTexture(data, 1, 1, RGBAFormat);
+  texture.colorSpace = colorSpace;
+  texture.wrapS = texture.wrapT = RepeatWrapping;
+  texture.needsUpdate = true;
+  return texture;
+}
+function ensureUv2Attribute(geometry) {
+  if (!geometry) return geometry;
+  const uv = geometry.getAttribute("uv");
+  if (!uv) return geometry;
+  if (!geometry.getAttribute("uv2")) {
+    const uv2 = uv.clone();
+    geometry.setAttribute("uv2", uv2);
+  }
+  return geometry;
+}
+function cloneTexture$1(texture, options = {}) {
+  if (!texture) return null;
+  if (typeof texture.clone === "function") {
+    const cloned = texture.clone();
+    cloned.needsUpdate = texture.needsUpdate;
+    if (options.repeat) {
+      cloned.repeat.copy(texture.repeat ?? new Vector2(1, 1));
+    }
+    cloned.wrapS = texture.wrapS;
+    cloned.wrapT = texture.wrapT;
+    cloned.offset.copy?.(texture.offset ?? new Vector2());
+    cloned.center?.copy?.(texture.center ?? new Vector2());
+    cloned.rotation = texture.rotation;
+    cloned.colorSpace = texture.colorSpace;
+    return cloned;
+  }
+  return texture;
+}
+const MARBLE_TEXTURE_DEFAULTS = {
+  map: "textures/marble_base.jpg",
+  normal: "textures/marble_normal-dx.jpg",
+  // Updated to -dx per instructions
+  rough: "textures/marble_rough.jpg",
+  ao: "textures/marble_ao.jpg"
+};
+const marbleTextureLoader = new TextureLoader();
+function resolveTextureUrl(baseUrl2, candidate) {
+  if (typeof candidate !== "string") return null;
+  const trimmed = candidate.trim();
+  if (!trimmed) return null;
+  if (/^(?:[a-z]+:)?\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  const root = typeof baseUrl2 === "string" && baseUrl2 ? baseUrl2 : resolveBaseUrl$4();
+  return joinPath(root, trimmed.replace(/^\/+/, ""));
+}
+async function loadTextureCandidate({ baseUrl: baseUrl2, candidate, colorSpace }) {
+  const url = resolveTextureUrl(baseUrl2, candidate);
+  if (!url) return null;
+  try {
+    const texture = await marbleTextureLoader.loadAsync(url);
+    applyNormalMapConvention(texture, url);
+    texture.wrapS = texture.wrapT = RepeatWrapping;
+    texture.anisotropy = 8;
+    texture.colorSpace = colorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  } catch (error) {
+    console.warn("[buildingKit] Marble texture load failed", url, error);
+    return null;
+  }
+}
+async function makeMarbleMaterialSet({
+  baseUrl: baseUrl2 = resolveBaseUrl$4(),
+  map = MARBLE_TEXTURE_DEFAULTS.map,
+  normal = MARBLE_TEXTURE_DEFAULTS.normal,
+  rough = MARBLE_TEXTURE_DEFAULTS.rough,
+  ao = MARBLE_TEXTURE_DEFAULTS.ao
+} = {}) {
+  let generated = null;
+  const ensureGenerated = () => {
+    if (!generated) {
+      generated = createProceduralMarbleTextures?.() || null;
+    }
+    return generated;
+  };
+  const fallback = {
+    map: createSolidDataTexture(15723754, { colorSpace: SRGBColorSpace }),
+    normalMap: createSolidDataTexture(8421631, {
+      colorSpace: LinearSRGBColorSpace
+    }),
+    roughnessMap: createSolidDataTexture(11776947, {
+      colorSpace: LinearSRGBColorSpace
+    }),
+    aoMap: createSolidDataTexture(14737632, {
+      colorSpace: LinearSRGBColorSpace
+    })
+  };
+  const [mapTexture, normalTexture, roughTexture, aoTexture] = await Promise.all([
+    loadTextureCandidate({
+      baseUrl: baseUrl2,
+      candidate: map,
+      colorSpace: SRGBColorSpace
+    }),
+    loadTextureCandidate({
+      baseUrl: baseUrl2,
+      candidate: normal,
+      colorSpace: LinearSRGBColorSpace
+    }),
+    loadTextureCandidate({
+      baseUrl: baseUrl2,
+      candidate: rough,
+      colorSpace: LinearSRGBColorSpace
+    }),
+    loadTextureCandidate({
+      baseUrl: baseUrl2,
+      candidate: ao,
+      colorSpace: LinearSRGBColorSpace
+    })
+  ]);
+  const procedural = ensureGenerated();
+  return {
+    map: mapTexture || procedural?.map || fallback.map,
+    normalMap: normalTexture || procedural?.normalMap || fallback.normalMap,
+    roughnessMap: roughTexture || procedural?.roughnessMap || fallback.roughnessMap,
+    aoMap: aoTexture || procedural?.aoMap || fallback.aoMap
+  };
+}
+function makePlasterMaterial({
+  color = 14209476,
+  roughness = 0.65
+} = {}) {
+  return new MeshStandardMaterial({
+    color,
+    roughness,
+    metalness: 0.04
+  });
+}
+function makeTerracottaMaterial({ color = 12150080 } = {}) {
+  return new MeshStandardMaterial({
+    color,
+    roughness: 0.6,
+    metalness: 0.08
+  });
+}
+async function makeColumn({
+  height = 7,
+  radiusTop = 0.7,
+  radiusBottom = 0.75,
+  radialSegments = 32,
+  heightSegments = 1,
+  material = null,
+  materialOptions = {}
+} = {}) {
+  const marbleSet = await makeMarbleMaterialSet(materialOptions);
+  const columnMaterial = material || new MeshPhysicalMaterial({
+    color: 16777215,
+    roughness: 0.42,
+    metalness: 0.08,
+    map: cloneTexture$1(marbleSet.map, { repeat: true }),
+    normalMap: cloneTexture$1(marbleSet.normalMap, { repeat: true }),
+    roughnessMap: cloneTexture$1(marbleSet.roughnessMap, { repeat: true }),
+    aoMap: cloneTexture$1(marbleSet.aoMap, { repeat: true }),
+    clearcoat: 0.28,
+    clearcoatRoughness: 0.5,
+    envMapIntensity: 0.9
+  });
+  const geometry = new CylinderGeometry(
+    radiusTop,
+    radiusBottom,
+    height,
+    radialSegments,
+    heightSegments,
+    false
+  );
+  geometry.translate(0, height / 2, 0);
+  ensureUv2Attribute(geometry);
+  const mesh = new Mesh(geometry, columnMaterial);
+  mesh.name = "ProceduralColumn";
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData = mesh.userData || {};
+  mesh.userData.noCollision = false;
+  return mesh;
+}
+async function makeStylobateSteps({
+  width = 20,
+  depth = 38,
+  stepCount = 3,
+  stepHeight = 0.35,
+  stepInset = 0.6,
+  material = null,
+  materialOptions = {}
+} = {}) {
+  const group = new Group();
+  group.name = "StylobateSteps";
+  const marbleSet = await makeMarbleMaterialSet(materialOptions);
+  const stepMaterial = material || new MeshPhysicalMaterial({
+    color: 16777215,
+    roughness: 0.5,
+    metalness: 0.04,
+    map: cloneTexture$1(marbleSet.map, { repeat: true }),
+    normalMap: cloneTexture$1(marbleSet.normalMap, { repeat: true }),
+    roughnessMap: cloneTexture$1(marbleSet.roughnessMap, { repeat: true }),
+    aoMap: cloneTexture$1(marbleSet.aoMap, { repeat: true }),
+    clearcoat: 0.18,
+    clearcoatRoughness: 0.4,
+    envMapIntensity: 0.85
+  });
+  const clampedSteps = Math.max(1, Math.floor(stepCount));
+  const safeInset = Math.max(0, stepInset);
+  for (let i = 0; i < clampedSteps; i++) {
+    const inset = (clampedSteps - 1 - i) * safeInset;
+    const stepWidth = Math.max(0.5, width + inset * 2);
+    const stepDepth = Math.max(0.5, depth + inset * 2);
+    const geometry = new BoxGeometry(stepWidth, stepHeight, stepDepth);
+    ensureUv2Attribute(geometry);
+    const mesh = new Mesh(geometry, stepMaterial);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.position.y = stepHeight * (i + 0.5);
+    mesh.userData = mesh.userData || {};
+    mesh.userData.noCollision = false;
+    mesh.name = `StylobateStep_${i}`;
+    group.add(mesh);
+  }
+  return group;
+}
+async function makePediment({
+  width = 20,
+  depth = 1.6,
+  height = 4.2,
+  material = null,
+  materialOptions = {}
+} = {}) {
+  const group = new Group();
+  group.name = "TemplePediment";
+  const marbleSet = await makeMarbleMaterialSet(materialOptions);
+  const pedimentMaterial = material || new MeshPhysicalMaterial({
+    color: 16777215,
+    roughness: 0.48,
+    metalness: 0.05,
+    map: cloneTexture$1(marbleSet.map, { repeat: true }),
+    normalMap: cloneTexture$1(marbleSet.normalMap, { repeat: true }),
+    roughnessMap: cloneTexture$1(marbleSet.roughnessMap, { repeat: true }),
+    aoMap: cloneTexture$1(marbleSet.aoMap, { repeat: true }),
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.45,
+    envMapIntensity: 0.85
+  });
+  const shape = new Shape();
+  const halfWidth = width / 2;
+  shape.moveTo(-halfWidth, 0);
+  shape.lineTo(0, height);
+  shape.lineTo(halfWidth, 0);
+  shape.closePath();
+  const extrude = new ExtrudeGeometry(shape, {
+    depth,
+    bevelEnabled: false,
+    steps: 1
+  });
+  extrude.translate(0, 0, -depth / 2);
+  ensureUv2Attribute(extrude);
+  const mesh = new Mesh(extrude, pedimentMaterial);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData = mesh.userData || {};
+  mesh.userData.noCollision = false;
+  group.add(mesh);
+  return group;
+}
+function createRoofSide({ width, depth, height, material, flip = false }) {
+  const halfDepth = depth / 2;
+  const halfWidth = width / 2;
+  const baseX = flip ? halfWidth : -halfWidth;
+  const ridgeX = 0;
+  const positions = new Float32Array([
+    baseX,
+    0,
+    -halfDepth,
+    baseX,
+    0,
+    halfDepth,
+    ridgeX,
+    height,
+    halfDepth,
+    ridgeX,
+    height,
+    -halfDepth
+  ]);
+  const uvs = new Float32Array([0, 0, 0, 1, 1, 1, 1, 0]);
+  const indices = flip ? [0, 2, 1, 0, 3, 2] : [0, 1, 2, 0, 2, 3];
+  const geometry = new BufferGeometry();
+  geometry.setAttribute("position", new BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  ensureUv2Attribute(geometry);
+  const mesh = new Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = false;
+  mesh.userData = mesh.userData || {};
+  mesh.userData.noCollision = false;
+  return mesh;
+}
+function makeRoof({
+  width = 20,
+  depth = 38,
+  height = 4,
+  overhang = 1.4,
+  material = null
+} = {}) {
+  const group = new Group();
+  group.name = "TempleRoof";
+  const roofMaterial = material || new MeshStandardMaterial({
+    color: 13135682,
+    roughness: 0.62,
+    metalness: 0.05
+  });
+  const effectiveWidth = width + overhang * 2;
+  const effectiveDepth = depth + overhang * 2;
+  const left = createRoofSide({
+    width: effectiveWidth,
+    depth: effectiveDepth,
+    height,
+    material: roofMaterial,
+    flip: false
+  });
+  const right = createRoofSide({
+    width: effectiveWidth,
+    depth: effectiveDepth,
+    height,
+    material: roofMaterial,
+    flip: true
+  });
+  group.add(left);
+  group.add(right);
+  return group;
+}
+async function makeColonnadeInstanced({
+  countX = 6,
+  countZ = 12,
+  spacingX = 4,
+  spacingZ = 4.5,
+  columnGeom = null,
+  columnMat = null,
+  materialOptions = {}
+} = {}) {
+  const needsSampleColumn = !(columnGeom instanceof BufferGeometry && columnMat);
+  const baseColumn = needsSampleColumn ? await makeColumn({ materialOptions }) : null;
+  const geometry = columnGeom instanceof BufferGeometry ? columnGeom : baseColumn.geometry;
+  const material = columnMat || baseColumn.material;
+  ensureUv2Attribute(geometry);
+  const perimeterCount = Math.max(0, countX) * 2 + Math.max(0, countZ - 2) * 2;
+  const instanceCount = Math.max(1, perimeterCount);
+  const instanced = new InstancedMesh(geometry, material, instanceCount);
+  instanced.instanceMatrix.setUsage(DynamicDrawUsage);
+  instanced.castShadow = true;
+  instanced.receiveShadow = true;
+  instanced.name = "TempleColonnade";
+  instanced.userData = instanced.userData || {};
+  instanced.userData.noCollision = false;
+  const dummy = new Object3D();
+  const halfSpanX = spacingX * Math.max(0, countX - 1) * 0.5;
+  const halfSpanZ = spacingZ * Math.max(0, countZ - 1) * 0.5;
+  let index = 0;
+  const placeColumn = (x, z) => {
+    dummy.position.set(x, 0, z);
+    dummy.rotation.set(0, 0, 0);
+    dummy.updateMatrix();
+    if (index < instanced.count) {
+      instanced.setMatrixAt(index, dummy.matrix);
+      index += 1;
+    }
+  };
+  for (let ix = 0; ix < countX; ix++) {
+    const x = -halfSpanX + ix * spacingX;
+    placeColumn(x, -halfSpanZ);
+    if (countZ > 1) {
+      placeColumn(x, halfSpanZ);
+    }
+  }
+  if (countZ > 2) {
+    for (let iz = 1; iz < countZ - 1; iz++) {
+      const z = -halfSpanZ + iz * spacingZ;
+      placeColumn(-halfSpanX, z);
+      if (countX > 1) {
+        placeColumn(halfSpanX, z);
+      }
+    }
+  }
+  instanced.count = index;
+  instanced.instanceMatrix.needsUpdate = true;
+  return instanced;
+}
+function cloneTexture(texture) {
+  if (!texture) return null;
+  if (typeof texture.clone === "function") {
+    const cloned = texture.clone();
+    cloned.needsUpdate = texture.needsUpdate;
+    cloned.repeat.copy?.(texture.repeat ?? new Vector2(1, 1));
+    cloned.offset.copy?.(texture.offset ?? new Vector2());
+    cloned.center?.copy?.(texture.center ?? new Vector2());
+    cloned.rotation = texture.rotation;
+    cloned.wrapS = texture.wrapS;
+    cloned.wrapT = texture.wrapT;
+    cloned.colorSpace = texture.colorSpace;
+    return cloned;
+  }
+  return texture;
+}
+async function createMarbleMaterial(overrides = {}, materialOptions = {}) {
+  return new Promise((resolve) => {
+    requestAnimationFrame(async () => {
+      const marbleSet = await makeMarbleMaterialSet(materialOptions);
+      const material = new MeshPhysicalMaterial({
+        color: 16777215,
+        roughness: 0.45,
+        metalness: 0.08,
+        clearcoat: 0.24,
+        clearcoatRoughness: 0.48,
+        envMapIntensity: 0.9,
+        ...overrides
+      });
+      if (!overrides.map) material.map = cloneTexture(marbleSet.map);
+      if (!overrides.normalMap) material.normalMap = cloneTexture(marbleSet.normalMap);
+      if (!overrides.roughnessMap) material.roughnessMap = cloneTexture(marbleSet.roughnessMap);
+      if (!overrides.aoMap) material.aoMap = cloneTexture(marbleSet.aoMap);
+      console.info("[temples] Marble material loaded in background");
+      resolve(material);
+    });
+  });
+}
+function setCollisionTag(object, shouldCollide = true) {
+  object.traverse?.((child) => {
+    if (!child?.isMesh) return;
+    child.userData = child.userData || {};
+    child.userData.noCollision = !shouldCollide;
+  });
+}
+async function buildTemple(options = {}) {
+  const {
+    width = 22,
+    depth = 42,
+    colX = 6,
+    colZ = 13,
+    scale = 1,
+    order = "doric",
+    materialPreset = "marble",
+    columnHeight: columnHeightOverride,
+    entablatureHeight: entablatureHeightOverride,
+    pedimentHeight: pedimentHeightOverride,
+    roofHeight: roofHeightOverride,
+    materialOptions = {}
+  } = options;
+  const group = new Group();
+  group.name = `ProceduralTemple_${order}`;
+  group.userData = {
+    ...group.userData || {},
+    proceduralType: "temple",
+    materialPreset
+  };
+  group.userData.noCollision = false;
+  const stylobateStepHeight = 0.38;
+  const stylobateSteps = Math.max(3, Math.floor(options.stepCount ?? 3));
+  const stylobateWidth = width + Math.max(2, (colX - 1) * 0.2);
+  const stylobateDepth = depth + Math.max(2, (colZ - 1) * 0.2);
+  const stylobate = await makeStylobateSteps({
+    width: stylobateWidth,
+    depth: stylobateDepth,
+    stepCount: stylobateSteps,
+    stepHeight: stylobateStepHeight,
+    materialOptions
+  });
+  group.add(stylobate);
+  const stylobateHeight = stylobateSteps * stylobateStepHeight;
+  const columnHeight = columnHeightOverride ?? Math.max(6, width * 0.7);
+  const entablatureHeight = entablatureHeightOverride ?? columnHeight * 0.16;
+  const pedimentHeight = pedimentHeightOverride ?? columnHeight * 0.22;
+  const roofHeight = roofHeightOverride ?? columnHeight * 0.3;
+  const columnSample = await makeColumn({
+    height: columnHeight,
+    materialOptions
+  });
+  const spacingX = colX > 1 ? width / (colX - 1) : width;
+  const spacingZ = colZ > 1 ? depth / (colZ - 1) : depth;
+  const colonnade = await makeColonnadeInstanced({
+    countX: colX,
+    countZ: colZ,
+    spacingX,
+    spacingZ,
+    columnGeom: columnSample.geometry,
+    columnMat: columnSample.material,
+    materialOptions
+  });
+  colonnade.position.y = stylobateHeight;
+  group.add(colonnade);
+  const entablatureWidth = width + spacingX * 0.6;
+  const entablatureDepth = depth + spacingZ * 0.6;
+  const entablatureGeometry = new BoxGeometry(
+    entablatureWidth,
+    entablatureHeight,
+    entablatureDepth
+  );
+  ensureUv2Attribute(entablatureGeometry);
+  const entablatureMaterial = await createMarbleMaterial({}, materialOptions);
+  const entablature = new Mesh(entablatureGeometry, entablatureMaterial);
+  entablature.castShadow = true;
+  entablature.receiveShadow = true;
+  entablature.position.y = stylobateHeight + columnHeight + entablatureHeight / 2;
+  entablature.userData = entablature.userData || {};
+  entablature.userData.noCollision = false;
+  group.add(entablature);
+  const pedimentMaterial = await createMarbleMaterial({
+    roughness: 0.42,
+    clearcoat: 0.25
+  }, materialOptions);
+  const pedimentDepth = Math.max(1.2, spacingZ * 0.4);
+  const frontPediment = await makePediment({
+    width: entablatureWidth,
+    depth: pedimentDepth,
+    height: pedimentHeight,
+    material: pedimentMaterial.clone(),
+    materialOptions
+  });
+  frontPediment.position.y = stylobateHeight + columnHeight + entablatureHeight;
+  frontPediment.position.z = depth / 2 + pedimentDepth * 0.5;
+  group.add(frontPediment);
+  const rearPediment = await makePediment({
+    width: entablatureWidth,
+    depth: pedimentDepth,
+    height: pedimentHeight,
+    material: pedimentMaterial.clone(),
+    materialOptions
+  });
+  rearPediment.rotation.y = Math.PI;
+  rearPediment.position.y = stylobateHeight + columnHeight + entablatureHeight;
+  rearPediment.position.z = -depth / 2 - pedimentDepth * 0.5;
+  group.add(rearPediment);
+  const roofMaterial = makeTerracottaMaterial({
+    color: 13399888
+  });
+  const roof = makeRoof({
+    width: entablatureWidth,
+    depth: entablatureDepth,
+    height: roofHeight,
+    overhang: spacingX * 0.35,
+    material: roofMaterial
+  });
+  roof.position.y = stylobateHeight + columnHeight + entablatureHeight;
+  group.add(roof);
+  const cellaInsetX = Math.max(spacingX * 0.8, 3);
+  const cellaInsetZ = Math.max(spacingZ * 0.8, 3);
+  const cellaWidth = Math.max(4, width - cellaInsetX);
+  const cellaDepth = Math.max(6, depth - cellaInsetZ);
+  const cellaHeight = columnHeight * 0.72;
+  const cellaGeometry = new BoxGeometry(cellaWidth, cellaHeight, cellaDepth);
+  ensureUv2Attribute(cellaGeometry);
+  const cellaMaterial = makePlasterMaterial();
+  const cella = new Mesh(cellaGeometry, cellaMaterial);
+  cella.position.y = stylobateHeight + cellaHeight / 2;
+  cella.castShadow = true;
+  cella.receiveShadow = true;
+  cella.userData = cella.userData || {};
+  cella.userData.noCollision = false;
+  group.add(cella);
+  setCollisionTag(group, true);
+  if (Number.isFinite(scale)) {
+    group.scale.setScalar(scale);
+  } else if (scale?.isVector3) {
+    group.scale.copy(scale);
+  } else if (Array.isArray(scale) && scale.length >= 3) {
+    group.scale.set(scale[0], scale[1], scale[2]);
+  }
+  return group;
+}
+function alignToGround(object, terrain, x, z, surfaceOffset = 0) {
+  if (!object) return;
+  const sampler = terrain?.userData?.getHeightAt?.bind(terrain.userData) || terrain?.getHeightAt || null;
+  if (typeof sampler !== "function") return;
+  const px2 = Number.isFinite(x) ? x : object.position?.x;
+  const pz2 = Number.isFinite(z) ? z : object.position?.z;
+  if (!Number.isFinite(px2) || !Number.isFinite(pz2)) return;
+  const height = sampler(px2, pz2);
+  if (!Number.isFinite(height)) return;
+  const offset = Number.isFinite(surfaceOffset) ? surfaceOffset : 0;
+  object.position.y = height + offset;
 }
 const CopyShader = {
   name: "CopyShader",
@@ -70907,6 +71497,15 @@ class Application {
     let villagerSystem = null;
     let atmosphericParticles = null;
     const roadsVisible = engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
+    const landmarksEnabled = parseBooleanQuery("landmarks", true);
+    const placeLandmark = async (sceneRef, terrainRef, position, opts = {}) => {
+      const temple = await buildTemple({ materialPreset: "marble", ...opts });
+      const height = terrainRef?.userData?.getHeightAt?.(position.x, position.z);
+      const y = Number.isFinite(height) ? height : position.y ?? 0;
+      temple.position.set(position.x, y + 0.05, position.z);
+      sceneRef.add(temple);
+      return temple;
+    };
     const { group: roadGroup, curve: mainRoad } = createMainHillRoad(
       worldRoot,
       terrain
@@ -70938,6 +71537,30 @@ class Application {
       foundationPadMaterial: harborCity?.userData?.["foundationPadMaterial"] ?? null
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
+    if (landmarksEnabled) {
+      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D, {
+        width: 22,
+        depth: 40
+      });
+      await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D, {
+        width: 30,
+        depth: 54,
+        columnCountX: 8,
+        columnCountZ: 17
+      });
+      await placeLandmark(
+        worldRoot,
+        terrain,
+        AGORA_CENTER_3D.clone().add(new Vector3(18, 0, -10)),
+        {
+          width: 12,
+          depth: 34,
+          columnCountX: 6,
+          columnCountZ: 2,
+          materialPreset: "plaster"
+        }
+      );
+    }
     applyGravelToRoads({ scene: scene2, baseUrl: BASE_URL2, repeat: [6, 6] }).catch(() => {
     });
     updateTerrainCoverageMask(terrain, {
@@ -71618,4 +72241,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-D7jQIp_G.js.map
+//# sourceMappingURL=index-Dk-Al-SI.js.map
