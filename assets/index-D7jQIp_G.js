@@ -45421,6 +45421,7 @@ function createHarborPad(harborGroundY) {
   );
   pad.receiveShadow = true;
   pad.renderOrder = RENDER_LAYERS.DETAIL;
+  pad.visible = false;
   return pad;
 }
 function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOCK_SECTION_WIDTH } = {}) {
@@ -49094,6 +49095,7 @@ async function createCity(scene2, terrain, options = {}) {
     const roadMesh = new Mesh(mergedRoads, roadMaterial);
     roadMesh.receiveShadow = true;
     roadMesh.userData.noCollision = true;
+    roadMesh.visible = false;
     city.add(roadMesh);
   }
   const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(60));
@@ -59147,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B-AH6lnH.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B7a9K5_P.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59882,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CqF5vs7U.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dq34f0bC.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60836,8 +60838,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T05:26:28.598Z" : "",
-      sha: true ? "5098951f0ac888dc40e702407dcfa9d79f6ee3c0" : ""
+      time: true ? "2026-01-03T05:38:18.592Z" : "",
+      sha: true ? "c6403b3b8c682be46a32aa8f69c00aea7203b275" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -70910,7 +70912,7 @@ class Application {
       terrain
     );
     if (roadGroup) {
-      roadGroup.visible = roadsVisible;
+      roadGroup.visible = false;
     }
     if (grassEnabled) {
       grassRoot = mount$1(scene2);
@@ -71616,4 +71618,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-ByrL4ofO.js.map
+//# sourceMappingURL=index-D7jQIp_G.js.map
