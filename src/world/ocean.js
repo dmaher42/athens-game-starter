@@ -415,6 +415,11 @@ export async function createOcean(scene, terrain, options = {}) {
         discard;
       }
 
+      // If terrain is above sea level, skip water to avoid inland shimmer/z-fighting
+      if (terrainHeight > uSeaLevel - 0.25) {
+        discard;
+      }
+
       vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
