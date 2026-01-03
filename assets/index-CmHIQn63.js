@@ -49669,7 +49669,8 @@ const MATERIAL_BASE = {
   wood: { color: 8740929, roughness: 0.74, metalness: 0 },
   roof: { color: 11094576, roughness: 0.62, metalness: 0 },
   plaster: { color: 16183782, roughness: 0.8, metalness: 0.015 },
-  paving: { color: 10985612, roughness: 0.9, metalness: 0.025 },
+  paving: { color: 4881471, roughness: 0.9, metalness: 0.025 },
+  // Grass green
   accent: { color: 11565637, roughness: 0.78, metalness: 0.035 },
   trim: { color: 14536887, roughness: 0.82, metalness: 0.025 }
 };
@@ -49680,7 +49681,8 @@ const MATERIAL_VARIANTS = {
   wood: [8740929, 7689785, 9464902],
   roof: [11094576, 10437421, 11884084],
   plaster: [16183782, 15458516, 16381162],
-  paving: [10985612, 10261634, 11906456],
+  paving: [4881471, 5013565, 4749374],
+  // Grass green variants
   accent: [11565637, 10776383, 12223568],
   trim: [14536887, 13878959, 15129282]
 };
@@ -59143,7 +59145,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DXPrVncJ.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BuzuB8Mq.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59878,7 +59880,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-z9oG8xPM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-FVaVrqyr.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60832,8 +60834,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T03:52:38.301Z" : "",
-      sha: true ? "5aaba39aa972d06d1b8cce3208f48b3889e4d42f" : ""
+      time: true ? "2026-01-03T04:01:38.340Z" : "",
+      sha: true ? "a2fe50df8752ef59b69050426e09fb8906f0e14e" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71560,4 +71562,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-HDmLWuJ8.js.map
+//# sourceMappingURL=index-CmHIQn63.js.map
