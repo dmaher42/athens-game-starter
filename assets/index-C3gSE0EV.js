@@ -59165,7 +59165,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bfesn-75.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-mdweBles.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59900,7 +59900,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-itsB7dRG.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-D1ndI1k0.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60868,8 +60868,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T23:12:49.455Z" : "",
-      sha: true ? "544b6e2a6a00c78563995a78c5f9e0bcb97389ec" : ""
+      time: true ? "2026-01-03T23:21:46.360Z" : "",
+      sha: true ? "d02524571c63cfc86c945f3b63efba0e121fb2b1" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71570,12 +71570,12 @@ class Application {
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
     if (landmarksEnabled) {
-      await placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new Vector3(140, 0, 40)), {
+      await placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new Vector3(-40, 0, -80)), {
         width: 22,
         depth: 40,
         rotationRad: MathUtils.degToRad(25)
       });
-      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new Vector3(-160, 0, 120)), {
+      await placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new Vector3(40, 0, -80)), {
         width: 30,
         depth: 54,
         columnCountX: 8,
@@ -71585,14 +71585,14 @@ class Application {
       await placeLandmark(
         worldRoot,
         terrain,
-        ACROPOLIS_PEAK_3D.clone().add(new Vector3(60, 0, -180)),
+        HARBOR_CENTER_3D.clone().add(new Vector3(0, 0, -140)),
         {
           width: 12,
           depth: 34,
           columnCountX: 6,
           columnCountZ: 2,
           materialPreset: "plaster",
-          rotationRad: MathUtils.degToRad(95)
+          rotationRad: MathUtils.degToRad(0)
         }
       );
     }
@@ -72278,4 +72278,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DRoI037q.js.map
+//# sourceMappingURL=index-C3gSE0EV.js.map
