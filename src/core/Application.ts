@@ -685,10 +685,10 @@ export class Application {
       updateLoadingStatus("Raising temples, homes, and harbors...");
 
       if (landmarksEnabled) {
-        await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new THREE.Vector3(-6, 0, -8)), {
+        await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new THREE.Vector3(-12, 0, -14)), {
           width: 22,
           depth: 40,
-          rotationRad: THREE.MathUtils.degToRad(15),
+          rotationRad: THREE.MathUtils.degToRad(20),
         });
 
         await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(0, 0, -6)), {
@@ -702,14 +702,14 @@ export class Application {
         await placeLandmark(
           worldRoot,
           terrain,
-          AGORA_CENTER_3D.clone().add(new THREE.Vector3(24, 0, 8)),
+          AGORA_CENTER_3D.clone().add(new THREE.Vector3(28, 0, 18)),
           {
             width: 12,
             depth: 34,
             columnCountX: 6,
             columnCountZ: 2,
             materialPreset: "plaster",
-            rotationRad: THREE.MathUtils.degToRad(90),
+            rotationRad: THREE.MathUtils.degToRad(110),
           },
         );
       }
