@@ -59219,7 +59219,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CjjnGw-J.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BEa3Jt0V.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59954,7 +59954,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DcaTBVpx.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Brp8Msdg.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60908,8 +60908,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T00:52:28.395Z" : "",
-      sha: true ? "9f3365bec2b025eb58bd12e5196ab0f9d482278d" : ""
+      time: true ? "2026-01-03T00:56:29.008Z" : "",
+      sha: true ? "76e75021972eb2b9904d19c53ba85b6a8da4bdfb" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -70555,9 +70555,6 @@ if (!ENABLE_GLB_MODE) {
 }
 const DEFAULT_FORCE_GLB = ENABLE_GLB_MODE && typeof engineConfig.featureFlags?.forceGlb === "boolean" ? engineConfig.featureFlags.forceGlb : false;
 const DEFAULT_FORCE_PROC = typeof engineConfig.featureFlags?.forceProcedural === "boolean" ? engineConfig.featureFlags.forceProcedural : !DEFAULT_FORCE_GLB || !ENABLE_GLB_MODE;
-function createFarOceanPlane(scene2, seaLevel, terrainSize) {
-  return null;
-}
 class Application {
   baseUrl;
   districtRuleCandidates;
@@ -70572,7 +70569,6 @@ class Application {
   ocean;
   pendingOceanStatus;
   coastalSkirt;
-  farOceanPlane;
   shoreTermination;
   skyboxTexture;
   npcUpdaters;
@@ -70609,7 +70605,6 @@ class Application {
     this.ocean = null;
     this.pendingOceanStatus = null;
     this.coastalSkirt = null;
-    this.farOceanPlane = null;
     this.shoreTermination = null;
     this.skyboxTexture = null;
     this.npcUpdaters = [];
@@ -70837,9 +70832,6 @@ class Application {
         waterColor: 677222
       });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
-    }
-    if (!this.farOceanPlane && Number.isFinite(terrainSize)) {
-      this.farOceanPlane = createFarOceanPlane(this.scene, seaLevel, terrainSize);
     }
     if (!this.shoreTermination) {
       this.shoreTermination = createShorelineTermination(this.scene, {
@@ -71238,7 +71230,7 @@ class Application {
       window.toggleWater = () => {
         let count = 0;
         scene2.traverse((obj) => {
-          const isWater = obj.name === "AegeanOcean" || obj.name === "FarOceanPlane" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater || obj.renderOrder === -1 && obj.material?.transparent;
+          const isWater = obj.name === "AegeanOcean" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater || obj.renderOrder === -1 && obj.material?.transparent;
           if (isWater) {
             obj.visible = !obj.visible;
             count++;
@@ -71249,7 +71241,7 @@ class Application {
       window.hideWater = () => {
         let count = 0;
         scene2.traverse((obj) => {
-          const isWater = obj.name === "AegeanOcean" || obj.name === "FarOceanPlane" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater || obj.renderOrder === -1 && obj.material?.transparent;
+          const isWater = obj.name === "AegeanOcean" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater || obj.renderOrder === -1 && obj.material?.transparent;
           if (isWater && obj.visible) {
             obj.visible = false;
             count++;
@@ -71260,7 +71252,7 @@ class Application {
       window.showWater = () => {
         let count = 0;
         scene2.traverse((obj) => {
-          const isWater = obj.name === "AegeanOcean" || obj.name === "FarOceanPlane" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater;
+          const isWater = obj.name === "AegeanOcean" || obj.name === "HarborLowPolyWater" || obj.name?.toLowerCase().includes("water") || obj.name?.toLowerCase().includes("ocean") || obj.userData?.isWater;
           if (isWater && !obj.visible) {
             obj.visible = true;
             count++;
@@ -71628,4 +71620,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DbbMTbWk.js.map
+//# sourceMappingURL=index-DMk2rWt7.js.map
