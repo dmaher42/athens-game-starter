@@ -45097,8 +45097,8 @@ async function createOcean(scene2, terrain, options = {}) {
     options.waterNormalsCandidates || HARBOR_WATER_NORMAL_CANDIDATES
   );
   const seaLevel = Number.isFinite(options.seaLevel) ? options.seaLevel : Number.isFinite(getSeaLevelY()) ? getSeaLevelY() : SEA_LEVEL_Y$1;
-  const oceanWidth = 3e3;
-  const oceanDepth = 2400;
+  const oceanWidth = 2e3;
+  const oceanDepth = 1600;
   const geometry = new PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
   const water = new Water(geometry, {
     textureWidth: 512,
@@ -45165,10 +45165,12 @@ async function createOcean(scene2, terrain, options = {}) {
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */
       `
-      // Clipping Logic for Mainland: Remove water from the West (inland) side
-      // Aggressively clip ocean to prevent overlap with city and terrain
-      // City is west of x=0, harbor is at x=120. Only show water east of x=100.
-      if (vWorldPosition.x < 100.0) {
+      // Clipping Logic for Mainland: Remove water from inland and far north/south
+      // Ocean starts at x≈400; clip anything west of 360 and outside Z bounds.
+      if (vWorldPosition.x < 360.0) {
+        discard;
+      }
+      if (abs(vWorldPosition.z) > 900.0) {
         discard;
       }
 
@@ -45216,7 +45218,8 @@ async function createOcean(scene2, terrain, options = {}) {
   water.rotation.x = -Math.PI / 2;
   const horizonOffset = Number.isFinite(options.horizonOffset) ? options.horizonOffset : 0;
   const horizonY = seaLevel + horizonOffset;
-  const oceanCenterX = oceanWidth / 2;
+  const oceanStartX = 400;
+  const oceanCenterX = oceanStartX + oceanWidth * 0.5;
   water.position.set(oceanCenterX, horizonY, 0);
   water.name = "AegeanOcean";
   water.userData.isWater = true;
@@ -59211,7 +59214,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BbSsVyeU.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Cm1xFui1.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59946,7 +59949,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BxKABUsx.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BSiEUqQH.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60900,8 +60903,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T00:19:05.568Z" : "",
-      sha: true ? "35d3989e15f9f384d1c025cd58e2b56455797827" : ""
+      time: true ? "2026-01-03T00:23:04.715Z" : "",
+      sha: true ? "23e91ae700bb8b6cfc21223959109c764479b90c" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71637,4 +71640,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BgDkiMGn.js.map
+//# sourceMappingURL=index-CE-qzoLk.js.map
