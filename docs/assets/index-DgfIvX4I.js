@@ -49669,7 +49669,8 @@ const MATERIAL_BASE = {
   wood: { color: 8740929, roughness: 0.74, metalness: 0 },
   roof: { color: 11094576, roughness: 0.62, metalness: 0 },
   plaster: { color: 16183782, roughness: 0.8, metalness: 0.015 },
-  paving: { color: 10985612, roughness: 0.9, metalness: 0.025 },
+  paving: { color: 4881471, roughness: 0.9, metalness: 0.025 },
+  // Grass green
   accent: { color: 11565637, roughness: 0.78, metalness: 0.035 },
   trim: { color: 14536887, roughness: 0.82, metalness: 0.025 }
 };
@@ -49680,7 +49681,8 @@ const MATERIAL_VARIANTS = {
   wood: [8740929, 7689785, 9464902],
   roof: [11094576, 10437421, 11884084],
   plaster: [16183782, 15458516, 16381162],
-  paving: [10985612, 10261634, 11906456],
+  paving: [4881471, 5013565, 4749374],
+  // Grass green variants
   accent: [11565637, 10776383, 12223568],
   trim: [14536887, 13878959, 15129282]
 };
@@ -59143,7 +59145,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bifrb24x.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-B9QO3vNL.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59878,7 +59880,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-Dyt_9hZh.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BzG-lAua.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60832,7 +60834,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T03:51:32.409Z" : "",
+      time: true ? "2026-01-03T04:00:34.106Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -71560,4 +71562,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BM4HgkrN.js.map
+//# sourceMappingURL=index-DgfIvX4I.js.map
