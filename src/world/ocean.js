@@ -323,11 +323,11 @@ export async function createOcean(scene, terrain, options = {}) {
       : SEA_LEVEL_Y;
 
   // 2. CREATE GEOMETRY
-  // Ocean should only extend eastward (seaward) from the coast, not cover the entire mainland
-  // Keep water safely away from the inland/city grid to avoid z-fighting.
-  // Width (X): 1400 units; Depth (Z): 1200 units
-  const oceanWidth = 1400;  // East-west extent
-  const oceanDepth = 1200;  // North-south extent
+  // Ocean should ONLY be visible far to the east (Aegean Sea side)
+  // Keep completely away from city/harbor/inland to eliminate reflections.
+  // Make it small and position it far away.
+  const oceanWidth = 800;   // East-west extent (reduced)
+  const oceanDepth = 800;   // North-south extent (reduced)
   const geometry = new THREE.PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
 
   // 3. CONFIGURE WATER SHADER
@@ -410,16 +410,16 @@ export async function createOcean(scene, terrain, options = {}) {
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // Clipping Logic for Mainland: Remove water from inland and far north/south
-      // Ocean starts at x≈800; clip anything west of 760 and outside tighter Z bounds.
-      if (vWorldPosition.x < 760.0) {
+      // Clipping Logic: Ocean starts at x≈1500, NEVER render inland
+      // Aggressively discard everything west of 1400 and outside narrow Z bounds
+      if (vWorldPosition.x < 1400.0) {
         discard;
       }
-      if (abs(vWorldPosition.z) > 700.0) {
+      if (abs(vWorldPosition.z) > 500.0) {
         discard;
       }
 
-      // If terrain is above sea level, skip water to avoid inland shimmer/z-fighting
+      // If terrain is above sea level, skip water to avoid shimmer
       if (terrainHeight > uSeaLevel - 0.25) {
         discard;
       }
@@ -471,9 +471,9 @@ export async function createOcean(scene, terrain, options = {}) {
     : 0;
   const horizonY = seaLevel + horizonOffset;
   
-  // Position ocean to extend eastward starting well beyond the city/harbor footprint
-  // Start water at x=800; center = start + width/2
-  const oceanStartX = 800;
+  // Position ocean FAR to the east, completely away from any city/harbor area
+  // Start water at x=1500 (far beyond all inland areas); center = start + width/2
+  const oceanStartX = 1500;
   const oceanCenterX = oceanStartX + oceanWidth * 0.5;
   water.position.set(oceanCenterX, horizonY, 0);
 
