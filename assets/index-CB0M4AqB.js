@@ -59149,7 +59149,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BZqcXpJM.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Xpqbp6xH.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59884,7 +59884,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-JHQQlOnC.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-DnoSIgi-.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60838,8 +60838,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T05:52:35.870Z" : "",
-      sha: true ? "23d8d73a3558d64baa81e078cdddbbc5bc86e529" : ""
+      time: true ? "2026-01-03T06:09:04.953Z" : "",
+      sha: true ? "87a39fd534315a32b83e97f0d4a165d8fefd062c" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -71499,10 +71499,12 @@ class Application {
     const roadsVisible = engineConfig.performance?.roadsVisible ?? parseBooleanQuery("roads", true);
     const landmarksEnabled = parseBooleanQuery("landmarks", true);
     const placeLandmark = async (sceneRef, terrainRef, position, opts = {}) => {
-      const temple = await buildTemple({ materialPreset: "marble", ...opts });
+      const { rotationRad = 0, ...rest } = opts;
+      const temple = await buildTemple({ materialPreset: "marble", ...rest });
       const height = terrainRef?.userData?.getHeightAt?.(position.x, position.z);
       const y = Number.isFinite(height) ? height : position.y ?? 0;
       temple.position.set(position.x, y + 0.05, position.z);
+      if (rotationRad) temple.rotation.y = rotationRad;
       sceneRef.add(temple);
       return temple;
     };
@@ -71538,26 +71540,29 @@ class Application {
     });
     updateLoadingStatus("Raising temples, homes, and harbors...");
     if (landmarksEnabled) {
-      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D, {
+      await placeLandmark(worldRoot, terrain, AGORA_CENTER_3D.clone().add(new Vector3(-6, 0, -8)), {
         width: 22,
-        depth: 40
+        depth: 40,
+        rotationRad: MathUtils.degToRad(15)
       });
-      await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D, {
+      await placeLandmark(worldRoot, terrain, ACROPOLIS_PEAK_3D.clone().add(new Vector3(0, 0, -6)), {
         width: 30,
         depth: 54,
         columnCountX: 8,
-        columnCountZ: 17
+        columnCountZ: 17,
+        rotationRad: MathUtils.degToRad(20)
       });
       await placeLandmark(
         worldRoot,
         terrain,
-        AGORA_CENTER_3D.clone().add(new Vector3(18, 0, -10)),
+        AGORA_CENTER_3D.clone().add(new Vector3(24, 0, 8)),
         {
           width: 12,
           depth: 34,
           columnCountX: 6,
           columnCountZ: 2,
-          materialPreset: "plaster"
+          materialPreset: "plaster",
+          rotationRad: MathUtils.degToRad(90)
         }
       );
     }
@@ -72241,4 +72246,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-Dk-Al-SI.js.map
+//# sourceMappingURL=index-CB0M4AqB.js.map
