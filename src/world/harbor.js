@@ -42,32 +42,6 @@ function enableShadows(mesh) {
   mesh.receiveShadow = true;
 }
 
-function createReflectiveWaterMaterial() {
-  // Use a physical material to pick up scene reflections and soft wave normals.
-  const normalMap = waterTextureLoader.load(
-    "textures/water/normals.png",
-    (tex) => {
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(6, 6);
-      if ("colorSpace" in tex && THREE.LinearSRGBColorSpace !== undefined) {
-        tex.colorSpace = THREE.LinearSRGBColorSpace;
-      }
-    },
-  );
-
-  return new THREE.MeshPhysicalMaterial({
-    color: new THREE.Color(0x00CED1), // Mediterranean turquoise
-    transparent: true,
-    opacity: 0.5,
-    metalness: 0.05,
-    roughness: 0.25,
-    transmission: 0.95,
-    envMapIntensity: 1.2,
-    normalMap,
-    normalScale: new THREE.Vector2(0.3, 0.3), // Subtler waves
-  });
-}
-
 function createHarborPad(harborGroundY) {
   // Small harbor island pad - 60x60 brown square
   const width = 60;
