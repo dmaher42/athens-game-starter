@@ -505,7 +505,7 @@ export function createTerrain(scene) {
 
   const terrainMaterials = [
     CoastalGroundMaterial,
-    CityGroundMaterial,
+    InlandGroundMaterial,  // Use grass instead of city dirt
     InlandGroundMaterial,
   ];
 
