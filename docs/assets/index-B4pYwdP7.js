@@ -45031,8 +45031,20 @@ async function createOcean(scene2, terrain, options = {}) {
     options.waterNormalsCandidates || HARBOR_WATER_NORMAL_CANDIDATES
   );
   const seaLevel = Number.isFinite(options.seaLevel) ? options.seaLevel : Number.isFinite(getSeaLevelY()) ? getSeaLevelY() : SEA_LEVEL_Y$1;
-  const oceanWidth = 1e3;
-  const oceanDepth = 1e3;
+  const bounds = options.bounds || {};
+  const hasHarborBounds = bounds.west != null && bounds.east != null && bounds.north != null && bounds.south != null;
+  let oceanWidth, oceanDepth, oceanCenterX, oceanCenterZ;
+  if (hasHarborBounds) {
+    oceanWidth = Math.abs(bounds.east - bounds.west);
+    oceanDepth = Math.abs(bounds.north - bounds.south);
+    oceanCenterX = (bounds.east + bounds.west) / 2;
+    oceanCenterZ = (bounds.north + bounds.south) / 2;
+  } else {
+    oceanWidth = 1e3;
+    oceanDepth = 1e3;
+    oceanCenterX = 2500;
+    oceanCenterZ = 0;
+  }
   const geometry = new PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
   const water = new Water(geometry, {
     textureWidth: 512,
@@ -45103,15 +45115,8 @@ async function createOcean(scene2, terrain, options = {}) {
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // Clipping: Discard if we're inland (west of x=1800) or terrain is above water level
-      // Ocean is positioned at x≈2500, size 1000x1000 (x: 2000-3000)
-      // Buffer of 200 units west of ocean mesh start to prevent edge artifacts
-      if (vWorldPosition.x < 1800.0) {
-        discard;
-      }
-      
-      // If terrain is above sea level, skip water to avoid shimmer
-      if (terrainHeight > uSeaLevel) {
+      // If terrain is above sea level, discard to avoid water on land
+      if (terrainHeight > uSeaLevel + 0.5) {
         discard;
       }
 
@@ -45155,9 +45160,7 @@ async function createOcean(scene2, terrain, options = {}) {
   water.rotation.x = -Math.PI / 2;
   const horizonOffset = Number.isFinite(options.horizonOffset) ? options.horizonOffset : 0;
   const horizonY = seaLevel + horizonOffset;
-  const oceanStartX = 2e3;
-  const oceanCenterX = oceanStartX + oceanWidth * 0.5;
-  water.position.set(oceanCenterX, horizonY, 0);
+  water.position.set(oceanCenterX, horizonY, oceanCenterZ);
   water.name = "AegeanOcean";
   water.userData.isWater = true;
   water.userData.seaLevel = seaLevel;
@@ -45172,7 +45175,7 @@ async function createOcean(scene2, terrain, options = {}) {
   }
   scene2.add(water);
   if (false) {
-    console.info(`[ocean] Created Global Ocean at Y=${seaLevel}, centered at X=${oceanCenterX}, size ${oceanWidth}x${oceanDepth}. Clipped west of x=1800.`);
+    console.info(`[ocean] Created water at Y=${seaLevel}, centered at (${oceanCenterX}, ${oceanCenterZ}), size ${oceanWidth}x${oceanDepth}`);
   }
   return water;
 }
@@ -59166,7 +59169,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C48VpigK.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-SN4VdJHI.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59901,7 +59904,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CRpeEB4m.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BFQCbNXv.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60869,7 +60872,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-04T09:00:55.451Z" : "",
+      time: true ? "2026-01-04T09:14:48.912Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -72279,4 +72282,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-BOY8yLs6.js.map
+//# sourceMappingURL=index-B4pYwdP7.js.map

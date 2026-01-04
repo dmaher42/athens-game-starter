@@ -322,11 +322,26 @@ export async function createOcean(scene, terrain, options = {}) {
       : SEA_LEVEL_Y;
 
   // 2. CREATE GEOMETRY
-  // Ocean should ONLY be visible far to the east (Aegean Sea side)
-  // Keep completely away from city/harbor/inland to eliminate reflections.
-  // Make it small and position it far away.
-  const oceanWidth = 1000;   // East-west extent
-  const oceanDepth = 1000;   // North-south extent
+  // Position water at harbor bounds if provided, otherwise create distant ocean
+  const bounds = options.bounds || {};
+  const hasHarborBounds = bounds.west != null && bounds.east != null && bounds.north != null && bounds.south != null;
+  
+  let oceanWidth, oceanDepth, oceanCenterX, oceanCenterZ;
+  
+  if (hasHarborBounds) {
+    // Harbor water - use provided bounds
+    oceanWidth = Math.abs(bounds.east - bounds.west);
+    oceanDepth = Math.abs(bounds.north - bounds.south);
+    oceanCenterX = (bounds.east + bounds.west) / 2;
+    oceanCenterZ = (bounds.north + bounds.south) / 2;
+  } else {
+    // Distant ocean - far to the east
+    oceanWidth = 1000;
+    oceanDepth = 1000;
+    oceanCenterX = 2500;
+    oceanCenterZ = 0;
+  }
+  
   const geometry = new THREE.PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
 
   // 3. CONFIGURE WATER SHADER
@@ -409,15 +424,8 @@ export async function createOcean(scene, terrain, options = {}) {
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // Clipping: Discard if we're inland (west of x=1800) or terrain is above water level
-      // Ocean is positioned at x≈2500, size 1000x1000 (x: 2000-3000)
-      // Buffer of 200 units west of ocean mesh start to prevent edge artifacts
-      if (vWorldPosition.x < 1800.0) {
-        discard;
-      }
-      
-      // If terrain is above sea level, skip water to avoid shimmer
-      if (terrainHeight > uSeaLevel) {
+      // If terrain is above sea level, discard to avoid water on land
+      if (terrainHeight > uSeaLevel + 0.5) {
         discard;
       }
 
@@ -462,17 +470,10 @@ export async function createOcean(scene, terrain, options = {}) {
 
   // 4. POSITIONING
   water.rotation.x = -Math.PI / 2;
-  // Ensure water is positioned at SEA_LEVEL_Y (horizonOffset defaults to 0)
-  const horizonOffset = Number.isFinite(options.horizonOffset)
-    ? options.horizonOffset
-    : 0;
+  const horizonOffset = Number.isFinite(options.horizonOffset) ? options.horizonOffset : 0;
   const horizonY = seaLevel + horizonOffset;
   
-  // Position ocean FAR to the east, completely away from any city/harbor area
-  // Start water at x=2000 (far beyond all inland areas); center = start + width/2
-  const oceanStartX = 2000;
-  const oceanCenterX = oceanStartX + oceanWidth * 0.5;
-  water.position.set(oceanCenterX, horizonY, 0);
+  water.position.set(oceanCenterX, horizonY, oceanCenterZ);
 
   water.name = "AegeanOcean";
   water.userData.isWater = true;
@@ -494,7 +495,7 @@ export async function createOcean(scene, terrain, options = {}) {
 
   // Debug info
   if (import.meta.env?.DEV) {
-    console.info(`[ocean] Created Global Ocean at Y=${seaLevel}, centered at X=${oceanCenterX}, size ${oceanWidth}x${oceanDepth}. Clipped west of x=1800.`);
+    console.info(`[ocean] Created water at Y=${seaLevel}, centered at (${oceanCenterX}, ${oceanCenterZ}), size ${oceanWidth}x${oceanDepth}`);
   }
 
   return water;
