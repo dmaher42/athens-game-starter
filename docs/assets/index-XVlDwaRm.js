@@ -43231,13 +43231,13 @@ function getHarborSeaLevel() {
 const CITY_CHUNK_CENTER = new Vector3(-70, getCityGroundY(), 25);
 const CITY_CHUNK_SIZE = new Vector2(50, 50);
 const CITY_SEED = 1297302345;
-const HARBOR_WATER_RADIUS = 70;
-const HARBOR_WATER_SIZE = new Vector2(140, 120);
+const HARBOR_WATER_RADIUS = 95;
+const HARBOR_WATER_SIZE = new Vector2(190, 166);
 const HARBOR_WATER_OFFSET = new Vector2(0, 0);
 const PIER_EDGE_OFFSET = 4.5;
-const HARBOR_WATER_HALF_WIDTH = 50;
+const HARBOR_WATER_HALF_WIDTH = 95;
 const HARBOR_WATER_HALF_DEPTH_NORTH = 80;
-const HARBOR_WATER_HALF_DEPTH_SOUTH = 10;
+const HARBOR_WATER_HALF_DEPTH_SOUTH = 33;
 const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x + HARBOR_WATER_HALF_WIDTH;
 const HARBOR_WATER_BOUNDS = {
   west: HARBOR_CENTER_3D.x - HARBOR_WATER_HALF_WIDTH,
@@ -43245,7 +43245,7 @@ const HARBOR_WATER_BOUNDS = {
   north: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH_NORTH,
   // Extends north (positive Z)
   south: HARBOR_CENTER_3D.z - HARBOR_WATER_HALF_DEPTH_SOUTH
-  // Minimal south (negative Z)
+  // Extended south to new pins
 };
 const HARBOR_WATER_NORMAL_CANDIDATES = [
   "textures/water/normals.png",
@@ -59169,7 +59169,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-SN4VdJHI.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Ck8b9d6h.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59904,7 +59904,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BFQCbNXv.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-ER9yVrsl.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60872,7 +60872,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-04T09:14:48.912Z" : "",
+      time: true ? "2026-01-04T10:37:09.562Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -72282,4 +72282,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-B4pYwdP7.js.map
+//# sourceMappingURL=index-XVlDwaRm.js.map

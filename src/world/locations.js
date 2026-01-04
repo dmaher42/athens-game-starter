@@ -58,14 +58,14 @@ export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, getCityGroundY(), 25);
 export const CITY_CHUNK_SIZE = new THREE.Vector2(50, 50);
 export const CITY_SEED = 0x4d534349;
 
-export const HARBOR_WATER_RADIUS = 70; 
-export const HARBOR_WATER_SIZE = new THREE.Vector2(140, 120); 
+export const HARBOR_WATER_RADIUS = 95; // Updated to match extended bounds
+export const HARBOR_WATER_SIZE = new THREE.Vector2(190, 166); // Extended to match new pin locations 
 export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, 0); 
 export const PIER_EDGE_OFFSET = 4.5; 
 
-const HARBOR_WATER_HALF_WIDTH = 50; // Narrower for focused dock area (±50 units in X)
+const HARBOR_WATER_HALF_WIDTH = 95; // Extended east to reach new pin locations (±95 units in X)
 const HARBOR_WATER_HALF_DEPTH_NORTH = 80; // Extended north for shipping lanes
-const HARBOR_WATER_HALF_DEPTH_SOUTH = 10; // Minimal south to avoid temples
+const HARBOR_WATER_HALF_DEPTH_SOUTH = 33; // Extended south to reach new pin locations
 
 // East Harbor: Water extends East from the basin
 export const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x + HARBOR_WATER_HALF_WIDTH;
@@ -74,7 +74,7 @@ export const HARBOR_WATER_BOUNDS = {
   west: HARBOR_CENTER_3D.x - HARBOR_WATER_HALF_WIDTH,
   east: HARBOR_CENTER_3D.x + HARBOR_WATER_HALF_WIDTH,
   north: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH_NORTH, // Extends north (positive Z)
-  south: HARBOR_CENTER_3D.z - HARBOR_WATER_HALF_DEPTH_SOUTH, // Minimal south (negative Z)
+  south: HARBOR_CENTER_3D.z - HARBOR_WATER_HALF_DEPTH_SOUTH, // Extended south to new pins
 };
 
 export const HARBOR_WATER_NORMAL_CANDIDATES = [
