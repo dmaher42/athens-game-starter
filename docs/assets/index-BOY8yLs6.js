@@ -43235,16 +43235,17 @@ const HARBOR_WATER_RADIUS = 70;
 const HARBOR_WATER_SIZE = new Vector2(140, 120);
 const HARBOR_WATER_OFFSET = new Vector2(0, 0);
 const PIER_EDGE_OFFSET = 4.5;
-const HARBOR_WATER_HALF_WIDTH = 70;
-const HARBOR_WATER_HALF_DEPTH = 60;
+const HARBOR_WATER_HALF_WIDTH = 50;
+const HARBOR_WATER_HALF_DEPTH_NORTH = 80;
+const HARBOR_WATER_HALF_DEPTH_SOUTH = 10;
 const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x + HARBOR_WATER_HALF_WIDTH;
 const HARBOR_WATER_BOUNDS = {
   west: HARBOR_CENTER_3D.x - HARBOR_WATER_HALF_WIDTH,
-  // 120 - 70 = 50
-  east: HARBOR_WATER_EAST_LIMIT,
-  // 120 + 70 = 190
-  north: HARBOR_CENTER_3D.z - HARBOR_WATER_HALF_DEPTH,
-  south: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH
+  east: HARBOR_CENTER_3D.x + HARBOR_WATER_HALF_WIDTH,
+  north: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH_NORTH,
+  // Extends north (positive Z)
+  south: HARBOR_CENTER_3D.z - HARBOR_WATER_HALF_DEPTH_SOUTH
+  // Minimal south (negative Z)
 };
 const HARBOR_WATER_NORMAL_CANDIDATES = [
   "textures/water/normals.png",
@@ -59165,7 +59166,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-CwTGTXUZ.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-C48VpigK.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59900,7 +59901,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-B39TtEAZ.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CRpeEB4m.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60868,7 +60869,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-03T23:21:01.643Z" : "",
+      time: true ? "2026-01-04T09:00:55.451Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -72278,4 +72279,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-dfjdngzK.js.map
+//# sourceMappingURL=index-BOY8yLs6.js.map
