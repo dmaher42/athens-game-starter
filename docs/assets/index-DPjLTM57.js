@@ -43595,11 +43595,10 @@ function applyHarbourCarve(x, z, seaLevel, height) {
   return MathUtils.lerp(height, targetHeight, blend);
 }
 function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
-  const west = EAST_HARBOR_CENTER.x;
-  const east = EAST_HARBOR_CENTER.x + 800;
-  const halfDepth = 200;
-  const north = EAST_HARBOR_CENTER.y - halfDepth;
-  const south = EAST_HARBOR_CENTER.y + halfDepth;
+  const west = HARBOR_WATER_BOUNDS.west;
+  const east = HARBOR_WATER_BOUNDS.east;
+  const north = HARBOR_WATER_BOUNDS.north;
+  const south = HARBOR_WATER_BOUNDS.south;
   const harborGroundY = seaLevel + HARBOR_GROUND_HEIGHT;
   const withinWater = x >= west && x <= east && z >= north && z <= south;
   if (withinWater) {
@@ -59169,7 +59168,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Ck8b9d6h.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-oRyi9eNe.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59904,7 +59903,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-ER9yVrsl.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-QAcnfLJU.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60872,7 +60871,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-04T10:37:09.562Z" : "",
+      time: true ? "2026-01-04T10:50:14.779Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -72282,4 +72281,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-XVlDwaRm.js.map
+//# sourceMappingURL=index-DPjLTM57.js.map

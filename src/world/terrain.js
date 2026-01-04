@@ -4,6 +4,7 @@ import {
   AGORA_CENTER_3D,
   HARBOR_CENTER_3D,
   HARBOR_GROUND_HEIGHT,
+  HARBOR_WATER_BOUNDS,
 } from "./locations.js";
 import { getDistanceToCoast, isInHarborZone } from './coastalZones.js';
 import {
@@ -137,14 +138,11 @@ function applyHarbourCarve(x, z, seaLevel, height) {
 }
 
 function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
-  // Define a bounding box for the East Harbor water area
-  // Water only on EAST side (in front), not west (behind)
-  const west = EAST_HARBOR_CENTER.x; // Start at harbor center, not west of it
-  const east = EAST_HARBOR_CENTER.x + 800; // Extend eastward
-  // Extended north-south depth to match water plane (200 half-depth = 400 total)
-  const halfDepth = 200;
-  const north = EAST_HARBOR_CENTER.y - halfDepth;
-  const south = EAST_HARBOR_CENTER.y + halfDepth;
+  // Define a bounding box for the harbor water area using HARBOR_WATER_BOUNDS
+  const west = HARBOR_WATER_BOUNDS.west;
+  const east = HARBOR_WATER_BOUNDS.east;
+  const north = HARBOR_WATER_BOUNDS.north;
+  const south = HARBOR_WATER_BOUNDS.south;
 
   const harborGroundY = seaLevel + HARBOR_GROUND_HEIGHT;
 
