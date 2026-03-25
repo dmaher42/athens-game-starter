@@ -13,12 +13,25 @@ const DISTANCE_CULLING_ENABLED = true;
 const CULL_DISTANCE_NEAR = 100; // Distance at which to start culling small props
 const CULL_DISTANCE_FAR = 200; // Distance at which all small props are culled
 
+function isRigAttachment(mesh) {
+  let current = mesh;
+  while (current) {
+    if (current.isBone || current.isSkinnedMesh) {
+      return true;
+    }
+    current = current.parent ?? null;
+  }
+  return false;
+}
+
 /**
  * Check if a mesh is a small prop based on bounding box size
  */
 function isSmallProp(mesh) {
   if (!mesh.isMesh) return false;
   if (!mesh.geometry) return false;
+  if (mesh.userData?.noCull) return false;
+  if (isRigAttachment(mesh)) return false;
   
   // Skip instanced meshes (handled separately)
   if (mesh.isInstancedMesh) return false;

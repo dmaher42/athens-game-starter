@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 8000",
+    "start": "vite --host 0.0.0.0 --port 8000",
     "build": "vite build && node scripts/ensure-three-bundled.mjs && node scripts/build-bundleless-sources.mjs && node scripts/copy-bundleless-sources.mjs && node scripts/sanitize-bare-import-text.mjs",
     "deploy": "npm run build"
   },

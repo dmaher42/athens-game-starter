@@ -59168,7 +59168,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-Bl2O8fAP.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DCrhLoaE.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59903,7 +59903,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-BNSF1-jM.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-CMN_AmTd.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60871,7 +60871,7 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-04T11:41:19.630Z" : "",
+      time: true ? "2026-03-25T12:09:44.519Z" : "",
       sha: true ? "" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
@@ -64371,9 +64371,21 @@ const OVERLAP_THRESHOLD = 0.5;
 const DISTANCE_CULLING_ENABLED = true;
 const CULL_DISTANCE_NEAR = 100;
 const CULL_DISTANCE_FAR = 200;
+function isRigAttachment(mesh) {
+  let current = mesh;
+  while (current) {
+    if (current.isBone || current.isSkinnedMesh) {
+      return true;
+    }
+    current = current.parent ?? null;
+  }
+  return false;
+}
 function isSmallProp(mesh) {
   if (!mesh.isMesh) return false;
   if (!mesh.geometry) return false;
+  if (mesh.userData?.noCull) return false;
+  if (isRigAttachment(mesh)) return false;
   if (mesh.isInstancedMesh) return false;
   if (!mesh.geometry.boundingBox) {
     mesh.geometry.computeBoundingBox();
@@ -71035,6 +71047,7 @@ class PlayerSystem {
         root.updateMatrixWorld(true);
         root.traverse((child) => {
           if (child.isMesh) {
+            child.visible = true;
             child.castShadow = true;
             child.receiveShadow = true;
             child.frustumCulled = false;
@@ -72281,4 +72294,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-wEMQMyjg.js.map
+//# sourceMappingURL=index-D27Gbi30.js.map

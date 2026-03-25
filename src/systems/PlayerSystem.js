@@ -195,6 +195,8 @@ export class PlayerSystem {
         // Enable shadow casting for all meshes and update bounding spheres
         root.traverse((child) => {
           if (child.isMesh) {
+            // Some imported hero GLB mesh parts arrive hidden; force them visible on the player rig.
+            child.visible = true;
             child.castShadow = true;
             child.receiveShadow = true;
             child.frustumCulled = false;  // Disable frustum culling for character meshes
