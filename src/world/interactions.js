@@ -6,8 +6,10 @@ const CITIZEN_PROMPT_TEXT = "Citizen: [Press E to Talk]";
 const CITIZEN_DIALOGUES = [
   "The wind is favorable today.",
   "Have you visited the Agora?",
+  "Follow the blue sail marker if you want the harbor.",
   "The bakers have fresh bread this morning.",
   "Be careful on the steeper slopes near the Acropolis.",
+  "The ivory beacon on the height marks the Acropolis.",
   "They say a new play opens at the theater tonight.",
 ];
 

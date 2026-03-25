@@ -1,19 +1,20 @@
 # Build Report
 
-- Ran `npm ci` to install dependencies. The script generated the favicon asset during postinstall.
-- Ran `npm run build` to produce the static site output under the `docs/` directory.
+- Ran `npm ci` to install dependencies.
+- Ran `npm run typecheck` to validate the current mixed TypeScript/JavaScript codebase.
+- Ran `npm run verify` to build the site, start a local preview server, and confirm the app loads under the GitHub Pages base path.
 
 ## Tooling Inventory (Stage 0)
 
 ### npm Scripts
-- `dev` – starts the local Vite development server.
-- `build` – builds the site and runs `ensure-three-bundled` and `sanitize-bare-import-text` post-build checks.
-- `preview` – serves the production build with strict port usage.
-- `typecheck` – runs `tsc` against `tsconfig.json` and now fails the pipeline when type errors are present.
-- `generate:favicon` – regenerates favicon assets.
-- `download:aristotle` – fetches the Aristotle tomb asset bundle.
-- `download:draco` – retrieves the Draco decoder bundle.
-- `postinstall` – downloads the Draco decoder and regenerates the favicon.
+- `dev` - starts the local Vite development server on port `8000`.
+- `start` - matches the `dev` workflow for local development.
+- `build` - builds the site and runs the post-build asset sanitation scripts.
+- `build:analyze` - builds with the debug-oriented analyze mode and updates `docs/stats.html`.
+- `preview` - serves the production build on localhost with strict port usage.
+- `typecheck` - runs `tsc --noEmit`.
+- `verify` - runs the production build and then browser-verifies the GitHub Pages build via Playwright.
+- `deploy` - aliases `npm run build`.
 
 ### Dependencies
 - `three`
@@ -26,3 +27,6 @@
 - `@types/node`
 - `@types/three`
 - `@types/web`
+- `playwright`
+- `@playwright/test`
+- `rollup-plugin-visualizer`

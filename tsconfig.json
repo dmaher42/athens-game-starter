@@ -14,7 +14,7 @@
     "useUnknownInCatchVariables": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "allowJs": false,
+    "allowJs": true,
     "resolvePackageJsonExports": true,
     "resolvePackageJsonImports": true,
     "forceConsistentCasingInFileNames": true,

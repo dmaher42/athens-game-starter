@@ -138,8 +138,16 @@ Development & Deployment
 ```bash
 npm install
 npm start
+```
 
-Simplified Mode: To run the game, open Codespaces and run `npm start`. There is no dev/production split; the engine runs in a consistent simplified mode for development.
+Run checks before pushing changes:
+
+```bash
+npm run typecheck
+npm run verify
+```
+
+Use `npm run build:analyze` only when you want the larger debug-friendly bundle and an updated `docs/stats.html`.
 
 ### Preview-First Workflow (Recommended)
 

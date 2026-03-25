@@ -1,68 +1,188 @@
-
-import { chromium } from 'playwright';
-import { fileURLToPath } from 'url';
-import path from 'path';
-import { promises as fs } from 'fs';
+import { chromium } from "playwright";
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import net from "node:net";
+import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, "..");
+const APP_BASE_PATH = "/athens-game-starter/";
+const PREVIEW_PORT_CANDIDATES = [4173, 4174, 4175, 4176];
+const STARTUP_TIMEOUT_MS = 30_000;
+const VITE_BIN = path.resolve(REPO_ROOT, "node_modules", "vite", "bin", "vite.js");
 
-(async () => {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  const viteLogPath = path.resolve(__dirname, '..', 'vite.log');
+async function isPortAvailable(port) {
+  return await new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", () => resolve(false));
+    server.once("listening", () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, "127.0.0.1");
+  });
+}
 
-  let serverReady = false;
-  let attempts = 0;
-  const maxAttempts = 30; // 30 seconds max wait
-  while (!serverReady && attempts < maxAttempts) {
-    try {
-      const logContent = await fs.readFile(viteLogPath, 'utf8');
-      if (logContent.includes('Local:') && logContent.includes('http://localhost:5173')) {
-        serverReady = true;
-        console.log('Vite server is ready.');
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    } catch (err) {
-      // Log file might not exist yet
-      await new Promise(resolve => setTimeout(resolve, 1000));
+async function getPreviewPort() {
+  for (const port of PREVIEW_PORT_CANDIDATES) {
+    if (await isPortAvailable(port)) {
+      return port;
     }
-    attempts++;
   }
 
-  if (!serverReady) {
-    console.error('Timeout: Vite server did not start within 30 seconds.');
-    process.exit(1);
-  }
+  throw new Error(
+    `Unable to find a free preview port in ${PREVIEW_PORT_CANDIDATES.join(", ")}.`,
+  );
+}
 
-  const consoleErrors = [];
-  page.on('console', msg => {
-    if (msg.type() === 'error') {
-      const errorText = msg.text();
-      // Ignore benign errors if any, for now logging all
-      console.error(`Browser console error: ${errorText}`);
-      consoleErrors.push(errorText);
-    }
+function createPreviewServer(port) {
+  const child = spawn(process.execPath, [VITE_BIN, "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
+    cwd: REPO_ROOT,
+    env: process.env,
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
-  try {
-    await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
-    // Increased wait time to ensure all scripts have loaded and executed
-    await page.waitForTimeout(10000);
-  } catch (error) {
-    console.error('Failed to load the page:', error);
-    await browser.close();
-    process.exit(1);
+  let output = "";
+  const appendOutput = (chunk) => {
+    output += chunk.toString();
+    if (output.length > 8_000) {
+      output = output.slice(-8_000);
+    }
+  };
+
+  child.stdout?.on("data", appendOutput);
+  child.stderr?.on("data", appendOutput);
+
+  return {
+    child,
+    getOutput: () => output,
+  };
+}
+
+async function waitForPreview(url, server) {
+  const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+
+  while (Date.now() < deadline) {
+    if (server.child.exitCode !== null) {
+      throw new Error(
+        `Preview server exited early with code ${server.child.exitCode}.\n${server.getOutput()}`,
+      );
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        redirect: "manual",
+      });
+      if (response.ok) {
+        return;
+      }
+    } catch {
+      // Keep polling until the timeout expires.
+    }
+
+    await sleep(500);
   }
 
-  await browser.close();
+  throw new Error(
+    `Timed out waiting for preview server at ${url}.\n${server.getOutput()}`,
+  );
+}
+
+async function stopPreviewServer(server) {
+  if (!server?.child || server.child.exitCode !== null) {
+    return;
+  }
+
+  if (process.platform === "win32") {
+    await new Promise((resolve) => {
+      const killer = spawn("taskkill", ["/pid", String(server.child.pid), "/t", "/f"], {
+        stdio: "ignore",
+      });
+      killer.once("close", () => resolve());
+      killer.once("error", () => resolve());
+    });
+    return;
+  }
+
+  server.child.kill("SIGTERM");
+  await Promise.race([
+    new Promise((resolve) => server.child.once("close", resolve)),
+    sleep(2_000),
+  ]);
+}
+
+function isIgnorableRequestFailure(request) {
+  const errorText = request.failure()?.errorText || "";
+  return request.method() === "HEAD" && errorText === "net::ERR_ABORTED";
+}
+
+async function runVerification() {
+  const previewPort = await getPreviewPort();
+  const appUrl = new URL(APP_BASE_PATH, `http://127.0.0.1:${previewPort}`).toString();
+  const previewServer = createPreviewServer(previewPort);
+  const consoleErrors = [];
+  const requestFailures = [];
+
+  try {
+    await waitForPreview(appUrl, previewServer);
+
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage();
+      page.on("console", (msg) => {
+        if (msg.type() === "error") {
+          consoleErrors.push(msg.text());
+        }
+      });
+      page.on("pageerror", (error) => {
+        consoleErrors.push(String(error));
+      });
+      page.on("requestfailed", (request) => {
+        if (isIgnorableRequestFailure(request)) {
+          return;
+        }
+        requestFailures.push(
+          `${request.method()} ${request.url()} :: ${request.failure()?.errorText || "request failed"}`,
+        );
+      });
+
+      await page.goto(appUrl, { waitUntil: "networkidle" });
+      await page.waitForTimeout(10_000);
+
+      const hasCanvas = (await page.locator("canvas").count()) > 0;
+      if (!hasCanvas) {
+        throw new Error("Verification failed: no canvas element was rendered.");
+      }
+
+      const bodyText = await page.locator("body").innerText();
+      if (bodyText.includes("We couldn't finish loading Athens")) {
+        throw new Error("Verification failed: loading screen reported a startup error.");
+      }
+    } finally {
+      await browser.close();
+    }
+  } finally {
+    await stopPreviewServer(previewServer);
+  }
+
+  if (requestFailures.length > 0) {
+    throw new Error(
+      `Verification failed: network requests failed.\n${requestFailures.join("\n")}`,
+    );
+  }
 
   if (consoleErrors.length > 0) {
-    console.error('Test failed: Console errors were detected.');
-    process.exit(1);
-  } else {
-    console.log('Test passed: No console errors detected.');
-    process.exit(0);
+    throw new Error(
+      `Verification failed: browser console errors were detected.\n${consoleErrors.join("\n")}`,
+    );
   }
-})();
+
+  console.log(`Verification passed: ${appUrl} loaded without console or network errors.`);
+}
+
+runVerification().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});

@@ -58,6 +58,7 @@ import {
   hideLoadingScreen,
 } from "../ui/loadingScreen.js";
 import { createPin } from "../world/pins.js";
+import { createDemoTour } from "../world/demoTour.js";
 import { attachHeightSampler, probeAt } from "../world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "../world/occluders.js";
 import { snapAboveGround } from "../world/ground.js";
@@ -640,7 +641,8 @@ export class Application {
         const { rotationRad = 0, ...rest } = opts;
         const temple = await buildTemple({ materialPreset: "marble", ...rest });
         const height = terrainRef?.userData?.getHeightAt?.(position.x, position.z);
-        const y = Number.isFinite(height) ? height : position.y ?? 0;
+        const authoredY = Number.isFinite(position?.y) ? position.y : 0;
+        const y = Number.isFinite(height) ? Math.max(height, authoredY) : authoredY;
         temple.position.set(position.x, y + 0.05, position.z);
         if (rotationRad) temple.rotation.y = rotationRad;
         sceneRef.add(temple);
@@ -710,6 +712,33 @@ export class Application {
             columnCountZ: 2,
             materialPreset: "plaster",
             rotationRad: THREE.MathUtils.degToRad(0),
+          },
+        );
+
+        await placeLandmark(
+          worldRoot,
+          terrain,
+          AGORA_CENTER_3D.clone().add(new THREE.Vector3(-24, 0, -8)),
+          {
+            width: 28,
+            depth: 52,
+            colX: 8,
+            colZ: 2,
+            materialPreset: "plaster",
+            rotationRad: THREE.MathUtils.degToRad(88),
+          },
+        );
+
+        await placeLandmark(
+          worldRoot,
+          terrain,
+          ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(6, 0, -6)),
+          {
+            width: 24,
+            depth: 46,
+            colX: 6,
+            colZ: 13,
+            rotationRad: THREE.MathUtils.degToRad(-16),
           },
         );
       }
@@ -809,6 +838,10 @@ export class Application {
 
       const questManager = new QuestManager();
       const questHud = new QuestHud(questManager);
+      const demoTour = createDemoTour(worldRoot, {
+        terrain,
+        questManager,
+      });
       const interactionHud = new InteractionHud();
       const interactionSystem = new InteractionSystem(playerSystem.player?.input as any, camera, scene, interactionHud);
 
@@ -857,6 +890,8 @@ export class Application {
         if (collectibles && playerSystem.player?.object) {
           collectibles.update(deltaTime, playerSystem.player.object.position);
         }
+
+        demoTour?.update(playerSystem.player?.object?.position, elapsed);
 
         interactionSystem.update(deltaTime);
 
