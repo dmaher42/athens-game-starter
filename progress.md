@@ -15,3 +15,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Started the third demo pass by switching debug overlays off at startup for a cleaner presenter-facing build, while keeping query flags available for manual debug sessions.
 - 2026-03-26: Added a short intro card at scene open so first-time viewers immediately see the walking route and basic movement cue for the Athens demo.
 - 2026-03-26: Verified the third pass with `npm run typecheck` and `npm run verify`. The production build regenerated `docs/` with the updated startup presentation.
+- 2026-03-26: Started the demo choreography pass by moving the default spawn anchor to the west side of the Agora and setting the opening third-person camera to face east toward the harbor route.
+- 2026-03-26: Verified the opening-spawn pass with `npm run typecheck`, `npm run verify`, and a scene-graph browser probe. The live player root now starts near `(-98, 3.9, 52)` with the camera placed just west of the player for a clearer route-facing opening.

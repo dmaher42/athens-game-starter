@@ -4,12 +4,29 @@ import { PlayerController } from "../controls/PlayerController.js";
 import { ThirdPersonCamera } from "../controls/ThirdPersonCamera.js";
 import { Character } from "../characters/Character.js";
 import { findSafePlayerSpawn } from "../world/spawn.js";
-import { AGORA_CENTER_3D, getSeaLevelY } from "../world/locations.js";
+import { AGORA_CENTER_3D, HARBOR_CENTER_3D, getSeaLevelY } from "../world/locations.js";
 import { createGLTFLoader, loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
 import { joinPath } from "../utils/baseUrl.js";
 
 const USE_THIRD_PERSON = true;
 const ENABLE_HERO_GLB = true;
+const DEMO_SPAWN_OFFSET = new THREE.Vector3(-18, 0, 12);
+const DEMO_LOOK_OFFSET = new THREE.Vector3(0, 0, 6);
+const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(16);
+const DEMO_CAMERA_DISTANCE = 6.2;
+
+function createDemoSpawnAnchor() {
+  return AGORA_CENTER_3D.clone().add(DEMO_SPAWN_OFFSET);
+}
+
+function getOpeningCameraYaw(from, to) {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  if (!Number.isFinite(dx) || !Number.isFinite(dz) || (Math.abs(dx) < 1e-5 && Math.abs(dz) < 1e-5)) {
+    return 0;
+  }
+  return Math.atan2(-dx, dz);
+}
 
 export class PlayerSystem {
   constructor({ scene, camera, renderer, envCollider, terrain, worldRoot, baseUrl }) {
@@ -35,11 +52,12 @@ export class PlayerSystem {
     });
     worldRoot.add(this.player.object);
 
+    const spawnAnchor = createDemoSpawnAnchor();
     const spawnPosition = findSafePlayerSpawn({
       envCollider,
       terrain,
-      searchCenter: AGORA_CENTER_3D,
-      fallback: AGORA_CENTER_3D,
+      searchCenter: spawnAnchor,
+      fallback: spawnAnchor,
       playerHeight: this.player.height,
       playerRadius: this.player.radius,
       verticalClearance: 3.0,
@@ -80,6 +98,16 @@ export class PlayerSystem {
           zoomSpeed: 4,
         },
       });
+
+      const openingLookTarget = AGORA_CENTER_3D
+        .clone()
+        .lerp(HARBOR_CENTER_3D.clone(), 0.34)
+        .add(DEMO_LOOK_OFFSET);
+      const openingYaw = getOpeningCameraYaw(spawnPosition, openingLookTarget);
+      this.thirdPersonCamera.distance = DEMO_CAMERA_DISTANCE;
+      this.thirdPersonCamera.setAngles(openingYaw, DEMO_CAMERA_PITCH, { snap: true });
+      this.player.cameraYaw = openingYaw;
+      this.player.cameraPitch = DEMO_CAMERA_PITCH;
     }
 
     await this.loadCharacter();
@@ -106,11 +134,12 @@ export class PlayerSystem {
     const seaLevel = getSeaLevelY();
 
     if (playerRoot && playerRoot.position.y < seaLevel - 15.0) {
+      const respawnAnchor = createDemoSpawnAnchor();
       const respawnPos = findSafePlayerSpawn({
         envCollider: this.envCollider,
         terrain: this.terrain,
-        searchCenter: AGORA_CENTER_3D,
-        fallback: AGORA_CENTER_3D,
+        searchCenter: respawnAnchor,
+        fallback: respawnAnchor,
         playerHeight: this.player.height,
         playerRadius: this.player.radius,
         verticalClearance: 0.5,
