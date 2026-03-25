@@ -26,3 +26,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Restored the hero toward its original theme by clamping player-only reflection and gloss values after the GLB loads, instead of changing world lighting or other asset materials.
 - 2026-03-26: Verified the hero material fix with `npm run typecheck`, `npm run verify`, and a browser material probe. Sampled player meshes now load with `envMapIntensity` `0.18`, `glossiness` `0.32`, and reduced specular color values rather than the previous highly reflective look.
 - 2026-03-26: Switched GitHub Pages deployment from the branch-push `peaceiris/actions-gh-pages` flow to the official GitHub Actions Pages artifact flow (`configure-pages`, `upload-pages-artifact`, `deploy-pages`) to reduce extra Pages workflow noise and failure surface.
+- 2026-03-26: Inspected the failed GitHub Actions build log and found the real breakage was missing Playwright browser binaries on the runner during `npm run verify`.
+- 2026-03-26: Added an explicit `npx playwright install --with-deps chromium` step to the Pages workflow before typecheck/verify so the GitHub runner has the browser that `verification/verify.mjs` expects.
+- 2026-03-26: Re-ran `npm.cmd run verify` locally after the CI change and it still passed, so the workflow fix did not break the current production verification path.
