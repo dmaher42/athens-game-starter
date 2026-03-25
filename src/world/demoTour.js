@@ -21,6 +21,10 @@ const DISTRICT_MARKERS = [
     theme: "harbor",
     accent: 0x2b86a8,
     glow: 0x82d7f4,
+    labelScale: { x: 10.8, y: 3.25 },
+    labelHeight: 6.4,
+    focusLightHeight: 4.4,
+    focusLightDistance: 22,
     anchor: new THREE.Vector3(
       HARBOR_CENTER_3D.x - 18,
       HARBOR_CENTER_3D.y + HARBOR_GROUND_HEIGHT,
@@ -33,6 +37,10 @@ const DISTRICT_MARKERS = [
     theme: "acropolis",
     accent: 0xd7cab4,
     glow: 0xffe7b0,
+    labelScale: { x: 10.2, y: 3.15 },
+    labelHeight: 6.3,
+    focusLightHeight: 4.2,
+    focusLightDistance: 18,
     anchor: new THREE.Vector3(ACROPOLIS_PEAK_3D.x + 10, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z - 8),
   },
 ];
@@ -74,6 +82,21 @@ function createBannerCloth(color, width = 1.2, height = 1.8) {
     baseRotationZ: 0,
   };
   return cloth;
+}
+
+function createSightlineColumn(color = 0xd4ccb9, height = 4.8) {
+  const column = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.22, height, 16),
+    new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.52,
+      metalness: 0.04,
+    }),
+  );
+  column.position.y = height * 0.5;
+  column.castShadow = true;
+  column.receiveShadow = true;
+  return column;
 }
 
 function createCrate(color = 0x8b6947, size = 0.9) {
@@ -176,7 +199,7 @@ function markNoCollision(object) {
   });
 }
 
-function createLabelSprite(text, accentColor) {
+function createLabelSprite(text, accentColor, scale = { x: 9.5, y: 3 }) {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 160;
@@ -206,7 +229,7 @@ function createLabelSprite(text, accentColor) {
     depthWrite: false,
   });
   const sprite = new THREE.Sprite(material);
-  sprite.scale.set(9.5, 3, 1);
+  sprite.scale.set(scale.x ?? 9.5, scale.y ?? 3, 1);
   sprite.renderOrder = 4;
   return sprite;
 }
@@ -243,12 +266,17 @@ function createBaseMarker(marker) {
   ring.castShadow = true;
   group.add(ring);
 
-  const label = createLabelSprite(marker.label, marker.accent);
-  label.position.set(0, 5.8, 0);
+  const label = createLabelSprite(marker.label, marker.accent, marker.labelScale);
+  label.position.set(0, marker.labelHeight ?? 5.8, 0);
   group.add(label);
 
-  const focusLight = new THREE.PointLight(marker.glow, 0.9, 16, 2);
-  focusLight.position.set(0, 3.4, 0);
+  const focusLight = new THREE.PointLight(
+    marker.glow,
+    0.9,
+    marker.focusLightDistance ?? 16,
+    2,
+  );
+  focusLight.position.set(0, marker.focusLightHeight ?? 3.4, 0);
   group.add(focusLight);
 
   group.userData = group.userData || {};
@@ -387,6 +415,49 @@ function addAgoraDetails(group, marker) {
   marketBench.position.set(0, 0.86, 1.45);
   marketBench.castShadow = true;
   group.add(marketBench);
+
+  const sightlineFrame = new THREE.Group();
+  sightlineFrame.name = "AgoraSightlineFrame";
+  sightlineFrame.position.set(3.8, 0, -0.2);
+
+  for (const z of [-1.55, 1.55]) {
+    const column = createSightlineColumn(0xd7cfbe, 4.9);
+    column.position.z = z;
+    sightlineFrame.add(column);
+  }
+
+  const lintel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.48, 0.3, 3.65),
+    new THREE.MeshStandardMaterial({
+      color: 0xc9bda5,
+      roughness: 0.58,
+      metalness: 0.04,
+    }),
+  );
+  lintel.position.set(0, 4.82, 0);
+  lintel.castShadow = true;
+  sightlineFrame.add(lintel);
+
+  const routeBanner = createBannerCloth(0x2b86a8, 1.2, 2.4);
+  routeBanner.position.set(0.18, 3.2, 0);
+  routeBanner.rotation.y = Math.PI / 2;
+  routeBanner.userData.baseRotationZ = THREE.MathUtils.degToRad(4);
+  sightlineFrame.add(routeBanner);
+
+  const routeTorch = createBrazier(0x50778e, 0x82d7f4);
+  routeTorch.group.position.set(0.9, 0, -2.35);
+  sightlineFrame.add(routeTorch.group);
+
+  const acropolisTorch = createBrazier(0x8f6d4f, 0xffe7b0);
+  acropolisTorch.group.position.set(-0.9, 0, 2.35);
+  sightlineFrame.add(acropolisTorch.group);
+
+  group.userData.extraFlames = [
+    ...(group.userData.extraFlames ?? []),
+    routeTorch.flame,
+    acropolisTorch.flame,
+  ];
+  group.add(sightlineFrame);
 }
 
 function addAcropolisDetails(group, marker) {
@@ -542,7 +613,8 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
         }
         const label = object.userData?.label;
         if (label) {
-          label.position.y = 5.8 + Math.sin(elapsed * 1.4 + object.position.z * 0.02) * 0.12;
+          const labelBaseY = DISTRICT_MARKERS.find((entry) => entry.id === marker.id)?.labelHeight ?? 5.8;
+          label.position.y = labelBaseY + Math.sin(elapsed * 1.4 + object.position.z * 0.02) * 0.12;
         }
         if (object.userData?.flame) {
           object.userData.flame.scale.setScalar(0.92 + Math.sin(elapsed * 5.5) * 0.08);
