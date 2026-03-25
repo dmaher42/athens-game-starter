@@ -48,11 +48,11 @@ const DEFAULT_ENGINE_CONFIG = ({
     },
     debug: {
       overlays: {
-        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: true, devDefault: true },
-        exposureSlider: { queryKey: "exposure", windowFlagKey: "SHOW_EXPOSURE", defaultValue: true, devDefault: true },
-        hotkeyReference: { queryKey: "hotkeys", windowFlagKey: "SHOW_HOTKEYS", defaultValue: true, devDefault: true },
-        devHud: { queryKey: "hud", windowFlagKey: "SHOW_HUD", defaultValue: true, devDefault: true },
-        cameraSettings: { queryKey: "camerahud", windowFlagKey: "SHOW_CAMERA_HUD", defaultValue: true, devDefault: true },
+        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: false },
+        exposureSlider: { queryKey: "exposure", windowFlagKey: "SHOW_EXPOSURE", defaultValue: false, devDefault: false },
+        hotkeyReference: { queryKey: "hotkeys", windowFlagKey: "SHOW_HOTKEYS", defaultValue: false, devDefault: false },
+        devHud: { queryKey: "hud", windowFlagKey: "SHOW_HUD", defaultValue: false, devDefault: false },
+        cameraSettings: { queryKey: "camerahud", windowFlagKey: "SHOW_CAMERA_HUD", defaultValue: false, devDefault: false },
       },
       logLevel: queryParams.get("log") || "info",
     },
@@ -68,11 +68,11 @@ const ENVIRONMENT_OVERRIDES = {
   development: ({ queryParams }) => ({
     debug: {
       overlays: {
-        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: true, devDefault: true },
-        exposureSlider: { queryKey: "exposure", defaultValue: true, devDefault: true },
-        hotkeyReference: { queryKey: "hotkeys", defaultValue: true, devDefault: true, windowFlagKey: "SHOW_HOTKEYS" },
-        devHud: { queryKey: "hud", defaultValue: true, devDefault: true },
-        cameraSettings: { queryKey: "camerahud", defaultValue: true, devDefault: true },
+        audioMixer: { queryKey: "audio", windowFlagKey: "SHOW_AUDIO_MIXER", defaultValue: false, devDefault: false },
+        exposureSlider: { queryKey: "exposure", defaultValue: false, devDefault: false, windowFlagKey: "SHOW_EXPOSURE" },
+        hotkeyReference: { queryKey: "hotkeys", defaultValue: false, devDefault: false, windowFlagKey: "SHOW_HOTKEYS" },
+        devHud: { queryKey: "hud", defaultValue: false, devDefault: false, windowFlagKey: "SHOW_HUD" },
+        cameraSettings: { queryKey: "camerahud", defaultValue: false, devDefault: false, windowFlagKey: "SHOW_CAMERA_HUD" },
       },
       logLevel: queryParams.get("log") || "debug",
     },

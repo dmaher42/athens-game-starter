@@ -50,6 +50,7 @@ import { UIManager } from "./UIManager.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
 import { QuestHud } from "../ui/questHud.js";
 import { InteractionHud } from "../ui/interactionHud.js";
+import { showDemoIntro } from "../ui/demoIntro.js";
 import {
   showLoadingScreen,
   updateLoadingStatus,
@@ -931,6 +932,7 @@ export class Application {
       loop.start();
       advanceLoadingStage("Opening the gates to ancient Athens...");
       hideLoadingScreen();
+      showDemoIntro();
 
       try {
         initPropCulling(scene, camera, { dryRun: false });
@@ -965,8 +967,8 @@ export class Application {
         if (Number.isFinite(y)) pin.position.y = y;
       };
 
-      const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: true, devDefault: true };
-      const cameraHudToggle = engineConfig.debug?.overlays?.cameraSettings || { defaultValue: true, devDefault: true };
+      const devHudToggle = engineConfig.debug?.overlays?.devHud || { defaultValue: false, devDefault: false };
+      const cameraHudToggle = engineConfig.debug?.overlays?.cameraSettings || { defaultValue: false, devDefault: false };
 
       // Set window flags to enable HUD overlays based on feature toggles
       if (typeof window !== "undefined") {

@@ -12,3 +12,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Verified the first demo pass with `npm run typecheck`, `npm run verify`, and browser inspection. Headless screenshots still mostly show HUD overlays, so future visual reviews may need headed capture or in-app debug camera framing.
 - 2026-03-26: Started the second demo pass by strengthening each destination marker into a fuller arrival set piece with themed props and local light accents. Harbor is now the strongest active stop, while Agora and Acropolis read more distinctly on arrival.
 - 2026-03-26: Verified the second pass with `npm run typecheck`, `npm run verify`, and browser inspection of quest state plus district marker composition counts.
+- 2026-03-26: Started the third demo pass by switching debug overlays off at startup for a cleaner presenter-facing build, while keeping query flags available for manual debug sessions.
+- 2026-03-26: Added a short intro card at scene open so first-time viewers immediately see the walking route and basic movement cue for the Athens demo.
+- 2026-03-26: Verified the third pass with `npm run typecheck` and `npm run verify`. The production build regenerated `docs/` with the updated startup presentation.
