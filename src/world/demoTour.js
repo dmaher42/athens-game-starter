@@ -64,6 +64,30 @@ const TOUR_STAGES = [
   },
 ];
 const ARRIVAL_PULSE_DURATION = 5.5;
+const ROUTE_GUIDES = [
+  {
+    markerId: "harbor",
+    accent: 0x2b86a8,
+    glow: 0x82d7f4,
+    positions: [
+      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.16).add(new THREE.Vector3(10, 0, -4)),
+      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.34).add(new THREE.Vector3(4, 0, -9)),
+      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.56).add(new THREE.Vector3(12, 0, -5)),
+      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.78).add(new THREE.Vector3(-8, 0, 4)),
+    ],
+  },
+  {
+    markerId: "acropolis",
+    accent: 0xd7cab4,
+    glow: 0xffe7b0,
+    positions: [
+      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.22).add(new THREE.Vector3(-12, 0, -4)),
+      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.46).add(new THREE.Vector3(8, 0, 8)),
+      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.68).add(new THREE.Vector3(-7, 0, 3)),
+      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.86).add(new THREE.Vector3(4, 0, -4)),
+    ],
+  },
+];
 
 function createBannerCloth(color, width = 1.2, height = 1.8) {
   const cloth = new THREE.Mesh(
@@ -259,6 +283,68 @@ function createArrivalHalo(marker) {
   light.position.set(0, 2.8, 0);
 
   return { ring, light };
+}
+
+function createRouteGuide(route, index, terrain) {
+  const group = new THREE.Group();
+  group.name = `DemoGuide_${route.markerId}_${index}`;
+
+  const pedestal = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.28, 0.38, 0.55, 14),
+    new THREE.MeshStandardMaterial({
+      color: 0xa4947b,
+      roughness: 0.8,
+      metalness: 0.03,
+    }),
+  );
+  pedestal.position.y = 0.275;
+  pedestal.castShadow = true;
+  pedestal.receiveShadow = true;
+  group.add(pedestal);
+
+  const post = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.08, 0.1, 2.6, 12),
+    new THREE.MeshStandardMaterial({
+      color: 0x816950,
+      roughness: 0.76,
+      metalness: 0.04,
+    }),
+  );
+  post.position.y = 1.55;
+  post.castShadow = true;
+  group.add(post);
+
+  const banner = createBannerCloth(route.accent, 0.68, 1.45);
+  banner.position.set(0.34, 2.15, 0);
+  banner.rotation.y = Math.PI / 2;
+  banner.userData.baseRotationZ = THREE.MathUtils.degToRad(6);
+  group.add(banner);
+
+  const ember = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.14, 0),
+    new THREE.MeshStandardMaterial({
+      color: route.glow,
+      emissive: route.glow,
+      emissiveIntensity: 0.72,
+      roughness: 0.2,
+      metalness: 0,
+    }),
+  );
+  ember.position.set(0, 2.9, 0);
+  group.add(ember);
+
+  const light = new THREE.PointLight(route.glow, 0.7, 10, 2);
+  light.position.set(0, 2.7, 0);
+  group.add(light);
+
+  const anchor = route.positions[index];
+  group.position.copy(anchor);
+  group.position.y = sampleGroundY(terrain, anchor) + 0.04;
+  markNoCollision(group);
+  group.userData.routeMarkerId = route.markerId;
+  group.userData.guideLight = light;
+  group.userData.guideFlame = ember;
+  return group;
 }
 
 function createBaseMarker(marker) {
@@ -585,6 +671,16 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
     markers.set(marker.id, object);
   }
 
+  const guidePosts = [];
+  for (const route of ROUTE_GUIDES) {
+    route.positions.forEach((_, index) => {
+      const guide = createRouteGuide(route, index, terrain);
+      guide.visible = false;
+      group.add(guide);
+      guidePosts.push(guide);
+    });
+  }
+
   scene.add(group);
 
   let currentStageIndex = 0;
@@ -633,6 +729,16 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
       if (focusLight) {
         focusLight.intensity = isActive ? 1.45 : 0.62;
         focusLight.distance = isActive ? 20 : 13;
+      }
+    }
+
+    const activeRouteMarkerId = activeStage?.markerId ?? null;
+    for (const guide of guidePosts) {
+      const isActive = guide.userData?.routeMarkerId === activeRouteMarkerId;
+      guide.visible = isActive;
+      const guideLight = guide.userData?.guideLight;
+      if (guideLight) {
+        guideLight.intensity = isActive ? 0.95 : 0;
       }
     }
   };
@@ -702,6 +808,18 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
             baseRotationZ +
             Math.sin(elapsed * speed + object.position.x * 0.01) * sway;
         });
+      }
+
+      for (const guide of guidePosts) {
+        if (!guide.visible) continue;
+        const guideLight = guide.userData?.guideLight;
+        const guideFlame = guide.userData?.guideFlame;
+        if (guideFlame) {
+          guideFlame.scale.setScalar(0.92 + Math.sin(elapsed * 5.2 + guide.position.x * 0.01) * 0.09);
+        }
+        if (guideLight) {
+          guideLight.intensity = 0.76 + Math.sin(elapsed * 4.1 + guide.position.z * 0.02) * 0.18;
+        }
       }
 
       if (!playerPosition || completed) {
