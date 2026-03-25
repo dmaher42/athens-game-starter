@@ -14,6 +14,11 @@ const DEMO_SPAWN_OFFSET = new THREE.Vector3(-18, 0, 12);
 const DEMO_LOOK_OFFSET = new THREE.Vector3(0, 0, 6);
 const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(16);
 const DEMO_CAMERA_DISTANCE = 6.2;
+const HERO_MAX_ENVMAP_INTENSITY = 0.18;
+const HERO_MAX_GLOSSINESS = 0.32;
+const HERO_MAX_SPECULAR = 0.42;
+const HERO_MAX_METALNESS = 0.08;
+const HERO_MIN_ROUGHNESS = 0.72;
 
 function createDemoSpawnAnchor() {
   return AGORA_CENTER_3D.clone().add(DEMO_SPAWN_OFFSET);
@@ -26,6 +31,45 @@ function getOpeningCameraYaw(from, to) {
     return 0;
   }
   return Math.atan2(-dx, dz);
+}
+
+function softenHeroMaterials(root) {
+  if (!root || typeof root.traverse !== "function") return;
+
+  root.traverse((child) => {
+    if (!child?.isMesh || !child.material) return;
+
+    const materials = Array.isArray(child.material) ? child.material : [child.material];
+    for (const material of materials) {
+      if (!material) continue;
+
+      // Keep the player's original cloth-and-leather feel by dialing back the
+      // strong reflection response that our global lighting now gives the hero.
+      if (typeof material.envMapIntensity === "number") {
+        material.envMapIntensity = Math.min(material.envMapIntensity, HERO_MAX_ENVMAP_INTENSITY);
+      }
+
+      if (material.isGLTFSpecularGlossinessMaterial) {
+        if (typeof material.glossiness === "number") {
+          material.glossiness = Math.min(material.glossiness, HERO_MAX_GLOSSINESS);
+        }
+        if (material.specular?.isColor) {
+          material.specular.r = Math.min(material.specular.r, HERO_MAX_SPECULAR);
+          material.specular.g = Math.min(material.specular.g, HERO_MAX_SPECULAR);
+          material.specular.b = Math.min(material.specular.b, HERO_MAX_SPECULAR);
+        }
+      } else {
+        if (typeof material.metalness === "number") {
+          material.metalness = Math.min(material.metalness, HERO_MAX_METALNESS);
+        }
+        if (typeof material.roughness === "number") {
+          material.roughness = Math.max(material.roughness, HERO_MIN_ROUGHNESS);
+        }
+      }
+
+      material.needsUpdate = true;
+    }
+  });
 }
 
 export class PlayerSystem {
@@ -217,6 +261,7 @@ export class PlayerSystem {
         // Don't reset scale - it was already scaled to targetHeight in loadGLBWithFallbacks
         // root.scale.set(1, 1, 1);  // REMOVED - this was undoing the scaling!
         root.position.set(0, 0, 0);
+        softenHeroMaterials(root);
         
         // Update matrix world to ensure proper bounding box calculations
         root.updateMatrixWorld(true);
