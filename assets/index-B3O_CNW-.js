@@ -59168,7 +59168,7 @@ function resolveKTX2TranscoderPath() {
 }
 async function createKTX2Loader(renderer2) {
   const { KTX2Loader } = await __vitePreload(async () => {
-    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-BYaIKKeb.js");
+    const { KTX2Loader: KTX2Loader2 } = await import("./KTX2Loader-DQNwpuSe.js");
     return { KTX2Loader: KTX2Loader2 };
   }, true ? [] : void 0);
   const loader = new KTX2Loader();
@@ -59903,7 +59903,7 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
 }
 async function createGLTFLoader(renderer2) {
   const { GLTFLoader } = await __vitePreload(async () => {
-    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-5d4bbsQF.js");
+    const { GLTFLoader: GLTFLoader2 } = await import("./GLTFLoader-X8qeYtk5.js");
     return { GLTFLoader: GLTFLoader2 };
   }, true ? [] : void 0);
   const loader = new GLTFLoader();
@@ -60871,8 +60871,8 @@ const DEFAULT_ENGINE_CONFIG = ({
     baseUrl: baseUrl2,
     queryParams,
     build: {
-      time: true ? "2026-01-04T11:42:13.741Z" : "",
-      sha: true ? "3ad3ea56a65d0d7615f72939f0d380832f7e06b7" : ""
+      time: true ? "2026-03-25T12:21:21.117Z" : "",
+      sha: true ? "5fb49d11585296e62905d18a1d5323ec37056b33" : ""
     },
     districtRuleCandidates: buildDistrictRuleUrlCandidates(baseUrl2),
     featureFlags: {
@@ -64371,9 +64371,21 @@ const OVERLAP_THRESHOLD = 0.5;
 const DISTANCE_CULLING_ENABLED = true;
 const CULL_DISTANCE_NEAR = 100;
 const CULL_DISTANCE_FAR = 200;
+function isRigAttachment(mesh) {
+  let current = mesh;
+  while (current) {
+    if (current.isBone || current.isSkinnedMesh) {
+      return true;
+    }
+    current = current.parent ?? null;
+  }
+  return false;
+}
 function isSmallProp(mesh) {
   if (!mesh.isMesh) return false;
   if (!mesh.geometry) return false;
+  if (mesh.userData?.noCull) return false;
+  if (isRigAttachment(mesh)) return false;
   if (mesh.isInstancedMesh) return false;
   if (!mesh.geometry.boundingBox) {
     mesh.geometry.computeBoundingBox();
@@ -71035,6 +71047,7 @@ class PlayerSystem {
         root.updateMatrixWorld(true);
         root.traverse((child) => {
           if (child.isMesh) {
+            child.visible = true;
             child.castShadow = true;
             child.receiveShadow = true;
             child.frustumCulled = false;
@@ -72281,4 +72294,4 @@ export {
   Material as y,
   LineBasicMaterial as z
 };
-//# sourceMappingURL=index-DRvVPMhn.js.map
+//# sourceMappingURL=index-B3O_CNW-.js.map
