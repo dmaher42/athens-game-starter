@@ -63,6 +63,7 @@ const TOUR_STAGES = [
       "You crossed Athens from market to sea to summit. The short walking tour is complete.",
   },
 ];
+const ARRIVAL_PULSE_DURATION = 5.5;
 
 function createBannerCloth(color, width = 1.2, height = 1.8) {
   const cloth = new THREE.Mesh(
@@ -234,6 +235,32 @@ function createLabelSprite(text, accentColor, scale = { x: 9.5, y: 3 }) {
   return sprite;
 }
 
+function createArrivalHalo(marker) {
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(1.95, 3.2, 40),
+    new THREE.MeshStandardMaterial({
+      color: marker.accent,
+      emissive: marker.glow,
+      emissiveIntensity: 0.75,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+      roughness: 0.34,
+      metalness: 0.04,
+      depthWrite: false,
+    }),
+  );
+  ring.name = `DemoArrival_${marker.id}`;
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.08;
+  ring.visible = false;
+
+  const light = new THREE.PointLight(marker.glow, 0, 28, 2);
+  light.position.set(0, 2.8, 0);
+
+  return { ring, light };
+}
+
 function createBaseMarker(marker) {
   const group = new THREE.Group();
   group.name = `DemoMarker_${marker.id}`;
@@ -279,10 +306,16 @@ function createBaseMarker(marker) {
   focusLight.position.set(0, marker.focusLightHeight ?? 3.4, 0);
   group.add(focusLight);
 
+  const arrivalHalo = createArrivalHalo(marker);
+  group.add(arrivalHalo.ring);
+  group.add(arrivalHalo.light);
+
   group.userData = group.userData || {};
   group.userData.ring = ring;
   group.userData.label = label;
   group.userData.focusLight = focusLight;
+  group.userData.arrivalRing = arrivalHalo.ring;
+  group.userData.arrivalLight = arrivalHalo.light;
   return group;
 }
 
@@ -557,6 +590,13 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
   let currentStageIndex = 0;
   let completed = false;
 
+  const triggerArrivalPulse = (markerId, elapsed = 0) => {
+    const object = markers.get(markerId);
+    if (!object) return;
+    object.userData.arrivalStartedAt = elapsed;
+    object.userData.arrivalUntil = elapsed + ARRIVAL_PULSE_DURATION;
+  };
+
   const setQuestObjective = (objective) => {
     if (!questManager) return;
     if (questManager.currentQuest?.status === "In Progress") {
@@ -616,6 +656,33 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
           const labelBaseY = DISTRICT_MARKERS.find((entry) => entry.id === marker.id)?.labelHeight ?? 5.8;
           label.position.y = labelBaseY + Math.sin(elapsed * 1.4 + object.position.z * 0.02) * 0.12;
         }
+        const arrivalRing = object.userData?.arrivalRing;
+        const arrivalLight = object.userData?.arrivalLight;
+        const arrivalUntil = object.userData?.arrivalUntil ?? 0;
+        const arrivalStartedAt = object.userData?.arrivalStartedAt ?? 0;
+        if (arrivalRing?.material && arrivalLight) {
+          const remaining = arrivalUntil - elapsed;
+          if (remaining > 0) {
+            const pulseProgress = THREE.MathUtils.clamp(
+              (elapsed - arrivalStartedAt) / ARRIVAL_PULSE_DURATION,
+              0,
+              1,
+            );
+            const envelope = Math.sin(pulseProgress * Math.PI);
+            const ripple = 0.82 + Math.sin(elapsed * 7.5 + object.position.x * 0.015) * 0.18;
+            const intensity = Math.max(0, envelope * ripple);
+            arrivalRing.visible = true;
+            arrivalRing.material.opacity = 0.16 + intensity * 0.26;
+            arrivalRing.material.emissiveIntensity = 0.45 + intensity * 1.25;
+            arrivalRing.scale.setScalar(1 + pulseProgress * 1.85);
+            arrivalLight.intensity = 0.35 + intensity * 1.8;
+          } else {
+            arrivalRing.visible = false;
+            arrivalRing.material.opacity = 0;
+            arrivalLight.intensity = 0;
+            arrivalRing.scale.setScalar(1);
+          }
+        }
         if (object.userData?.flame) {
           object.userData.flame.scale.setScalar(0.92 + Math.sin(elapsed * 5.5) * 0.08);
         }
@@ -665,6 +732,7 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
         return;
       }
 
+      triggerArrivalPulse(marker.id, elapsed);
       currentStageIndex += 1;
       if (currentStageIndex >= TOUR_STAGES.length) {
         completed = true;
