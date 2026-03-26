@@ -52,3 +52,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Started the interaction-system cleanup by removing the duplicate `src/interactions/InteractionSystem.js` runtime path and routing the player's `E` input directly into the world interactor from `src/world/interactions.js`.
 - 2026-03-26: Cleaned the remaining runtime wiring in `src/core/Application.ts` and `src/core/UIManager.js` so the world interactor is now the single interaction source of truth.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the interaction cleanup; both passed.
+- 2026-03-26: Started the NPC-layer cleanup by choosing the path-based crowd system in `src/world/npcs.js` as the canonical runtime NPC path and removing the overlapping random-wander villager system from `src/world/traffic.js`.
+- 2026-03-26: Cleaned `src/core/Application.ts` so it no longer creates or updates the duplicate `VillagerSystem`; the active NPC layer is now `spawnCitizenCrowd()` plus `spawnGLBNPCs()`.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the NPC cleanup; both passed.

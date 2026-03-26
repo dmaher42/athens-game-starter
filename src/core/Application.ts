@@ -87,7 +87,6 @@ import {
   WORLD_ROOT_NAME,
 } from "./Scene.js";
 import { GameLoop } from "./GameLoop.js";
-import { VillagerSystem } from "../world/traffic.js";
 import { createAtmosphericParticles } from "../world/particles.js";
 import { initPropCulling, updateDistanceCulling } from "../utils/propCulling.js";
 import { cullDistantBuildings } from "../utils/buildingCulling.js";
@@ -624,7 +623,6 @@ export class Application {
       this.playerSystem = playerSystem;
 
       let grassRoot: any = null;
-      let villagerSystem: any = null;
       let atmosphericParticles: any = null;
 
       const roadsVisible =
@@ -671,12 +669,6 @@ export class Application {
           seaLevel: resolvedSeaLevel,
         },
       );
-
-      if (roadCurves && roadCurves.length > 0) {
-        villagerSystem = new (VillagerSystem as any)(scene, terrain);
-        scene.userData = scene.userData || {};
-        scene.userData['villagerSystem'] = villagerSystem;
-      }
 
       const hillCity = await createHillCity(worldRoot, terrain, mainRoad, {
         seed: 42,
@@ -897,10 +889,6 @@ export class Application {
         }
 
         for (const updateNpc of this.npcUpdaters) updateNpc(deltaTime);
-
-        if (villagerSystem) {
-          villagerSystem.update(deltaTime);
-        }
 
         if (atmosphericParticles) {
           atmosphericParticles.update(deltaTime, elapsed);
