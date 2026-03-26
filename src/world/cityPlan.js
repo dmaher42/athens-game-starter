@@ -20,7 +20,7 @@ export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.2
 // Grid Constants
 const MIN_X = -10, MAX_X = 10;
 const MIN_Z = -10, MAX_Z = 20;
-const BLOCK_SIZE = 48; // Increased from 40 for better district spacing (~20% increase)
+const BLOCK_SIZE = 36; // Tighter block size keeps the city readable and walkable.
 
 // District Spacing Rules
 export const SPACING_RULES = {
@@ -291,6 +291,15 @@ function createPavedStrip(width, length, color = 0x888888) {
   return mesh;
 }
 
+function isWithinSetbackRect(x, z, rect) {
+  if (!rect) return false;
+  const west = Math.min(rect.west, rect.east);
+  const east = Math.max(rect.west, rect.east);
+  const south = Math.min(rect.south, rect.north);
+  const north = Math.max(rect.south, rect.north);
+  return x >= west && x <= east && z >= south && z <= north;
+}
+
 function generateCityGrid(terrainSampler) {
   const cells = [];
   
@@ -370,11 +379,15 @@ function generateCityGrid(terrainSampler) {
         }
       }
 
-      // Road placement (always buildable, regardless of slope)
-      if (Math.abs(gridZ) <= 1) {
+      // Keep the Agora core open as a readable civic plaza.
+      if (Math.abs(gridX) <= 1 && Math.abs(gridZ) <= 1) {
+        cell.type = 'plaza';
+        cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (Math.abs(gridZ) <= 1) {
         cell.type = 'road'; // Main E-W avenue
         cell.buildable = true;
-      } else if (gridX === 0 && cell.district !== 'sacred') {
+      } else if (Math.abs(gridX) <= 1 && cell.district !== 'sacred') {
         cell.type = 'road'; // Central N-S boulevard
         cell.buildable = true;
       } else if (cell.district === 'sacred') {
@@ -517,10 +530,7 @@ export async function createCivicDistrict(scene, options = {}) {
     const worldX = center.x + localX;
     const worldZ = center.z + localZ;
     const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
-      return (
-        worldX >= r.west && worldX <= r.east &&
-        worldZ >= r.north && worldZ <= r.south
-      );
+      return isWithinSetbackRect(worldX, worldZ, r);
     });
     if (isInSetback) {
       continue; // Skip placing any city element inside harbor/walkway setbacks
@@ -531,7 +541,6 @@ export async function createCivicDistrict(scene, options = {}) {
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0x887766 : 0x666666);
       roadMesh.position.set(localX, localY - 0.02, localZ);
-      roadMesh.visible = false;  // Hide civic district roads
       group.add(roadMesh);
     } else if (cell.type === 'plaza') {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xaaaaaa);
@@ -574,10 +583,7 @@ export async function createCivicDistrict(scene, options = {}) {
       const worldX = center.x + localX;
       const worldZ = center.z + localZ;
       const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
-        return (
-          worldX >= r.west && worldX <= r.east &&
-          worldZ >= r.north && worldZ <= r.south
-        );
+        return isWithinSetbackRect(worldX, worldZ, r);
       });
       if (isInSetback) continue;
 
@@ -586,7 +592,6 @@ export async function createCivicDistrict(scene, options = {}) {
       const pathColor = pathTile.type === 'connector' ? 0x998877 : 0xaa9988;
       const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
       pathMesh.position.set(localX, localY + 0.01, localZ); // Slight offset above ground
-      pathMesh.visible = false;  // Hide footpaths
       pathMesh.userData.isFootpath = true;
       group.add(pathMesh);
     }

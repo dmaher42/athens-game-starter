@@ -13,14 +13,14 @@ const SURFACE_OFFSET = 0.025;
 export function createMainHillRoad(scene, terrain) {
   // Gentle S-curve from harbor → agora → acropolis
   const pts = [
-    HARBOR_CENTER_3D.clone().add(new THREE.Vector3(12, 0, -6)),
+    HARBOR_CENTER_3D.clone().add(new THREE.Vector3(8, 0, -4)),
     HARBOR_CENTER_3D.clone()
-      .lerp(AGORA_CENTER_3D, 0.28)
-      .add(new THREE.Vector3(-4, 1.2, 12)),
-    AGORA_CENTER_3D.clone().add(new THREE.Vector3(6, 0, -2)),
+      .lerp(AGORA_CENTER_3D, 0.34)
+      .add(new THREE.Vector3(-2, 1.0, 8)),
+    AGORA_CENTER_3D.clone().add(new THREE.Vector3(3, 0, -1)),
     AGORA_CENTER_3D.clone()
-      .lerp(ACROPOLIS_PEAK_3D, 0.45)
-      .add(new THREE.Vector3(3, 1.5, -8)),
+      .lerp(ACROPOLIS_PEAK_3D, 0.52)
+      .add(new THREE.Vector3(2, 1.3, -5)),
     ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(-1, 0, -1)),
   ];
   const curve = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.1);
