@@ -38,3 +38,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Fixed a player-material regression where the hero looked metallic again after the ground-material pass. Root cause: global environment-intensity updates were overwriting the hero-specific reflection clamp after load.
 - 2026-03-26: Tagged hero materials with an `envMapIntensityCap` during load and updated both lighting/environment intensity passes to respect that cap so preset changes no longer make the player shiny again.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the hero reflection fix; both passed.
+- 2026-03-26: Started a harbor realism pass focused on demo impact. Added a proper quay edge with ladders and bollards, a larger hero ship with masts/sails/oars, and a more deliberate working waterfront zone with crane, market stalls, and cargo clustering.
+- 2026-03-26: Kept the harbor pass inside `src/world/harbor.js` to avoid cross-system churn and preserve the existing tour marker/district logic.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the harbor pass; both passed.

@@ -27,6 +27,9 @@ const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
 const DOCK_LIFT = 1.2; // Raise docks above water for better visibility
+const QUAY_EDGE_X = 68;
+const QUAY_SPAN_NORTH = -30;
+const QUAY_SPAN_SOUTH = 34;
 const waterTextureLoader = new THREE.TextureLoader();
 
 const BOAT_STYLES = [
@@ -234,6 +237,125 @@ function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f
   return boat;
 }
 
+function createHeroHarborShip({ seaLevel = 0, hull = 0x285779, accent = 0xd7a15a } = {}) {
+  const ship = new THREE.Group();
+  ship.name = "HarborHeroShip";
+
+  const hullMaterial = new THREE.MeshStandardMaterial({
+    color: hull,
+    roughness: 0.46,
+    metalness: 0.14,
+  });
+  const accentMaterial = new THREE.MeshStandardMaterial({
+    color: accent,
+    roughness: 0.52,
+    metalness: 0.08,
+  });
+  const mastMaterial = new THREE.MeshStandardMaterial({
+    color: 0xe8dbc8,
+    roughness: 0.54,
+    metalness: 0.04,
+  });
+
+  const hullBase = new THREE.Mesh(
+    new THREE.BoxGeometry(22, 1.8, 5.4),
+    hullMaterial,
+  );
+  hullBase.position.y = 0.9;
+  enableShadows(hullBase);
+  ship.add(hullBase);
+
+  const bow = new THREE.Mesh(
+    new THREE.ConeGeometry(2.7, 4.6, 10),
+    accentMaterial,
+  );
+  bow.rotation.z = Math.PI / 2;
+  bow.position.set(12.4, 1.25, 0);
+  enableShadows(bow);
+  ship.add(bow);
+
+  const stern = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 2.2, 5.1),
+    new THREE.MeshStandardMaterial({ color: 0xe8dcc3, roughness: 0.42, metalness: 0.08 }),
+  );
+  stern.position.set(-9.2, 2.1, 0);
+  enableShadows(stern);
+  ship.add(stern);
+
+  const deck = new THREE.Mesh(
+    new THREE.BoxGeometry(18.5, 0.22, 4.3),
+    new THREE.MeshStandardMaterial({ color: 0xc7a07d, roughness: 0.72, metalness: 0.03 }),
+  );
+  deck.position.y = 1.9;
+  enableShadows(deck);
+  ship.add(deck);
+
+  const mastPositions = [-3.4, 4.6];
+  mastPositions.forEach((x, index) => {
+    const mast = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.14, 7.8, 10),
+      mastMaterial,
+    );
+    mast.position.set(x, 5.2, 0);
+    enableShadows(mast);
+    ship.add(mast);
+
+    const yard = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.07, 5.2 - index * 0.5, 8),
+      mastMaterial,
+    );
+    yard.rotation.z = Math.PI / 2;
+    yard.position.set(x, 6.2 - index * 0.3, 0);
+    enableShadows(yard);
+    ship.add(yard);
+
+    const sail = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.2 - index * 0.4, 3.8 - index * 0.3),
+      new THREE.MeshStandardMaterial({
+        color: index === 0 ? 0xf1e5ca : 0xe4d6bb,
+        side: THREE.DoubleSide,
+        roughness: 0.9,
+        metalness: 0,
+      }),
+    );
+    sail.position.set(x + 0.18, 5.2 - index * 0.2, 0);
+    sail.rotation.y = Math.PI / 2;
+    enableShadows(sail);
+    ship.add(sail);
+  });
+
+  const railMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8d6d50,
+    roughness: 0.74,
+    metalness: 0.04,
+  });
+  [-1.95, 1.95].forEach((z) => {
+    const rail = new THREE.Mesh(
+      new THREE.BoxGeometry(17.5, 0.14, 0.18),
+      railMaterial,
+    );
+    rail.position.set(0.5, 2.45, z);
+    enableShadows(rail);
+    ship.add(rail);
+  });
+
+  for (let i = 0; i < 10; i++) {
+    const oar = new THREE.Mesh(
+      new THREE.BoxGeometry(2.6, 0.05, 0.07),
+      new THREE.MeshStandardMaterial({ color: 0xb68d64, roughness: 0.82, metalness: 0.02 }),
+    );
+    const side = i % 2 === 0 ? -1 : 1;
+    const offsetIndex = Math.floor(i / 2);
+    oar.position.set(-6 + offsetIndex * 2.8, 1.55, side * 2.75);
+    oar.rotation.z = side * THREE.MathUtils.degToRad(10);
+    enableShadows(oar);
+    ship.add(oar);
+  }
+
+  ship.position.y = seaLevel - HARBOR_GROUND_HEIGHT;
+  return ship;
+}
+
 function createCrateCluster() {
   const group = new THREE.Group();
   group.name = "HarborCrateCluster";
@@ -272,6 +394,257 @@ function createBarrelCluster() {
     group.add(barrel);
   }
   return group;
+}
+
+function createAmphoraStack(count = 4) {
+  const group = new THREE.Group();
+  group.name = "HarborAmphoraStack";
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xb67a54,
+    roughness: 0.66,
+    metalness: 0.06,
+  });
+
+  for (let i = 0; i < count; i++) {
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.26, 0.18, 0.82, 12),
+      material,
+    );
+    body.position.set(
+      THREE.MathUtils.randFloatSpread(1.2),
+      0.42 + (i % 2) * 0.08,
+      THREE.MathUtils.randFloatSpread(1.0),
+    );
+    enableShadows(body);
+    group.add(body);
+  }
+
+  return group;
+}
+
+function createMarketStall({ width = 4.2, depth = 2.8, cloth = 0xc4683b } = {}) {
+  const stall = new THREE.Group();
+  stall.name = "HarborMarketStall";
+
+  const postMaterial = new THREE.MeshStandardMaterial({
+    color: 0x815f43,
+    roughness: 0.8,
+    metalness: 0.02,
+  });
+  const clothMaterial = new THREE.MeshStandardMaterial({
+    color: cloth,
+    side: THREE.DoubleSide,
+    roughness: 0.88,
+    metalness: 0.02,
+  });
+
+  const postOffsets = [
+    [width * 0.5, depth * 0.5],
+    [-width * 0.5, depth * 0.5],
+    [width * 0.5, -depth * 0.5],
+    [-width * 0.5, -depth * 0.5],
+  ];
+  postOffsets.forEach(([x, z]) => {
+    const post = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 2.1, 0.14),
+      postMaterial,
+    );
+    post.position.set(x, 1.05, z);
+    enableShadows(post);
+    stall.add(post);
+  });
+
+  const canopy = new THREE.Mesh(
+    new THREE.BoxGeometry(width + 0.5, 0.16, depth + 0.5),
+    clothMaterial,
+  );
+  canopy.position.y = 2.1;
+  canopy.rotation.z = THREE.MathUtils.degToRad(1.5);
+  enableShadows(canopy);
+  stall.add(canopy);
+
+  const counter = new THREE.Mesh(
+    new THREE.BoxGeometry(width * 0.86, 0.36, depth * 0.56),
+    new THREE.MeshStandardMaterial({ color: 0x9b744d, roughness: 0.76, metalness: 0.04 }),
+  );
+  counter.position.y = 0.8;
+  enableShadows(counter);
+  stall.add(counter);
+
+  return stall;
+}
+
+function createHarborCrane() {
+  const crane = new THREE.Group();
+  crane.name = "HarborCrane";
+
+  const timber = new THREE.MeshStandardMaterial({
+    color: 0x7a5c3d,
+    roughness: 0.82,
+    metalness: 0.02,
+  });
+  const rope = new THREE.MeshStandardMaterial({
+    color: 0xc3af8b,
+    roughness: 0.92,
+    metalness: 0,
+  });
+
+  const mast = new THREE.Mesh(
+    new THREE.BoxGeometry(0.42, 6.2, 0.42),
+    timber,
+  );
+  mast.position.y = 3.1;
+  enableShadows(mast);
+  crane.add(mast);
+
+  const arm = new THREE.Mesh(
+    new THREE.BoxGeometry(5.6, 0.32, 0.32),
+    timber,
+  );
+  arm.position.set(2.1, 5.7, 0);
+  arm.rotation.z = THREE.MathUtils.degToRad(-12);
+  enableShadows(arm);
+  crane.add(arm);
+
+  const brace = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 4.2, 0.22),
+    timber,
+  );
+  brace.position.set(1.3, 3.8, 0);
+  brace.rotation.z = THREE.MathUtils.degToRad(32);
+  enableShadows(brace);
+  crane.add(brace);
+
+  const line = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 3.4, 6),
+    rope,
+  );
+  line.position.set(4.4, 4.15, 0);
+  crane.add(line);
+
+  const hookLoad = createCrateCluster();
+  hookLoad.scale.setScalar(0.72);
+  hookLoad.position.set(4.35, 2.3, 0);
+  crane.add(hookLoad);
+
+  return crane;
+}
+
+function createQuayEdge() {
+  const quay = new THREE.Group();
+  quay.name = "HarborQuayEdge";
+
+  const wallMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8e877d,
+    roughness: 0.9,
+    metalness: 0.02,
+  });
+  const copingMaterial = new THREE.MeshStandardMaterial({
+    color: 0xbdb4a4,
+    roughness: 0.76,
+    metalness: 0.04,
+  });
+  const bollardMaterial = new THREE.MeshStandardMaterial({
+    color: 0x4e463f,
+    roughness: 0.64,
+    metalness: 0.22,
+  });
+
+  const segmentDepth = 10;
+  for (let z = QUAY_SPAN_NORTH; z <= QUAY_SPAN_SOUTH; z += segmentDepth) {
+    const remaining = Math.min(segmentDepth, QUAY_SPAN_SOUTH - z + 2);
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(2.8, 2.6, remaining),
+      wallMaterial,
+    );
+    wall.position.set(QUAY_EDGE_X, -0.95, z + remaining * 0.5 - 0.5);
+    enableShadows(wall);
+    quay.add(wall);
+
+    const coping = new THREE.Mesh(
+      new THREE.BoxGeometry(3.4, 0.34, remaining + 0.1),
+      copingMaterial,
+    );
+    coping.position.set(QUAY_EDGE_X - 0.1, 0.42, z + remaining * 0.5 - 0.5);
+    enableShadows(coping);
+    quay.add(coping);
+  }
+
+  for (let z = QUAY_SPAN_NORTH + 4; z <= QUAY_SPAN_SOUTH - 2; z += 8) {
+    const bollard = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 0.24, 0.55, 10),
+      bollardMaterial,
+    );
+    bollard.position.set(QUAY_EDGE_X - 1.35, 0.55, z);
+    enableShadows(bollard);
+    quay.add(bollard);
+  }
+
+  for (const z of [-18, 6, 24]) {
+    const ladder = new THREE.Group();
+    const railGeometry = new THREE.CylinderGeometry(0.05, 0.05, 2.4, 6);
+    const rungGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.9, 6);
+    for (const side of [-0.35, 0.35]) {
+      const rail = new THREE.Mesh(railGeometry, bollardMaterial);
+      rail.position.set(QUAY_EDGE_X + 1.15, -0.6, z + side);
+      enableShadows(rail);
+      ladder.add(rail);
+    }
+    for (let i = 0; i < 5; i++) {
+      const rung = new THREE.Mesh(rungGeometry, bollardMaterial);
+      rung.rotation.z = Math.PI / 2;
+      rung.position.set(QUAY_EDGE_X + 1.15, -1.45 + i * 0.42, z);
+      enableShadows(rung);
+      ladder.add(rung);
+    }
+    quay.add(ladder);
+  }
+
+  return quay;
+}
+
+function createHarborWorkZone() {
+  const zone = new THREE.Group();
+  zone.name = "HarborWorkZone";
+
+  const cargoPiles = [
+    { x: 46, z: -12, scale: 1.1 },
+    { x: 52, z: 2, scale: 1.2 },
+    { x: 58, z: 14, scale: 1.0 },
+  ];
+  cargoPiles.forEach(({ x, z, scale }) => {
+    const cargo = Math.random() > 0.5 ? createCrateCluster() : createAmphoraStack(5);
+    cargo.scale.setScalar(scale);
+    cargo.position.set(x, 0.1, z);
+    zone.add(cargo);
+  });
+
+  const crane = createHarborCrane();
+  crane.position.set(30, 0, 12);
+  zone.add(crane);
+
+  const stallA = createMarketStall({ cloth: 0xca7146 });
+  stallA.position.set(34, 0, -18);
+  zone.add(stallA);
+
+  const stallB = createMarketStall({ cloth: 0x2d768f });
+  stallB.position.set(41, 0, -18);
+  zone.add(stallB);
+
+  const fishTables = new THREE.Group();
+  fishTables.name = "HarborFishTables";
+  for (let i = 0; i < 2; i++) {
+    const table = new THREE.Mesh(
+      new THREE.BoxGeometry(2.4, 0.18, 0.95),
+      new THREE.MeshStandardMaterial({ color: 0xc9d2d7, roughness: 0.58, metalness: 0.08 }),
+    );
+    table.position.set(34 + i * 2.8, 0.92, -18.5);
+    enableShadows(table);
+    fishTables.add(table);
+  }
+  zone.add(fishTables);
+
+  return zone;
 }
 
 function scatterDockProps(target, dockSections, seaLevel) {
@@ -654,6 +1027,7 @@ export function createHarbor(scene, options = {}) {
 
   const harborPad = createHarborPad(harborGroundY);
   harbor.add(harborPad);
+  harbor.add(createQuayEdge());
 
   // Use grid-aligned dock slots if available, otherwise fallback to default positions
   const piersGroup = new THREE.Group();
@@ -753,12 +1127,25 @@ export function createHarbor(scene, options = {}) {
     boat.userData.category = "harbor-boat";
     boatsGroup.add(boat);
   }
+
+  const heroStyle = BOAT_STYLES[(boatStyleIndex + 1) % BOAT_STYLES.length];
+  const heroShip = createHeroHarborShip({
+    seaLevel,
+    hull: heroStyle.hull,
+    accent: heroStyle.accent,
+  });
+  heroShip.position.set(34, seaLevel - HARBOR_GROUND_HEIGHT, 6);
+  heroShip.rotation.y = -0.18;
+  heroShip.userData.category = "harbor-hero-ship";
+  boatsGroup.add(heroShip);
+
   harbor.add(boatsGroup);
 
   const propsGroup = new THREE.Group();
   propsGroup.name = "HarborProps";
   scatterDockProps(propsGroup, allSections, seaLevel);
   scatterShoreProps(propsGroup, harborGroundY);
+  propsGroup.add(createHarborWorkZone());
   harbor.add(propsGroup);
 
   // Sheds positioned in local coordinates
