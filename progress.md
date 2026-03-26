@@ -44,3 +44,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Started a compact-layout pass after the city still felt too large. Moved the harbor significantly closer to the civic core in the shared location constants, tightened the harbor water footprint, and nudged harbor ground height slightly upward so the harbor-city transition is less stretched.
 - 2026-03-26: Kept the scale pass centered in `src/world/locations.js` so demo markers, roads, terrain carving, ocean bounds, and harbor placement all inherit the tighter layout automatically.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the compact-layout pass; both passed.
+- 2026-03-26: Started a route-feel pass for the compact city layout by tightening the demo guide chains, nudging the harbor tour anchor, reshaping the main harbor-agora-acropolis boulevard, and refining the opening third-person camera framing so the first view reads more clearly into the harbor approach.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the route-feel pass; both passed.

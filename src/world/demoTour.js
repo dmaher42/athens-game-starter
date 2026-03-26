@@ -26,9 +26,9 @@ const DISTRICT_MARKERS = [
     focusLightHeight: 4.4,
     focusLightDistance: 22,
     anchor: new THREE.Vector3(
-      HARBOR_CENTER_3D.x - 18,
+      HARBOR_CENTER_3D.x - 12,
       HARBOR_CENTER_3D.y + HARBOR_GROUND_HEIGHT,
-      HARBOR_CENTER_3D.z + 18,
+      HARBOR_CENTER_3D.z + 20,
     ),
   },
   {
@@ -70,10 +70,12 @@ const ROUTE_GUIDES = [
     accent: 0x2b86a8,
     glow: 0x82d7f4,
     positions: [
-      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.16).add(new THREE.Vector3(10, 0, -4)),
-      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.34).add(new THREE.Vector3(4, 0, -9)),
-      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.56).add(new THREE.Vector3(12, 0, -5)),
-      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.78).add(new THREE.Vector3(-8, 0, 4)),
+      AGORA_CENTER_3D.clone().add(new THREE.Vector3(18, 0, -2)),
+      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.22).add(new THREE.Vector3(8, 0, -6)),
+      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.42).add(new THREE.Vector3(12, 0, -8)),
+      AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.62).add(new THREE.Vector3(12, 0, -2)),
+      HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-22, 0, 16)),
+      HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-10, 0, 20)),
     ],
   },
   {
@@ -81,10 +83,11 @@ const ROUTE_GUIDES = [
     accent: 0xd7cab4,
     glow: 0xffe7b0,
     positions: [
-      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.22).add(new THREE.Vector3(-12, 0, -4)),
-      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.46).add(new THREE.Vector3(8, 0, 8)),
-      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.68).add(new THREE.Vector3(-7, 0, 3)),
-      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.86).add(new THREE.Vector3(4, 0, -4)),
+      HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-8, 0, 12)),
+      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.26).add(new THREE.Vector3(-10, 0, 4)),
+      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.48).add(new THREE.Vector3(-2, 0, 12)),
+      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.68).add(new THREE.Vector3(4, 0, 8)),
+      HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.86).add(new THREE.Vector3(4, 0, -2)),
     ],
   },
 ];
