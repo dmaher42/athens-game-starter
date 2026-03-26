@@ -63,3 +63,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Started a low-risk `src/core/Application.ts` cleanup pass by removing dead imports and old assembly leftovers left behind from earlier structural changes.
 - 2026-03-26: Removed a duplicate `KeyE` interaction trigger from the window keydown handler so the world interactor now uses the player input queue as its single interaction path.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the `Application.ts` cleanup; both passed.
+- 2026-03-26: Continued the application cleanup by extracting the manual runtime/debug controls into `src/core/ApplicationRuntimeControls.js`, so `src/core/Application.ts` now delegates the fog toggle, lighting cycle, hover-interact click, resize handling, and scene debug helpers instead of owning that block inline.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the runtime-control extraction; both passed.

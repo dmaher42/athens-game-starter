@@ -58,6 +58,7 @@ import { buildTemple } from "../features/temples.js";
 import { AssetLoader } from "./AssetLoader.js";
 import { createRenderer, createSceneContext, WORLD_ROOT_NAME } from "./Scene.js";
 import { GameLoop } from "./GameLoop.js";
+import { installApplicationRuntimeControls } from "./ApplicationRuntimeControls.js";
 import { createAtmosphericParticles } from "../world/particles.js";
 import { initPropCulling, updateDistanceCulling } from "../utils/propCulling.js";
 import { cullDistantBuildings } from "../utils/buildingCulling.js";
@@ -968,8 +969,26 @@ export class Application {
         devHud.setStatusLine("proc", proceduralStatus);
       }
 
-      // Add debug water visibility controls
-      if (typeof window !== 'undefined') {
+      installApplicationRuntimeControls({
+        scene,
+        playerSystem,
+        lightingSystem,
+        interactor,
+        renderer,
+        camera,
+        composer,
+        bloomPass,
+        toggleFog,
+        probePlayerPosition: () => {
+          const position = playerSystem.player?.object?.position;
+          const x = position?.x;
+          const z = position?.z;
+          if (Number.isFinite(x) && Number.isFinite(z)) {
+            probeAt(x, z);
+          }
+        },
+      });
+      if (false) {
         (window as any).toggleWater = () => {
           let count = 0;
           scene.traverse((obj: any) => {
