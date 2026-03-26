@@ -21,6 +21,7 @@ export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.2
 const MIN_X = -10, MAX_X = 10;
 const MIN_Z = -10, MAX_Z = 20;
 const BLOCK_SIZE = 36; // Tighter block size keeps the city readable and walkable.
+const AGORA_PLAZA_RADIUS = 2;
 
 // District Spacing Rules
 export const SPACING_RULES = {
@@ -366,6 +367,68 @@ function createAgoraPlazaAccent() {
   return group;
 }
 
+function createAgoraPerimeterAccent(gridX, gridZ) {
+  const group = new THREE.Group();
+  group.name = "AgoraPerimeterAccent";
+
+  const absX = Math.abs(gridX);
+  const absZ = Math.abs(gridZ);
+  const isCorner = absX === AGORA_PLAZA_RADIUS && absZ === AGORA_PLAZA_RADIUS;
+
+  if (isCorner) {
+    const podium = new THREE.Mesh(
+      new THREE.BoxGeometry(4.4, 0.45, 2.2),
+      new THREE.MeshStandardMaterial({ color: 0xc8b89b, roughness: 0.78, metalness: 0.03 }),
+    );
+    podium.position.set(0, 0.22, 0);
+    group.add(podium);
+
+    const jar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.34, 0.24, 1.1, 10),
+      new THREE.MeshStandardMaterial({ color: 0xbe8a63, roughness: 0.68, metalness: 0.04 }),
+    );
+    jar.position.set(-0.8, 0.92, 0.1);
+    group.add(jar);
+
+    const banner = createBannerStand(0xb8843a);
+    banner.position.set(1.15, 0, 0);
+    group.add(banner);
+  } else {
+    const stylobate = new THREE.Mesh(
+      new THREE.BoxGeometry(10.5, 0.36, 2.8),
+      new THREE.MeshStandardMaterial({ color: 0xcbbea4, roughness: 0.8, metalness: 0.03 }),
+    );
+    stylobate.position.set(0, 0.18, 0.35);
+    group.add(stylobate);
+
+    for (const x of [-3.1, 0, 3.1]) {
+      const column = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.24, 3.2, 12),
+        new THREE.MeshStandardMaterial({ color: 0xe0d4bf, roughness: 0.56, metalness: 0.03 }),
+      );
+      column.position.set(x, 1.78, 0.55);
+      group.add(column);
+    }
+
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(8.8, 0.32, 0.7),
+      new THREE.MeshStandardMaterial({ color: 0xd4c6ad, roughness: 0.68, metalness: 0.03 }),
+    );
+    lintel.position.set(0, 3.42, 0.55);
+    group.add(lintel);
+
+    const bench = new THREE.Mesh(
+      new THREE.BoxGeometry(5.6, 0.42, 1.05),
+      new THREE.MeshStandardMaterial({ color: 0xbcab8f, roughness: 0.82, metalness: 0.02 }),
+    );
+    bench.position.set(0, 0.64, -1.1);
+    group.add(bench);
+  }
+
+  enableShadowProps(group);
+  return group;
+}
+
 function createCommercialAccent(rng) {
   const group = new THREE.Group();
   group.name = "CommercialAccent";
@@ -522,6 +585,22 @@ function resolveDistrictForCell(worldX, worldZ) {
   return "residential";
 }
 
+function isAgoraPlazaCell(gridX, gridZ) {
+  return Math.abs(gridX) <= AGORA_PLAZA_RADIUS && Math.abs(gridZ) <= AGORA_PLAZA_RADIUS;
+}
+
+function isAgoraPlazaPerimeterCell(gridX, gridZ) {
+  return isAgoraPlazaCell(gridX, gridZ) && Math.max(Math.abs(gridX), Math.abs(gridZ)) === AGORA_PLAZA_RADIUS;
+}
+
+function getAgoraPlazaAccentRotation(gridX, gridZ) {
+  if (gridZ === -AGORA_PLAZA_RADIUS && gridX === 0) return 0;
+  if (gridX === AGORA_PLAZA_RADIUS && gridZ === 0) return -Math.PI / 2;
+  if (gridZ === AGORA_PLAZA_RADIUS && gridX === 0) return Math.PI;
+  if (gridX === -AGORA_PLAZA_RADIUS && gridZ === 0) return Math.PI / 2;
+  return Math.atan2(-gridX, -gridZ);
+}
+
 function generateCityGrid(terrainSampler) {
   const cells = [];
   
@@ -586,7 +665,7 @@ function generateCityGrid(terrainSampler) {
       }
 
       // Keep the Agora core open as a readable civic plaza.
-      if (Math.abs(gridX) <= 1 && Math.abs(gridZ) <= 1) {
+      if (isAgoraPlazaCell(gridX, gridZ)) {
         cell.type = 'plaza';
         cell.district = 'commercial';
         cell.buildable = true;
@@ -742,7 +821,7 @@ export async function createCivicDistrict(scene, options = {}) {
       continue; // Skip placing any city element inside harbor/walkway setbacks
     }
 
-    if (cell.type === 'road') {
+      if (cell.type === 'road') {
       // Avenue is now East-West (gridZ approx 0)
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0x887766 : 0x666666);
@@ -757,6 +836,11 @@ export async function createCivicDistrict(scene, options = {}) {
         const plazaAccent = createAgoraPlazaAccent();
         plazaAccent.position.set(localX, localY, localZ);
         group.add(plazaAccent);
+      } else if (isAgoraPlazaPerimeterCell(cell.gridX, cell.gridZ)) {
+        const perimeterAccent = createAgoraPerimeterAccent(cell.gridX, cell.gridZ);
+        perimeterAccent.position.set(localX, localY, localZ);
+        perimeterAccent.rotation.y = getAgoraPlazaAccentRotation(cell.gridX, cell.gridZ);
+        group.add(perimeterAccent);
       }
     } else if (cell.type === 'building') {
        // Deterministic RNG
