@@ -32,3 +32,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Reviewed the leftover local changes and separated real source edits from generated noise. The useful keepers were a controls/HUD cleanup (`E` interact, `F` fly mode, arrow-key look help, fog hotkey text) plus a small manual-lighting responsiveness fix.
 - 2026-03-26: Fixed the corrupted README text encoding while keeping the controls section aligned with the current playable input scheme.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` with the controls/HUD cleanup in place; both passed before discarding regenerated build artifacts.
+- 2026-03-26: Started a ground texture cleanup pass after the terrain looked odd in demo play. Found that the terrain materials were still in a temporary stub state: all three terrain zones were rendering as the same unlit grass material.
+- 2026-03-26: Restored proper terrain zoning so coast uses sand, city uses dirt, and inland uses grass, and switched those materials back to lit `MeshStandardMaterial` instances using the existing texture sets under `public/textures/`.
+- 2026-03-26: Verified the ground-material pass with `npm.cmd run typecheck` and `npm.cmd run verify`. Headless canvas screenshots remain black in this environment, so visual confirmation is limited to code inspection plus successful browser load.
