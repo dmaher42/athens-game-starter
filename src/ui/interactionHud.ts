@@ -24,7 +24,7 @@ export class InteractionHud {
 
     // Icon/Key prompt
     this.keyEl = document.createElement("span");
-    this.keyEl.textContent = "[F]";
+    this.keyEl.textContent = "[E]";
     Object.assign(this.keyEl.style, {
       background: "rgba(255,255,255,0.9)",
       color: "#000",

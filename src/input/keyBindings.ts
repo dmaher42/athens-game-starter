@@ -4,7 +4,7 @@ export type KeyCode = string;
 export type KeyList = readonly KeyCode[];
 export type MovementKey = "forward" | "back" | "left" | "right";
 export type LookKey = "left" | "right" | "up" | "down";
-export type ActionKey = "jump" | "sprint" | "flyToggle" | "crouch" | "interact";
+export type ActionKey = "jump" | "sprint" | "flyToggle" | "interact";
 
 type KeyGroups<T extends string> = Readonly<Record<T, KeyList>>;
 
@@ -33,31 +33,18 @@ export const MOVEMENT_KEYS = createKeyGroups<MovementKey>({
 });
 
 export const LOOK_KEYS = createKeyGroups<LookKey>({
-  left: ["ArrowLeft", "Comma"],
-  right: ["ArrowRight", "Period"],
+  left: ["ArrowLeft"],
+  right: ["ArrowRight"],
   up: ["ArrowUp"],
   down: ["ArrowDown"],
 });
 
-export const ALT_LOOK_KEYS = createKeyGroups<LookKey>({
-  left: ["KeyJ"],
-  right: ["KeyL"],
-  up: ["KeyI"],
-  down: ["KeyK"],
-});
-
-export const ALL_LOOK_KEYS = createKeyGroups<LookKey>({
-  left: [...LOOK_KEYS.left, ...ALT_LOOK_KEYS.left],
-  right: [...LOOK_KEYS.right, ...ALT_LOOK_KEYS.right],
-  up: [...LOOK_KEYS.up, ...ALT_LOOK_KEYS.up],
-  down: [...LOOK_KEYS.down, ...ALT_LOOK_KEYS.down],
-});
+export const ALL_LOOK_KEYS = LOOK_KEYS;
 
 export const ACTION_KEYS = createKeyGroups<ActionKey>({
   jump: ["Space"],
   sprint: ["ShiftLeft", "ShiftRight"],
   flyToggle: ["KeyF"],
-  crouch: ["ControlLeft", "ControlRight", "KeyC"],
   interact: ["KeyE"],
 });
 

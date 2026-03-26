@@ -19,6 +19,8 @@ const CONTROL_KEYS = new Set<string>([
   ...MOVEMENT_KEY_LIST,
   ...LOOK_KEY_LIST,
   ...ACTION_KEY_LIST,
+  "ControlLeft",
+  "ControlRight",
 ]);
 
 const NON_TYPING_INPUT_TYPES = new Set<string>([
@@ -223,10 +225,6 @@ export class InputMap {
 
   get lookDown(): boolean {
     return this.isAnyDown(ALL_LOOK_KEYS.down);
-  }
-
-  get crouch(): boolean {
-    return this.isAnyDown(ACTION_KEYS.crouch);
   }
 
   consumeFlyToggle(): boolean {

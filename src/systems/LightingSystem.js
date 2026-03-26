@@ -589,7 +589,9 @@ export class LightingSystem {
         this.userPresetActive = source !== "auto";
         this.devHud?.setActivePreset?.(resolvedProfileName);
 
-        if (immediate) {
+        // Manual/debug preset changes should take effect right away so
+        // hotkeys and HUD buttons visibly update the scene in the same frame.
+        if (immediate || source !== "auto") {
             this.applyLookProfileImmediate(resolvedProfileName);
         }
     };

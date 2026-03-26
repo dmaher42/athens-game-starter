@@ -29,3 +29,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Inspected the failed GitHub Actions build log and found the real breakage was missing Playwright browser binaries on the runner during `npm run verify`.
 - 2026-03-26: Added an explicit `npx playwright install --with-deps chromium` step to the Pages workflow before typecheck/verify so the GitHub runner has the browser that `verification/verify.mjs` expects.
 - 2026-03-26: Re-ran `npm.cmd run verify` locally after the CI change and it still passed, so the workflow fix did not break the current production verification path.
+- 2026-03-26: Reviewed the leftover local changes and separated real source edits from generated noise. The useful keepers were a controls/HUD cleanup (`E` interact, `F` fly mode, arrow-key look help, fog hotkey text) plus a small manual-lighting responsiveness fix.
+- 2026-03-26: Fixed the corrupted README text encoding while keeping the controls section aligned with the current playable input scheme.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` with the controls/HUD cleanup in place; both passed before discarding regenerated build artifacts.

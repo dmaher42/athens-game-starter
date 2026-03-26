@@ -313,8 +313,8 @@ export function mountDevHUD(options: DevHudOptions = {}): DevHudHandle | null {
     fogButton.textContent = enabled ? "Disable Fog" : "Enable Fog";
     fogButton.setAttribute("aria-pressed", String(enabled));
     fogButton.title = enabled
-      ? "Disable atmospheric fog (Hotkey F)"
-      : "Enable atmospheric fog (Hotkey F)";
+      ? "Disable atmospheric fog (Hotkey G)"
+      : "Enable atmospheric fog (Hotkey G)";
   };
 
   if (typeof onToggleFog === "function") {

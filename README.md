@@ -5,11 +5,11 @@
 This project is an experimental, walkable 3D interpretation of Athens as a coastal mainland city.
 
 The goal is not to build a large open-world game or a technical terrain demo.
-The goal is to create a place — a city that feels enjoyable to walk around, explore, and return to.
+The goal is to create a place - a city that feels enjoyable to walk around, explore, and return to.
 
 If someone remembers this project, the ideal outcome is simple:
 
-They remember how much they enjoyed walking around — and they want to come back.
+They remember how much they enjoyed walking around - and they want to come back.
 
 This repository serves as both:
 
@@ -19,9 +19,9 @@ a testbed for AI-assisted development using tools like Codex and Jules.
 
 ## Documentation for AI Assistants
 
-**📖 [ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete technical architecture, file structure, recent fixes, and common pitfalls. **READ THIS FIRST** before making any code changes.
+**[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete technical architecture, file structure, recent fixes, and common pitfalls. **READ THIS FIRST** before making any code changes.
 
-**📖 [GAME_OVERVIEW.md](./GAME_OVERVIEW.md)** - Design philosophy, creator profile, and game priorities.
+**[GAME_OVERVIEW.md](./GAME_OVERVIEW.md)** - Design philosophy, creator profile, and game priorities.
 
 ## Core Vision (Authoritative)
 
@@ -57,7 +57,7 @@ Coastline + sea = open boundary
 
 Inland hills/mountains = soft physical boundary
 
-No circular rims, bowls, or “disk world” artifacts
+No circular rims, bowls, or "disk world" artifacts
 
 Atmosphere over spectacle
 
@@ -81,7 +81,7 @@ catch light and cast shadows
 
 visually anchor the city
 
-Skybox mountains are supportive only — real geometry defines the world
+Skybox mountains are supportive only - real geometry defines the world
 
 AI-Assisted Development Rules
 
@@ -103,24 +103,30 @@ Favor comfort, clarity, and atmosphere over technical cleverness.
 
 Controls
 
-W / A / S / D – Move
+Current player controls:
 
-Shift – Sprint
+W / A / S / D - Move
 
-Space – Jump / ascend while flying
+Shift - Sprint
 
-Ctrl – Descend while flying
+Space - Jump / ascend while flying
 
-F – Interact
+Ctrl - Descend while flying
 
-G – Toggle fly mode (dev/debug only)
+F - Toggle fly mode
+
+E - Interact
+
+Arrow Keys - Look around
+
+H - Show / hide controls
 
 Development & Deployment
 
-### ✅ Getting Started (Chromebook Friendly)
+### Getting Started (Chromebook Friendly)
 
 1. **Open in GitHub Codespaces**
-   - Click the green "Code" button → **Open with Codespaces**
+   - Click the green "Code" button -> **Open with Codespaces**
    - Wait for it to initialize
 
 2. **Run the Game**
@@ -151,13 +157,13 @@ Use `npm run build:analyze` only when you want the larger debug-friendly bundle 
 
 ### Preview-First Workflow (Recommended)
 
-Edit files directly in GitHub → create a PR
+Edit files directly in GitHub -> create a PR
 
 Wait for the GitHub Pages preview
 
 Play the build
 
-Merge if it feels right — or close the PR
+Merge if it feels right - or close the PR
 
 No local dev environment is required for this flow.
 
