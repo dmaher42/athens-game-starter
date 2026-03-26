@@ -3,20 +3,20 @@ import { getSeaLevelY } from "./seaLevelState.js";
 import { HARBOR_CENTER_3D } from "./locations.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 
-const DEFAULT_COASTAL_INNER_RADIUS = 215;
-const DEFAULT_COASTAL_WIDTH = 35;
-const DEFAULT_SILHOUETTE_COUNT = 32;
-const SKY_HORIZON_COLOR = new THREE.Color(0x2a3f5c);
-const SKY_BLEND_COLOR = new THREE.Color(0x6b7f9c);
+const DEFAULT_COASTAL_INNER_RADIUS = 235;
+const DEFAULT_COASTAL_WIDTH = 42;
+const DEFAULT_SILHOUETTE_COUNT = 40;
+const SKY_HORIZON_COLOR = new THREE.Color(0x35577c);
+const SKY_BLEND_COLOR = new THREE.Color(0x7f9cbb);
 
-// Harbor direction calculation
-// We map world (x, z) to ring (x, y) where ring.y = -world.z
-// HARBOR_CENTER_3D is (-120, y, 80).
-// Ring coords: x = -120, y = -80.
-const HARBOR_RING_X = -120;
-const HARBOR_RING_Y = -80;
+// Harbor direction calculation.
+// Ring geometry uses X/Y before rotation, where ring.y corresponds to -world.z.
+// This must track the live harbor anchor or the coastal silhouette aims at the wrong side
+// of the map after layout changes.
+const HARBOR_RING_X = HARBOR_CENTER_3D.x;
+const HARBOR_RING_Y = -HARBOR_CENTER_3D.z;
 const HARBOR_ANGLE = Math.atan2(HARBOR_RING_Y, HARBOR_RING_X); // ~ -2.55 rad
-const HARBOR_ARC_LENGTH = Math.PI * 1.35; // ~240 degrees, wide enough to cover the view
+const HARBOR_ARC_LENGTH = Math.PI * 1.5;
 
 function resolveFogColor(scene, provided) {
   if (provided) return provided.clone();
@@ -265,7 +265,7 @@ function createWaterFadeRing({
           // Fade out over the last 15% of the arc or fixed angle
           float taper = clamp((arcEdge - angleDist) / 0.5, 0.0, 1.0);
 
-          float alpha = fade * (1.0 - heightFade) * 0.68 * taper;
+          float alpha = fade * (1.0 - heightFade) * 0.82 * taper;
 
           if (alpha <= 0.003) {
             gl_FragColor = vec4(0.0);
@@ -284,7 +284,7 @@ function createWaterFadeRing({
 
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = "WaterHorizonFade";
-  mesh.position.y = seaLevel + 0.06;
+  mesh.position.y = seaLevel + 0.12;
   mesh.renderOrder = RENDER_LAYERS.WATER;
   mesh.userData.nonInteractive = true;
   return mesh;

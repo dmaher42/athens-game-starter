@@ -3,8 +3,8 @@ import { getSeaLevelY } from "./seaLevelState.js";
 
 const DEFAULT_HORIZON_RADIUS = 1700;
 const DEFAULT_FADE_WIDTH = 320;
-const SKYBOX_SEA_TINT = new THREE.Color(0x2a3f5c);
-const SKYBOX_SKY_BLEND = new THREE.Color(0x6b7f9c);
+const SKYBOX_SEA_TINT = new THREE.Color(0x46719a);
+const SKYBOX_SKY_BLEND = new THREE.Color(0x8cabca);
 
 function resolveFogColor(scene) {
   const fallback = SKYBOX_SKY_BLEND.clone();
@@ -110,7 +110,7 @@ function createHorizonRing({
         float alpha = 1.0 - smoothstep(0.0, 1.0, radialFade);
 
         // Sea side stays light and low; land side fades softly into haze
-        float directionalAlpha = mix(0.25, 1.0, eastness);
+        float directionalAlpha = mix(0.55, 1.0, eastness);
         alpha *= directionalAlpha;
 
         float skyFeather = smoothstep(0.52, 1.0, vRadialMix);
@@ -131,7 +131,7 @@ function createHorizonRing({
         float luma = dot(color, vec3(0.299, 0.587, 0.114));
         color = mix(color, vec3(luma), desaturate * 0.55);
         color = mix(color, fogColor, westness * 0.5 * skyBlend);
-        gl_FragColor = vec4(color, alpha * 0.65);
+        gl_FragColor = vec4(color, alpha * 0.82);
       }
     `,
   });
