@@ -141,16 +141,16 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   // Define a bounding box for the harbor water area using HARBOR_WATER_BOUNDS
   const west = HARBOR_WATER_BOUNDS.west;
   const east = HARBOR_WATER_BOUNDS.east;
-  const north = HARBOR_WATER_BOUNDS.north;
-  const south = HARBOR_WATER_BOUNDS.south;
+  const north = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
+  const south = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
 
   const harborGroundY = seaLevel + HARBOR_GROUND_HEIGHT;
 
-  const withinWater = x >= west && x <= east && z >= north && z <= south;
+  const withinWater = x >= west && x <= east && z >= south && z <= north;
   if (withinWater) {
     // Ensure terrain sits BELOW the water plane inside the harbor water bounds
     // Water plane is at seaLevel (0). Drop terrain to avoid occlusion.
-    return seaLevel - 1.4;
+    return seaLevel - 2.3;
   }
 
   // Create a flat shelf BEHIND the harbor (west of water) for city connection
@@ -158,7 +158,7 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   const shelfStart = west - shelfWidth;
   const shelfDepth = 80; // Extend shelf north-south
   
-  if (x >= shelfStart && x < west && z >= north - shelfDepth && z <= south + shelfDepth) {
+  if (x >= shelfStart && x < west && z >= south - shelfDepth && z <= north + shelfDepth) {
     // Flat shelf at harborGroundY for harbor props and city connection
     return harborGroundY;
   }
@@ -167,7 +167,7 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   const slopeWidth = 25; // Transition from shelf to city terrain
   const landStart = shelfStart - slopeWidth;
 
-  if (x >= landStart && x < shelfStart && z >= north - shelfDepth - 10 && z <= south + shelfDepth + 10) {
+  if (x >= landStart && x < shelfStart && z >= south - shelfDepth - 10 && z <= north + shelfDepth + 10) {
       const t = (x - landStart) / slopeWidth;
       return THREE.MathUtils.lerp(baseHeight, harborGroundY, t);
   }
