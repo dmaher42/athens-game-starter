@@ -58,3 +58,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Started the environment/ocean boot cleanup by consolidating the duplicated ocean initialization in `src/core/Application.ts` down to a single canonical `createOcean()` path.
 - 2026-03-26: Updated the surviving ocean initialization path to use the harbor water bounds and water-normal candidates directly, and removed the later dead fallback branch that would have called `createOcean()` with the wrong argument shape.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the ocean boot cleanup; both passed.
+- 2026-03-26: Continued the environment cleanup by removing the unused `src/core/EnvironmentManager.js` layer. The active lighting bridge remains `src/core/EnvironmentManager.stubs.js`, which is the only environment-manager path referenced by `src/systems/LightingSystem.js`.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after removing the dead environment manager; both passed.
