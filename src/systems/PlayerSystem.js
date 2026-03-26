@@ -42,6 +42,11 @@ function softenHeroMaterials(root) {
     const materials = Array.isArray(child.material) ? child.material : [child.material];
     for (const material of materials) {
       if (!material) continue;
+      material.userData = material.userData || {};
+      material.userData.envMapIntensityCap = Math.min(
+        material.userData.envMapIntensityCap ?? Infinity,
+        HERO_MAX_ENVMAP_INTENSITY,
+      );
 
       // Keep the player's original cloth-and-leather feel by dialing back the
       // strong reflection response that our global lighting now gives the hero.

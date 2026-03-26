@@ -756,7 +756,10 @@ export class LightingSystem {
           }
 
           if ("envMapIntensity" in material) {
-            material.envMapIntensity = target;
+            const cappedTarget = Number.isFinite(material.userData?.envMapIntensityCap)
+              ? Math.min(target, material.userData.envMapIntensityCap)
+              : target;
+            material.envMapIntensity = cappedTarget;
             material.needsUpdate = true;
           }
         };

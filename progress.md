@@ -35,3 +35,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Started a ground texture cleanup pass after the terrain looked odd in demo play. Found that the terrain materials were still in a temporary stub state: all three terrain zones were rendering as the same unlit grass material.
 - 2026-03-26: Restored proper terrain zoning so coast uses sand, city uses dirt, and inland uses grass, and switched those materials back to lit `MeshStandardMaterial` instances using the existing texture sets under `public/textures/`.
 - 2026-03-26: Verified the ground-material pass with `npm.cmd run typecheck` and `npm.cmd run verify`. Headless canvas screenshots remain black in this environment, so visual confirmation is limited to code inspection plus successful browser load.
+- 2026-03-26: Fixed a player-material regression where the hero looked metallic again after the ground-material pass. Root cause: global environment-intensity updates were overwriting the hero-specific reflection clamp after load.
+- 2026-03-26: Tagged hero materials with an `envMapIntensityCap` during load and updated both lighting/environment intensity passes to respect that cap so preset changes no longer make the player shiny again.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the hero reflection fix; both passed.
