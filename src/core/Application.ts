@@ -73,7 +73,6 @@ import {
 } from "../config/EngineConfig.js";
 import { CollectiblesManager } from "../world/collectibles.js";
 import { QuestManager, QuestStatus } from "../state/QuestManager.js";
-import { InteractionSystem } from "../interactions/InteractionSystem.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "../features/aristotle-texture.js";
 import { applyGravelToRoads } from "../features/roads-gravel.js";
@@ -844,7 +843,6 @@ export class Application {
         questManager,
       });
       const interactionHud = new InteractionHud();
-      const interactionSystem = new InteractionSystem(playerSystem.player?.input as any, camera, scene, interactionHud);
 
       let interactor: any = createInteractor(renderer, camera, scene);
 
@@ -894,7 +892,9 @@ export class Application {
 
         demoTour?.update(playerSystem.player?.object?.position, elapsed);
 
-        interactionSystem.update(deltaTime);
+        if (playerSystem.player?.input?.consumeInteract?.()) {
+          interactor.useObject();
+        }
 
         for (const updateNpc of this.npcUpdaters) updateNpc(deltaTime);
 

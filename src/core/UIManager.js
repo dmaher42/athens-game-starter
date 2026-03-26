@@ -35,7 +35,7 @@ export const UIManager = {
       sunAlignment,
     } = options;
 
-    // Use externally-created instances if provided (for InteractionSystem integration)
+    // Use externally-created HUD instances if provided.
     interactionHud = externalInteractionHud || new InteractionHud();
     questHud = externalQuestHud || (questManager ? new QuestHud(questManager) : null);
 

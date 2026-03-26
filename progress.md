@@ -49,3 +49,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Started a harbor-atmosphere pass to make the port feel more like a working harbor. Added mooring ropes, fenders, rope coils, a gangplank for the hero ship, warehouse frontage, fishery clutter, and static dock-worker figures while keeping the work inside `src/world/harbor.js`.
 - 2026-03-26: Updated shoreline dressing to use the current compact harbor water bounds instead of older hardcoded extents, so dockside props stay aligned with the smaller harbor footprint.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the harbor-atmosphere pass; both passed.
+- 2026-03-26: Started the interaction-system cleanup by removing the duplicate `src/interactions/InteractionSystem.js` runtime path and routing the player's `E` input directly into the world interactor from `src/world/interactions.js`.
+- 2026-03-26: Cleaned the remaining runtime wiring in `src/core/Application.ts` and `src/core/UIManager.js` so the world interactor is now the single interaction source of truth.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the interaction cleanup; both passed.
