@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, CITY_CENTER_ORIGIN, getCityGroundY } from './locations.js';
+import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, CITY_CENTER_ORIGIN, getCityGroundY } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { IS_DEV } from '../utils/env.js';
@@ -502,6 +502,26 @@ function isWithinSetbackRect(x, z, rect) {
   return x >= west && x <= east && z >= south && z <= north;
 }
 
+function resolveDistrictForCell(worldX, worldZ) {
+  const harborDistance = Math.hypot(worldX - HARBOR_CENTER_3D.x, worldZ - HARBOR_CENTER_3D.z);
+  const agoraDistance = Math.hypot(worldX - AGORA_CENTER_3D.x, worldZ - AGORA_CENTER_3D.z);
+  const acropolisDistance = Math.hypot(worldX - ACROPOLIS_PEAK_3D.x, worldZ - ACROPOLIS_PEAK_3D.z);
+
+  if (harborDistance <= BLOCK_SIZE * 3.1 || worldX >= HARBOR_CENTER_3D.x - BLOCK_SIZE * 1.25) {
+    return "harbor";
+  }
+
+  if (acropolisDistance <= BLOCK_SIZE * 2.25) {
+    return "sacred";
+  }
+
+  if (agoraDistance <= BLOCK_SIZE * 3.2 && isWithinCivicClusterRange(worldX, worldZ)) {
+    return "commercial";
+  }
+
+  return "residential";
+}
+
 function generateCityGrid(terrainSampler) {
   const cells = [];
   
@@ -525,23 +545,7 @@ function generateCityGrid(terrainSampler) {
         buildable: true,
       };
 
-      const distance = Math.sqrt((gridX * BLOCK_SIZE) ** 2 + (gridZ * BLOCK_SIZE) ** 2);
-
-      // District Logic (Directional + Radial) - BEFORE slope analysis
-      if (worldX >= HARBOR_CENTER_3D.x - BLOCK_SIZE * 1.5) {
-        cell.district = 'harbor';
-      } else if (distance < 60) {
-        cell.district = 'sacred';
-      } else if (distance >= 60 && distance < 140) {
-        cell.district = 'commercial';
-        
-        // Commercial areas near Agora should be within civic cluster range
-        if (!isWithinCivicClusterRange(worldX, worldZ)) {
-          cell.district = 'residential'; // Downgrade to residential if too far
-        }
-      } else {
-        cell.district = 'residential';
-      }
+      cell.district = resolveDistrictForCell(worldX, worldZ);
       
       // Civic district must be within 30 tiles of starting point and on flat land
       if (cell.district === 'civic') {
