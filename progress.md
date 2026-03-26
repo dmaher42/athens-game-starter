@@ -41,3 +41,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Started a harbor realism pass focused on demo impact. Added a proper quay edge with ladders and bollards, a larger hero ship with masts/sails/oars, and a more deliberate working waterfront zone with crane, market stalls, and cargo clustering.
 - 2026-03-26: Kept the harbor pass inside `src/world/harbor.js` to avoid cross-system churn and preserve the existing tour marker/district logic.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the harbor pass; both passed.
+- 2026-03-26: Started a compact-layout pass after the city still felt too large. Moved the harbor significantly closer to the civic core in the shared location constants, tightened the harbor water footprint, and nudged harbor ground height slightly upward so the harbor-city transition is less stretched.
+- 2026-03-26: Kept the scale pass centered in `src/world/locations.js` so demo markers, roads, terrain carving, ocean bounds, and harbor placement all inherit the tighter layout automatically.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the compact-layout pass; both passed.

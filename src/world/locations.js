@@ -21,15 +21,15 @@ export { getCityGroundY }; // Export for use across city systems
 export const CITY_CENTER_ORIGIN = new THREE.Vector3(0, getCityGroundY(), 0);
 
 // Harbor ground height above sea level
-export const HARBOR_GROUND_HEIGHT = 2;
+export const HARBOR_GROUND_HEIGHT = 2.2;
 
 // --- HARBOR POSITION ---
 // SINGLE SOURCE OF TRUTH for the harbor's world position.
 // All other systems (terrain, placement, etc.) should derive from this.
 export const HARBOR_CENTER_3D = new THREE.Vector3(
-  310.73,
+  120,
   resolveSeaLevelY() + HARBOR_GROUND_HEIGHT,
-  1.31,
+  8,
 );
 
 // All districts now sit on the same flat plane
@@ -38,17 +38,17 @@ export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-40, getCityGroundY(), 10);
 export const ISLAND_RADIUS = 205; // Kept for legacy ref, but world is mainland now
 
 // Shrink exclusion zones to fit the tighter map
-export const HARBOR_EXCLUDE_RADIUS = 90;
+export const HARBOR_EXCLUDE_RADIUS = 78;
 export const AGORA_RADIUS = 22;
 export const ACROPOLIS_RADIUS = 18;
-export const CITY_AREA_RADIUS = 90;
+export const CITY_AREA_RADIUS = 82;
 
 export const MIN_ABOVE_SEA = 2.0; 
 export const MAX_SLOPE_DELTA = 0.35; 
 
 export const MAIN_ROAD_WIDTH = 3.2;
 
-export const HARBOR_CENTER = new THREE.Vector2(120, 80);
+export const HARBOR_CENTER = new THREE.Vector2(120, 8);
 export function getHarborSeaLevel() {
   return getSeaLevelY();
 }
@@ -58,8 +58,8 @@ export const CITY_CHUNK_CENTER = new THREE.Vector3(-70, getCityGroundY(), 25);
 export const CITY_CHUNK_SIZE = new THREE.Vector2(50, 50);
 export const CITY_SEED = 0x4d534349;
 
-export const HARBOR_WATER_RADIUS = 95; // Updated to match extended bounds
-export const HARBOR_WATER_SIZE = new THREE.Vector2(190, 166); // Extended to match new pin locations 
+export const HARBOR_WATER_RADIUS = 72;
+export const HARBOR_WATER_SIZE = new THREE.Vector2(144, 84);
 export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, 0); 
 export const PIER_EDGE_OFFSET = 4.5; 
 
@@ -67,14 +67,19 @@ const HARBOR_WATER_HALF_WIDTH = 95; // Extended east to reach new pin locations 
 const HARBOR_WATER_HALF_DEPTH_NORTH = 80; // Extended north for shipping lanes
 const HARBOR_WATER_HALF_DEPTH_SOUTH = 33; // Extended south to reach new pin locations
 
+// Compact harbor footprint for a tighter, more demo-friendly waterfront.
+const COMPACT_HARBOR_WATER_HALF_WIDTH = 72;
+const COMPACT_HARBOR_WATER_HALF_DEPTH_NORTH = 56;
+const COMPACT_HARBOR_WATER_HALF_DEPTH_SOUTH = 28;
+
 // East Harbor: Water extends East from the basin
-export const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x + HARBOR_WATER_HALF_WIDTH;
+export const HARBOR_WATER_EAST_LIMIT = HARBOR_CENTER_3D.x + COMPACT_HARBOR_WATER_HALF_WIDTH;
 
 export const HARBOR_WATER_BOUNDS = {
-  west: HARBOR_CENTER_3D.x - HARBOR_WATER_HALF_WIDTH,
-  east: HARBOR_CENTER_3D.x + HARBOR_WATER_HALF_WIDTH,
-  north: HARBOR_CENTER_3D.z + HARBOR_WATER_HALF_DEPTH_NORTH, // Extends north (positive Z)
-  south: HARBOR_CENTER_3D.z - HARBOR_WATER_HALF_DEPTH_SOUTH, // Extended south to new pins
+  west: HARBOR_CENTER_3D.x - COMPACT_HARBOR_WATER_HALF_WIDTH,
+  east: HARBOR_CENTER_3D.x + COMPACT_HARBOR_WATER_HALF_WIDTH,
+  north: HARBOR_CENTER_3D.z + COMPACT_HARBOR_WATER_HALF_DEPTH_NORTH,
+  south: HARBOR_CENTER_3D.z - COMPACT_HARBOR_WATER_HALF_DEPTH_SOUTH,
 };
 
 export const HARBOR_WATER_NORMAL_CANDIDATES = [
