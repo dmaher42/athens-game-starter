@@ -2,6 +2,7 @@ import * as THREE from "three";
 import {
   getSeaLevelY,
   AGORA_CENTER_3D,
+  AEGEAN_OCEAN_BOUNDS,
   HARBOR_CENTER_3D,
   HARBOR_GROUND_HEIGHT,
   HARBOR_WATER_BOUNDS,
@@ -143,6 +144,10 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   const east = HARBOR_WATER_BOUNDS.east;
   const north = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
   const south = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
+  const oceanWest = Math.min(AEGEAN_OCEAN_BOUNDS.west, AEGEAN_OCEAN_BOUNDS.east);
+  const oceanEast = Math.max(AEGEAN_OCEAN_BOUNDS.west, AEGEAN_OCEAN_BOUNDS.east);
+  const oceanNorth = Math.max(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
+  const oceanSouth = Math.min(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
 
   const harborGroundY = seaLevel + HARBOR_GROUND_HEIGHT;
 
@@ -151,6 +156,12 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
     // Ensure terrain sits BELOW the water plane inside the harbor water bounds
     // Water plane is at seaLevel (0). Drop terrain to avoid occlusion.
     return seaLevel - 2.3;
+  }
+
+  const withinOpenSea =
+    x >= oceanWest && x <= oceanEast && z >= oceanSouth && z <= oceanNorth;
+  if (withinOpenSea) {
+    return seaLevel - 7.5;
   }
 
   // Create a flat shelf BEHIND the harbor (west of water) for city connection

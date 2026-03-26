@@ -73,3 +73,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the district-identity pass; both passed.
 - 2026-03-26: Started a final demo-polish pass by tightening the opening spawn framing in `src/systems/PlayerSystem.js`, extending the intro card cue in `src/ui/demoIntro.js`, and adding stage-specific approach frames in `src/world/demoTour.js` so the harbor and Acropolis feel more intentionally staged on approach.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the demo-polish pass; both passed.
+- 2026-03-26: Started an ocean-scale fix by separating the sheltered harbor basin from the seaward Aegean bounds in `src/world/locations.js`, then switching the runtime ocean mesh in `src/core/Application.ts` over to the larger open-sea bounds.
+- 2026-03-26: Extended the terrain carve in `src/world/terrain.js` so the harbor still keeps its shallow basin while the connected seaward region drops deeper, making the harbor open into visible ocean instead of reading like an isolated water patch.

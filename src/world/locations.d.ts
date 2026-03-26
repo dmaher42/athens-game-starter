@@ -15,6 +15,7 @@ export interface HarborWaterBounds {
 }
 
 export const HARBOR_WATER_BOUNDS: HarborWaterBounds;
+export const AEGEAN_OCEAN_BOUNDS: HarborWaterBounds;
 export const HARBOR_WATER_CENTER: { x: number; y: number; z: number };
 export const HARBOR_WATER_NORMAL_CANDIDATES: string[];
 

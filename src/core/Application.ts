@@ -16,6 +16,7 @@ import { createHillCity, createCity } from "../world/city.js";
 import { mount as mountGrass, update as updateGrass } from "../world/grass.js";
 import {
   AGORA_CENTER_3D,
+  AEGEAN_OCEAN_BOUNDS,
   CITY_AREA_RADIUS,
   ACROPOLIS_PEAK_3D,
   HARBOR_CENTER_3D,
@@ -423,7 +424,7 @@ export class Application {
     }
     if (!this.ocean) {
       this.ocean = await (createOcean as any)(this.scene, terrain, {
-        bounds: HARBOR_WATER_BOUNDS,
+        bounds: AEGEAN_OCEAN_BOUNDS,
         waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
         seaLevel,
         shoreBlendWidth: 4,
@@ -562,7 +563,7 @@ export class Application {
       onFogChange(fogEnabled);
       pendingOceanStatus = {
         seaLevel: resolvedSeaLevel,
-        bounds: HARBOR_WATER_BOUNDS,
+        bounds: AEGEAN_OCEAN_BOUNDS,
       };
       this.pendingOceanStatus = pendingOceanStatus;
       updateOceanHudStatus();

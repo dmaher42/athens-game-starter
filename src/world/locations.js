@@ -82,6 +82,16 @@ export const HARBOR_WATER_BOUNDS = {
   south: HARBOR_CENTER_3D.z - COMPACT_HARBOR_WATER_HALF_DEPTH_SOUTH,
 };
 
+// The harbor basin is only the sheltered waterfront. The visible Aegean needs
+// a much larger seaward sheet so the city reads as coastal rather than having
+// a rectangular dock pool.
+export const AEGEAN_OCEAN_BOUNDS = {
+  west: HARBOR_WATER_BOUNDS.east - 14,
+  east: HARBOR_CENTER_3D.x + 620,
+  north: HARBOR_CENTER_3D.z + 220,
+  south: HARBOR_CENTER_3D.z - 180,
+};
+
 export const HARBOR_WATER_NORMAL_CANDIDATES = [
   "textures/water/normals.png",
   "textures/water/normals.jpg",
