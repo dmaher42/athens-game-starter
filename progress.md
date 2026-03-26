@@ -46,3 +46,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the compact-layout pass; both passed.
 - 2026-03-26: Started a route-feel pass for the compact city layout by tightening the demo guide chains, nudging the harbor tour anchor, reshaping the main harbor-agora-acropolis boulevard, and refining the opening third-person camera framing so the first view reads more clearly into the harbor approach.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the route-feel pass; both passed.
+- 2026-03-26: Started a harbor-atmosphere pass to make the port feel more like a working harbor. Added mooring ropes, fenders, rope coils, a gangplank for the hero ship, warehouse frontage, fishery clutter, and static dock-worker figures while keeping the work inside `src/world/harbor.js`.
+- 2026-03-26: Updated shoreline dressing to use the current compact harbor water bounds instead of older hardcoded extents, so dockside props stay aligned with the smaller harbor footprint.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the harbor-atmosphere pass; both passed.
