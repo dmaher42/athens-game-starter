@@ -1,15 +1,8 @@
 import * as THREE from "three";
 import { Soundscape } from "../audio/soundscape.js";
-import {
-  createInteractor,
-  queueSceneInteractable,
-} from "../world/interactions.js";
+import { createInteractor } from "../world/interactions.js";
 import { attachCrosshair } from "../world/ui/crosshair.js";
-import {
-  createTerrain,
-  updateTerrain,
-  updateTerrainCoverageMask,
-} from "../world/terrain.js";
+import { createTerrain, updateTerrain, updateTerrainCoverageMask } from "../world/terrain.js";
 import { createHorizon } from "../world/horizon.js";
 import { createShorelineTermination } from "../world/shoreTermination.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
@@ -18,19 +11,9 @@ import { createHarbor } from "../world/harbor.js";
 import { createHarborDecorations } from "../world/decoration.js";
 import { BackdropMountains } from "../world/backdrop/BackdropMountains.js";
 import { createShorelineDressing } from "../world/backdrop/ShorelineDressing.js";
-import {
-  createMainHillRoad,
-} from "../world/roads_hillcity.js";
-import { createPlazas } from "../world/plazas.js";
-import {
-  createHillCity,
-  createCity,
-} from "../world/city.js";
-import { validateCityGroundMaterials } from "../materials/groundMaterials.js";
-import {
-  mount as mountGrass,
-  update as updateGrass,
-} from "../world/grass.js";
+import { createMainHillRoad } from "../world/roads_hillcity.js";
+import { createHillCity, createCity } from "../world/city.js";
+import { mount as mountGrass, update as updateGrass } from "../world/grass.js";
 import {
   AGORA_CENTER_3D,
   CITY_AREA_RADIUS,
@@ -44,7 +27,6 @@ import {
 } from "../world/locations.js";
 import { createCivicDistrict } from "../world/cityPlan.js";
 import { EnvironmentCollider } from "../env/EnvironmentCollider.js";
-import { BuildingManager } from "../buildings/BuildingManager.js";
 import { UIManager } from "./UIManager.js";
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
 import { QuestHud } from "../ui/questHud.js";
@@ -61,36 +43,25 @@ import { createPin } from "../world/pins.js";
 import { createDemoTour } from "../world/demoTour.js";
 import { attachHeightSampler, probeAt } from "../world/terrainHeight.js";
 import { addDepthOccluderRibbon } from "../world/occluders.js";
-import { snapAboveGround } from "../world/ground.js";
-import { findSafePlayerSpawn } from "../world/spawn.js";
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
-import { LIGHTING_PRESETS } from "../config/LookProfiles.js";
+import { resolveBaseUrl } from "../utils/baseUrl.js";
 import {
   engineConfig,
   resolveFeatureToggle,
   parseBooleanQuery,
 } from "../config/EngineConfig.js";
 import { CollectiblesManager } from "../world/collectibles.js";
-import { QuestManager, QuestStatus } from "../state/QuestManager.js";
+import { QuestManager } from "../state/QuestManager.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "../features/aristotle-texture.js";
 import { applyGravelToRoads } from "../features/roads-gravel.js";
 import { buildTemple } from "../features/temples.js";
-import {
-  AssetLoader,
-  createProceduralMarbleTextures,
-} from "./AssetLoader.js";
-import {
-  createRenderer,
-  createSceneContext,
-  WORLD_ROOT_NAME,
-} from "./Scene.js";
+import { AssetLoader } from "./AssetLoader.js";
+import { createRenderer, createSceneContext, WORLD_ROOT_NAME } from "./Scene.js";
 import { GameLoop } from "./GameLoop.js";
 import { createAtmosphericParticles } from "../world/particles.js";
 import { initPropCulling, updateDistanceCulling } from "../utils/propCulling.js";
 import { cullDistantBuildings } from "../utils/buildingCulling.js";
 import { scatterGroundProps } from "../world/groundProps.js";
-import { initCityDebugMode } from "../debug/cityDebug.js";
 import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
 import { PlayerSystem } from "../systems/PlayerSystem.js";
@@ -201,7 +172,6 @@ export class Application {
     const BASE_URL = this.baseUrl;
     const DISTRICT_RULE_URL_CANDIDATES = this.districtRuleCandidates;
     const FORCE_PROC = this.forceProc;
-    const FORCE_GLB = this.forceGlb;
     const assetLoader = this.assetLoader;
     const debugGlobalScope: any =
       typeof globalThis !== "undefined"
@@ -727,9 +697,6 @@ export class Application {
         );
       }
 
-      // Validate ground material setup after scene initialization
-      // validateCityGroundMaterials(scene); // Disabled - simplified materials
-
       applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch(() => {});
 
       updateTerrainCoverageMask(terrain, {
@@ -919,7 +886,7 @@ export class Application {
       } catch {}
 
 
-      // Debug mode is intentionally manual-only; call initCityDebugMode(scene, terrain) when needed.
+      // City debug tooling is intentionally manual-only and not booted by default.
 
       const getPosition = () => {
         try {
@@ -1172,9 +1139,7 @@ export class Application {
         });
 
         window.addEventListener("keydown", (event) => {
-          if (event.code === "KeyE") {
-            interactor.useObject();
-          } else if (event.code === "KeyG" && !event.repeat) {
+          if (event.code === "KeyG" && !event.repeat) {
             toggleFog();
           } else if (event.code === "KeyT" && !event.repeat) {
               (lightingSystem as any).cycleLightingPreset();

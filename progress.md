@@ -60,3 +60,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the ocean boot cleanup; both passed.
 - 2026-03-26: Continued the environment cleanup by removing the unused `src/core/EnvironmentManager.js` layer. The active lighting bridge remains `src/core/EnvironmentManager.stubs.js`, which is the only environment-manager path referenced by `src/systems/LightingSystem.js`.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after removing the dead environment manager; both passed.
+- 2026-03-26: Started a low-risk `src/core/Application.ts` cleanup pass by removing dead imports and old assembly leftovers left behind from earlier structural changes.
+- 2026-03-26: Removed a duplicate `KeyE` interaction trigger from the window keydown handler so the world interactor now uses the player input queue as its single interaction path.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the `Application.ts` cleanup; both passed.
