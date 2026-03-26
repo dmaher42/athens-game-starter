@@ -71,3 +71,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Nudged the main harbor-agora-acropolis road curve in `src/world/roads_hillcity.js` to suit the denser city footprint, with a shorter harbor approach and a straighter Agora-to-Acropolis climb.
 - 2026-03-26: Started the next district-identity pass in `src/world/cityPlan.js` by adding a civic centerpiece to the Agora plaza, commercial awnings and banners, harbor-front cargo/canopy accents, and sacred column-and-altar accents so the main districts read differently at a glance.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the district-identity pass; both passed.
+- 2026-03-26: Started a final demo-polish pass by tightening the opening spawn framing in `src/systems/PlayerSystem.js`, extending the intro card cue in `src/ui/demoIntro.js`, and adding stage-specific approach frames in `src/world/demoTour.js` so the harbor and Acropolis feel more intentionally staged on approach.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the demo-polish pass; both passed.

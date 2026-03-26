@@ -91,6 +91,26 @@ const ROUTE_GUIDES = [
     ],
   },
 ];
+const APPROACH_FRAMES = [
+  {
+    markerId: "harbor",
+    accent: 0x2b86a8,
+    glow: 0x82d7f4,
+    anchor: AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.72).add(new THREE.Vector3(-2, 0, 6)),
+    facingTarget: HARBOR_CENTER_3D.clone().add(new THREE.Vector3(0, 0, 10)),
+    bannerColor: 0x2b86a8,
+    title: "Toward The Harbor",
+  },
+  {
+    markerId: "acropolis",
+    accent: 0xd7cab4,
+    glow: 0xffe7b0,
+    anchor: HARBOR_CENTER_3D.clone().lerp(ACROPOLIS_PEAK_3D, 0.74).add(new THREE.Vector3(2, 0, -2)),
+    facingTarget: ACROPOLIS_PEAK_3D.clone(),
+    bannerColor: 0xc8b68c,
+    title: "Climb To The Acropolis",
+  },
+];
 
 function createBannerCloth(color, width = 1.2, height = 1.8) {
   const cloth = new THREE.Mesh(
@@ -347,6 +367,63 @@ function createRouteGuide(route, index, terrain) {
   group.userData.routeMarkerId = route.markerId;
   group.userData.guideLight = light;
   group.userData.guideFlame = ember;
+  return group;
+}
+
+function createApproachFrame(frame, terrain) {
+  const group = new THREE.Group();
+  group.name = `DemoApproach_${frame.markerId}`;
+
+  for (const z of [-1.6, 1.6]) {
+    const column = createSightlineColumn(0xd8cfbe, 5.2);
+    column.position.set(0, 0, z);
+    group.add(column);
+  }
+
+  const lintel = new THREE.Mesh(
+    new THREE.BoxGeometry(0.52, 0.34, 3.9),
+    new THREE.MeshStandardMaterial({
+      color: 0xcbbfa7,
+      roughness: 0.62,
+      metalness: 0.04,
+    }),
+  );
+  lintel.position.set(0, 5.1, 0);
+  lintel.castShadow = true;
+  group.add(lintel);
+
+  const banner = createBannerCloth(frame.bannerColor, 1.35, 2.45);
+  banner.position.set(0.2, 3.2, 0);
+  banner.rotation.y = Math.PI / 2;
+  banner.userData.baseRotationZ = THREE.MathUtils.degToRad(5);
+  group.add(banner);
+
+  const label = createLabelSprite(frame.title, frame.accent, { x: 8.8, y: 2.7 });
+  label.position.set(0, 6.25, 0);
+  group.add(label);
+
+  const leftBrazier = createBrazier(frame.accent, frame.glow);
+  leftBrazier.group.position.set(0.95, 0, -2.3);
+  group.add(leftBrazier.group);
+
+  const rightBrazier = createBrazier(frame.accent, frame.glow);
+  rightBrazier.group.position.set(-0.95, 0, 2.3);
+  group.add(rightBrazier.group);
+
+  group.position.copy(frame.anchor);
+  group.position.y = sampleGroundY(terrain, frame.anchor) + 0.05;
+  if (frame.facingTarget) {
+    group.lookAt(
+      frame.facingTarget.x,
+      group.position.y + 1.5,
+      frame.facingTarget.z,
+    );
+  }
+  markNoCollision(group);
+  group.userData.frameLabel = label;
+  group.userData.frameBanner = banner;
+  group.userData.extraFlames = [leftBrazier.flame, rightBrazier.flame];
+  group.userData.routeMarkerId = frame.markerId;
   return group;
 }
 
@@ -684,6 +761,14 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
     });
   }
 
+  const approachFrames = [];
+  for (const frame of APPROACH_FRAMES) {
+    const frameObject = createApproachFrame(frame, terrain);
+    frameObject.visible = false;
+    group.add(frameObject);
+    approachFrames.push(frameObject);
+  }
+
   scene.add(group);
 
   let currentStageIndex = 0;
@@ -743,6 +828,10 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
       if (guideLight) {
         guideLight.intensity = isActive ? 0.95 : 0;
       }
+    }
+
+    for (const frame of approachFrames) {
+      frame.visible = frame.userData?.routeMarkerId === activeRouteMarkerId;
     }
   };
 
@@ -822,6 +911,27 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
         }
         if (guideLight) {
           guideLight.intensity = 0.76 + Math.sin(elapsed * 4.1 + guide.position.z * 0.02) * 0.18;
+        }
+      }
+
+      for (const frame of approachFrames) {
+        if (!frame.visible) continue;
+        const label = frame.userData?.frameLabel;
+        if (label) {
+          label.position.y = 6.25 + Math.sin(elapsed * 1.25 + frame.position.x * 0.01) * 0.1;
+        }
+        const banner = frame.userData?.frameBanner;
+        if (banner?.userData?.swayAmount) {
+          const speed = banner.userData?.swaySpeed ?? 1;
+          const baseRotationZ = banner.userData?.baseRotationZ ?? 0;
+          banner.rotation.z = baseRotationZ + Math.sin(elapsed * speed + frame.position.z * 0.01) * banner.userData.swayAmount;
+        }
+        if (Array.isArray(frame.userData?.extraFlames)) {
+          frame.userData.extraFlames.forEach((extraFlame, index) => {
+            extraFlame.scale.setScalar(
+              0.88 + Math.sin(elapsed * (4.3 + index * 0.5) + index) * 0.08,
+            );
+          });
         }
       }
 

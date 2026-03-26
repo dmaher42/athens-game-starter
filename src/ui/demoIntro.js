@@ -3,8 +3,8 @@ let activeIntro = null;
 export function showDemoIntro({
   title = "A Short Walk Through Athens",
   route = "Agora -> Harbor Quarter -> Acropolis",
-  hint = "Follow the glowing beacon and use WASD plus the mouse to move through the city.",
-  durationMs = 14000,
+  hint = "Start in the Agora, follow the blue beacon down to the sea, then climb toward the ivory glow above the city.",
+  durationMs = 16000,
 } = {}) {
   if (typeof document === "undefined") {
     return () => {};

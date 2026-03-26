@@ -10,10 +10,10 @@ import { joinPath } from "../utils/baseUrl.js";
 
 const USE_THIRD_PERSON = true;
 const ENABLE_HERO_GLB = true;
-const DEMO_SPAWN_OFFSET = new THREE.Vector3(-18, 0, 12);
-const DEMO_LOOK_OFFSET = new THREE.Vector3(6, 0, 4);
-const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(14);
-const DEMO_CAMERA_DISTANCE = 5.8;
+const DEMO_SPAWN_OFFSET = new THREE.Vector3(-14, 0, 10);
+const DEMO_LOOK_OFFSET = new THREE.Vector3(10, 0, 2);
+const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(11);
+const DEMO_CAMERA_DISTANCE = 6.6;
 const HERO_MAX_ENVMAP_INTENSITY = 0.18;
 const HERO_MAX_GLOSSINESS = 0.32;
 const HERO_MAX_SPECULAR = 0.42;
@@ -150,7 +150,7 @@ export class PlayerSystem {
 
       const openingLookTarget = AGORA_CENTER_3D
         .clone()
-        .lerp(HARBOR_CENTER_3D.clone(), 0.46)
+        .lerp(HARBOR_CENTER_3D.clone(), 0.6)
         .add(DEMO_LOOK_OFFSET);
       const openingYaw = getOpeningCameraYaw(spawnPosition, openingLookTarget);
       this.thirdPersonCamera.distance = DEMO_CAMERA_DISTANCE;
