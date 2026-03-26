@@ -22,6 +22,9 @@ const MIN_X = -10, MAX_X = 10;
 const MIN_Z = -10, MAX_Z = 20;
 const BLOCK_SIZE = 36; // Tighter block size keeps the city readable and walkable.
 const AGORA_PLAZA_RADIUS = 2;
+const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.1;
+const AGORA_MARKET_RADIUS = BLOCK_SIZE * 3.2;
+const ACROPOLIS_SACRED_RADIUS = BLOCK_SIZE * 1.2;
 
 // District Spacing Rules
 export const SPACING_RULES = {
@@ -574,15 +577,36 @@ function resolveDistrictForCell(worldX, worldZ) {
     return "harbor";
   }
 
-  if (acropolisDistance <= BLOCK_SIZE * 2.25) {
+  if (acropolisDistance <= ACROPOLIS_SACRED_RADIUS) {
     return "sacred";
   }
 
-  if (agoraDistance <= BLOCK_SIZE * 3.2 && isWithinCivicClusterRange(worldX, worldZ)) {
+  if (agoraDistance <= AGORA_CIVIC_RADIUS && isWithinCivicClusterRange(worldX, worldZ)) {
+    return "civic";
+  }
+
+  if (agoraDistance <= AGORA_MARKET_RADIUS && isWithinCivicClusterRange(worldX, worldZ)) {
     return "commercial";
   }
 
   return "residential";
+}
+
+function resolveDistrictRuleForCell(district, rulesManifest) {
+  const match = rulesManifest?.districts?.find?.((rule) => rule?.id === district);
+  if (!match) return null;
+
+  if (district !== 'civic') {
+    return match;
+  }
+
+  return {
+    ...match,
+    // Keep the Agora ring focused on stoas and monuments instead of large temple massing.
+    allowedTypes: Array.isArray(match.allowedTypes)
+      ? match.allowedTypes.filter((type) => type !== 'temple')
+      : ['stoa', 'monument', 'plaza'],
+  };
 }
 
 function isAgoraPlazaCell(gridX, gridZ) {
@@ -853,7 +877,7 @@ export async function createCivicDistrict(scene, options = {}) {
        const buildingGroup = spawnBuilding({
          district: cell.district,
          rng: rng,
-         districtRules
+         districtRules: resolveDistrictRuleForCell(cell.district, districtRules),
        });
 
        if (buildingGroup) {
