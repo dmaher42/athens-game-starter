@@ -55,3 +55,6 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-26: Started the NPC-layer cleanup by choosing the path-based crowd system in `src/world/npcs.js` as the canonical runtime NPC path and removing the overlapping random-wander villager system from `src/world/traffic.js`.
 - 2026-03-26: Cleaned `src/core/Application.ts` so it no longer creates or updates the duplicate `VillagerSystem`; the active NPC layer is now `spawnCitizenCrowd()` plus `spawnGLBNPCs()`.
 - 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the NPC cleanup; both passed.
+- 2026-03-26: Started the environment/ocean boot cleanup by consolidating the duplicated ocean initialization in `src/core/Application.ts` down to a single canonical `createOcean()` path.
+- 2026-03-26: Updated the surviving ocean initialization path to use the harbor water bounds and water-normal candidates directly, and removed the later dead fallback branch that would have called `createOcean()` with the wrong argument shape.
+- 2026-03-26: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the ocean boot cleanup; both passed.

@@ -37,7 +37,6 @@ import {
   ACROPOLIS_PEAK_3D,
   HARBOR_CENTER_3D,
   HARBOR_WATER_BOUNDS,
-  HARBOR_WATER_CENTER,
   HARBOR_WATER_NORMAL_CANDIDATES,
   MAIN_ROAD_WIDTH,
   getSeaLevelY,
@@ -453,9 +452,10 @@ export class Application {
     }
     if (!this.ocean) {
       this.ocean = await (createOcean as any)(this.scene, terrain, {
+        bounds: HARBOR_WATER_BOUNDS,
+        waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
         seaLevel,
-        radius: oceanRadius,
-        horizonOffset: 0,
+        shoreBlendWidth: 4,
         waterColor: 0x0a5566,
       });
       if (this.ocean) this.ocean.scale.set(1, 1, 1);
@@ -587,15 +587,7 @@ export class Application {
       const grassEnabled =
         engineConfig.performance?.enableGrass ?? parseBooleanQuery("grass", false);
 
-      if (!ocean) {
-        ocean = await createOcean(scene, {
-          bounds: HARBOR_WATER_BOUNDS,
-          waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
-          seaLevel: resolvedSeaLevel,
-          shoreBlendWidth: 4,
-        });
-      }
-      this.ocean = ocean;
+      ocean = this.ocean;
       onFogChange(fogEnabled);
       pendingOceanStatus = {
         seaLevel: resolvedSeaLevel,
