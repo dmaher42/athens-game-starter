@@ -5,6 +5,8 @@ import {
   CITY_SEED,
   getSeaLevelY,
   CITY_AREA_RADIUS,
+  AGORA_CENTER_3D,
+  ACROPOLIS_PEAK_3D,
   HARBOR_CENTER_3D,
   HARBOR_WATER_BOUNDS,
   AEGEAN_OCEAN_BOUNDS,
@@ -64,6 +66,39 @@ function isInLegacyHarborExclusion(x, z) {
     isWithinRect(x, z, AEGEAN_OCEAN_BOUNDS) ||
     (x >= harborFrontWest && z >= harborSouth - 68 && z <= harborNorth + 68)
   );
+}
+
+function isInLegacyCivicCoreExclusion(x, z) {
+  const agoraDistance = Math.hypot(x - AGORA_CENTER_3D.x, z - AGORA_CENTER_3D.z);
+  const acropolisDistance = Math.hypot(x - ACROPOLIS_PEAK_3D.x, z - ACROPOLIS_PEAK_3D.z);
+  return agoraDistance <= 44 || acropolisDistance <= 34;
+}
+
+function isInLegacyNeighborhoodBand(x, z, origin, band) {
+  if (isInLegacyHarborExclusion(x, z) || isInLegacyCivicCoreExclusion(x, z)) {
+    return false;
+  }
+
+  const radius = Math.hypot(x - origin.x, z - origin.z);
+  const harborApproachLimit = HARBOR_CENTER_3D.x - 34;
+
+  if (x >= harborApproachLimit) {
+    return false;
+  }
+
+  if (band === "inner") {
+    return radius >= 20 && radius <= 74 && z <= origin.z + 18;
+  }
+
+  if (band === "middle") {
+    return radius >= 42 && radius <= 108 && z <= origin.z + 54;
+  }
+
+  if (band === "outer") {
+    return radius >= 82 && radius <= 128 && (x <= origin.x + 12 || z <= origin.z - 6);
+  }
+
+  return false;
 }
 
 function findHighestPoint(terrain, center, radius, step = 6) {
@@ -444,17 +479,16 @@ export async function createCity(scene, terrain, options = {}) {
     return true;
   };
 
-  const zoneACount = 800;
+  const zoneACount = 320;
   let zoneAPlaced = 0;
   let attemptsA = 0;
   while (zoneAPlaced < zoneACount && attemptsA < zoneACount * 8) {
     attemptsA++;
-    const r = Math.sqrt(random()) * 120;
+    const r = 18 + Math.sqrt(random()) * 56;
     const theta = random() * Math.PI * 2;
     const x = origin.x + r * Math.cos(theta);
     const z = origin.z + r * Math.sin(theta);
-    if (isInLegacyHarborExclusion(x, z)) continue;
-    if (z >= origin.z - 50) continue;
+    if (!isInLegacyNeighborhoodBand(x, z, origin, "inner")) continue;
 
     const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
     if (bestDist > 18 || bestDist < 2) continue;
@@ -489,16 +523,16 @@ export async function createCity(scene, terrain, options = {}) {
     zoneAPlaced++;
   }
 
-  const zoneBCount = 600;
+  const zoneBCount = 220;
   let zoneBPlaced = 0;
   let attemptsB = 0;
   while (zoneBPlaced < zoneBCount && attemptsB < zoneBCount * 8) {
     attemptsB++;
-    const r = Math.sqrt(random()) * 200;
+    const r = 44 + Math.sqrt(random()) * 62;
     const theta = random() * Math.PI * 2;
     const x = origin.x + r * Math.cos(theta);
     const z = origin.z + r * Math.sin(theta);
-    if (isInLegacyHarborExclusion(x, z)) continue;
+    if (!isInLegacyNeighborhoodBand(x, z, origin, "middle")) continue;
 
     const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
     if (bestDist > 20 || bestDist < 3) continue;
@@ -533,20 +567,20 @@ export async function createCity(scene, terrain, options = {}) {
     zoneBPlaced++;
   }
 
-  const zoneCCount = 150;
+  const zoneCCount = 70;
   let zoneCPlaced = 0;
   let attemptsC = 0;
   while (zoneCPlaced < zoneCCount && attemptsC < zoneCCount * 12) {
     attemptsC++;
-    const r = 200 + Math.sqrt(random()) * Math.max(0, CITY_AREA_RADIUS - 200);
+    const r = 86 + Math.sqrt(random()) * 40;
     const theta = random() * Math.PI * 2;
     const x = origin.x + r * Math.cos(theta);
     const z = origin.z + r * Math.sin(theta);
-    if (isInLegacyHarborExclusion(x, z)) continue;
+    if (!isInLegacyNeighborhoodBand(x, z, origin, "outer")) continue;
 
     const y = sampleElevation(x, z);
     if (y <= seaLevel + 0.5) continue;
-    if (Math.hypot(x - origin.x, z - origin.z) < 190 && y <= 10) continue;
+    if (y <= seaLevel + 6.5) continue;
 
     const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
     if (bestDist < 3) continue;
