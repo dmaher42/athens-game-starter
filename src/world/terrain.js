@@ -71,6 +71,7 @@ const SHORELINE_CITY_LIMIT = 0.46;
 const SHORELINE_SAND_BAND = 0.3;
 const SHALLOW_WATER_BAND = 1.2;
 const HARBOR_BASIN_EDGE_BAND = 12;
+const HARBOR_COASTAL_BAND = 16;
 const HARBOR_SHELF_PADDING = 18;
 const HARBOR_SHELF_SLOPE_WIDTH = 20;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
@@ -216,6 +217,17 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   }
 
   return baseHeight;
+}
+
+function getDistanceToHarborWaterBounds(x, z) {
+  const west = Math.min(HARBOR_WATER_BOUNDS.west, HARBOR_WATER_BOUNDS.east);
+  const east = Math.max(HARBOR_WATER_BOUNDS.west, HARBOR_WATER_BOUNDS.east);
+  const north = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
+  const south = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
+
+  const dx = x < west ? west - x : x > east ? x - east : 0;
+  const dz = z < south ? south - z : z > north ? z - north : 0;
+  return Math.hypot(dx, dz);
 }
 
 function getElevation(
@@ -501,6 +513,16 @@ export function createTerrain(scene) {
     const b = indexArray[i + 1];
     const c = indexArray[i + 2];
     const dSea = (dSeaValues[a] + dSeaValues[b] + dSeaValues[c]) / 3;
+    const centerX =
+      (positionAttribute.getX(a) +
+        positionAttribute.getX(b) +
+        positionAttribute.getX(c)) /
+      3;
+    const centerZ =
+      (positionAttribute.getY(a) +
+        positionAttribute.getY(b) +
+        positionAttribute.getY(c)) /
+      3;
     const heightA = positionAttribute.getZ(a);
     const heightB = positionAttribute.getZ(b);
     const heightC = positionAttribute.getZ(c);
@@ -508,9 +530,14 @@ export function createTerrain(scene) {
     const minHeight = Math.min(heightA, heightB, heightC);
     const isShallowWater = avgHeight <= seaLevel + SHALLOW_WATER_BAND;
     const touchesWaterline = minHeight <= seaLevel + 0.12;
+    const harborDistance = getDistanceToHarborWaterBounds(centerX, centerZ);
+    const isHarborShoreline =
+      harborDistance <= HARBOR_COASTAL_BAND &&
+      (isShallowWater || touchesWaterline);
     const shouldUseCoastalMaterial =
       dSea < 0.15 ||
-      (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline));
+      (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline)) ||
+      isHarborShoreline;
 
     if (shouldUseCoastalMaterial) {
       coastalIndices.push(a, b, c);
