@@ -601,6 +601,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     : Infinity;
 
   if (district === 'civic') {
+    if (cell && isAgoraFramingCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'monument'],
+        heightRange: [3.2, 4.2],
+        courtyardChance: 0,
+      };
+    }
+
     return {
       ...match,
       // Keep the Agora ring focused on lower stoas and monuments instead of large temple massing.
@@ -613,6 +622,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'commercial' && civicDistance <= AGORA_MARKET_RADIUS) {
+    if (cell && isAgoraFramingCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'monument'],
+        heightRange: [3.0, 4.0],
+        courtyardChance: 0,
+      };
+    }
+
     return {
       ...match,
       heightRange: [3.2, 4.6],
@@ -630,6 +648,11 @@ function isAgoraPlazaPerimeterCell(gridX, gridZ) {
   return isAgoraPlazaCell(gridX, gridZ) && Math.max(Math.abs(gridX), Math.abs(gridZ)) === AGORA_PLAZA_RADIUS;
 }
 
+function isAgoraFramingCell(gridX, gridZ) {
+  const framingRing = AGORA_PLAZA_RADIUS + 1;
+  return Math.abs(gridZ) === framingRing && Math.abs(gridX) <= 1;
+}
+
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
   if (gridZ === -AGORA_PLAZA_RADIUS && gridX === 0) return 0;
   if (gridX === AGORA_PLAZA_RADIUS && gridZ === 0) return -Math.PI / 2;
@@ -640,6 +663,11 @@ function getAgoraPlazaAccentRotation(gridX, gridZ) {
 
 function applyAgoraScalePass(buildingGroup, cell) {
   if (!buildingGroup || !cell) return;
+
+  if (isAgoraFramingCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(0.84);
+    return;
+  }
 
   const agoraDistance = Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z);
   if (cell.district === 'civic' && agoraDistance <= AGORA_CIVIC_RADIUS + BLOCK_SIZE * 0.5) {
@@ -916,7 +944,9 @@ export async function createCivicDistrict(scene, options = {}) {
            group.add(buildingGroup);
 
            let districtAccent = null;
-           if (cell.district === 'commercial' && rng() < 0.38) {
+           if (isAgoraFramingCell(cell.gridX, cell.gridZ)) {
+             districtAccent = null;
+           } else if (cell.district === 'commercial' && rng() < 0.38) {
              districtAccent = createCommercialAccent(rng);
            } else if (cell.district === 'harbor' && rng() < 0.44) {
              districtAccent = createHarborFrontAccent(rng);
