@@ -45,7 +45,7 @@ function createScrubTuft(scale = 1) {
 function createShoreCluster(x, z, terrain, seaLevel, seed) {
     if (!terrain?.userData?.getHeightAt) return null;
     const h = terrain.userData.getHeightAt(x, z);
-    if (!Number.isFinite(h) || h <= seaLevel + 0.08) return null;
+    if (!Number.isFinite(h) || h <= seaLevel + 0.08 || h >= seaLevel + 1.7) return null;
 
     const group = new THREE.Group();
     group.name = "ShoreCluster";
@@ -85,7 +85,7 @@ export function createShorelineDressing(scene, terrain, seaLevel) {
     const seaNorth = Math.max(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
     const seaSouth = Math.min(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
 
-    const count = 58;
+    const count = 34;
     const seed = 999;
 
     const rockGeo = new THREE.DodecahedronGeometry(1, 0);
@@ -113,7 +113,7 @@ export function createShorelineDressing(scene, terrain, seaLevel) {
               : southLimit - 24 - seededRandom(seed + i * 5) * Math.max(12, southLimit - seaSouth - 26);
         }
 
-        const scale = 0.5 + seededRandom(seed + i * 4) * 1.5;
+        const scale = 0.45 + seededRandom(seed + i * 4) * 1.0;
 
         const mesh = new THREE.Mesh(rockGeo, rockMat);
         mesh.position.set(x, seaLevel, z);
@@ -129,8 +129,10 @@ export function createShorelineDressing(scene, terrain, seaLevel) {
         // If we have terrain sampler, we can adjust.
         if (terrain && terrain.userData.getHeightAt) {
              const h = terrain.userData.getHeightAt(x, z);
-             if (h !== null) {
+             if (Number.isFinite(h) && h <= seaLevel + 1.3) {
                  mesh.position.y = h - scale * 0.34; // Embed slightly for a softer shoreline
+             } else {
+                 continue;
              }
         }
 
@@ -139,7 +141,7 @@ export function createShorelineDressing(scene, terrain, seaLevel) {
         group.add(mesh);
     }
 
-    const clusterCount = 16;
+    const clusterCount = 12;
     for (let i = 0; i < clusterCount; i++) {
         const shorelineBand = seededRandom(seed + 200 + i) > 0.45 ? "mouth" : "openSea";
         const side = seededRandom(seed + 240 + i) > 0.5 ? 1 : -1;

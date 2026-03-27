@@ -995,13 +995,13 @@ function scatterShoreProps(target, groundY) {
   const localWaterNorth = HARBOR_WATER_BOUNDS.north - HARBOR_CENTER_3D.z;
   const localWaterSouth = HARBOR_WATER_BOUNDS.south - HARBOR_CENTER_3D.z;
   const scatterBounds = {
-    west: localWaterEast + 2,
-    east: localWaterEast + 14,
-    north: Math.min(localWaterSouth, localWaterNorth) - 4,
-    south: Math.max(localWaterSouth, localWaterNorth) + 4,
+    west: localWaterEast + 4,
+    east: localWaterEast + 10,
+    north: Math.min(localWaterSouth, localWaterNorth) + 2,
+    south: Math.max(localWaterSouth, localWaterNorth) - 2,
   };
 
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 4; i++) {
     const prop = Math.random() > 0.5 ? createCrateCluster() : createBarrelCluster();
     const x = THREE.MathUtils.randFloat(scatterBounds.west, scatterBounds.east);
     const z = THREE.MathUtils.randFloat(scatterBounds.north, scatterBounds.south);
