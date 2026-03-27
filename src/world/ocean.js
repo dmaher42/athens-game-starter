@@ -415,7 +415,14 @@ export async function createOcean(scene, terrain, options = {}) {
     shader.fragmentShader = shader.fragmentShader.replace(
       "gl_FragColor = vec4( color, 1.0 );",
       /* glsl */ `
-      vec2 terrainUV = vWorldPosition.xz / uTerrainSize + 0.5;
+      // The terrain height texture is generated from PlaneGeometry before the
+      // mesh is rotated onto the XZ plane, so world Z must be flipped back to
+      // match the stored row order when sampling shoreline heights.
+      vec2 terrainUV = vec2(
+        vWorldPosition.x / uTerrainSize.x + 0.5,
+        0.5 - (vWorldPosition.z / uTerrainSize.y)
+      );
+      terrainUV = clamp(terrainUV, vec2(0.0), vec2(1.0));
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
 
