@@ -5,6 +5,9 @@ import {
   CITY_SEED,
   getSeaLevelY,
   CITY_AREA_RADIUS,
+  HARBOR_CENTER_3D,
+  HARBOR_WATER_BOUNDS,
+  AEGEAN_OCEAN_BOUNDS,
 } from "./locations.js";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import { makeTiledPBR } from "../materials/pbr-utils.js";
@@ -40,6 +43,27 @@ function applyVertexColor(geometry, color) {
   }
   geom.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   return geom;
+}
+
+function isWithinRect(x, z, rect) {
+  if (!rect) return false;
+  const west = Math.min(rect.west, rect.east);
+  const east = Math.max(rect.west, rect.east);
+  const south = Math.min(rect.south, rect.north);
+  const north = Math.max(rect.south, rect.north);
+  return x >= west && x <= east && z >= south && z <= north;
+}
+
+function isInLegacyHarborExclusion(x, z) {
+  const harborNorth = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
+  const harborSouth = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
+  const harborFrontWest = HARBOR_CENTER_3D.x - 72;
+
+  return (
+    isWithinRect(x, z, HARBOR_WATER_BOUNDS) ||
+    isWithinRect(x, z, AEGEAN_OCEAN_BOUNDS) ||
+    (x >= harborFrontWest && z >= harborSouth - 68 && z <= harborNorth + 68)
+  );
 }
 
 function findHighestPoint(terrain, center, radius, step = 6) {
@@ -429,6 +453,7 @@ export async function createCity(scene, terrain, options = {}) {
     const theta = random() * Math.PI * 2;
     const x = origin.x + r * Math.cos(theta);
     const z = origin.z + r * Math.sin(theta);
+    if (isInLegacyHarborExclusion(x, z)) continue;
     if (z >= origin.z - 50) continue;
 
     const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
@@ -473,6 +498,7 @@ export async function createCity(scene, terrain, options = {}) {
     const theta = random() * Math.PI * 2;
     const x = origin.x + r * Math.cos(theta);
     const z = origin.z + r * Math.sin(theta);
+    if (isInLegacyHarborExclusion(x, z)) continue;
 
     const { bestDist, bestCurve, bestT } = findNearestRoad(x, z);
     if (bestDist > 20 || bestDist < 3) continue;
@@ -516,6 +542,7 @@ export async function createCity(scene, terrain, options = {}) {
     const theta = random() * Math.PI * 2;
     const x = origin.x + r * Math.cos(theta);
     const z = origin.z + r * Math.sin(theta);
+    if (isInLegacyHarborExclusion(x, z)) continue;
 
     const y = sampleElevation(x, z);
     if (y <= seaLevel + 0.5) continue;
