@@ -910,6 +910,45 @@ function createHarborEdgeTransitions() {
   return group;
 }
 
+function createHarborMouthMarkers() {
+  const group = new THREE.Group();
+  group.name = "HarborMouthMarkers";
+
+  const markerMaterial = new THREE.MeshStandardMaterial({
+    color: 0xd8cfb8,
+    roughness: 0.76,
+    metalness: 0.04,
+  });
+  const beaconMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffd79a,
+    emissive: 0xffbf66,
+    emissiveIntensity: 0.55,
+    roughness: 0.32,
+    metalness: 0.0,
+  });
+
+  const localWaterEast = HARBOR_WATER_EAST_LIMIT - HARBOR_CENTER_3D.x;
+  for (const z of [-24, 24]) {
+    const tower = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.42, 0.58, 5.4, 10),
+      markerMaterial,
+    );
+    tower.position.set(localWaterEast - 6.5, 2.7, z);
+    enableShadows(tower);
+    group.add(tower);
+
+    const beacon = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.58, 0),
+      beaconMaterial,
+    );
+    beacon.position.set(localWaterEast - 6.5, 5.95, z);
+    enableShadows(beacon);
+    group.add(beacon);
+  }
+
+  return group;
+}
+
 function createHarborWorkZone() {
   const zone = new THREE.Group();
   zone.name = "HarborWorkZone";
@@ -1390,6 +1429,7 @@ export function createHarbor(scene, options = {}) {
 
   harbor.add(createQuayEdge());
   harbor.add(createHarborEdgeTransitions());
+  harbor.add(createHarborMouthMarkers());
 
   // Use grid-aligned dock slots if available, otherwise fallback to default positions
   const piersGroup = new THREE.Group();
@@ -1496,7 +1536,8 @@ export function createHarbor(scene, options = {}) {
     hull: heroStyle.hull,
     accent: heroStyle.accent,
   });
-  heroShip.position.set(46, seaLevel - HARBOR_GROUND_HEIGHT, 8);
+  heroShip.scale.setScalar(1.16);
+  heroShip.position.set(54, seaLevel - HARBOR_GROUND_HEIGHT, 6);
   heroShip.rotation.y = -0.18;
   heroShip.userData.category = "harbor-hero-ship";
   boatsGroup.add(heroShip);

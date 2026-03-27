@@ -571,8 +571,8 @@ function isWithinSetbackRect(x, z, rect) {
 function isInAuthoredHarborFront(worldX, worldZ) {
   const harborNorth = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
   const harborSouth = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
-  const harborWestCutoff = HARBOR_CENTER_3D.x - BLOCK_SIZE * 1.5;
-  const harborZPadding = BLOCK_SIZE * 1.5;
+  const harborWestCutoff = HARBOR_CENTER_3D.x - BLOCK_SIZE * 2.1;
+  const harborZPadding = BLOCK_SIZE * 1.9;
 
   return (
     worldX >= harborWestCutoff &&
@@ -961,7 +961,19 @@ export async function createCivicDistrict(scene, options = {}) {
          districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
        });
 
-       if (buildingGroup) {
+      if (buildingGroup) {
+           if (cell.district === 'harbor') {
+             // Keep the generic city kit out of the waterfront so the authored
+             // harbor owns that destination space more clearly.
+             if (rng() < 0.6) {
+               const lowAccent = createHarborFrontAccent(rng);
+               lowAccent.position.set(localX, localY, localZ);
+               lowAccent.rotation.y = Math.floor(rng() * 4) * (Math.PI / 2);
+               group.add(lowAccent);
+             }
+             continue;
+           }
+
            applyAgoraScalePass(buildingGroup, cell);
            buildingGroup.position.set(localX, localY, localZ);
            // Random 90 degree rotation
