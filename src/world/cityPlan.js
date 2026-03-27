@@ -282,12 +282,12 @@ export function verifyReachability(grid, pathTiles, options = {}) {
   };
 }
 
-function createPavedStrip(width, length, color = 0x888888) {
-  const geometry = new THREE.BoxGeometry(width, 0.1, length);
+function createPavedStrip(width, length, color = 0xb09370) {
+  const geometry = new THREE.BoxGeometry(width, 0.04, length);
   const material = new THREE.MeshStandardMaterial({
     color: color,
-    roughness: 0.8,
-    metalness: 0.1
+    roughness: 0.92,
+    metalness: 0.02
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.receiveShadow = true;
@@ -848,11 +848,11 @@ export async function createCivicDistrict(scene, options = {}) {
       continue; // Skip placing any city element inside harbor/walkway setbacks
     }
 
-      if (cell.type === 'road') {
+    if (cell.type === 'road') {
       // Avenue is now East-West (gridZ approx 0)
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
-      const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0x887766 : 0x666666);
-      roadMesh.position.set(localX, localY - 0.02, localZ);
+      const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0xb0895f : 0xa48463);
+      roadMesh.position.set(localX, localY - 0.01, localZ);
       group.add(roadMesh);
     } else if (cell.type === 'plaza') {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xb29e7e);
@@ -926,9 +926,9 @@ export async function createCivicDistrict(scene, options = {}) {
 
       // Create narrow footpath (lighter color than roads)
       const pathWidth = pathTile.type === 'connector' ? 8 : 6;
-      const pathColor = pathTile.type === 'connector' ? 0x998877 : 0xaa9988;
+      const pathColor = pathTile.type === 'connector' ? 0xc0a07b : 0xcfb18e;
       const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
-      pathMesh.position.set(localX, localY + 0.01, localZ); // Slight offset above ground
+      pathMesh.position.set(localX, localY + 0.004, localZ); // Keep the path visible without exposing dark side faces
       pathMesh.userData.isFootpath = true;
       group.add(pathMesh);
     }
