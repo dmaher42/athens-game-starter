@@ -132,6 +132,7 @@ const DEFAULT_INLAND_CLIP = Number.isFinite(HARBOR_WATER_BOUNDS?.south)
   ? HARBOR_WATER_BOUNDS.south + DEFAULT_INLAND_PADDING
   : 160;
 const TERRAIN_CLEARANCE_EPSILON = 0.02;
+const LAND_CLIP_CLEARANCE = 0.05;
 const SHORE_PROBE_X_FRACTIONS = [0.2, 0.5, 0.8];
 const SHORE_PROBE_Z_FRACTIONS = [0.0, 0.5, 0.9];
 const DEFAULT_OCEAN_RADIUS = 4000;
@@ -424,8 +425,9 @@ export async function createOcean(scene, terrain, options = {}) {
       float terrainHeight = texture2D(uHeightMap, terrainUV).r;
       float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // If terrain is above sea level, discard to avoid water on land
-      if (terrainHeight > uSeaLevel + 0.5) {
+      // If terrain rises even slightly above the waterline, stop rendering
+      // the water there so shoreline ground does not shimmer/fight through it.
+      if (terrainHeight > uSeaLevel + ${LAND_CLIP_CLEARANCE.toFixed(2)}) {
         discard;
       }
 

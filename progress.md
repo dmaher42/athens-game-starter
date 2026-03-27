@@ -108,3 +108,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the Agora framing pass; both passed.
 - 2026-03-27: Continued the district-transition polish in `src/world/harbor.js` by dressing the city-harbor connector with small market stalls, amphorae, cargo, net bundles, and a worker at the city-side landing. The route from Agora to harbor should now pick up waterfront cues before the player reaches the quay.
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the connector transition pass; both passed.
+- 2026-03-27: Tightened the shoreline clip in `src/world/ocean.js` after water still appeared to fight with ground textures. The water shader now discards as soon as sampled terrain rises slightly above the waterline instead of tolerating up to 0.5m of overlap on land.
+- 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the ocean clip fix; both passed.
