@@ -15,11 +15,12 @@ const DEMO_LOOK_BLEND = 0.42;
 const DEMO_LOOK_OFFSET = new THREE.Vector3(12, 0, 6);
 const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(9);
 const DEMO_CAMERA_DISTANCE = 7.25;
-const HERO_MAX_ENVMAP_INTENSITY = 0.18;
-const HERO_MAX_GLOSSINESS = 0.32;
-const HERO_MAX_SPECULAR = 0.42;
-const HERO_MAX_METALNESS = 0.08;
-const HERO_MIN_ROUGHNESS = 0.72;
+const HERO_MAX_ENVMAP_INTENSITY = 0.06;
+const HERO_MAX_GLOSSINESS = 0.16;
+const HERO_MAX_SPECULAR = 0.18;
+const HERO_MAX_METALNESS = 0.02;
+const HERO_MIN_ROUGHNESS = 0.88;
+const HERO_MAX_REFLECTIVITY = 0.18;
 
 function createDemoSpawnAnchor() {
   return AGORA_CENTER_3D.clone().add(DEMO_SPAWN_OFFSET);
@@ -70,6 +71,18 @@ function softenHeroMaterials(root) {
         }
         if (typeof material.roughness === "number") {
           material.roughness = Math.max(material.roughness, HERO_MIN_ROUGHNESS);
+        }
+        if (typeof material.reflectivity === "number") {
+          material.reflectivity = Math.min(material.reflectivity, HERO_MAX_REFLECTIVITY);
+        }
+        if (typeof material.clearcoat === "number") {
+          material.clearcoat = 0;
+        }
+        if (typeof material.clearcoatRoughness === "number") {
+          material.clearcoatRoughness = 1;
+        }
+        if (typeof material.sheen === "number") {
+          material.sheen = 0;
         }
       }
 
