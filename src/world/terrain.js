@@ -67,6 +67,9 @@ const NOISE_AMPLITUDE = 0.45;
 const OCEAN_DEPTH = -12.0;
 const CITY_HEIGHT = 2.5; // Base city height (above sea level)
 const MAINLAND_EDGE_BUFFER = 0.8;
+const SHORELINE_CITY_LIMIT = 0.46;
+const SHORELINE_SAND_BAND = 0.3;
+const SHALLOW_WATER_BAND = 1.2;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
@@ -469,11 +472,20 @@ export function createTerrain(scene) {
     const b = indexArray[i + 1];
     const c = indexArray[i + 2];
     const dSea = (dSeaValues[a] + dSeaValues[b] + dSeaValues[c]) / 3;
-    const height = (positionAttribute.getZ(a) + positionAttribute.getZ(b) + positionAttribute.getZ(c)) / 3;
+    const heightA = positionAttribute.getZ(a);
+    const heightB = positionAttribute.getZ(b);
+    const heightC = positionAttribute.getZ(c);
+    const avgHeight = (heightA + heightB + heightC) / 3;
+    const minHeight = Math.min(heightA, heightB, heightC);
+    const isShallowWater = avgHeight <= seaLevel + SHALLOW_WATER_BAND;
+    const touchesWaterline = minHeight <= seaLevel + 0.12;
+    const shouldUseCoastalMaterial =
+      dSea < 0.15 ||
+      (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline));
 
-    if (height > seaLevel && dSea < 0.15) {
+    if (shouldUseCoastalMaterial) {
       coastalIndices.push(a, b, c);
-    } else if (dSea <= 0.55) {
+    } else if (dSea <= SHORELINE_CITY_LIMIT) {
       cityIndices.push(a, b, c);
     } else {
       inlandIndices.push(a, b, c);

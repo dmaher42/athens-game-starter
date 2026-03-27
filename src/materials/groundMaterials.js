@@ -60,8 +60,8 @@ function createGroundMaterial({
 
 export const CoastalGroundMaterial = createGroundMaterial({
   name: "CoastalGroundMaterial",
-  color: new THREE.Color(0xd3c3a2),
-  repeat: [44, 44],
+  color: new THREE.Color(0xc7bea8),
+  repeat: [36, 36],
   map: "textures/sand/albedo.jpg",
   normalMap: "textures/sand/normal_gl.jpg",
   roughnessMap: "textures/sand/arm.jpg",
@@ -69,7 +69,7 @@ export const CoastalGroundMaterial = createGroundMaterial({
   aoMap: "textures/sand/arm.jpg",
   roughness: 0.97,
   metalness: 0.04,
-  normalScale: 0.4,
+  normalScale: 0.32,
   aoIntensity: 0.6,
 });
 
