@@ -886,13 +886,13 @@ export async function createCivicDistrict(scene, options = {}) {
       continue;
     }
 
-    const localX = cell.position.x;
-    const localZ = cell.position.z;
+    const localX = cell.position.x - center.x;
+    const localZ = cell.position.z - center.z;
     const localY = sampleLocalHeight(localX, localZ, 0);
 
     // Compute world-space position to respect harbor exclusions
-    const worldX = center.x + localX;
-    const worldZ = center.z + localZ;
+    const worldX = cell.position.x;
+    const worldZ = cell.position.z;
     const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
       return isWithinSetbackRect(worldX, worldZ, r);
     });
@@ -967,13 +967,13 @@ export async function createCivicDistrict(scene, options = {}) {
   if (IS_DEV) console.log(`[CityPlan] Rendering ${pathTiles.length} path tiles...`);
   for (const pathTile of pathTiles) {
     if (pathTile.type === 'footpath' || pathTile.type === 'connector') {
-      const localX = pathTile.position.x;
-      const localZ = pathTile.position.z;
+      const localX = pathTile.position.x - center.x;
+      const localZ = pathTile.position.z - center.z;
       const localY = sampleLocalHeight(localX, localZ, 0);
 
       // Check harbor exclusion
-      const worldX = center.x + localX;
-      const worldZ = center.z + localZ;
+      const worldX = pathTile.position.x;
+      const worldZ = pathTile.position.z;
       const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
         return isWithinSetbackRect(worldX, worldZ, r);
       });
