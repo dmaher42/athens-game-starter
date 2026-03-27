@@ -12,6 +12,11 @@ const propMaterials = {
   bush: new THREE.MeshStandardMaterial({ color: "#3c5d2c", roughness: 0.82 }),
 };
 
+const OPENING_VISTA_WEST = AGORA_CENTER_3D.x - 62;
+const OPENING_VISTA_EAST = AGORA_CENTER_3D.x + 18;
+const OPENING_VISTA_SOUTH = AGORA_CENTER_3D.z - 24;
+const OPENING_VISTA_NORTH = AGORA_CENTER_3D.z + 34;
+
 export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush"];
 
 function pickPropType() {
@@ -81,7 +86,7 @@ function isInsideBuilding(x, z, placements, padding = 1.2) {
 
 function isInsideKeyDistrict(x, z) {
   const civicDistance = Math.hypot(x - AGORA_CENTER_3D.x, z - AGORA_CENTER_3D.z);
-  if (civicDistance < 52) return true;
+  if (civicDistance < 60) return true;
 
   const acropolisDistance = Math.hypot(x - ACROPOLIS_PEAK_3D.x, z - ACROPOLIS_PEAK_3D.z);
   if (acropolisDistance < 28) return true;
@@ -92,10 +97,31 @@ function isInsideKeyDistrict(x, z) {
   return false;
 }
 
+function isInsideOpeningVista(x, z) {
+  if (
+    x >= OPENING_VISTA_WEST &&
+    x <= OPENING_VISTA_EAST &&
+    z >= OPENING_VISTA_SOUTH &&
+    z <= OPENING_VISTA_NORTH
+  ) {
+    return true;
+  }
+
+  const vistaStart = new THREE.Vector2(AGORA_CENTER_3D.x - 44, AGORA_CENTER_3D.z + 18);
+  const vistaEnd = new THREE.Vector2(AGORA_CENTER_3D.x + 12, AGORA_CENTER_3D.z + 2);
+  const vistaLine = new THREE.Line3(
+    new THREE.Vector3(vistaStart.x, 0, vistaStart.y),
+    new THREE.Vector3(vistaEnd.x, 0, vistaEnd.y),
+  );
+  const nearest = new THREE.Vector3();
+  vistaLine.closestPointToPoint(new THREE.Vector3(x, 0, z), true, nearest);
+  return Math.hypot(nearest.x - x, nearest.z - z) < 12;
+}
+
 export function scatterGroundProps(scene, terrain, options = {}) {
   if (!scene || !terrain) return null;
 
-  const count = options.count ?? 28;
+  const count = options.count ?? 22;
   const seaLevel = Number.isFinite(options?.seaLevel)
     ? options.seaLevel
     : getSeaLevelY();
@@ -127,6 +153,7 @@ export function scatterGroundProps(scene, terrain, options = {}) {
 
     if (isInsideBuilding(x, z, placements)) continue;
     if (isInsideKeyDistrict(x, z)) continue;
+    if (isInsideOpeningVista(x, z)) continue;
 
     const nearMainRoad = mainRoadCurve
       ? distanceToCurve(mainRoadCurve, x, z, 180) <= roadPadding

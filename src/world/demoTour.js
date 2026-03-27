@@ -96,10 +96,10 @@ const APPROACH_FRAMES = [
     markerId: "harbor",
     accent: 0x2b86a8,
     glow: 0x82d7f4,
-    anchor: AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.72).add(new THREE.Vector3(-2, 0, 6)),
-    facingTarget: HARBOR_CENTER_3D.clone().add(new THREE.Vector3(0, 0, 10)),
+    anchor: AGORA_CENTER_3D.clone().add(new THREE.Vector3(-28, 0, 18)),
+    facingTarget: AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.4).add(new THREE.Vector3(10, 0, 4)),
     bannerColor: 0x2b86a8,
-    title: "Toward The Harbor",
+    title: "Across The Agora",
   },
   {
     markerId: "acropolis",
