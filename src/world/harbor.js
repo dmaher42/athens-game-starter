@@ -887,6 +887,99 @@ function createQuayEdge() {
   return quay;
 }
 
+function createQuayEndTransition(endZ, direction = 1) {
+  const group = new THREE.Group();
+  group.name = `HarborQuayTransition_${direction > 0 ? "south" : "north"}`;
+
+  const shoreMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc5baa0,
+    roughness: 0.94,
+    metalness: 0.02,
+  });
+  const rubbleMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8d8479,
+    roughness: 0.92,
+    metalness: 0.02,
+  });
+  const timberMaterial = new THREE.MeshStandardMaterial({
+    color: 0x7a6248,
+    roughness: 0.84,
+    metalness: 0.02,
+  });
+
+  const shoreApron = new THREE.Mesh(
+    new THREE.CylinderGeometry(7.4, 10.2, 0.2, 22),
+    shoreMaterial,
+  );
+  shoreApron.scale.set(1.15, 1, 0.88);
+  shoreApron.position.set(QUAY_EDGE_X - 7.2, 0.08, endZ + direction * 4.8);
+  shoreApron.rotation.y = THREE.MathUtils.degToRad(direction * 8);
+  shoreApron.receiveShadow = true;
+  group.add(shoreApron);
+
+  const embankment = new THREE.Mesh(
+    new THREE.BoxGeometry(7.8, 0.92, 11.4),
+    new THREE.MeshStandardMaterial({
+      color: 0xb2a58f,
+      roughness: 0.88,
+      metalness: 0.03,
+    }),
+  );
+  embankment.position.set(QUAY_EDGE_X - 3.9, -0.28, endZ + direction * 2.3);
+  embankment.rotation.z = THREE.MathUtils.degToRad(-11);
+  embankment.rotation.y = THREE.MathUtils.degToRad(direction * 6);
+  enableShadows(embankment);
+  group.add(embankment);
+
+  const retainingStone = new THREE.Mesh(
+    new THREE.BoxGeometry(2.6, 1.7, 7.2),
+    rubbleMaterial,
+  );
+  retainingStone.position.set(QUAY_EDGE_X + 0.2, -0.58, endZ + direction * 1.1);
+  retainingStone.rotation.y = THREE.MathUtils.degToRad(direction * 5);
+  enableShadows(retainingStone);
+  group.add(retainingStone);
+
+  const rubbleGeometry = new THREE.DodecahedronGeometry(0.9, 0);
+  for (const [x, z, scale] of [
+    [QUAY_EDGE_X + 2.6, endZ + direction * 4.8, 1.05],
+    [QUAY_EDGE_X + 1.1, endZ + direction * 7.2, 0.76],
+    [QUAY_EDGE_X - 2.3, endZ + direction * 6.4, 0.88],
+    [QUAY_EDGE_X - 5.0, endZ + direction * 3.3, 1.18],
+  ]) {
+    const rock = new THREE.Mesh(rubbleGeometry, rubbleMaterial);
+    rock.position.set(x, 0.34, z);
+    rock.scale.setScalar(scale);
+    rock.rotation.set(
+      THREE.MathUtils.randFloatSpread(0.22),
+      Math.random() * Math.PI * 2,
+      THREE.MathUtils.randFloatSpread(0.22),
+    );
+    enableShadows(rock);
+    group.add(rock);
+  }
+
+  const mooringPost = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.2, 1.9, 8),
+    timberMaterial,
+  );
+  mooringPost.position.set(QUAY_EDGE_X + 1.8, 0.25, endZ + direction * 6.1);
+  enableShadows(mooringPost);
+  group.add(mooringPost);
+
+  return group;
+}
+
+function createHarborEdgeTransitions() {
+  const group = new THREE.Group();
+  group.name = "HarborEdgeTransitions";
+
+  group.add(createQuayEndTransition(QUAY_SPAN_NORTH, -1));
+  group.add(createQuayEndTransition(QUAY_SPAN_SOUTH, 1));
+
+  return group;
+}
+
 function createHarborWorkZone() {
   const zone = new THREE.Group();
   zone.name = "HarborWorkZone";
@@ -1334,6 +1427,7 @@ export function createHarbor(scene, options = {}) {
   const harborPad = createHarborPad(harborGroundY);
   harbor.add(harborPad);
   harbor.add(createQuayEdge());
+  harbor.add(createHarborEdgeTransitions());
 
   // Use grid-aligned dock slots if available, otherwise fallback to default positions
   const piersGroup = new THREE.Group();

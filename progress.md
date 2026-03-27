@@ -92,3 +92,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the shoreline fix; both passed.
 - 2026-03-27: Continued the shoreline pass in `src/world/backdrop/ShorelineDressing.js` by adding low beach patches and scrub clusters around the harbor mouth and first open-sea stretch so the coast reads as built-up shoreline instead of just a rock line.
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the shoreline-dressing pass; both passed.
+- 2026-03-27: Added a focused harbor-edge shoreline pass in `src/world/harbor.js` by building tapered north/south quay-end shoulders with sand aprons, embankment wedges, retaining stones, rubble, and mooring posts so the quay wall no longer stops as a hard square edge.
+- 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the harbor-edge transition pass; both passed.
