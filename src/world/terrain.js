@@ -70,6 +70,9 @@ const MAINLAND_EDGE_BUFFER = 0.8;
 const SHORELINE_CITY_LIMIT = 0.46;
 const SHORELINE_SAND_BAND = 0.3;
 const SHALLOW_WATER_BAND = 1.2;
+const HARBOR_BASIN_EDGE_BAND = 12;
+const HARBOR_SHELF_PADDING = 18;
+const HARBOR_SHELF_SLOPE_WIDTH = 20;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
@@ -153,12 +156,24 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   const oceanSouth = Math.min(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
 
   const harborGroundY = seaLevel + HARBOR_GROUND_HEIGHT;
+  const shelfNorth = north + HARBOR_SHELF_PADDING;
+  const shelfSouth = south - HARBOR_SHELF_PADDING;
+  const shelfCenterZ = (shelfNorth + shelfSouth) * 0.5;
+  const shelfHalfDepth = Math.max(1, (shelfNorth - shelfSouth) * 0.5);
 
   const withinWater = x >= west && x <= east && z >= south && z <= north;
   if (withinWater) {
-    // Ensure terrain sits BELOW the water plane inside the harbor water bounds
-    // Water plane is at seaLevel (0). Drop terrain to avoid occlusion.
-    return seaLevel - 2.3;
+    // Shape a softer basin: shallower near the shoreline, deeper toward the
+    // middle, so the terrain owns the harbor edge instead of a hard cut.
+    const edgeDistance = Math.min(x - west, east - x, z - south, north - z);
+    const basinBlend = THREE.MathUtils.smoothstep(
+      0,
+      HARBOR_BASIN_EDGE_BAND,
+      edgeDistance,
+    );
+    const shallowEdgeY = seaLevel - 0.95;
+    const basinFloorY = seaLevel - 2.3;
+    return THREE.MathUtils.lerp(shallowEdgeY, basinFloorY, basinBlend);
   }
 
   const withinOpenSea =
@@ -167,23 +182,37 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
     return seaLevel - 7.5;
   }
 
-  // Create a flat shelf BEHIND the harbor (west of water) for city connection
-  const shelfWidth = 60; // Width of flat area for harbor buildings and props
+  // Create a flatter shelf behind the harbor, but keep it constrained so it
+  // supports the connector and waterfront buildings without becoming a large
+  // rectangular patch across the whole district.
+  const shelfWidth = 60;
   const shelfStart = west - shelfWidth;
-  const shelfDepth = 80; // Extend shelf north-south
-  
-  if (x >= shelfStart && x < west && z >= south - shelfDepth && z <= north + shelfDepth) {
-    // Flat shelf at harborGroundY for harbor props and city connection
-    return harborGroundY;
+  const zDistanceFromShelfCenter = Math.abs(z - shelfCenterZ);
+  const shelfDepthFactor = THREE.MathUtils.clamp(
+    1 - zDistanceFromShelfCenter / shelfHalfDepth,
+    0,
+    1,
+  );
+
+  if (x >= shelfStart && x < west && z >= shelfSouth && z <= shelfNorth) {
+    const shelfBlend = shelfDepthFactor * shelfDepthFactor;
+    return THREE.MathUtils.lerp(baseHeight, harborGroundY, shelfBlend);
   }
 
   // Slope up to land on the West side of the harbor shelf
-  const slopeWidth = 25; // Transition from shelf to city terrain
+  const slopeWidth = HARBOR_SHELF_SLOPE_WIDTH;
   const landStart = shelfStart - slopeWidth;
+  const slopeNorth = shelfNorth + 10;
+  const slopeSouth = shelfSouth - 10;
 
-  if (x >= landStart && x < shelfStart && z >= south - shelfDepth - 10 && z <= north + shelfDepth + 10) {
+  if (x >= landStart && x < shelfStart && z >= slopeSouth && z <= slopeNorth) {
       const t = (x - landStart) / slopeWidth;
-      return THREE.MathUtils.lerp(baseHeight, harborGroundY, t);
+      const zFade = THREE.MathUtils.clamp(
+        1 - Math.abs(z - shelfCenterZ) / Math.max(1, (slopeNorth - slopeSouth) * 0.5),
+        0,
+        1,
+      );
+      return THREE.MathUtils.lerp(baseHeight, harborGroundY, t * zFade);
   }
 
   return baseHeight;
