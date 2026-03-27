@@ -2,17 +2,11 @@ import * as THREE from "three";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { Water } from "three/examples/jsm/objects/Water.js";
 import {
-  HARBOR_WATER_CENTER,
-  HARBOR_WATER_SIZE,
-  HARBOR_WATER_EAST_LIMIT,
   HARBOR_WATER_BOUNDS,
   HARBOR_WATER_NORMAL_CANDIDATES,
   getSeaLevelY,
   SEA_LEVEL_Y,
   AGORA_CENTER_3D,
-  HARBOR_CENTER,
-  HARBOR_WATER_RADIUS,
-  ISLAND_RADIUS,
 } from "./locations.js";
 import { RENDER_LAYERS } from "./renderLayers.js";
 

@@ -58,10 +58,7 @@ export const CITY_CHUNK_CENTER = new THREE.Vector3(-36, getCityGroundY(), 18);
 export const CITY_CHUNK_SIZE = new THREE.Vector2(50, 50);
 export const CITY_SEED = 0x4d534349;
 
-export const HARBOR_WATER_RADIUS = 76;
-export const HARBOR_WATER_SIZE = new THREE.Vector2(152, 94);
 export const HARBOR_WATER_OFFSET = new THREE.Vector2(0, 0); 
-export const PIER_EDGE_OFFSET = 4.5; 
 
 const HARBOR_WATER_HALF_WIDTH = 95; // Extended east to reach new pin locations (±95 units in X)
 const HARBOR_WATER_HALF_DEPTH_NORTH = 80; // Extended north for shipping lanes

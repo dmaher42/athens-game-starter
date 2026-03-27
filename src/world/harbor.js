@@ -1347,7 +1347,7 @@ function createClocktower() {
  * All elements are positioned relative to harborGroundY (seaLevel + HARBOR_GROUND_HEIGHT)
  * to ensure they sit above water level.
  * 
- * The harbor is positioned at HARBOR_CENTER_3D (120, harborGroundY, 80).
+ * The harbor is positioned at the current HARBOR_CENTER_3D world anchor.
  * Terrain is flattened behind the harbor to create a smooth connection to the city.
  * The boardwalk connector provides a walkable route from city core (Y=2.5) to docks (Y=2).
  * 
