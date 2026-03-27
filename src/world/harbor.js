@@ -46,9 +46,10 @@ function enableShadows(mesh) {
 }
 
 function createHarborPad(harborGroundY) {
-  // Small harbor island pad - 60x60 brown square
-  const width = 60;
-  const depth = 60;
+  // Quay apron behind the waterfront. Keep it off the main water read so it
+  // supports the warehouses and harbor edge without cutting across the basin.
+  const width = 54;
+  const depth = 88;
   const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
   if (geometry.attributes.uv && !geometry.attributes.uv2) {
     geometry.setAttribute(
@@ -100,12 +101,12 @@ function createHarborPad(harborGroundY) {
   const pad = new THREE.Mesh(geometry, padMaterial);
   pad.name = "HarborPad";
   pad.rotation.x = -Math.PI / 2;
-  // Position relative to harbor group origin (0,0,0)
-  // Group is positioned at HARBOR_CENTER_3D (120, harborGroundY, 80) in world space
+  // Offset the pad toward the built harbor edge instead of centering it across
+  // the whole district, which helps stop it visually competing with the water.
   pad.position.set(
-    0,
-    0.12, // lift above water plane for z-fighting prevention
-    0,
+    78,
+    0.03,
+    4,
   );
   pad.receiveShadow = true;
   pad.renderOrder = RENDER_LAYERS.DETAIL;

@@ -110,3 +110,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the connector transition pass; both passed.
 - 2026-03-27: Tightened the shoreline clip in `src/world/ocean.js` after water still appeared to fight with ground textures. The water shader now discards as soon as sampled terrain rises slightly above the waterline instead of tolerating up to 0.5m of overlap on land.
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the ocean clip fix; both passed.
+- 2026-03-27: Followed up on the remaining harbor water/ground clash in `src/world/harbor.js`. The harbor pad was still a centered 60x60 plane, so it could visually compete with the basin. Reshaped it into a narrower quay apron and offset it toward the built harbor edge instead of centering it across the water.
+- 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the harbor-pad adjustment; both passed.
