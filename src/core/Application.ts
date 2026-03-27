@@ -491,68 +491,9 @@ export class Application {
       );
     }
 
-    const currentSeaLevel = seaLevel;
-    const harborSampler: any = null;
-    let sampledSeaLevel = currentSeaLevel;
-    let harborSampleCount = 0;
     let harbor = null;
 
-    harbor = createHarbor(scene);
-
-    if (typeof harborSampler === "function") {
-        const { west, east, north, south } = HARBOR_WATER_BOUNDS;
-        const centerX = (west + east) * 0.5;
-        const centerZ = (north + south) * 0.5;
-        const width = Math.max(1, Math.abs(east - west));
-        const depth = Math.max(1, Math.abs(south - north));
-        const insetX = Math.min(width * 0.1, 4);
-        const insetZ = Math.min(depth * 0.15, 6);
-        const sampleWestX = west + insetX;
-        const sampleEastX = east - insetX;
-        const shorelineOffsets = [0, depth * 0.25, -depth * 0.25];
-
-        const samplePoints = [
-          { x: sampleWestX, z: centerZ },
-          { x: sampleEastX, z: centerZ },
-          { x: centerX, z: north + insetZ },
-          { x: centerX, z: south - insetZ },
-          { x: centerX, z: centerZ },
-        ];
-
-        for (const offset of shorelineOffsets) {
-          samplePoints.push({ x: sampleEastX, z: centerZ + offset });
-        }
-
-        const samples = [];
-        for (const point of samplePoints) {
-          const height = harborSampler(point.x, point.z);
-          if (Number.isFinite(height)) {
-            samples.push(height);
-          }
-        }
-
-        harborSampleCount = samples.length;
-        if (samples.length >= 3) {
-          samples.sort((a, b) => a - b);
-          const trimmed =
-            samples.length > 4 ? samples.slice(1, samples.length - 1) : samples;
-          const total = trimmed.reduce((sum, value) => sum + value, 0);
-          const average = total / trimmed.length;
-          if (Number.isFinite(average)) {
-            sampledSeaLevel = average;
-          }
-        }
-      }
-
-      if (
-        Number.isFinite(sampledSeaLevel) &&
-        Math.abs(sampledSeaLevel - currentSeaLevel) > 1e-3
-      ) {
-        setSeaLevelY(sampledSeaLevel, {
-          reason: "harbor-sampling",
-          samples: harborSampleCount,
-        });
-      }
+    harbor = createHarbor(scene, { terrain });
 
       const resolvedSeaLevel = getSeaLevelY();
 
