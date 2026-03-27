@@ -94,3 +94,7 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the shoreline-dressing pass; both passed.
 - 2026-03-27: Added a focused harbor-edge shoreline pass in `src/world/harbor.js` by building tapered north/south quay-end shoulders with sand aprons, embankment wedges, retaining stones, rubble, and mooring posts so the quay wall no longer stops as a hard square edge.
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the harbor-edge transition pass; both passed.
+- 2026-03-27: Used the latest gameplay screenshot as a material/readability audit. The Agora still had blown-out plaza stone and too many dark rock props scattered through the civic foreground.
+- 2026-03-27: Tightened `src/world/groundProps.js` by reducing default scatter count, cutting rock odds, shrinking rock scale, and expanding the exclusion radius around the Agora/harbor so random clutter stays out of the main civic view.
+- 2026-03-27: Softened the Agora stone treatment in `src/world/cityPlan.js` with warmer plaza tinting, lower normal intensity, lower environment reflection, and darker civic accent colors so the plaza reads as stone instead of flat white glare.
+- 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the Agora material/clutter pass; both passed. The local dev server at `http://127.0.0.1:8000/athens-game-starter/` also returned HTTP 200 during the check.

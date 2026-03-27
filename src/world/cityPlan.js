@@ -335,21 +335,21 @@ function createAgoraPlazaAccent() {
 
   const plinth = new THREE.Mesh(
     new THREE.CylinderGeometry(5.6, 6.1, 0.45, 18),
-    new THREE.MeshStandardMaterial({ color: 0xc8b594, roughness: 0.76, metalness: 0.04 }),
+    new THREE.MeshStandardMaterial({ color: 0xb7a07b, roughness: 0.88, metalness: 0.03 }),
   );
   plinth.position.y = 0.22;
   group.add(plinth);
 
   const basin = new THREE.Mesh(
     new THREE.CylinderGeometry(2.2, 2.7, 0.7, 16),
-    new THREE.MeshStandardMaterial({ color: 0xe3d8c5, roughness: 0.58, metalness: 0.06 }),
+    new THREE.MeshStandardMaterial({ color: 0xcbbca1, roughness: 0.82, metalness: 0.03 }),
   );
   basin.position.y = 0.62;
   group.add(basin);
 
   const pillar = new THREE.Mesh(
     new THREE.CylinderGeometry(0.3, 0.34, 2.7, 12),
-    new THREE.MeshStandardMaterial({ color: 0xded2bb, roughness: 0.5, metalness: 0.04 }),
+    new THREE.MeshStandardMaterial({ color: 0xc7b79b, roughness: 0.78, metalness: 0.03 }),
   );
   pillar.position.y = 2;
   group.add(pillar);
@@ -381,7 +381,7 @@ function createAgoraPerimeterAccent(gridX, gridZ) {
   if (isCorner) {
     const podium = new THREE.Mesh(
       new THREE.BoxGeometry(4.4, 0.45, 2.2),
-      new THREE.MeshStandardMaterial({ color: 0xc8b89b, roughness: 0.78, metalness: 0.03 }),
+      new THREE.MeshStandardMaterial({ color: 0xbda989, roughness: 0.84, metalness: 0.02 }),
     );
     podium.position.set(0, 0.22, 0);
     group.add(podium);
@@ -399,7 +399,7 @@ function createAgoraPerimeterAccent(gridX, gridZ) {
   } else {
     const stylobate = new THREE.Mesh(
       new THREE.BoxGeometry(10.5, 0.36, 2.8),
-      new THREE.MeshStandardMaterial({ color: 0xcbbea4, roughness: 0.8, metalness: 0.03 }),
+      new THREE.MeshStandardMaterial({ color: 0xbca98b, roughness: 0.86, metalness: 0.02 }),
     );
     stylobate.position.set(0, 0.18, 0.35);
     group.add(stylobate);
@@ -407,7 +407,7 @@ function createAgoraPerimeterAccent(gridX, gridZ) {
     for (const x of [-3.1, 0, 3.1]) {
       const column = new THREE.Mesh(
         new THREE.CylinderGeometry(0.2, 0.24, 3.2, 12),
-        new THREE.MeshStandardMaterial({ color: 0xe0d4bf, roughness: 0.56, metalness: 0.03 }),
+        new THREE.MeshStandardMaterial({ color: 0xcab99d, roughness: 0.76, metalness: 0.02 }),
       );
       column.position.set(x, 1.78, 0.55);
       group.add(column);
@@ -415,14 +415,14 @@ function createAgoraPerimeterAccent(gridX, gridZ) {
 
     const lintel = new THREE.Mesh(
       new THREE.BoxGeometry(8.8, 0.32, 0.7),
-      new THREE.MeshStandardMaterial({ color: 0xd4c6ad, roughness: 0.68, metalness: 0.03 }),
+      new THREE.MeshStandardMaterial({ color: 0xc1ae90, roughness: 0.8, metalness: 0.02 }),
     );
     lintel.position.set(0, 3.42, 0.55);
     group.add(lintel);
 
     const bench = new THREE.Mesh(
       new THREE.BoxGeometry(5.6, 0.42, 1.05),
-      new THREE.MeshStandardMaterial({ color: 0xbcab8f, roughness: 0.82, metalness: 0.02 }),
+      new THREE.MeshStandardMaterial({ color: 0xad9878, roughness: 0.86, metalness: 0.02 }),
     );
     bench.position.set(0, 0.64, -1.1);
     group.add(bench);
@@ -813,10 +813,13 @@ export async function createCivicDistrict(scene, options = {}) {
       normalMap.repeat.set(4, 4);
 
       plazaMat = new THREE.MeshStandardMaterial({
+          color: 0xbca98a,
           map: baseMap,
           normalMap: normalMap,
+          normalScale: new THREE.Vector2(0.35, 0.35),
           roughness: 1,
           metalness: 0,
+          envMapIntensity: 0.08,
           polygonOffset: true,
           polygonOffsetFactor: -1,
           polygonOffsetUnits: -1
@@ -852,7 +855,7 @@ export async function createCivicDistrict(scene, options = {}) {
       roadMesh.position.set(localX, localY - 0.02, localZ);
       group.add(roadMesh);
     } else if (cell.type === 'plaza') {
-      const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xaaaaaa);
+      const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xb29e7e);
       plazaMesh.position.set(localX, localY, localZ);
       if (plazaMat) plazaMesh.material = plazaMat;
       group.add(plazaMesh);

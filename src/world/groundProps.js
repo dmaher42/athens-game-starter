@@ -21,8 +21,8 @@ export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush"];
 
 function pickPropType() {
   const r = Math.random();
-  if (r < 0.2) return "rock";
-  if (r < 0.72) return "grass-tuft";
+  if (r < 0.08) return "rock";
+  if (r < 0.74) return "grass-tuft";
   return "bush";
 }
 
@@ -30,7 +30,7 @@ function createPropMesh(type) {
   switch (type) {
     case "rock": {
       const mesh = new THREE.Mesh(ROCK_GEOMETRY, propMaterials.rock);
-      mesh.scale.setScalar(THREE.MathUtils.randFloat(0.55, 1.1));
+      mesh.scale.setScalar(THREE.MathUtils.randFloat(0.4, 0.82));
       mesh.rotation.set(
         THREE.MathUtils.randFloatSpread(0.2),
         Math.random() * Math.PI * 2,
@@ -86,13 +86,13 @@ function isInsideBuilding(x, z, placements, padding = 1.2) {
 
 function isInsideKeyDistrict(x, z) {
   const civicDistance = Math.hypot(x - AGORA_CENTER_3D.x, z - AGORA_CENTER_3D.z);
-  if (civicDistance < 60) return true;
+  if (civicDistance < 78) return true;
 
   const acropolisDistance = Math.hypot(x - ACROPOLIS_PEAK_3D.x, z - ACROPOLIS_PEAK_3D.z);
   if (acropolisDistance < 28) return true;
 
   const harborDistance = Math.hypot(x - HARBOR_CENTER_3D.x, z - HARBOR_CENTER_3D.z);
-  if (harborDistance < 22) return true;
+  if (harborDistance < 26) return true;
 
   return false;
 }
@@ -121,7 +121,7 @@ function isInsideOpeningVista(x, z) {
 export function scatterGroundProps(scene, terrain, options = {}) {
   if (!scene || !terrain) return null;
 
-  const count = options.count ?? 22;
+  const count = options.count ?? 14;
   const seaLevel = Number.isFinite(options?.seaLevel)
     ? options.seaLevel
     : getSeaLevelY();
