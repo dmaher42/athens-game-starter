@@ -75,11 +75,17 @@ export const CoastalGroundMaterial = createGroundMaterial({
 
 export const CityGroundMaterial = createGroundMaterial({
   name: "CityGroundMaterial",
-  color: new THREE.Color(0xc8b08b),
-  repeat: [54, 54],
+  color: new THREE.Color(0xbd9b73),
+  repeat: [42, 42],
   map: "textures/ground/dirt-albedo.jpg",
-  roughness: 0.98,
-  metalness: 0.02,
+  normalMap: "textures/sand/normal_gl.jpg",
+  roughnessMap: "textures/sand/arm.jpg",
+  metalnessMap: "textures/sand/arm.jpg",
+  aoMap: "textures/sand/arm.jpg",
+  roughness: 1,
+  metalness: 0,
+  normalScale: 0.18,
+  aoIntensity: 0.35,
 });
 
 export const InlandGroundMaterial = createGroundMaterial({

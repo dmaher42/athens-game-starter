@@ -283,13 +283,17 @@ export function verifyReachability(grid, pathTiles, options = {}) {
 }
 
 function createPavedStrip(width, length, color = 0xb09370) {
-  const geometry = new THREE.BoxGeometry(width, 0.04, length);
+  const geometry = new THREE.PlaneGeometry(width, length);
   const material = new THREE.MeshStandardMaterial({
     color: color,
-    roughness: 0.92,
-    metalness: 0.02
+    roughness: 0.98,
+    metalness: 0,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
   });
   const mesh = new THREE.Mesh(geometry, material);
+  mesh.rotation.x = -Math.PI / 2;
   mesh.receiveShadow = true;
   mesh.castShadow = false;
   return mesh;
@@ -930,11 +934,11 @@ export async function createCivicDistrict(scene, options = {}) {
       // Avenue is now East-West (gridZ approx 0)
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0xb0895f : 0xa48463);
-      roadMesh.position.set(localX, localY - 0.01, localZ);
+      roadMesh.position.set(localX, localY + 0.018, localZ);
       group.add(roadMesh);
     } else if (cell.type === 'plaza') {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xb29e7e);
-      plazaMesh.position.set(localX, localY, localZ);
+      plazaMesh.position.set(localX, localY + 0.014, localZ);
       if (plazaMat) plazaMesh.material = plazaMat;
       group.add(plazaMesh);
       if (cell.gridX === 0 && cell.gridZ === 0) {
@@ -1018,7 +1022,7 @@ export async function createCivicDistrict(scene, options = {}) {
       const pathWidth = pathTile.type === 'connector' ? 8 : 6;
       const pathColor = pathTile.type === 'connector' ? 0xc0a07b : 0xcfb18e;
       const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
-      pathMesh.position.set(localX, localY + 0.004, localZ); // Keep the path visible without exposing dark side faces
+      pathMesh.position.set(localX, localY + 0.02, localZ); // Float slightly above the terrain to avoid dark cut lines.
       pathMesh.userData.isFootpath = true;
       group.add(pathMesh);
     }

@@ -24,27 +24,30 @@ export class BackdropMountains {
   }
 
   createMountains() {
-    const count = 120; // Number of peaks
+    const count = 72; // Fewer, broader forms read more like distant ridges than repeated spikes.
     const minRadius = 1100;
     const maxRadius = 1800;
 
-    // Geometry for peaks - simple tetrahedrons or cones
+    // Use broader low-poly masses so the skyline reads like layered hills instead of sharp black pyramids.
     const geoms = [
-      new THREE.ConeGeometry(1, 1, 4, 1, true), // simple pyramid
-      new THREE.ConeGeometry(1, 1, 3, 1, true), // 3-sided
+      new THREE.DodecahedronGeometry(1, 0),
+      new THREE.IcosahedronGeometry(1, 0),
+      new THREE.OctahedronGeometry(1, 0),
     ];
 
-    // Align base to 0 (default Cone is centered at height/2)
+    // Align base to 0.
     geoms.forEach(g => {
-        g.translate(0, 0.5, 0);
+        g.computeBoundingBox();
+        const minY = g.boundingBox?.min.y ?? 0;
+        g.translate(0, -minY, 0);
         g.computeVertexNormals();
     });
 
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x5a6a7a, // Blends with horizon/fog
-      fog: true,
-      side: THREE.DoubleSide
-    });
+    const ridgeMaterials = [
+      new THREE.MeshLambertMaterial({ color: 0x64737d, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x6d7d83, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x58665f, fog: true, side: THREE.DoubleSide }),
+    ];
 
     const mountainGeoms = [];
 
@@ -66,22 +69,26 @@ export class BackdropMountains {
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
 
-      const scaleW = 150 + seededRandom(this.seed + i * 2) * 300;
-      const scaleH = 100 + seededRandom(this.seed + i * 3) * 300;
+      const scaleW = 220 + seededRandom(this.seed + i * 2) * 430;
+      const scaleD = 180 + seededRandom(this.seed + i * 6) * 320;
+      const scaleH = 90 + seededRandom(this.seed + i * 3) * 180;
 
       const geomIdx = Math.floor(seededRandom(this.seed + i * 4) * geoms.length);
       const geom = geoms[geomIdx].clone();
 
-      geom.scale(scaleW, scaleH, scaleW);
+      geom.scale(scaleW, scaleH, scaleD);
       geom.rotateY(seededRandom(this.seed + i * 5) * Math.PI * 2);
-      geom.translate(x, this.seaLevel - 20, z);
+      geom.translate(x, this.seaLevel - 16, z);
 
-      mountainGeoms.push(geom);
+      mountainGeoms.push({
+        geom,
+        material: ridgeMaterials[i % ridgeMaterials.length],
+      });
     }
 
     if (mountainGeoms.length > 0) {
-        mountainGeoms.forEach(g => {
-             const m = new THREE.Mesh(g, material);
+        mountainGeoms.forEach(({ geom, material }) => {
+             const m = new THREE.Mesh(geom, material);
              m.castShadow = false;
              m.receiveShadow = false;
              m.matrixAutoUpdate = false;
@@ -145,8 +152,8 @@ export class BackdropMountains {
 
       geometry.rotateX(-Math.PI / 2);
 
-      const material = new THREE.MeshBasicMaterial({
-          color: 0x5b6055,
+      const material = new THREE.MeshLambertMaterial({
+          color: 0x706a58,
           side: THREE.FrontSide,
           fog: true
       });
