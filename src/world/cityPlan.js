@@ -592,21 +592,34 @@ function resolveDistrictForCell(worldX, worldZ) {
   return "residential";
 }
 
-function resolveDistrictRuleForCell(district, rulesManifest) {
+function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   const match = rulesManifest?.districts?.find?.((rule) => rule?.id === district);
   if (!match) return null;
 
-  if (district !== 'civic') {
-    return match;
+  const civicDistance = cell
+    ? Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z)
+    : Infinity;
+
+  if (district === 'civic') {
+    return {
+      ...match,
+      // Keep the Agora ring focused on lower stoas and monuments instead of large temple massing.
+      allowedTypes: Array.isArray(match.allowedTypes)
+        ? match.allowedTypes.filter((type) => type !== 'temple')
+        : ['stoa', 'monument', 'plaza'],
+      heightRange: [3.4, 4.8],
+      courtyardChance: 0,
+    };
   }
 
-  return {
-    ...match,
-    // Keep the Agora ring focused on stoas and monuments instead of large temple massing.
-    allowedTypes: Array.isArray(match.allowedTypes)
-      ? match.allowedTypes.filter((type) => type !== 'temple')
-      : ['stoa', 'monument', 'plaza'],
-  };
+  if (district === 'commercial' && civicDistance <= AGORA_MARKET_RADIUS) {
+    return {
+      ...match,
+      heightRange: [3.2, 4.6],
+    };
+  }
+
+  return match;
 }
 
 function isAgoraPlazaCell(gridX, gridZ) {
@@ -623,6 +636,17 @@ function getAgoraPlazaAccentRotation(gridX, gridZ) {
   if (gridZ === AGORA_PLAZA_RADIUS && gridX === 0) return Math.PI;
   if (gridX === -AGORA_PLAZA_RADIUS && gridZ === 0) return Math.PI / 2;
   return Math.atan2(-gridX, -gridZ);
+}
+
+function applyAgoraScalePass(buildingGroup, cell) {
+  if (!buildingGroup || !cell) return;
+
+  const agoraDistance = Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z);
+  if (cell.district === 'civic' && agoraDistance <= AGORA_CIVIC_RADIUS + BLOCK_SIZE * 0.5) {
+    buildingGroup.scale.multiplyScalar(0.82);
+  } else if (cell.district === 'commercial' && agoraDistance <= AGORA_MARKET_RADIUS) {
+    buildingGroup.scale.multiplyScalar(0.9);
+  }
 }
 
 function generateCityGrid(terrainSampler) {
@@ -880,10 +904,11 @@ export async function createCivicDistrict(scene, options = {}) {
        const buildingGroup = spawnBuilding({
          district: cell.district,
          rng: rng,
-         districtRules: resolveDistrictRuleForCell(cell.district, districtRules),
+         districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
        });
 
        if (buildingGroup) {
+           applyAgoraScalePass(buildingGroup, cell);
            buildingGroup.position.set(localX, localY, localZ);
            // Random 90 degree rotation
            const rot = Math.floor(rng() * 4) * (Math.PI / 2);

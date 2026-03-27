@@ -538,6 +538,12 @@ export function spawnBuilding(options = {}) {
   // Override roof color in options if valid
   const spawnOpts = { rng, ...options };
   if (roofColor) spawnOpts.roofColor = roofColor;
+  if (Array.isArray(districtRules?.heightRange) && districtRules.heightRange.length === 2) {
+    const [minH, maxH] = districtRules.heightRange;
+    if (Number.isFinite(minH) && Number.isFinite(maxH) && maxH >= minH && !Number.isFinite(spawnOpts.h)) {
+      spawnOpts.h = minH + rng() * (maxH - minH);
+    }
+  }
 
   const building = spawner(spawnOpts);
   building.userData = { ...building.userData, district, type };
