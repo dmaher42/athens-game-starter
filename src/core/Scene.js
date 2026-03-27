@@ -176,8 +176,10 @@ export function createSceneContext({
   const camera = CameraManager.createCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 
   const composer = new EffectComposer(renderer);
-  const composerPixelRatio =
-    renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1;
+  const composerPixelRatio = Math.min(
+    renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1,
+    1,
+  );
   composer.setPixelRatio(composerPixelRatio);
   composer.setSize(window.innerWidth, window.innerHeight);
   const renderPass = new RenderPass(scene, camera);

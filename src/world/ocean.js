@@ -338,11 +338,15 @@ export async function createOcean(scene, terrain, options = {}) {
   }
   
   const geometry = new THREE.PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
+  const waterRenderTargetSize = computeRenderTargetSize({
+    ...options,
+    baseTextureSize: options.baseTextureSize ?? 256,
+  });
 
   // 3. CONFIGURE WATER SHADER
   const water = new Water(geometry, {
-    textureWidth: 512,
-    textureHeight: 512,
+    textureWidth: waterRenderTargetSize,
+    textureHeight: waterRenderTargetSize,
     waterNormals: waterNormals,
     sunDirection: new THREE.Vector3(),
     sunColor: 0xffffff,

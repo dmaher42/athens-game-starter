@@ -231,7 +231,9 @@ export class Application {
     this.renderer = createRenderer();
     const renderer = this.renderer;
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    // Cap device pixel ratio more aggressively so the default build stays
+    // responsive on laptops and school machines.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     
