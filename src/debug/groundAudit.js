@@ -109,14 +109,15 @@ function logDetailedAudit(scene) {
   console.log("  2. Terrain (Y=0, renderOrder=0) - Main ground with sand texture");
   console.log("  3. AegeanOcean (Y=0, renderOrder=0, transparent) - Ocean water");
   console.log("  4. ShoreTermination (Y≈0.06, renderOrder=-1, transparent) - Coastal silhouette");
-  console.log("  5. HarborPad (Y≈2.12, renderOrder=2) - Opaque sand ground raised above water");
-  console.log("  6. Docks / quay / harbor props (renderOrder=2 or default) - above-water structures");
-  console.log("  7. Docks (Y≈0.975, renderOrder=0) - Wood docks above harbor water");
+  console.log("  5. Docks / quay / harbor props (renderOrder=2 or default) - Above-water structures");
+  console.log("  6. Shoreline dressing / beach patches (slightly above terrain) - Coastal transition detail");
+  console.log("  7. Dock decks (Y≈0.975, renderOrder=0) - Wood walkways above the basin");
   
   console.log("Current runtime ownership:");
   console.log("  - AegeanOcean is the only live water surface.");
   console.log("  - Terrain owns shoreline elevation and coastal material zoning.");
-  console.log("  - HarborPad is only a quay apron and should not be treated as water.");
+  console.log("  - Terrain is the harbor-ground owner near the basin.");
+  console.log("  - Harbor structures should stay above the shoreline, not replace it.");
   console.groupEnd();
 }
 

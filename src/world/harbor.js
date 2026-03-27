@@ -18,8 +18,6 @@ import {
   analyzeHarborZone,
   HARBOR_ZONE_CONFIG,
 } from "./coastalZones.js";
-import { RENDER_LAYERS } from "./renderLayers.js";
-import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 
 const DOCK_SECTION_LENGTH = 9.5;
 const DOCK_SECTION_WIDTH = 5.8;
@@ -43,75 +41,6 @@ const BOAT_STYLES = [
 function enableShadows(mesh) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
-}
-
-function createHarborPad(harborGroundY) {
-  // Quay apron behind the waterfront. Keep it off the main water read so it
-  // supports the warehouses and harbor edge without cutting across the basin.
-  const width = 54;
-  const depth = 88;
-  const geometry = new THREE.PlaneGeometry(width, depth, 1, 1);
-  if (geometry.attributes.uv && !geometry.attributes.uv2) {
-    geometry.setAttribute(
-      "uv2",
-      new THREE.BufferAttribute(
-        new Float32Array(geometry.attributes.uv.array),
-        2,
-      ),
-    );
-  }
-  
-  // Create material matching terrain texture for seamless appearance underwater
-  const textureLoader = new THREE.TextureLoader();
-  const baseUrl = resolveBaseUrl();
-  
-  const sandDiffuse = textureLoader.load(
-    joinPath(baseUrl, "textures/sand/albedo.jpg"),
-  );
-  sandDiffuse.wrapS = sandDiffuse.wrapT = THREE.RepeatWrapping;
-  sandDiffuse.repeat.set(28, 24); // Match terrain repeat scale
-  sandDiffuse.colorSpace = THREE.SRGBColorSpace;
-  
-  const sandNormal = textureLoader.load(
-    joinPath(baseUrl, "textures/sand/normal_gl.jpg"),
-  );
-  sandNormal.wrapS = sandNormal.wrapT = THREE.RepeatWrapping;
-  sandNormal.repeat.set(28, 24); // Match terrain repeat scale
-  sandNormal.colorSpace = THREE.NoColorSpace;
-  
-  const sandARM = textureLoader.load(
-    joinPath(baseUrl, "textures/sand/arm.jpg"),
-  );
-  sandARM.wrapS = sandARM.wrapT = THREE.RepeatWrapping;
-  sandARM.repeat.set(28, 24); // Match terrain repeat scale
-  sandARM.colorSpace = THREE.NoColorSpace;
-  
-  const padMaterial = new THREE.MeshStandardMaterial({
-    map: sandDiffuse,
-    color: 0xffffff,
-    roughness: 0.8,
-    metalness: 0.0,
-    normalMap: sandNormal,
-    normalScale: new THREE.Vector2(0.5, 0.5),
-    aoMap: sandARM,
-    roughnessMap: sandARM,
-    aoMapIntensity: 0.6,
-  });
-  
-  const pad = new THREE.Mesh(geometry, padMaterial);
-  pad.name = "HarborPad";
-  pad.rotation.x = -Math.PI / 2;
-  // Offset the pad toward the built harbor edge instead of centering it across
-  // the whole district, which helps stop it visually competing with the water.
-  pad.position.set(
-    78,
-    0.03,
-    4,
-  );
-  pad.receiveShadow = true;
-  pad.renderOrder = RENDER_LAYERS.DETAIL;
-  pad.visible = true;   // Show harbor pad to restore harbor visuals
-  return pad;
 }
 
 function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOCK_SECTION_WIDTH } = {}) {
@@ -1459,8 +1388,6 @@ export function createHarbor(scene, options = {}) {
     raisedSlots = analysis.bestRaisedPositions || [];
   }
 
-  const harborPad = createHarborPad(harborGroundY);
-  harbor.add(harborPad);
   harbor.add(createQuayEdge());
   harbor.add(createHarborEdgeTransitions());
 
