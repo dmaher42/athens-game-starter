@@ -995,7 +995,6 @@ export class Application {
           scene.traverse((obj: any) => {
             const isWater = 
               obj.name === 'AegeanOcean' ||
-              obj.name === 'HarborLowPolyWater' ||
               obj.name?.toLowerCase().includes('water') ||
               obj.name?.toLowerCase().includes('ocean') ||
               obj.userData?.isWater ||
@@ -1013,7 +1012,6 @@ export class Application {
           scene.traverse((obj: any) => {
             const isWater = 
               obj.name === 'AegeanOcean' ||
-              obj.name === 'HarborLowPolyWater' ||
               obj.name?.toLowerCase().includes('water') ||
               obj.name?.toLowerCase().includes('ocean') ||
               obj.userData?.isWater ||
@@ -1031,7 +1029,6 @@ export class Application {
           scene.traverse((obj: any) => {
             const isWater = 
               obj.name === 'AegeanOcean' ||
-              obj.name === 'HarborLowPolyWater' ||
               obj.name?.toLowerCase().includes('water') ||
               obj.name?.toLowerCase().includes('ocean') ||
               obj.userData?.isWater;

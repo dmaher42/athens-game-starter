@@ -1,7 +1,6 @@
 function isWaterObject(obj) {
   return (
     obj?.name === "AegeanOcean" ||
-    obj?.name === "HarborLowPolyWater" ||
     obj?.name?.toLowerCase?.().includes("water") ||
     obj?.name?.toLowerCase?.().includes("ocean") ||
     obj?.userData?.isWater ||
