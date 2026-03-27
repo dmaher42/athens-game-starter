@@ -133,14 +133,14 @@ export class PlayerSystem {
     if (USE_THIRD_PERSON) {
       this.thirdPersonCamera = new ThirdPersonCamera(camera, this.player.object, {
         targetOffset: thirdPersonTargetOffset,
-        followLerp: 0.2,
-        rotationLerp: 0.24,
+        followLerp: 0.42,
+        rotationLerp: 0.5,
         solids: thirdPersonSolids,
         enabled: false,
         keyOrbit: {
           enabled: true,
-          yawSpeed: 0.9,
-          pitchSpeed: 0.9,
+          yawSpeed: 1.9,
+          pitchSpeed: 1.7,
           minPitch: -0.6,
           maxPitch: 0.6,
           minDist: 2.5,

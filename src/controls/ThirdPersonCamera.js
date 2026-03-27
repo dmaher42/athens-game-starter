@@ -636,28 +636,18 @@ export class ThirdPersonCamera {
     const pitchInput = ((keys.up ? 1 : 0) - (keys.down ? 1 : 0)) * invert;
     const zoomInput = (keys.pageDown ? 1 : 0) - (keys.pageUp ? 1 : 0);
 
-    if (yawInput !== 0) {
-      state.desiredYawDelta += yawInput * this.keyOrbit.yawSpeed * dt;
-    }
-    if (pitchInput !== 0) {
-      state.desiredPitchDelta += pitchInput * this.keyOrbit.pitchSpeed * dt;
-    }
-
-    const yawStep = THREE.MathUtils.lerp(0, state.desiredYawDelta, 0.18);
-    const pitchStep = THREE.MathUtils.lerp(0, state.desiredPitchDelta, 0.18);
+    const yawStep = yawInput * this.keyOrbit.yawSpeed * dt;
+    const pitchStep = pitchInput * this.keyOrbit.pitchSpeed * dt;
 
     if (yawStep !== 0) {
       this.targetYaw = wrapAngle(this.targetYaw + yawStep);
     }
-    if (pitchStep !== 0 || pitchInput !== 0 || Math.abs(state.desiredPitchDelta) > 1e-5) {
+    if (pitchStep !== 0) {
       const minPitch = Math.max(this.minPitch, this.keyOrbit.minPitch);
       const maxPitch = Math.min(this.maxPitch, this.keyOrbit.maxPitch);
       const nextPitch = this.targetPitch + pitchStep;
       this.targetPitch = THREE.MathUtils.clamp(nextPitch, minPitch, maxPitch);
     }
-
-    state.desiredYawDelta -= yawStep;
-    state.desiredPitchDelta -= pitchStep;
 
     if (zoomInput !== 0) {
       const zoomDelta = zoomInput * this.keyOrbit.zoomSpeed * dt;
