@@ -90,3 +90,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-27: Fixed a shoreline material clash by widening the coastal-material assignment in `src/world/terrain.js` so shallow-water and waterline triangles use the coastal sand material instead of letting city dirt reach all the way to the ocean edge.
 - 2026-03-27: Softened `CoastalGroundMaterial` in `src/materials/groundMaterials.js` with a cooler sand tint, a slightly larger texture scale, and a gentler normal response so it sits more naturally beside the ocean surface.
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the shoreline fix; both passed.
+- 2026-03-27: Continued the shoreline pass in `src/world/backdrop/ShorelineDressing.js` by adding low beach patches and scrub clusters around the harbor mouth and first open-sea stretch so the coast reads as built-up shoreline instead of just a rock line.
+- 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the shoreline-dressing pass; both passed.
