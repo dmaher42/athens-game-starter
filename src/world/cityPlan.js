@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, CITY_CENTER_ORIGIN, getCityGroundY } from './locations.js';
+import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, HARBOR_WATER_BOUNDS, CITY_CENTER_ORIGIN, getCityGroundY } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { IS_DEV } from '../utils/env.js';
@@ -568,6 +568,19 @@ function isWithinSetbackRect(x, z, rect) {
   return x >= west && x <= east && z >= south && z <= north;
 }
 
+function isInAuthoredHarborFront(worldX, worldZ) {
+  const harborNorth = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
+  const harborSouth = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
+  const harborWestCutoff = HARBOR_CENTER_3D.x - BLOCK_SIZE * 1.5;
+  const harborZPadding = BLOCK_SIZE * 1.5;
+
+  return (
+    worldX >= harborWestCutoff &&
+    worldZ >= harborSouth - harborZPadding &&
+    worldZ <= harborNorth + harborZPadding
+  );
+}
+
 function resolveDistrictForCell(worldX, worldZ) {
   const harborDistance = Math.hypot(worldX - HARBOR_CENTER_3D.x, worldZ - HARBOR_CENTER_3D.z);
   const agoraDistance = Math.hypot(worldX - AGORA_CENTER_3D.x, worldZ - AGORA_CENTER_3D.z);
@@ -896,7 +909,7 @@ export async function createCivicDistrict(scene, options = {}) {
     const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
       return isWithinSetbackRect(worldX, worldZ, r);
     });
-    if (isInSetback) {
+    if (isInSetback || isInAuthoredHarborFront(worldX, worldZ)) {
       continue; // Skip placing any city element inside harbor/walkway setbacks
     }
 
@@ -977,7 +990,7 @@ export async function createCivicDistrict(scene, options = {}) {
       const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
         return isWithinSetbackRect(worldX, worldZ, r);
       });
-      if (isInSetback) continue;
+      if (isInSetback || isInAuthoredHarborFront(worldX, worldZ)) continue;
 
       // Create narrow footpath (lighter color than roads)
       const pathWidth = pathTile.type === 'connector' ? 8 : 6;
