@@ -674,27 +674,27 @@ export class Application {
         await placeLandmark(
           worldRoot,
           terrain,
-          AGORA_CENTER_3D.clone().add(new THREE.Vector3(-24, 0, -8)),
+          AGORA_CENTER_3D.clone().add(new THREE.Vector3(-58, 0, -20)),
           {
-            width: 28,
-            depth: 52,
-            colX: 8,
+            width: 22,
+            depth: 40,
+            colX: 6,
             colZ: 2,
             materialPreset: "plaster",
-            rotationRad: THREE.MathUtils.degToRad(88),
+            rotationRad: THREE.MathUtils.degToRad(78),
           },
         );
 
         await placeLandmark(
           worldRoot,
           terrain,
-          ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(6, 0, -6)),
+          ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(18, 0, -22)),
           {
-            width: 24,
-            depth: 46,
+            width: 22,
+            depth: 42,
             colX: 6,
-            colZ: 13,
-            rotationRad: THREE.MathUtils.degToRad(-16),
+            colZ: 11,
+            rotationRad: THREE.MathUtils.degToRad(-22),
           },
         );
       }
