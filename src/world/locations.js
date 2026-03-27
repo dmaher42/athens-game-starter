@@ -118,6 +118,15 @@ export const HARBOR_SETBACKS = [
     north: HARBOR_CENTER_3D.z - HARBOR_WALKWAY_HALF_WIDTH,
     south: HARBOR_CENTER_3D.z + HARBOR_WALKWAY_HALF_WIDTH,
   },
+  {
+    // Open sea setback for procedural city layout. The harbor basin and Aegean
+    // read as water-owned space, so city roads/buildings should not render
+    // across this larger seaward sheet.
+    west: AEGEAN_OCEAN_BOUNDS.west,
+    east: AEGEAN_OCEAN_BOUNDS.east,
+    north: AEGEAN_OCEAN_BOUNDS.north,
+    south: AEGEAN_OCEAN_BOUNDS.south,
+  },
 ];
 
 export const HARBOR_WATER_CENTER = new THREE.Vector3(
