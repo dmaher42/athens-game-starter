@@ -106,3 +106,5 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the landmark placement pass; both passed.
 - 2026-03-27: Continued the Agora composition work by adding a dedicated north/south framing rule in `src/world/cityPlan.js`. The cells just outside the plaza now prefer low stoas/monuments, use tighter height ranges, scale down slightly more, and skip extra market clutter so the square feels framed without getting crowded.
 - 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the Agora framing pass; both passed.
+- 2026-03-27: Continued the district-transition polish in `src/world/harbor.js` by dressing the city-harbor connector with small market stalls, amphorae, cargo, net bundles, and a worker at the city-side landing. The route from Agora to harbor should now pick up waterfront cues before the player reaches the quay.
+- 2026-03-27: Re-ran `npm.cmd run typecheck` and `npm.cmd run verify` after the connector transition pass; both passed.

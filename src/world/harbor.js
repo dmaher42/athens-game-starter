@@ -1224,6 +1224,40 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
     connector.add(railing);
   });
 
+  const threshold = new THREE.Group();
+  threshold.name = "HarborCityThreshold";
+
+  const stallA = createMarketStall({ width: 4.8, depth: 2.6, cloth: 0xc77244 });
+  stallA.position.set(-58, elevationDiff + 0.02, -7.2);
+  stallA.rotation.y = THREE.MathUtils.degToRad(8);
+  threshold.add(stallA);
+
+  const stallB = createMarketStall({ width: 4.4, depth: 2.5, cloth: 0x2f7891 });
+  stallB.position.set(-50, elevationDiff + 0.02, 7.4);
+  stallB.rotation.y = THREE.MathUtils.degToRad(-10);
+  threshold.add(stallB);
+
+  const amphorae = createAmphoraStack(5);
+  amphorae.position.set(-54, elevationDiff + 0.02, -11.5);
+  threshold.add(amphorae);
+
+  const cargo = createCrateCluster();
+  cargo.position.set(-47, elevationDiff + 0.02, 10.4);
+  cargo.scale.setScalar(0.9);
+  threshold.add(cargo);
+
+  const netBundle = createNetBundle({ width: 1.8, depth: 1.2, color: 0x8fa4a6 });
+  netBundle.position.set(-60.5, elevationDiff + 0.06, 9.2);
+  netBundle.rotation.y = THREE.MathUtils.degToRad(12);
+  threshold.add(netBundle);
+
+  const worker = createHarborWorker({ tunic: 0xc4ad8b, accent: 0x6f4f37 });
+  worker.position.set(-53, elevationDiff + 0.02, 0.8);
+  worker.rotation.y = THREE.MathUtils.degToRad(96);
+  threshold.add(worker);
+
+  connector.add(threshold);
+
   return connector;
 }
 
