@@ -133,8 +133,8 @@ export class PlayerSystem {
     if (USE_THIRD_PERSON) {
       this.thirdPersonCamera = new ThirdPersonCamera(camera, this.player.object, {
         targetOffset: thirdPersonTargetOffset,
-        followLerp: 0.12,
-        rotationLerp: 0.15,
+        followLerp: 0.2,
+        rotationLerp: 0.24,
         solids: thirdPersonSolids,
         enabled: false,
         keyOrbit: {
@@ -160,9 +160,9 @@ export class PlayerSystem {
       this.player.cameraPitch = DEMO_CAMERA_PITCH;
     }
 
-    await this.loadCharacter();
-
+    this.attachFallbackAvatar();
     this.setThirdPersonEnabled(USE_THIRD_PERSON);
+    void this.loadCharacter();
   }
 
   update(deltaTime) {
@@ -278,7 +278,7 @@ export class PlayerSystem {
             // Some imported hero GLB mesh parts arrive hidden; force them visible on the player rig.
             child.visible = true;
             child.castShadow = true;
-            child.receiveShadow = true;
+            child.receiveShadow = false;
             child.frustumCulled = false;  // Disable frustum culling for character meshes
             // Update geometry bounds
             if (child.geometry) {
@@ -297,7 +297,11 @@ export class PlayerSystem {
         }
       } catch (error) {
         console.warn('[PlayerSystem] Failed to load hero GLB, using fallback avatar:', error);
-        this.attachFallbackAvatar();
+        if (this.fallbackAvatar) {
+          this.fallbackAvatar.visible = true;
+        } else {
+          this.attachFallbackAvatar();
+        }
       }
     } else {
       this.attachFallbackAvatar();
@@ -305,6 +309,10 @@ export class PlayerSystem {
   }
 
   attachFallbackAvatar() {
+    if (this.fallbackAvatar) {
+      this.fallbackAvatar.visible = true;
+      return;
+    }
     const fallbackAvatar = this.createFallbackAvatar();
     this.fallbackAvatar = fallbackAvatar;
     this.player.object.add(fallbackAvatar);
@@ -327,7 +335,7 @@ export class PlayerSystem {
       bodyMaterial,
     );
     body.castShadow = true;
-    body.receiveShadow = true;
+    body.receiveShadow = false;
     body.position.y = 0.6;
     group.add(body);
 

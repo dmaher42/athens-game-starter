@@ -586,60 +586,58 @@ export class Application {
       updateLoadingStatus("Raising temples, homes, and harbors...");
 
       if (landmarksEnabled) {
-        await placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-40, 0, -80)), {
-          width: 22,
-          depth: 40,
-          rotationRad: THREE.MathUtils.degToRad(25),
-        });
-
-        await placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(40, 0, -80)), {
-          width: 30,
-          depth: 54,
-          columnCountX: 8,
-          columnCountZ: 17,
-          rotationRad: THREE.MathUtils.degToRad(-10),
-        });
-
-        await placeLandmark(
-          worldRoot,
-          terrain,
-          HARBOR_CENTER_3D.clone().add(new THREE.Vector3(0, 0, -140)),
-          {
-            width: 12,
-            depth: 34,
-            columnCountX: 6,
-            columnCountZ: 2,
-            materialPreset: "plaster",
-            rotationRad: THREE.MathUtils.degToRad(0),
-          },
-        );
-
-        await placeLandmark(
-          worldRoot,
-          terrain,
-          AGORA_CENTER_3D.clone().add(new THREE.Vector3(-58, 0, -20)),
-          {
+        await Promise.all([
+          placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-40, 0, -80)), {
             width: 22,
             depth: 40,
-            colX: 6,
-            colZ: 2,
-            materialPreset: "plaster",
-            rotationRad: THREE.MathUtils.degToRad(78),
-          },
-        );
-
-        await placeLandmark(
-          worldRoot,
-          terrain,
-          ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(18, 0, -22)),
-          {
-            width: 22,
-            depth: 42,
-            colX: 6,
-            colZ: 11,
-            rotationRad: THREE.MathUtils.degToRad(-22),
-          },
-        );
+            rotationRad: THREE.MathUtils.degToRad(25),
+          }),
+          placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(40, 0, -80)), {
+            width: 30,
+            depth: 54,
+            columnCountX: 8,
+            columnCountZ: 17,
+            rotationRad: THREE.MathUtils.degToRad(-10),
+          }),
+          placeLandmark(
+            worldRoot,
+            terrain,
+            HARBOR_CENTER_3D.clone().add(new THREE.Vector3(0, 0, -140)),
+            {
+              width: 12,
+              depth: 34,
+              columnCountX: 6,
+              columnCountZ: 2,
+              materialPreset: "plaster",
+              rotationRad: THREE.MathUtils.degToRad(0),
+            },
+          ),
+          placeLandmark(
+            worldRoot,
+            terrain,
+            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-58, 0, -20)),
+            {
+              width: 22,
+              depth: 40,
+              colX: 6,
+              colZ: 2,
+              materialPreset: "plaster",
+              rotationRad: THREE.MathUtils.degToRad(78),
+            },
+          ),
+          placeLandmark(
+            worldRoot,
+            terrain,
+            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(18, 0, -22)),
+            {
+              width: 22,
+              depth: 42,
+              colX: 6,
+              colZ: 11,
+              rotationRad: THREE.MathUtils.degToRad(-22),
+            },
+          ),
+        ]);
       }
 
       applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch(() => {});
