@@ -39,7 +39,7 @@ export const WALKABILITY_CONFIG = {
   KEY_LOCATIONS: {
     ACROPOLIS: { x: 0, z: -5 }, // Grid coords
     AGORA: { x: 0, z: 0 },
-    HARBOR: { x: 10, z: 0 },
+    HARBOR: { x: 2, z: 0 }, // City-side harbor gate, not the open waterfront
   },
 };
 
@@ -100,7 +100,7 @@ function findPath(grid, startX, startZ, endX, endZ, maxSlope = WALKABILITY_CONFI
     
     for (const [dx, dz] of dirs) {
       const neighbor = getCell(cell.gridX + dx, cell.gridZ + dz);
-      if (neighbor && neighbor.slope <= maxSlope) {
+      if (neighbor && !neighbor.blocked && neighbor.slope <= maxSlope) {
         neighbors.push(neighbor);
       }
     }
@@ -163,7 +163,7 @@ export function generatePaths(grid, options = {}) {
 
   // Mark existing roads as paths
   for (const cell of grid) {
-    if (cell.type === 'road') {
+    if (!cell.blocked && cell.type === 'road') {
       pathTiles.push({
         gridX: cell.gridX,
         gridZ: cell.gridZ,
@@ -178,7 +178,7 @@ export function generatePaths(grid, options = {}) {
   for (let x = MIN_X; x <= MAX_X; x += spacing) {
     for (let z = MIN_Z; z <= MAX_Z; z += spacing) {
       const cell = grid.find(c => c.gridX === x && c.gridZ === z);
-      if (cell && cell.type !== 'road' && cell.slope <= maxSlope) {
+      if (cell && !cell.blocked && cell.type !== 'road' && cell.slope <= maxSlope) {
         pathTiles.push({
           gridX: cell.gridX,
           gridZ: cell.gridZ,
@@ -581,6 +581,13 @@ function isInAuthoredHarborFront(worldX, worldZ) {
   );
 }
 
+function isBlockedForCityLayout(worldX, worldZ) {
+  const isInSetback = HARBOR_SETBACKS?.some?.((rect) =>
+    isWithinSetbackRect(worldX, worldZ, rect),
+  );
+  return isInSetback || isInAuthoredHarborFront(worldX, worldZ);
+}
+
 function resolveDistrictForCell(worldX, worldZ) {
   const harborDistance = Math.hypot(worldX - HARBOR_CENTER_3D.x, worldZ - HARBOR_CENTER_3D.z);
   const agoraDistance = Math.hypot(worldX - AGORA_CENTER_3D.x, worldZ - AGORA_CENTER_3D.z);
@@ -711,9 +718,18 @@ function generateCityGrid(terrainSampler) {
         slope: 0,
         elevation: 0,
         buildable: true,
+        blocked: false,
       };
 
       cell.district = resolveDistrictForCell(worldX, worldZ);
+
+      if (isBlockedForCityLayout(worldX, worldZ)) {
+        cell.type = 'blocked';
+        cell.buildable = false;
+        cell.blocked = true;
+        cells.push(cell);
+        continue;
+      }
       
       // Civic district must be within 30 tiles of starting point and on flat land
       if (cell.district === 'civic') {
@@ -906,10 +922,7 @@ export async function createCivicDistrict(scene, options = {}) {
     // Compute world-space position to respect harbor exclusions
     const worldX = cell.position.x;
     const worldZ = cell.position.z;
-    const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
-      return isWithinSetbackRect(worldX, worldZ, r);
-    });
-    if (isInSetback || isInAuthoredHarborFront(worldX, worldZ)) {
+    if (isBlockedForCityLayout(worldX, worldZ)) {
       continue; // Skip placing any city element inside harbor/walkway setbacks
     }
 
@@ -987,10 +1000,7 @@ export async function createCivicDistrict(scene, options = {}) {
       // Check harbor exclusion
       const worldX = pathTile.position.x;
       const worldZ = pathTile.position.z;
-      const isInSetback = HARBOR_SETBACKS?.some?.((r) => {
-        return isWithinSetbackRect(worldX, worldZ, r);
-      });
-      if (isInSetback || isInAuthoredHarborFront(worldX, worldZ)) continue;
+      if (isBlockedForCityLayout(worldX, worldZ)) continue;
 
       // Create narrow footpath (lighter color than roads)
       const pathWidth = pathTile.type === 'connector' ? 8 : 6;
