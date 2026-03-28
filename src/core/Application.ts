@@ -577,6 +577,7 @@ export class Application {
           useProceduralBlocks: FORCE_PROC,
           forceProcedural: FORCE_PROC,
           seaLevel: resolvedSeaLevel,
+          metadataOnly: true,
         },
       );
 

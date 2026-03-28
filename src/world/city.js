@@ -371,6 +371,7 @@ export function generateGreekHouseGeometry(
 export async function createCity(scene, terrain, options = {}) {
   const origin = options.origin ? options.origin.clone() : CITY_CHUNK_CENTER.clone();
   const seaLevel = Number.isFinite(options.seaLevel) ? options.seaLevel : getSeaLevelY();
+  const metadataOnly = options.metadataOnly === true;
   const rng = (seed) => {
     let s = seed;
     return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 0xffffffff);
@@ -486,17 +487,18 @@ export async function createCity(scene, terrain, options = {}) {
     const wallColor = new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random));
     const roofColor = new THREE.Color(pickRandom(ROOF_COLOR_PRESETS, random));
 
-    const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
-
     let angle = 0;
     if (bestCurve) {
       const tangent = bestCurve.getTangent(bestT);
       angle = Math.atan2(tangent.x, tangent.z);
     }
     angle += THREE.MathUtils.degToRad((random() - 0.5) * 60);
-    houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
-    houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
-    cityGeometries.push(houseGeo);
+    if (!metadataOnly) {
+      const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
+      houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
+      houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
+      cityGeometries.push(houseGeo);
+    }
     placedPoints.push({ x, z, radius: neighborRadius });
     buildingPlacements.push({ x, z, rotation: angle, width, depth });
     zoneAPlaced++;
@@ -530,17 +532,18 @@ export async function createCity(scene, terrain, options = {}) {
     const wallColor = new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random));
     const roofColor = new THREE.Color(pickRandom(ROOF_COLOR_PRESETS, random));
 
-    const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
-
     let angle = 0;
     if (bestCurve) {
       const tangent = bestCurve.getTangent(bestT);
       angle = Math.atan2(tangent.x, tangent.z);
     }
     angle += THREE.MathUtils.degToRad((random() - 0.5) * 12);
-    houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
-    houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
-    cityGeometries.push(houseGeo);
+    if (!metadataOnly) {
+      const houseGeo = generateGreekHouseGeometry(width, depth, wallHeight, roofHeight, wallColor, roofColor);
+      houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
+      houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
+      cityGeometries.push(houseGeo);
+    }
     placedPoints.push({ x, z, radius: neighborRadius });
     buildingPlacements.push({ x, z, rotation: angle, width, depth });
     zoneBPlaced++;
@@ -575,31 +578,32 @@ export async function createCity(scene, terrain, options = {}) {
     const wallColor = new THREE.Color(pickRandom(WALL_COLOR_PRESETS, random));
     const roofColor = new THREE.Color(pickRandom(ROOF_COLOR_PRESETS, random));
 
-    const houseGeo = generateGreekHouseGeometry(
-      width,
-      depth,
-      wallHeight,
-      roofHeight,
-      wallColor,
-      roofColor,
-      { courtyard: true },
-    );
-
     let angle = 0;
     if (bestCurve) {
       const tangent = bestCurve.getTangent(bestT);
       angle = Math.atan2(tangent.x, tangent.z);
     }
     angle += THREE.MathUtils.degToRad((random() - 0.5) * 30);
-    houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
-    houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
-    cityGeometries.push(houseGeo);
+    if (!metadataOnly) {
+      const houseGeo = generateGreekHouseGeometry(
+        width,
+        depth,
+        wallHeight,
+        roofHeight,
+        wallColor,
+        roofColor,
+        { courtyard: true },
+      );
+      houseGeo.applyMatrix4(new THREE.Matrix4().makeRotationY(angle));
+      houseGeo.applyMatrix4(new THREE.Matrix4().makeTranslation(x, y, z));
+      cityGeometries.push(houseGeo);
+    }
     placedPoints.push({ x, z, radius: neighborRadius });
     buildingPlacements.push({ x, z, rotation: angle, width, depth });
     zoneCPlaced++;
   }
 
-  if (cityGeometries.length > 0) {
+  if (!metadataOnly && cityGeometries.length > 0) {
     const mergedCity = mergeGeometries(cityGeometries, true);
     const cityMaterial =
       (await makeTiledPBR("textures/marble", { repeat: { x: 0.25, y: 0.25 } })) ||
@@ -612,11 +616,11 @@ export async function createCity(scene, terrain, options = {}) {
     city.add(cityMesh);
   }
 
-  populateCityDetails(city, terrain, buildingPlacements, roadCurves);
-
-  applyForegroundFogPolicy(city);
-
-  applyTextureBudgetToObject(city, scene?.userData?.renderer);
+  if (!metadataOnly) {
+    populateCityDetails(city, terrain, buildingPlacements, roadCurves);
+    applyForegroundFogPolicy(city);
+    applyTextureBudgetToObject(city, scene?.userData?.renderer);
+  }
 
   return {
     city,
