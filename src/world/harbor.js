@@ -1295,10 +1295,11 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
   // Calculate elevation difference
   const elevationDiff = cityGroundY - harborGroundY;
   
-  // Boardwalk extends from city edge (around X=60) toward harbor
-  // In local harbor coordinates: cityX - harborX = 0 - 120 = -120
-  const boardwalkLength = 70; // Length toward city (west)
-  const boardwalkWidth = 8;   // Width for comfortable walkway
+  // Keep the connector on the harbor side so it reads as a destination ramp
+  // instead of a silhouette slicing across the spawn view.
+  const boardwalkStartX = -34;
+  const boardwalkLength = 34;
+  const boardwalkWidth = 6.4;
   const boardwalkThickness = 0.35;
   
   // Wood planks material
@@ -1328,7 +1329,7 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
     );
     
     // Position each segment
-    const xPos = -70 + (i * segmentLength) + (segmentLength / 2);
+    const xPos = boardwalkStartX + (i * segmentLength) + (segmentLength / 2);
     segment.position.set(xPos, avgElevation, 0);
     segment.rotation.z = tiltAngle;
     segment.receiveShadow = true;
@@ -1348,7 +1349,7 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
 
   for (let i = 0; i < postCount; i++) {
     const t = i / (postCount - 1);
-    const xPos = -70 + (t * boardwalkLength);
+    const xPos = boardwalkStartX + (t * boardwalkLength);
     const topElevation = THREE.MathUtils.lerp(0, elevationDiff, t);
     const postHeight = topElevation + 2.5; // Extend down below surface
     
@@ -1378,7 +1379,7 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
     const railingPoints = [];
     for (let i = 0; i <= 16; i++) {
       const t = i / 16;
-      const xPos = -70 + (t * boardwalkLength);
+      const xPos = boardwalkStartX + (t * boardwalkLength);
       const yPos = THREE.MathUtils.lerp(0, elevationDiff, t) + railingHeight;
       railingPoints.push(new THREE.Vector3(xPos, yPos, side));
     }
@@ -1395,31 +1396,31 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
   threshold.name = "HarborCityThreshold";
 
   const stallA = createMarketStall({ width: 4.8, depth: 2.6, cloth: 0xc77244 });
-  stallA.position.set(-58, elevationDiff + 0.02, -7.2);
+  stallA.position.set(-29, elevationDiff + 0.02, -5.8);
   stallA.rotation.y = THREE.MathUtils.degToRad(8);
   threshold.add(stallA);
 
   const stallB = createMarketStall({ width: 4.4, depth: 2.5, cloth: 0x2f7891 });
-  stallB.position.set(-50, elevationDiff + 0.02, 7.4);
+  stallB.position.set(-22, elevationDiff + 0.02, 6.2);
   stallB.rotation.y = THREE.MathUtils.degToRad(-10);
   threshold.add(stallB);
 
   const amphorae = createAmphoraStack(5);
-  amphorae.position.set(-54, elevationDiff + 0.02, -11.5);
+  amphorae.position.set(-26, elevationDiff + 0.02, -8.8);
   threshold.add(amphorae);
 
   const cargo = createCrateCluster();
-  cargo.position.set(-47, elevationDiff + 0.02, 10.4);
+  cargo.position.set(-19.5, elevationDiff + 0.02, 8.7);
   cargo.scale.setScalar(0.9);
   threshold.add(cargo);
 
   const netBundle = createNetBundle({ width: 1.8, depth: 1.2, color: 0x8fa4a6 });
-  netBundle.position.set(-60.5, elevationDiff + 0.06, 9.2);
+  netBundle.position.set(-31.5, elevationDiff + 0.06, 7.4);
   netBundle.rotation.y = THREE.MathUtils.degToRad(12);
   threshold.add(netBundle);
 
   const worker = createHarborWorker({ tunic: 0xc4ad8b, accent: 0x6f4f37 });
-  worker.position.set(-53, elevationDiff + 0.02, 0.8);
+  worker.position.set(-24.5, elevationDiff + 0.02, 0.6);
   worker.rotation.y = THREE.MathUtils.degToRad(96);
   threshold.add(worker);
 

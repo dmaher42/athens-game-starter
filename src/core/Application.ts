@@ -609,14 +609,14 @@ export class Application {
           placeLandmark(
             worldRoot,
             terrain,
-            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-58, 0, -20)),
+            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-42, 0, 38)),
             {
-              width: 22,
-              depth: 40,
+              width: 18,
+              depth: 30,
               colX: 6,
               colZ: 2,
               materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(78),
+              rotationRad: THREE.MathUtils.degToRad(112),
             },
           ),
           placeLandmark(
