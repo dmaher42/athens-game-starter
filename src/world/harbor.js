@@ -1469,6 +1469,40 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
   return connector;
 }
 
+function optimizeHarborShadowCost(harbor) {
+  if (!harbor?.traverse) return;
+
+  const receiveOnlyGroups = new Set([
+    "HarborShorelineApron",
+    "HarborEdgeTransitions",
+    "HarborMouthMarkers",
+    "HarborBreakwaters",
+    "HarborQuayForecourt",
+    "HarborWorkZone",
+    "HarborWarehouseFrontage",
+    "HarborShorelineDressing",
+  ]);
+
+  const shouldReceiveOnly = (mesh) => {
+    let current = mesh.parent ?? null;
+    while (current) {
+      if (receiveOnlyGroups.has(current.name)) {
+        return true;
+      }
+      current = current.parent ?? null;
+    }
+    return false;
+  };
+
+  harbor.traverse((child) => {
+    if (!child?.isMesh) return;
+    if (shouldReceiveOnly(child)) {
+      child.castShadow = false;
+      child.receiveShadow = true;
+    }
+  });
+}
+
 /**
  * Creates a lighthouse on a raised platform.
  * Includes cylindrical stone tower with light chamber at top.
@@ -1838,6 +1872,7 @@ export function createHarbor(scene, options = {}) {
 
   // Position harbor group in world space
   harbor.position.copy(HARBOR_CENTER_3D);
+  optimizeHarborShadowCost(harbor);
 
   if (scene) {
     scene.add(harbor);

@@ -764,6 +764,8 @@ export class Application {
           .catch(() => {});
       }
 
+      let propCullingTimer = 0;
+      let buildingCullingTimer = 0;
       const onFrame = (deltaTime: number, elapsed: number) => {
         if (!scene.background || scene.background === null) {
           scene.background = new THREE.Color("#dbe9ff");
@@ -804,15 +806,20 @@ export class Application {
           lastDisplayedTime = formattedTime;
         }
 
-        if (Math.floor(elapsed * 60) % 10 === 0) {
+        propCullingTimer += deltaTime;
+        buildingCullingTimer += deltaTime;
+
+        if (propCullingTimer >= 0.6) {
           updateDistanceCulling(scene, camera, {
             nearDistance: 100,
             farDistance: 200
           });
+          propCullingTimer = 0;
         }
 
-        if (Math.floor(elapsed * 60) % 20 === 0) {
+        if (buildingCullingTimer >= 1.2) {
           cullDistantBuildings(scene, camera, 400);
+          buildingCullingTimer = 0;
         }
 
         renderFrame();
