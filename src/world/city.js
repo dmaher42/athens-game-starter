@@ -399,27 +399,6 @@ export async function createCity(scene, terrain, options = {}) {
     roadCurves.push(curve);
   }
 
-  const roadGeometries = roadCurves.map((curve) => {
-    const tube = new THREE.TubeGeometry(curve, 80, 1.5, 8, false);
-    return applyVertexColor(tube, 0x8f8676);
-  });
-
-  if (roadGeometries.length > 0) {
-    const mergedRoads = mergeGeometries(roadGeometries, true);
-    const roadMaterial = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 1.0,
-      metalness: 0.0,
-      side: THREE.DoubleSide,
-      fog: true,
-    });
-    const roadMesh = new THREE.Mesh(mergedRoads, roadMaterial);
-    roadMesh.receiveShadow = true;
-    roadMesh.userData.noCollision = true;
-    roadMesh.visible = false;  // Hide harbor city road tubes
-    city.add(roadMesh);
-  }
-
   const roadSamples = roadCurves.map((curve) => curve.getSpacedPoints(60));
 
   const cityGeometries = [];
@@ -649,9 +628,3 @@ export function updateCityLighting(city, nightFactor = 0, opts = {}) {
   if (!city) return;
 }
 
-export function createHillCity(scene, terrain, curve, opts = {}) {
-  const group = new THREE.Group();
-  group.name = "HillCity";
-  scene.add(group);
-  return group;
-}

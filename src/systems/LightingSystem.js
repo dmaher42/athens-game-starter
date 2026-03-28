@@ -255,7 +255,7 @@ export class LightingSystem {
         });
     }
 
-    update(deltaTime, elapsed, { harbor, harborCity, hillCity, roadGroup, ocean, grassRoot }) {
+    update(deltaTime, elapsed, { harbor, harborCity, roadGroup, ocean, grassRoot }) {
         const { dayCycle, timeOfDayState, currentLookProfile, dynamicSky, sunAlignmentState, lights } = this;
         if (dayCycle.secondsPerDay > 0) {
             const deltaPhase = deltaTime / dayCycle.secondsPerDay;
@@ -316,12 +316,9 @@ export class LightingSystem {
             dynamicSky.update(deltaTime);
         }
 
-        if (harbor && harborCity && hillCity && roadGroup) {
+        if (harbor && harborCity && roadGroup) {
             updateHarborLighting(harbor, lights.nightFactor);
             updateCityLighting(harborCity, lights.nightFactor, {
-                timeOfDayPhase: phase,
-            });
-            updateCityLighting(hillCity, lights.nightFactor, {
                 timeOfDayPhase: phase,
             });
             updateMainHillRoadLighting(roadGroup, lights.nightFactor);

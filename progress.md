@@ -1,5 +1,6 @@
 Original prompt: once complete start and finish the 5 most important issues
 
+- 2026-03-28: Started a repo cleanup audit focused on overlapping world-building layers. Removed dead `src/world/ground.js`, `src/world/roads.js`, `src/world/plazas.js`, the unused `adjustShallowWater()` helper in `src/world/terrain.js`, the empty `HillCity` bootstrap stub, and the hidden duplicate harbor-city road mesh so the live runtime no longer carries those stale ground/road paths.
 - 2026-03-25: Repaired the repo verification workflow so it builds, launches a Vite preview server on a free localhost port, and checks the GitHub Pages base path in Playwright.
 - 2026-03-25: Added `typecheck`, `preview`, `build:analyze`, and `verify` npm scripts; CI now uses `npm ci` and runs `typecheck` plus `verify` before deploy.
 - 2026-03-25: Updated TypeScript config to allow the existing mixed TypeScript/JavaScript codebase to typecheck without placeholder module shims.

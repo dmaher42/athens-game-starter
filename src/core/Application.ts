@@ -12,7 +12,7 @@ import { createHarborDecorations } from "../world/decoration.js";
 import { BackdropMountains } from "../world/backdrop/BackdropMountains.js";
 import { createShorelineDressing } from "../world/backdrop/ShorelineDressing.js";
 import { createMainHillRoad } from "../world/roads_hillcity.js";
-import { createHillCity, createCity } from "../world/city.js";
+import { createCity } from "../world/city.js";
 import { mount as mountGrass, update as updateGrass } from "../world/grass.js";
 import {
   AGORA_CENTER_3D,
@@ -577,12 +577,6 @@ export class Application {
         },
       );
 
-      const hillCity = await createHillCity(worldRoot, terrain, mainRoad, {
-        seed: 42,
-        buildingCount: 140,
-        foundationPadMaterial:
-          harborCity?.userData?.['foundationPadMaterial'] ?? null,
-      });
       updateLoadingStatus("Raising temples, homes, and harbors...");
 
       if (landmarksEnabled) {
@@ -771,7 +765,7 @@ export class Application {
           scene.background = new THREE.Color("#dbe9ff");
         }
 
-        lightingSystem.update(deltaTime, elapsed, { harbor, harborCity, hillCity, roadGroup, ocean, grassRoot });
+        lightingSystem.update(deltaTime, elapsed, { harbor, harborCity, roadGroup, ocean, grassRoot });
         playerSystem.update(deltaTime);
 
         (updateTerrain as any)(terrain, elapsed);

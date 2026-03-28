@@ -301,26 +301,12 @@ export interface CityGenerationOptions {
   gridWarpNoise?: number;
 }
 
-/** Hill-side city scatter options consumed by {@link createHillCity}. */
-export interface HillCityGenerationOptions {
-  seed?: number;
-  buildingCount?: number;
-  spacing?: number;
-  harborBand?: [number, number];
-  agoraBand?: [number, number];
-  acroBand?: [number, number];
-  avoidHarborRadius?: number;
-  showFoundationPads?: boolean;
-  foundationPadMaterial?: Material | null;
-}
-
 /**
  * Declarative world presets exposed to the application bootstrap. The discriminant
  * makes it trivial for tooling (or future editors) to surface the supported presets.
  */
 export type WorldPreset =
   | { type: 'harbor-city'; options?: CityGenerationOptions }
-  | { type: 'hill-city'; options?: HillCityGenerationOptions }
   | { type: 'civic-district'; options?: CivicDistrictOptions }
   | { type: 'harbor-decor'; options?: HarborDecorationOptions }
   | { type: 'city-plan-overlay'; options?: CityPlanOverlayOptions };
