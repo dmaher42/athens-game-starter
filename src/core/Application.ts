@@ -565,7 +565,11 @@ export class Application {
         grassRoot = mountGrass(scene);
       }
 
-      const { city: harborCity, roadCurves } = await createCity(
+      const {
+        city: harborCity,
+        roadCurves,
+        buildingPlacements,
+      } = await createCity(
         worldRoot,
         this.terrain,
         {
@@ -636,7 +640,7 @@ export class Application {
       applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch(() => {});
 
       updateTerrainCoverageMask(terrain, {
-        buildingPlacements: harborCity?.userData?.['buildingPlacements'] ?? [],
+        buildingPlacements: buildingPlacements ?? [],
         roadCurves: roadCurves ?? [],
         mainRoadCurve: mainRoad ?? null,
         mainRoadWidth: MAIN_ROAD_WIDTH,
@@ -651,7 +655,7 @@ export class Application {
       }
 
       scatterGroundProps(worldRoot, terrain, {
-        buildingPlacements: harborCity?.userData?.['buildingPlacements'] ?? [],
+        buildingPlacements: buildingPlacements ?? [],
         roadCurves: roadCurves ?? [],
         mainRoadCurve: mainRoad ?? null,
         roadPadding: MAIN_ROAD_WIDTH * 0.7,
