@@ -230,6 +230,14 @@ function getDistanceToHarborWaterBounds(x, z) {
   return Math.hypot(dx, dz);
 }
 
+function isWithinOceanBounds(x, z) {
+  const west = Math.min(AEGEAN_OCEAN_BOUNDS.west, AEGEAN_OCEAN_BOUNDS.east);
+  const east = Math.max(AEGEAN_OCEAN_BOUNDS.west, AEGEAN_OCEAN_BOUNDS.east);
+  const north = Math.max(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
+  const south = Math.min(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
+  return x >= west && x <= east && z >= south && z <= north;
+}
+
 function getElevation(
   x,
   z,
@@ -529,7 +537,9 @@ export function createTerrain(scene) {
     const avgHeight = (heightA + heightB + heightC) / 3;
     const minHeight = Math.min(heightA, heightB, heightC);
     const isShallowWater = avgHeight <= seaLevel + SHALLOW_WATER_BAND;
+    const isUnderwaterTriangle = avgHeight <= seaLevel + 0.05;
     const touchesWaterline = minHeight <= seaLevel + 0.12;
+    const isOpenSeaTriangle = isWithinOceanBounds(centerX, centerZ);
     const harborDistance = getDistanceToHarborWaterBounds(centerX, centerZ);
     const isHarborShoreline =
       harborDistance <= HARBOR_COASTAL_BAND &&
@@ -537,6 +547,8 @@ export function createTerrain(scene) {
     const shouldUseCoastalMaterial =
       dSea < 0.15 ||
       (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline)) ||
+      isUnderwaterTriangle ||
+      (isOpenSeaTriangle && (isShallowWater || touchesWaterline || isUnderwaterTriangle)) ||
       isHarborShoreline;
 
     if (shouldUseCoastalMaterial) {
