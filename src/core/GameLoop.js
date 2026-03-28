@@ -6,6 +6,7 @@ export class GameLoop {
     this.callbacks = new Set();
     this.performance = { fps: 0 };
     this._running = false;
+    this._elapsedSeconds = 0;
     this._frameCount = 0;
     this._perfLastTimestamp = null;
     this._boundLoop = this._loop.bind(this);
@@ -19,8 +20,6 @@ export class GameLoop {
     if (this._running) return;
     this._running = true;
     this.clock.start();
-    this._frameCount = 0;
-    this._perfLastTimestamp = null;
     this._rafId = requestAnimationFrame(this._boundLoop);
   }
 
@@ -45,23 +44,63 @@ export class GameLoop {
     return { ...this.performance };
   }
 
+  getElapsedTime() {
+    return this._elapsedSeconds;
+  }
+
+  advanceTime(ms = 0, fixedStepSeconds = 1 / 60) {
+    const durationSeconds = Math.max(0, Number(ms) / 1000 || 0);
+    if (durationSeconds <= 0) return;
+
+    const stepSeconds = Math.max(
+      1 / 240,
+      Number.isFinite(fixedStepSeconds) ? fixedStepSeconds : 1 / 60,
+    );
+    const wasRunning = this._running;
+
+    if (wasRunning && this._rafId) {
+      cancelAnimationFrame(this._rafId);
+      this._rafId = null;
+      this._running = false;
+    }
+
+    let remaining = durationSeconds;
+    while (remaining > 1e-8) {
+      const delta = Math.min(stepSeconds, remaining);
+      this._tick(delta);
+      remaining -= delta;
+    }
+
+    if (wasRunning) {
+      this._running = true;
+      this.clock.start();
+      this._rafId = requestAnimationFrame(this._boundLoop);
+    }
+  }
+
   _loop() {
     if (!this._running) return;
 
     const delta = this.clock.getDelta();
-    const elapsed = this.clock.elapsedTime;
+    this._tick(delta);
+
+    this._rafId = requestAnimationFrame(this._boundLoop);
+  }
+
+  _tick(delta) {
+    const safeDelta = Number.isFinite(delta) ? Math.max(0, delta) : 0;
+    this._elapsedSeconds += safeDelta;
+    const elapsed = this._elapsedSeconds;
 
     for (const callback of this.callbacks) {
       try {
-        callback(delta, elapsed);
+        callback(safeDelta, elapsed);
       } catch (error) {
         console.error("[GameLoop] callback error", error);
       }
     }
 
-    this._updatePerformance(delta);
-
-    this._rafId = requestAnimationFrame(this._boundLoop);
+    this._updatePerformance(safeDelta);
   }
 
   _updatePerformance(delta) {

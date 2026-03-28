@@ -825,6 +825,65 @@ export class Application {
       hideLoadingScreen();
       showDemoIntro();
 
+      const buildRenderStateText = () => {
+        const playerObject = playerSystem.player?.object;
+        const playerPosition = playerObject?.position;
+        const playerVelocity = playerSystem.player?.velocity;
+        const currentQuest = questManager.currentQuest ?? null;
+        const landmarkTargets = [
+          { id: "agora", x: AGORA_CENTER_3D.x, y: AGORA_CENTER_3D.y, z: AGORA_CENTER_3D.z },
+          { id: "harbor", x: HARBOR_CENTER_3D.x, y: HARBOR_CENTER_3D.y, z: HARBOR_CENTER_3D.z },
+          { id: "acropolis", x: ACROPOLIS_PEAK_3D.x, y: ACROPOLIS_PEAK_3D.y, z: ACROPOLIS_PEAK_3D.z },
+        ];
+
+        const payload = {
+          mode: "play",
+          coordinateSystem: "World space centered near the city core; x/z are horizontal ground axes and y is vertical.",
+          time: {
+            phase: Number((lightingSystem.timeOfDayState.timeOfDayPhase ?? 0).toFixed(4)),
+            label: lastDisplayedTime || formatPhaseAsTime(lightingSystem.timeOfDayState.timeOfDayPhase),
+          },
+          player: playerPosition
+            ? {
+                x: Number(playerPosition.x.toFixed(2)),
+                y: Number(playerPosition.y.toFixed(2)),
+                z: Number(playerPosition.z.toFixed(2)),
+                vx: Number((playerVelocity?.x ?? 0).toFixed(2)),
+                vy: Number((playerVelocity?.y ?? 0).toFixed(2)),
+                vz: Number((playerVelocity?.z ?? 0).toFixed(2)),
+                grounded: !!playerSystem.player?.grounded,
+                flying: !!playerSystem.player?.flying,
+                cameraYaw: Number((playerSystem.player?.cameraYaw ?? 0).toFixed(3)),
+                cameraPitch: Number((playerSystem.player?.cameraPitch ?? 0).toFixed(3)),
+              }
+            : null,
+          camera: {
+            x: Number(camera.position.x.toFixed(2)),
+            y: Number(camera.position.y.toFixed(2)),
+            z: Number(camera.position.z.toFixed(2)),
+          },
+          quest: currentQuest
+            ? {
+                title: currentQuest.title,
+                objective: currentQuest.objective,
+                status: currentQuest.status,
+              }
+            : null,
+          nearbyPrompt: interactionHud?.root?.textContent?.trim?.() || null,
+          targets: landmarkTargets,
+        };
+
+        return JSON.stringify(payload);
+      };
+
+      if (typeof window !== "undefined") {
+        (window as any).render_game_to_text = buildRenderStateText;
+        (window as any).advanceTime = (ms: number) => {
+          loop.advanceTime(ms);
+          return Promise.resolve();
+        };
+      }
+
       try {
         initPropCulling(scene, camera, { dryRun: false });
       } catch {}
