@@ -910,6 +910,86 @@ function createHarborEdgeTransitions() {
   return group;
 }
 
+function createHarborShorelineApron() {
+  const group = new THREE.Group();
+  group.name = "HarborShorelineApron";
+
+  const shoreMaterial = new THREE.MeshStandardMaterial({
+    color: 0xc8b89a,
+    roughness: 0.97,
+    metalness: 0.02,
+  });
+  const bermMaterial = new THREE.MeshStandardMaterial({
+    color: 0xb8a486,
+    roughness: 0.92,
+    metalness: 0.02,
+  });
+  const rubbleMaterial = new THREE.MeshStandardMaterial({
+    color: 0x887d71,
+    roughness: 0.94,
+    metalness: 0.02,
+  });
+
+  const localWaterWest = HARBOR_WATER_BOUNDS.west - HARBOR_CENTER_3D.x;
+  const localWaterNorth = HARBOR_WATER_BOUNDS.north - HARBOR_CENTER_3D.z;
+  const localWaterSouth = HARBOR_WATER_BOUNDS.south - HARBOR_CENTER_3D.z;
+
+  const shorelinePads = [
+    { x: localWaterWest + 18, z: -24, sx: 1.55, sz: 1.0, rot: -0.22 },
+    { x: localWaterWest + 16, z: -6, sx: 1.85, sz: 1.05, rot: -0.08 },
+    { x: localWaterWest + 18, z: 14, sx: 1.7, sz: 1.02, rot: 0.11 },
+    { x: localWaterWest + 22, z: 30, sx: 1.35, sz: 0.92, rot: 0.18 },
+    { x: 44, z: localWaterNorth - 7, sx: 1.12, sz: 0.78, rot: 0.15 },
+    { x: 48, z: localWaterSouth + 7, sx: 1.18, sz: 0.82, rot: -0.12 },
+  ];
+
+  for (const padDef of shorelinePads) {
+    const patch = new THREE.Mesh(
+      new THREE.CylinderGeometry(8.2, 10.4, 0.22, 22),
+      shoreMaterial,
+    );
+    patch.scale.set(padDef.sx, 1, padDef.sz);
+    patch.position.set(padDef.x, 0.06, padDef.z);
+    patch.rotation.y = padDef.rot;
+    patch.receiveShadow = true;
+    patch.castShadow = false;
+    group.add(patch);
+
+    const berm = new THREE.Mesh(
+      new THREE.BoxGeometry(9.8, 0.42, 3.1),
+      bermMaterial,
+    );
+    berm.position.set(padDef.x - 3.8, 0.18, padDef.z);
+    berm.rotation.y = padDef.rot * 0.9;
+    berm.rotation.z = THREE.MathUtils.degToRad(-4);
+    enableShadows(berm);
+    group.add(berm);
+  }
+
+  const rubbleGeometry = new THREE.DodecahedronGeometry(0.82, 0);
+  for (const [x, z, scale] of [
+    [localWaterWest + 8, -22, 0.88],
+    [localWaterWest + 10, -9, 1.05],
+    [localWaterWest + 9, 8, 0.92],
+    [localWaterWest + 11, 24, 1.18],
+    [46, localWaterNorth - 4, 0.82],
+    [49, localWaterSouth + 4, 0.9],
+  ]) {
+    const rock = new THREE.Mesh(rubbleGeometry, rubbleMaterial);
+    rock.position.set(x, 0.3, z);
+    rock.scale.setScalar(scale);
+    rock.rotation.set(
+      THREE.MathUtils.randFloatSpread(0.18),
+      Math.random() * Math.PI * 2,
+      THREE.MathUtils.randFloatSpread(0.18),
+    );
+    enableShadows(rock);
+    group.add(rock);
+  }
+
+  return group;
+}
+
 function createHarborMouthMarkers() {
   const group = new THREE.Group();
   group.name = "HarborMouthMarkers";
@@ -1429,6 +1509,7 @@ export function createHarbor(scene, options = {}) {
 
   harbor.add(createQuayEdge());
   harbor.add(createHarborEdgeTransitions());
+  harbor.add(createHarborShorelineApron());
   harbor.add(createHarborMouthMarkers());
 
   // Use grid-aligned dock slots if available, otherwise fallback to default positions

@@ -575,11 +575,13 @@ function isWithinSetbackRect(x, z, rect) {
 function isInAuthoredHarborFront(worldX, worldZ) {
   const harborNorth = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
   const harborSouth = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
-  const harborWestCutoff = HARBOR_CENTER_3D.x - BLOCK_SIZE * 2.1;
-  const harborZPadding = BLOCK_SIZE * 1.9;
+  const harborWestCutoff = HARBOR_CENTER_3D.x - BLOCK_SIZE * 3.1;
+  const harborEastCutoff = HARBOR_CENTER_3D.x + BLOCK_SIZE * 0.5;
+  const harborZPadding = BLOCK_SIZE * 2.45;
 
   return (
     worldX >= harborWestCutoff &&
+    worldX <= harborEastCutoff &&
     worldZ >= harborSouth - harborZPadding &&
     worldZ <= harborNorth + harborZPadding
   );
