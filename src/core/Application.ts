@@ -404,10 +404,10 @@ export class Application {
 
     const seaLevel = getSeaLevelY();
     const oceanRadius = Math.max(
-      Number.isFinite(terrainSize) ? terrainSize * 2.2 : 0,
-      2600,
+      Number.isFinite(terrainSize) ? terrainSize * 2.9 : 0,
+      4200,
     );
-    const horizonColor = 0x96b9d8;
+    const horizonColor = 0x7ba7c8;
     const shorelineInnerRadius = Math.max(
       Number.isFinite(terrainSize) ? terrainSize * 0.5 + 4 : 0,
       215,
@@ -417,11 +417,11 @@ export class Application {
       this.horizon = createHorizon(this.scene, {
         seaLevel,
         radius: oceanRadius,
-        fadeWidth: 320,
+        fadeWidth: 540,
         horizonColor,
         westHeight: 7,
-        eastHeight: 1.1,
-        westRadiusScale: 1.95,
+        eastHeight: 0.6,
+        westRadiusScale: 2.02,
       });
     }
     if (!this.ocean) {
@@ -440,8 +440,8 @@ export class Application {
       this.shoreTermination = createShorelineTermination(this.scene, {
         seaLevel,
         innerRadius: shorelineInnerRadius,
-        bandWidth: 35,
-        fadeWidth: 320,
+        bandWidth: 42,
+        fadeWidth: 540,
         oceanRadius,
         horizonColor,
       });

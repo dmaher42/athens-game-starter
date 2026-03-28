@@ -113,8 +113,8 @@ function createProceduralWaterNormals(size = 256) {
   return texture;
 }
 
-const _dayWaterColor = new THREE.Color(0x1E90FF); // Brighter Mediterranean blue
-const _nightWaterColor = new THREE.Color(0x001a21);
+const _dayWaterColor = new THREE.Color(0x2c7fb2);
+const _nightWaterColor = new THREE.Color(0x00131b);
 const _moodWaterColor = new THREE.Color();
 
 const DEFAULT_SEAWARD_PADDING = 4;
@@ -350,8 +350,8 @@ export async function createOcean(scene, terrain, options = {}) {
     waterNormals: waterNormals,
     sunDirection: new THREE.Vector3(),
     sunColor: 0xffffff,
-    waterColor: options.waterColor ?? 0x40E0D0, // Mediterranean turquoise
-    distortionScale: 1.2, // Subtler distortion
+    waterColor: options.waterColor ?? 0x2b86b8,
+    distortionScale: 1.8,
     fog: !!scene.fog,
   });
 
@@ -369,9 +369,10 @@ export async function createOcean(scene, terrain, options = {}) {
     heightMap.needsUpdate = true;
     shader.uniforms.uHeightMap = { value: heightMap };
 
-    // Fade Constants - softer fade now that aggressive clipping is removed
-    shader.uniforms.uFadeStart = { value: 500.0 };
-    shader.uniforms.uFadeEnd = { value: 3000.0 };
+    // Let the open sea keep its readable surface detail farther into the
+    // distance so it feels like an ocean rather than a small enclosed basin.
+    shader.uniforms.uFadeStart = { value: 900.0 };
+    shader.uniforms.uFadeEnd = { value: 5200.0 };
 
     // VERTEX SHADER FIX: Ensure main exists and vWorldPosition is assigned
     // We try to replace the 'void main() {' string.
@@ -446,6 +447,11 @@ export async function createOcean(scene, terrain, options = {}) {
       float shallowFactor = smoothstep(0.0, 10.0, waterDepth);
       finalColor = mix(vec3(0.5, 0.8, 0.9), finalColor, shallowFactor);
 
+      // Add a deeper offshore tint so the far sea reads more open and less like
+      // a uniformly lit inland lake.
+      float offshore = smoothstep(180.0, 760.0, vWorldPosition.x);
+      finalColor = mix(finalColor, vec3(0.08, 0.28, 0.44), offshore * 0.38);
+
 
       float n = oceanNoise(vWorldPosition.xz * 0.5);
       if (foamFactor > 0.0 && n > 0.7) {
@@ -498,8 +504,8 @@ export async function createOcean(scene, terrain, options = {}) {
   // Custom wave scaling keeps detail even on the rectangular expanse
   if (waterNormals) {
     waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping;
-    const repeatX = Math.max(oceanWidth / 180, 8);
-    const repeatZ = Math.max(oceanDepth / 180, 8);
+    const repeatX = Math.max(oceanWidth / 220, 10);
+    const repeatZ = Math.max(oceanDepth / 220, 10);
     waterNormals.repeat.set(repeatX, repeatZ);
   }
 
@@ -556,7 +562,7 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor,
   const calmFactor = THREE.MathUtils.clamp(typeof mood === "number" ? mood : 0, 0, 1);
   if (uniforms.distortionScale) {
     // Ensure water does not become too flat (1.1 min) even in calm/night conditions
-    const scale = THREE.MathUtils.lerp(2.0, 1.1, calmFactor);
+    const scale = THREE.MathUtils.lerp(2.6, 1.35, calmFactor);
     uniforms.distortionScale.value = THREE.MathUtils.clamp(scale, 0.1, 10.0);
   }
   if (uniforms.waterColor) {
