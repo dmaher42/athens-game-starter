@@ -8,7 +8,6 @@ import { createShorelineTermination } from "../world/shoreTermination.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
 import { createWorldFloorCap, applyKillPlane } from "../world/worldBounds.js";
 import { createHarbor } from "../world/harbor.js";
-import { createHarborDecorations } from "../world/decoration.js";
 import { BackdropMountains } from "../world/backdrop/BackdropMountains.js";
 import { createShorelineDressing } from "../world/backdrop/ShorelineDressing.js";
 import { createMainHillRoad } from "../world/roads_hillcity.js";
@@ -667,12 +666,6 @@ export class Application {
         greensWidth: 9,
         center: AGORA_CENTER_3D,
         terrain,
-      });
-
-      createHarborDecorations(worldRoot, {
-        harborCity,
-        terrain,
-        seaLevel: resolvedSeaLevel,
       });
 
       const backdrop = new BackdropMountains(worldRoot, {

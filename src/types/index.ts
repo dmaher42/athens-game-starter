@@ -219,16 +219,6 @@ export interface CivicDistrictOptions {
   surfaceOffset?: number;
 }
 
-/** Decorative scatter parameters surrounding the harbor frontage. */
-export interface HarborDecorationOptions {
-  center?: Vector3 | null;
-  harborPlazaCenter?: Vector3 | null;
-  harborAttempts?: number;
-  harborCity?: Object3D | null;
-  buildingsGroup?: Object3D | null;
-  terrain?: TerrainLike | null;
-}
-
 /** Blueprint overlay configuration mirroring {@link createCityPlanImplementation}. */
 export interface CityPlanOverlayOptions {
   center?: Vector3 | { x?: number; y?: number; z?: number };
@@ -308,5 +298,4 @@ export interface CityGenerationOptions {
 export type WorldPreset =
   | { type: 'harbor-city'; options?: CityGenerationOptions }
   | { type: 'civic-district'; options?: CivicDistrictOptions }
-  | { type: 'harbor-decor'; options?: HarborDecorationOptions }
   | { type: 'city-plan-overlay'; options?: CityPlanOverlayOptions };
