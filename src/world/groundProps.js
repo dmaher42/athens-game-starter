@@ -21,8 +21,7 @@ export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush"];
 
 function pickPropType() {
   const r = Math.random();
-  if (r < 0.03) return "rock";
-  if (r < 0.76) return "grass-tuft";
+  if (r < 0.78) return "grass-tuft";
   return "bush";
 }
 

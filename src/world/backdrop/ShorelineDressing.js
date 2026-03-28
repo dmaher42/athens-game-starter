@@ -85,7 +85,7 @@ export function createShorelineDressing(scene, terrain, seaLevel) {
     const seaNorth = Math.max(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
     const seaSouth = Math.min(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
 
-    const count = 14;
+    const count = 0;
     const seed = 999;
 
     const rockGeo = new THREE.DodecahedronGeometry(1, 0);

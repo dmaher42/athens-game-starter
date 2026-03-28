@@ -870,23 +870,6 @@ function createQuayEndTransition(endZ, direction = 1) {
   enableShadows(retainingStone);
   group.add(retainingStone);
 
-  const rubbleGeometry = new THREE.DodecahedronGeometry(0.9, 0);
-  for (const [x, z, scale] of [
-    [QUAY_EDGE_X + 2.1, endZ + direction * 5.2, 0.76],
-    [QUAY_EDGE_X - 3.4, endZ + direction * 4.0, 0.88],
-  ]) {
-    const rock = new THREE.Mesh(rubbleGeometry, rubbleMaterial);
-    rock.position.set(x, 0.34, z);
-    rock.scale.setScalar(scale);
-    rock.rotation.set(
-      THREE.MathUtils.randFloatSpread(0.22),
-      Math.random() * Math.PI * 2,
-      THREE.MathUtils.randFloatSpread(0.22),
-    );
-    enableShadows(rock);
-    group.add(rock);
-  }
-
   const mooringPost = new THREE.Mesh(
     new THREE.CylinderGeometry(0.16, 0.2, 1.9, 8),
     timberMaterial,
@@ -920,11 +903,6 @@ function createHarborShorelineApron() {
   const bermMaterial = new THREE.MeshStandardMaterial({
     color: 0xb8a486,
     roughness: 0.92,
-    metalness: 0.02,
-  });
-  const rubbleMaterial = new THREE.MeshStandardMaterial({
-    color: 0x887d71,
-    roughness: 0.94,
     metalness: 0.02,
   });
 
@@ -974,25 +952,6 @@ function createHarborShorelineApron() {
     berm.rotation.z = THREE.MathUtils.degToRad(-4);
     enableShadows(berm);
     group.add(berm);
-  }
-
-  const rubbleGeometry = new THREE.DodecahedronGeometry(0.82, 0);
-  for (const [x, z, scale] of [
-    [getShoreCoveX(-20, 0), -20, 0.68],
-    [getShoreCoveX(10, -1), 10, 0.72],
-    [47, localWaterNorth - 4, 0.62],
-    [48, localWaterSouth + 4, 0.66],
-  ]) {
-    const rock = new THREE.Mesh(rubbleGeometry, rubbleMaterial);
-    rock.position.set(x, 0.3, z);
-    rock.scale.setScalar(scale);
-    rock.rotation.set(
-      THREE.MathUtils.randFloatSpread(0.18),
-      Math.random() * Math.PI * 2,
-      THREE.MathUtils.randFloatSpread(0.18),
-    );
-    enableShadows(rock);
-    group.add(rock);
   }
 
   return group;
