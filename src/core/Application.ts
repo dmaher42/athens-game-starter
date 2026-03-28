@@ -11,7 +11,7 @@ import { createHarbor } from "../world/harbor.js";
 import { BackdropMountains } from "../world/backdrop/BackdropMountains.js";
 import { createShorelineDressing } from "../world/backdrop/ShorelineDressing.js";
 import { createMainHillRoad } from "../world/roads_hillcity.js";
-import { createCity } from "../world/city.js";
+import { createCityLayoutMetadata } from "../world/city.js";
 import { mount as mountGrass, update as updateGrass } from "../world/grass.js";
 import {
   AGORA_CENTER_3D,
@@ -569,17 +569,14 @@ export class Application {
       }
 
       const {
-        city: harborCity,
         roadCurves,
         buildingPlacements,
-      } = await createCity(
-        worldRoot,
+      } = createCityLayoutMetadata(
         this.terrain,
         {
           roadsVisible,
           useProceduralBlocks: FORCE_PROC,
           forceProcedural: FORCE_PROC,
-          metadataOnly: true,
           seaLevel: resolvedSeaLevel,
         },
       );
@@ -794,7 +791,7 @@ export class Application {
           scene.background = new THREE.Color("#dbe9ff");
         }
 
-        lightingSystem.update(deltaTime, elapsed, { harbor, harborCity, roadGroup, ocean, grassRoot });
+        lightingSystem.update(deltaTime, elapsed, { harbor, roadGroup, ocean, grassRoot });
         playerSystem.update(deltaTime);
 
         (updateTerrain as any)(terrain, elapsed);

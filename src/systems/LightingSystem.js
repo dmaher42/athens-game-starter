@@ -11,7 +11,6 @@ import { joinPath } from "../utils/baseUrl.js";
 import { init as initEnvStubs, applyBasicLightingProfile, setEnvironmentMapIntensity, setSunPosition, setTimeOfDay } from "../core/EnvironmentManager.stubs.js";
 import { updateOcean } from "../world/ocean.js";
 import { updateHarborLighting } from "../world/harbor.js";
-import { updateCityLighting } from "../world/city.js";
 import { updateMainHillRoadLighting } from "../world/roads_hillcity.js";
 import { setNightFactor as setGrassNightFactor } from "../world/grass.js";
 
@@ -255,7 +254,7 @@ export class LightingSystem {
         });
     }
 
-    update(deltaTime, elapsed, { harbor, harborCity, roadGroup, ocean, grassRoot }) {
+    update(deltaTime, elapsed, { harbor, roadGroup, ocean, grassRoot }) {
         const { dayCycle, timeOfDayState, currentLookProfile, dynamicSky, sunAlignmentState, lights } = this;
         if (dayCycle.secondsPerDay > 0) {
             const deltaPhase = deltaTime / dayCycle.secondsPerDay;
@@ -316,11 +315,8 @@ export class LightingSystem {
             dynamicSky.update(deltaTime);
         }
 
-        if (harbor && harborCity && roadGroup) {
+        if (harbor && roadGroup) {
             updateHarborLighting(harbor, lights.nightFactor);
-            updateCityLighting(harborCity, lights.nightFactor, {
-                timeOfDayPhase: phase,
-            });
             updateMainHillRoadLighting(roadGroup, lights.nightFactor);
         }
 

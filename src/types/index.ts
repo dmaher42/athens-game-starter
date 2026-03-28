@@ -274,7 +274,6 @@ export interface CityGenerationOptions {
   roadsVisible?: boolean;
   followPromenade?: boolean;
   forceProcedural?: boolean;
-  metadataOnly?: boolean;
   spacingX?: number;
   spacingZ?: number;
   jitter?: number;
