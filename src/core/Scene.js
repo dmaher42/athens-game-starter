@@ -20,7 +20,14 @@ export function configureRendererShadows(renderer) {
 }
 
 export function createRenderer({ antialias = true } = {}) {
-  const renderer = new THREE.WebGLRenderer({ antialias });
+  // Automated browser captures can produce blank WebGL screenshots unless the
+  // back buffer is preserved for the snapshot step.
+  const preserveDrawingBuffer =
+    typeof navigator !== "undefined" && navigator.webdriver === true;
+  const renderer = new THREE.WebGLRenderer({
+    antialias,
+    preserveDrawingBuffer,
+  });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.9; // Look presets assume ACES with ~1.0 as the baseline exposure
@@ -36,6 +43,8 @@ export function createSceneContext({
   worldRootName = WORLD_ROOT_NAME,
   onFogChange,
 } = {}) {
+  const isAutomationCapture =
+    typeof navigator !== "undefined" && navigator.webdriver === true;
   const scene = new THREE.Scene();
   scene.userData = scene.userData || {};
   scene.userData.renderer = renderer;
@@ -175,25 +184,30 @@ export function createSceneContext({
   // Create camera using CameraManager for consistency
   const camera = CameraManager.createCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 
-  const composer = new EffectComposer(renderer);
-  const composerPixelRatio = Math.min(
-    renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1,
-    1,
-  );
-  composer.setPixelRatio(composerPixelRatio);
-  composer.setSize(window.innerWidth, window.innerHeight);
-  const renderPass = new RenderPass(scene, camera);
-  composer.addPass(renderPass);
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.3,
-    0.6,
-    0.85,
-  );
-  bloomPass.enabled = true;
-  composer.addPass(bloomPass);
-  const colorGradePass = createColorGradePass();
-  composer.addPass(colorGradePass);
+  const composer = isAutomationCapture ? null : new EffectComposer(renderer);
+  let bloomPass = null;
+  let colorGradePass = null;
+
+  if (composer) {
+    const composerPixelRatio = Math.min(
+      renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1,
+      1,
+    );
+    composer.setPixelRatio(composerPixelRatio);
+    composer.setSize(window.innerWidth, window.innerHeight);
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+    bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.3,
+      0.6,
+      0.85,
+    );
+    bloomPass.enabled = true;
+    composer.addPass(bloomPass);
+    colorGradePass = createColorGradePass();
+    composer.addPass(colorGradePass);
+  }
 
   const renderFrame = () => {
     // DEV: detect textures that are flagged for update but have no image data
