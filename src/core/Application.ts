@@ -66,6 +66,7 @@ import { scatterGroundProps } from "../world/groundProps.js";
 import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
 import { PlayerSystem } from "../systems/PlayerSystem.js";
+import { mountPerformanceHud } from "../ui/performanceHud.js";
 
 // Expose THREE globally for debugging in devtools.
 (window as any).THREE = THREE;
@@ -111,6 +112,7 @@ export class Application {
   sceneContext: any;
   renderer: any;
   devHud: any;
+  performanceHud: any;
   ocean: any;
   pendingOceanStatus: any;
   coastalSkirt: any;
@@ -154,6 +156,7 @@ export class Application {
     this.sceneContext = null;
     this.renderer = null;
     this.devHud = null;
+    this.performanceHud = null;
     this.ocean = null;
     this.pendingOceanStatus = null;
     this.coastalSkirt = null;
@@ -576,8 +579,8 @@ export class Application {
           roadsVisible,
           useProceduralBlocks: FORCE_PROC,
           forceProcedural: FORCE_PROC,
-          seaLevel: resolvedSeaLevel,
           metadataOnly: true,
+          seaLevel: resolvedSeaLevel,
         },
       );
 
@@ -735,6 +738,34 @@ export class Application {
       // Safe mode texture budgeting is intentionally disabled for normal gameplay.
 
       const loop = this.gameLoop;
+      const getPerformanceSnapshot = () => {
+        const loopMetrics = loop.getPerformanceMetrics?.() ?? {};
+        const renderInfo = renderer.info?.render ?? {};
+        const memoryInfo = renderer.info?.memory ?? {};
+        const heapInfo = (performance as any)?.memory;
+        const jsHeapMb =
+          Number.isFinite(heapInfo?.usedJSHeapSize)
+            ? heapInfo.usedJSHeapSize / (1024 * 1024)
+            : null;
+
+        return {
+          fps: Number.isFinite(loopMetrics.fps) ? Number(loopMetrics.fps.toFixed(1)) : 0,
+          frameTimeMs: Number.isFinite(loopMetrics.frameTimeMs)
+            ? Number(loopMetrics.frameTimeMs.toFixed(2))
+            : 0,
+          averageFrameTimeMs: Number.isFinite(loopMetrics.averageFrameTimeMs)
+            ? Number(loopMetrics.averageFrameTimeMs.toFixed(2))
+            : 0,
+          worstFrameMs: Number.isFinite(loopMetrics.worstFrameMs)
+            ? Number(loopMetrics.worstFrameMs.toFixed(2))
+            : 0,
+          drawCalls: Number.isFinite(renderInfo.calls) ? renderInfo.calls : 0,
+          triangles: Number.isFinite(renderInfo.triangles) ? renderInfo.triangles : 0,
+          textures: Number.isFinite(memoryInfo.textures) ? memoryInfo.textures : 0,
+          geometries: Number.isFinite(memoryInfo.geometries) ? memoryInfo.geometries : 0,
+          jsHeapMb: jsHeapMb == null ? null : Number(jsHeapMb.toFixed(1)),
+        };
+      };
 
       if (civicDistrict.walkingLoop) {
         const crowd = spawnCitizenCrowd(worldRoot, civicDistrict.walkingLoop, {
@@ -819,6 +850,10 @@ export class Application {
 
       loop.onUpdate(onFrame);
       loop.start();
+      this.performanceHud = mountPerformanceHud({
+        getMetrics: getPerformanceSnapshot,
+        toggleKey: "F10",
+      });
       advanceLoadingStage("Opening the gates to ancient Athens...");
       hideLoadingScreen();
       showDemoIntro();
@@ -869,6 +904,7 @@ export class Application {
             : null,
           nearbyPrompt: interactionHud?.root?.textContent?.trim?.() || null,
           targets: landmarkTargets,
+          performance: getPerformanceSnapshot(),
         };
 
         return JSON.stringify(payload);
@@ -880,6 +916,7 @@ export class Application {
           loop.advanceTime(ms);
           return Promise.resolve();
         };
+        (window as any).getPerformanceMetrics = getPerformanceSnapshot;
       }
 
       try {
@@ -1234,6 +1271,10 @@ export class Application {
 
     if (this.renderer) {
       this.renderer.dispose();
+    }
+
+    if (this.performanceHud?.dispose) {
+      this.performanceHud.dispose();
     }
     
     if (this.gameLoop) {

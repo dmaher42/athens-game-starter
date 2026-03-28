@@ -164,6 +164,41 @@
   box-shadow: 0 0 0 1px var(--hud-button-border-hover);
 }
 
+.perf-hud-panel {
+  width: 208px;
+  gap: 8px;
+}
+
+.perf-hud-hint {
+  opacity: 0.68;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.perf-hud-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.perf-hud-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.perf-hud-label {
+  opacity: 0.76;
+}
+
+.perf-hud-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+
 .dev-hud-btn:hover {
   background: var(--hud-button-bg-hover);
   border-color: var(--hud-button-border-hover);

@@ -15,6 +15,7 @@ const DEFAULT_POSITIONS: Record<string, HudQuadrant> = {
   miniMap: "topLeft",
   questHud: "topLeft",
   devHud: "topRight",
+  performanceHud: "bottomLeft",
   audioMixer: "topRight",
   exposureSlider: "topRight",
   hotkeyOverlay: "topRight",

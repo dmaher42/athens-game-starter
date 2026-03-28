@@ -4,11 +4,17 @@ export class GameLoop {
   constructor({ autoStart = false } = {}) {
     this.clock = new THREE.Clock();
     this.callbacks = new Set();
-    this.performance = { fps: 0 };
+    this.performance = {
+      fps: 0,
+      frameTimeMs: 0,
+      averageFrameTimeMs: 0,
+      worstFrameMs: 0,
+    };
     this._running = false;
     this._elapsedSeconds = 0;
     this._frameCount = 0;
     this._perfLastTimestamp = null;
+    this._perfWorstFrameMs = 0;
     this._boundLoop = this._loop.bind(this);
 
     if (autoStart) {
@@ -104,6 +110,9 @@ export class GameLoop {
   }
 
   _updatePerformance(delta) {
+    const frameTimeMs = Math.max(0, delta * 1000);
+    this.performance.frameTimeMs = frameTimeMs;
+    this._perfWorstFrameMs = Math.max(this._perfWorstFrameMs, frameTimeMs);
     this._frameCount += 1;
     const now =
       typeof performance?.now === "function" ? performance.now() : Date.now();
@@ -116,8 +125,12 @@ export class GameLoop {
     if (elapsedMs >= 500) {
       const fps = this._frameCount / (elapsedMs / 1000);
       this.performance.fps = fps;
+      this.performance.averageFrameTimeMs =
+        this._frameCount > 0 ? elapsedMs / this._frameCount : 0;
+      this.performance.worstFrameMs = this._perfWorstFrameMs;
       this._frameCount = 0;
       this._perfLastTimestamp = now;
+      this._perfWorstFrameMs = 0;
     }
   }
 }
