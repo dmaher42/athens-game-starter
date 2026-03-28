@@ -96,10 +96,12 @@ const APPROACH_FRAMES = [
     markerId: "harbor",
     accent: 0x2b86a8,
     glow: 0x82d7f4,
-    anchor: AGORA_CENTER_3D.clone().add(new THREE.Vector3(-28, 0, 18)),
-    facingTarget: AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.4).add(new THREE.Vector3(10, 0, 4)),
+    anchor: AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.18).add(new THREE.Vector3(-6, 0, 4)),
+    facingTarget: AGORA_CENTER_3D.clone().lerp(HARBOR_CENTER_3D, 0.58).add(new THREE.Vector3(10, 0, 4)),
     bannerColor: 0x2b86a8,
     title: "Across The Agora",
+    labelScale: { x: 5.8, y: 1.8 },
+    labelHeight: 5.45,
   },
   {
     markerId: "acropolis",
@@ -398,8 +400,12 @@ function createApproachFrame(frame, terrain) {
   banner.userData.baseRotationZ = THREE.MathUtils.degToRad(5);
   group.add(banner);
 
-  const label = createLabelSprite(frame.title, frame.accent, { x: 8.8, y: 2.7 });
-  label.position.set(0, 6.25, 0);
+  const label = createLabelSprite(
+    frame.title,
+    frame.accent,
+    frame.labelScale ?? { x: 8.8, y: 2.7 },
+  );
+  label.position.set(0, frame.labelHeight ?? 6.25, 0);
   group.add(label);
 
   const leftBrazier = createBrazier(frame.accent, frame.glow);
