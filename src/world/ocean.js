@@ -135,6 +135,10 @@ const OCEAN_SEGMENTS = 96;
 let cachedWaterNormalsTexture = null;
 let cachedWaterNormalsKey = null;
 
+function isAutomationCaptureSession() {
+  return typeof navigator !== "undefined" && navigator.webdriver === true;
+}
+
 async function resolveWaterNormalsTexture(options) {
   const candidates = [];
 
@@ -344,142 +348,159 @@ export async function createOcean(scene, terrain, options = {}) {
   });
 
   // 3. CONFIGURE WATER SHADER
-  const water = new Water(geometry, {
-    textureWidth: waterRenderTargetSize,
-    textureHeight: waterRenderTargetSize,
-    waterNormals: waterNormals,
-    sunDirection: new THREE.Vector3(),
-    sunColor: 0xffffff,
-    waterColor: options.waterColor ?? 0x2b86b8,
-    distortionScale: 1.8,
-    fog: !!scene.fog,
-  });
+  const useAutomationFallback = isAutomationCaptureSession();
+  const water = useAutomationFallback
+    ? new THREE.Mesh(
+        geometry,
+        new THREE.MeshPhongMaterial({
+          color: options.waterColor ?? 0x2b86b8,
+          emissive: 0x0d3954,
+          emissiveIntensity: 0.22,
+          shininess: 32,
+          specular: new THREE.Color(0x8cc8e8),
+          transparent: true,
+          opacity: 0.94,
+          fog: !!scene.fog,
+        }),
+      )
+    : new Water(geometry, {
+        textureWidth: waterRenderTargetSize,
+        textureHeight: waterRenderTargetSize,
+        waterNormals: waterNormals,
+        sunDirection: new THREE.Vector3(),
+        sunColor: 0xffffff,
+        waterColor: options.waterColor ?? 0x2b86b8,
+        distortionScale: 1.8,
+        fog: !!scene.fog,
+      });
 
   // Shader injection for shoreline interaction and distance fade
-  water.material.onBeforeCompile = (shader) => {
-    shader.uniforms.uSeaLevel = { value: seaLevel };
-    shader.uniforms.uTerrainSize = { value: new THREE.Vector2(terrain.geometry.parameters.width, terrain.geometry.parameters.height) };
+  if (!useAutomationFallback) {
+    water.material.onBeforeCompile = (shader) => {
+      shader.uniforms.uSeaLevel = { value: seaLevel };
+      shader.uniforms.uTerrainSize = { value: new THREE.Vector2(terrain.geometry.parameters.width, terrain.geometry.parameters.height) };
 
-    const positionAttribute = terrain.geometry.attributes.position;
-    const heightData = new Float32Array(positionAttribute.count);
-    for (let i = 0; i < positionAttribute.count; i++) {
-        heightData[i] = positionAttribute.getZ(i);
-    }
-    const heightMap = new THREE.DataTexture(heightData, terrain.geometry.parameters.widthSegments + 1, terrain.geometry.parameters.heightSegments + 1, THREE.RedFormat, THREE.FloatType);
-    heightMap.needsUpdate = true;
-    shader.uniforms.uHeightMap = { value: heightMap };
+      const positionAttribute = terrain.geometry.attributes.position;
+      const heightData = new Float32Array(positionAttribute.count);
+      for (let i = 0; i < positionAttribute.count; i++) {
+          heightData[i] = positionAttribute.getZ(i);
+      }
+      const heightMap = new THREE.DataTexture(heightData, terrain.geometry.parameters.widthSegments + 1, terrain.geometry.parameters.heightSegments + 1, THREE.RedFormat, THREE.FloatType);
+      heightMap.needsUpdate = true;
+      shader.uniforms.uHeightMap = { value: heightMap };
 
-    // Let the open sea keep its readable surface detail farther into the
-    // distance so it feels like an ocean rather than a small enclosed basin.
-    shader.uniforms.uFadeStart = { value: 900.0 };
-    shader.uniforms.uFadeEnd = { value: 5200.0 };
+      // Let the open sea keep its readable surface detail farther into the
+      // distance so it feels like an ocean rather than a small enclosed basin.
+      shader.uniforms.uFadeStart = { value: 900.0 };
+      shader.uniforms.uFadeEnd = { value: 5200.0 };
 
-    // VERTEX SHADER FIX: Ensure main exists and vWorldPosition is assigned
-    // We try to replace the 'void main() {' string.
-    const vertexHead = "void main() {";
-    const vertexBody = `
-      varying vec3 vWorldPosition;
-      void main() {
-        vWorldPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
+      // VERTEX SHADER FIX: Ensure main exists and vWorldPosition is assigned
+      // We try to replace the 'void main() {' string.
+      const vertexHead = "void main() {";
+      const vertexBody = `
+        varying vec3 vWorldPosition;
+        void main() {
+          vWorldPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
+        `;
+
+      if (shader.vertexShader.includes(vertexHead)) {
+        shader.vertexShader = shader.vertexShader.replace(vertexHead, vertexBody);
+      } else {
+        // Robust regex replace if formatting differs
+        shader.vertexShader = shader.vertexShader.replace(/void\s+main\s*\(\s*\)\s*\{/, vertexBody);
+      }
+
+      // FRAGMENT SHADER INJECTION
+      const fragmentHeader = /* glsl */ `
+        uniform sampler2D uHeightMap;
+        uniform float uSeaLevel;
+        uniform vec2 uTerrainSize;
+        uniform float uFadeStart;
+        uniform float uFadeEnd;
+        varying vec3 vWorldPosition;
+
+        // Renamed to avoid collisions
+        float oceanHash(vec2 p) {
+            return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+        }
+
+        float oceanNoise(vec2 p) {
+            vec2 i = floor(p);
+            vec2 f = fract(p);
+            f = f * f * (3.0 - 2.0 * f);
+            return mix(mix(oceanHash(i + vec2(0.0, 0.0)), oceanHash(i + vec2(1.0, 0.0)), f.x),
+                       mix(oceanHash(i + vec2(0.0, 1.0)), oceanHash(i + vec2(1.0, 1.0)), f.x), f.y);
+        }
       `;
 
-    if (shader.vertexShader.includes(vertexHead)) {
-      shader.vertexShader = shader.vertexShader.replace(vertexHead, vertexBody);
-    } else {
-      // Robust regex replace if formatting differs
-      shader.vertexShader = shader.vertexShader.replace(/void\s+main\s*\(\s*\)\s*\{/, vertexBody);
-    }
+      // Inject header at top (works because Three.js prepends defines/version)
+      shader.fragmentShader = fragmentHeader + "\n" + shader.fragmentShader;
 
-    // FRAGMENT SHADER INJECTION
-    const fragmentHeader = /* glsl */ `
-      uniform sampler2D uHeightMap;
-      uniform float uSeaLevel;
-      uniform vec2 uTerrainSize;
-      uniform float uFadeStart;
-      uniform float uFadeEnd;
-      varying vec3 vWorldPosition;
+      // Apply Shoreline Logic
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "gl_FragColor = vec4( color, 1.0 );",
+        /* glsl */ `
+        // The terrain height texture is generated from PlaneGeometry before the
+        // mesh is rotated onto the XZ plane, so world Z must be flipped back to
+        // match the stored row order when sampling shoreline heights.
+        vec2 terrainUV = vec2(
+          vWorldPosition.x / uTerrainSize.x + 0.5,
+          0.5 - (vWorldPosition.z / uTerrainSize.y)
+        );
+        terrainUV = clamp(terrainUV, vec2(0.0), vec2(1.0));
+        float terrainHeight = texture2D(uHeightMap, terrainUV).r;
+        float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // Renamed to avoid collisions
-      float oceanHash(vec2 p) {
-          return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
-      }
+        // If terrain rises even slightly above the waterline, stop rendering
+        // the water there so shoreline ground does not shimmer/fight through it.
+        if (terrainHeight > uSeaLevel + ${LAND_CLIP_CLEARANCE.toFixed(2)}) {
+          discard;
+        }
 
-      float oceanNoise(vec2 p) {
-          vec2 i = floor(p);
-          vec2 f = fract(p);
-          f = f * f * (3.0 - 2.0 * f);
-          return mix(mix(oceanHash(i + vec2(0.0, 0.0)), oceanHash(i + vec2(1.0, 0.0)), f.x),
-                     mix(oceanHash(i + vec2(0.0, 1.0)), oceanHash(i + vec2(1.0, 1.0)), f.x), f.y);
-      }
-    `;
+        vec3 finalColor = color;
 
-    // Inject header at top (works because Three.js prepends defines/version)
-    shader.fragmentShader = fragmentHeader + "\n" + shader.fragmentShader;
+        // Shoreline foam
+        float foamFactor = smoothstep(0.0, 2.0, waterDepth) - smoothstep(2.0, 4.0, waterDepth);
+        foamFactor = clamp(foamFactor, 0.0, 1.0);
 
-    // Apply Shoreline Logic
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "gl_FragColor = vec4( color, 1.0 );",
-      /* glsl */ `
-      // The terrain height texture is generated from PlaneGeometry before the
-      // mesh is rotated onto the XZ plane, so world Z must be flipped back to
-      // match the stored row order when sampling shoreline heights.
-      vec2 terrainUV = vec2(
-        vWorldPosition.x / uTerrainSize.x + 0.5,
-        0.5 - (vWorldPosition.z / uTerrainSize.y)
+        // Shallow water color
+        float shallowFactor = smoothstep(0.0, 10.0, waterDepth);
+        finalColor = mix(vec3(0.5, 0.8, 0.9), finalColor, shallowFactor);
+
+        // Add a deeper offshore tint so the far sea reads more open and less like
+        // a uniformly lit inland lake.
+        float offshore = smoothstep(180.0, 760.0, vWorldPosition.x);
+        finalColor = mix(finalColor, vec3(0.08, 0.28, 0.44), offshore * 0.38);
+
+
+        float n = oceanNoise(vWorldPosition.xz * 0.5);
+        if (foamFactor > 0.0 && n > 0.7) {
+          finalColor = mix(finalColor, vec3(1.0), foamFactor * 0.5);
+        }
+
+
+        gl_FragColor = vec4( finalColor, 1.0 );
+        `
       );
-      terrainUV = clamp(terrainUV, vec2(0.0), vec2(1.0));
-      float terrainHeight = texture2D(uHeightMap, terrainUV).r;
-      float waterDepth = vWorldPosition.y - terrainHeight;
 
-      // If terrain rises even slightly above the waterline, stop rendering
-      // the water there so shoreline ground does not shimmer/fight through it.
-      if (terrainHeight > uSeaLevel + ${LAND_CLIP_CLEARANCE.toFixed(2)}) {
-        discard;
-      }
+      // Apply Fade Logic
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <fog_fragment>",
+        /* glsl */ `
+        float dist = length(vWorldPosition - cameraPosition);
+        float fadeFactor = smoothstep(uFadeStart, uFadeEnd, dist);
 
-      vec3 finalColor = color;
+        #ifdef USE_FOG
+          vec3 targetColor = fogColor;
+          // Mix existing color (reflection/refraction) with target color to reduce contrast and detail
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, targetColor, fadeFactor * 0.9);
+        #endif
 
-      // Shoreline foam
-      float foamFactor = smoothstep(0.0, 2.0, waterDepth) - smoothstep(2.0, 4.0, waterDepth);
-      foamFactor = clamp(foamFactor, 0.0, 1.0);
-
-      // Shallow water color
-      float shallowFactor = smoothstep(0.0, 10.0, waterDepth);
-      finalColor = mix(vec3(0.5, 0.8, 0.9), finalColor, shallowFactor);
-
-      // Add a deeper offshore tint so the far sea reads more open and less like
-      // a uniformly lit inland lake.
-      float offshore = smoothstep(180.0, 760.0, vWorldPosition.x);
-      finalColor = mix(finalColor, vec3(0.08, 0.28, 0.44), offshore * 0.38);
-
-
-      float n = oceanNoise(vWorldPosition.xz * 0.5);
-      if (foamFactor > 0.0 && n > 0.7) {
-        finalColor = mix(finalColor, vec3(1.0), foamFactor * 0.5);
-      }
-
-
-      gl_FragColor = vec4( finalColor, 1.0 );
-      `
-    );
-
-    // Apply Fade Logic
-    shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <fog_fragment>",
-      /* glsl */ `
-      float dist = length(vWorldPosition - cameraPosition);
-      float fadeFactor = smoothstep(uFadeStart, uFadeEnd, dist);
-
-      #ifdef USE_FOG
-        vec3 targetColor = fogColor;
-        // Mix existing color (reflection/refraction) with target color to reduce contrast and detail
-        gl_FragColor.rgb = mix(gl_FragColor.rgb, targetColor, fadeFactor * 0.9);
-      #endif
-
-      #include <fog_fragment>
-      `
-    );
-  };
+        #include <fog_fragment>
+        `
+      );
+    };
+  }
 
   // 4. POSITIONING
   water.rotation.x = -Math.PI / 2;
@@ -490,6 +511,7 @@ export async function createOcean(scene, terrain, options = {}) {
 
   water.name = "AegeanOcean";
   water.userData.isWater = true;
+  water.userData.isAutomationFallback = useAutomationFallback;
   water.userData.seaLevel = seaLevel;
   water.userData.oceanSize = { width: oceanWidth, depth: oceanDepth };
   water.userData.horizonY = horizonY;
