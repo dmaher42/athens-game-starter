@@ -891,72 +891,6 @@ function createHarborEdgeTransitions() {
   return group;
 }
 
-function createHarborShorelineApron() {
-  const group = new THREE.Group();
-  group.name = "HarborShorelineApron";
-
-  const shoreMaterial = new THREE.MeshStandardMaterial({
-    color: 0xc8b89a,
-    roughness: 0.97,
-    metalness: 0.02,
-  });
-  const bermMaterial = new THREE.MeshStandardMaterial({
-    color: 0xb8a486,
-    roughness: 0.92,
-    metalness: 0.02,
-  });
-
-  const localWaterWest = HARBOR_WATER_BOUNDS.west - HARBOR_CENTER_3D.x;
-  const localWaterNorth = HARBOR_WATER_BOUNDS.north - HARBOR_CENTER_3D.z;
-  const localWaterSouth = HARBOR_WATER_BOUNDS.south - HARBOR_CENTER_3D.z;
-  const localShoreCenterZ = (localWaterNorth + localWaterSouth) * 0.5;
-  const localShoreHalfDepth = Math.max(1, (localWaterNorth - localWaterSouth) * 0.5);
-  const getShoreCoveX = (z, offset = 0) => {
-    const normalizedZ = THREE.MathUtils.clamp(
-      Math.abs(z - localShoreCenterZ) / localShoreHalfDepth,
-      0,
-      1,
-    );
-    const coveFactor = 1 - THREE.MathUtils.smoothstep(0.1, 0.95, normalizedZ);
-    const shoulderFactor = 1 - normalizedZ * 0.22;
-    return localWaterWest + 16 * coveFactor * shoulderFactor + offset;
-  };
-
-  const shorelinePads = [
-    { x: getShoreCoveX(-24, 7), z: -24, sx: 1.55, sz: 1.0, rot: -0.22 },
-    { x: getShoreCoveX(-6, 3), z: -6, sx: 1.85, sz: 1.05, rot: -0.08 },
-    { x: getShoreCoveX(14, 5), z: 14, sx: 1.7, sz: 1.02, rot: 0.11 },
-    { x: getShoreCoveX(30, 10), z: 30, sx: 1.35, sz: 0.92, rot: 0.18 },
-    { x: 44, z: localWaterNorth - 7, sx: 1.12, sz: 0.78, rot: 0.15 },
-    { x: 48, z: localWaterSouth + 7, sx: 1.18, sz: 0.82, rot: -0.12 },
-  ];
-
-  for (const padDef of shorelinePads) {
-    const patch = new THREE.Mesh(
-      new THREE.CylinderGeometry(8.2, 10.4, 0.22, 22),
-      shoreMaterial,
-    );
-    patch.scale.set(padDef.sx, 1, padDef.sz);
-    patch.position.set(padDef.x, 0.06, padDef.z);
-    patch.rotation.y = padDef.rot;
-    patch.receiveShadow = true;
-    patch.castShadow = false;
-    group.add(patch);
-
-    const berm = new THREE.Mesh(
-      new THREE.BoxGeometry(9.8, 0.42, 3.1),
-      bermMaterial,
-    );
-    berm.position.set(padDef.x - 3.8, 0.18, padDef.z);
-    berm.rotation.y = padDef.rot * 0.9;
-    berm.rotation.z = THREE.MathUtils.degToRad(-4);
-    enableShadows(berm);
-    group.add(berm);
-  }
-
-  return group;
-}
-
 function createHarborMouthMarkers() {
   const group = new THREE.Group();
   group.name = "HarborMouthMarkers";
@@ -1433,7 +1367,6 @@ function optimizeHarborShadowCost(harbor) {
   if (!harbor?.traverse) return;
 
   const receiveOnlyGroups = new Set([
-    "HarborShorelineApron",
     "HarborEdgeTransitions",
     "HarborMouthMarkers",
     "HarborBreakwaters",
@@ -1600,21 +1533,19 @@ function createClocktower() {
  * Creates a complete harbor with all features and props.
  * 
  * Harbor Features Created:
- * 1. Harbor Pad - Ground plane with sand texture
- * 2. Water Plane - Reflective water surface extending eastward
- * 3. Piers - Three rows of wooden docks (North, Center, South)
+ * 1. Piers - Three rows of wooden docks (North, Center, South)
  *    - Each pier has multiple dock sections
  *    - Wooden posts for structural support
- * 4. Boats - Fishing boats moored at each pier
+ * 2. Boats - Fishing boats moored at each pier
  *    - Hull, bow, cabin, and mast
  *    - Variety of colors from BOAT_STYLES
- * 5. Shoreline Dressing - Mooring posts along the waterfront
- * 6. Dock Props - Crates and barrels scattered on dock sections
- * 7. Shore Props - Crates and barrels on the shoreline
- * 8. Sheds/Warehouses - Two storage buildings with terracotta roofs
- * 9. City Connector - Wooden boardwalk ramp from city level to harbor level
- * 10. Lighthouse - Tall stone tower on raised platform (if available)
- * 11. Clocktower - Square tower with clock faces on raised platform (if available)
+ * 3. Shoreline Dressing - Mooring posts along the waterfront
+ * 4. Dock Props - Crates and barrels scattered on dock sections
+ * 5. Shore Props - Crates and barrels on the shoreline
+ * 6. Sheds/Warehouses - Two storage buildings with terracotta roofs
+ * 7. City Connector - Wooden boardwalk ramp from city level to harbor level
+ * 8. Lighthouse - Tall stone tower on raised platform (if available)
+ * 9. Clocktower - Square tower with clock faces on raised platform (if available)
  * 
  * All elements are positioned relative to harborGroundY (seaLevel + HARBOR_GROUND_HEIGHT)
  * to ensure they sit above water level.
@@ -1662,7 +1593,6 @@ export function createHarbor(scene, options = {}) {
 
   harbor.add(createQuayEdge());
   harbor.add(createHarborEdgeTransitions());
-  harbor.add(createHarborShorelineApron());
   harbor.add(createQuayForecourt());
   harbor.add(createHarborMouthMarkers());
   harbor.add(createHarborBreakwaters());
