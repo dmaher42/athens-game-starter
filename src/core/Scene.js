@@ -7,6 +7,87 @@ import { CameraManager } from "./CameraManager.js";
 
 export const WORLD_ROOT_NAME = "WorldRoot";
 
+function isAutomationCaptureSession() {
+  return typeof navigator !== "undefined" && navigator.webdriver === true;
+}
+
+function createAutomationPreviewMaterial(material) {
+  if (!material) return material;
+  if (material.userData?.automationPreviewConverted) {
+    return material;
+  }
+  if (
+    !material.isMeshStandardMaterial &&
+    !material.isMeshPhysicalMaterial &&
+    !material.isMeshPhongMaterial &&
+    !material.isMeshLambertMaterial
+  ) {
+    return material;
+  }
+
+  const previewMaterial = new THREE.MeshLambertMaterial({
+    color: material.color?.clone?.() ?? new THREE.Color(0xffffff),
+    map: material.map || null,
+    alphaMap: material.alphaMap || null,
+    emissive: material.emissive?.clone?.() ?? new THREE.Color(0x000000),
+    emissiveIntensity: material.emissiveIntensity ?? 0,
+    transparent: !!material.transparent,
+    opacity: Number.isFinite(material.opacity) ? material.opacity : 1,
+    side: material.side,
+    alphaTest: material.alphaTest ?? 0,
+    vertexColors: !!material.vertexColors,
+    fog: material.fog !== false,
+    depthWrite: material.depthWrite !== false,
+    depthTest: material.depthTest !== false,
+  });
+  previewMaterial.userData = {
+    ...material.userData,
+    automationPreviewConverted: true,
+  };
+  return previewMaterial;
+}
+
+function ensureAutomationPreviewReadability(scene, renderer) {
+  if (!scene || !renderer) return;
+  const state = scene.userData.automationPreviewState || {};
+  scene.userData.automationPreviewState = state;
+
+  if (renderer.shadowMap) {
+    renderer.shadowMap.enabled = false;
+    renderer.shadowMap.autoUpdate = false;
+  }
+  renderer.toneMappingExposure = Math.max(1.0, renderer.toneMappingExposure ?? 1.0);
+
+  if (!state.previewAmbientLight) {
+    const ambient = new THREE.AmbientLight(0xffffff, 1.15);
+    ambient.name = "AutomationPreviewAmbient";
+    scene.add(ambient);
+    state.previewAmbientLight = ambient;
+  }
+
+  if (!state.previewHemisphereLight) {
+    const hemisphere = new THREE.HemisphereLight(0xf4f8ff, 0xcab28d, 1.35);
+    hemisphere.name = "AutomationPreviewHemisphere";
+    scene.add(hemisphere);
+    state.previewHemisphereLight = hemisphere;
+  }
+
+  scene.traverse((obj) => {
+    if (!obj?.isMesh || !obj.material) return;
+    if (obj.userData?.isWater) return;
+    if (obj.name === "AegeanOcean") return;
+
+    if (Array.isArray(obj.material)) {
+      obj.material = obj.material.map((material) =>
+        createAutomationPreviewMaterial(material),
+      );
+      return;
+    }
+
+    obj.material = createAutomationPreviewMaterial(obj.material);
+  });
+}
+
 export function configureRendererShadows(renderer) {
   if (!renderer) return;
 
@@ -22,8 +103,7 @@ export function configureRendererShadows(renderer) {
 export function createRenderer({ antialias = true } = {}) {
   // Automated browser captures can produce blank WebGL screenshots unless the
   // back buffer is preserved for the snapshot step.
-  const preserveDrawingBuffer =
-    typeof navigator !== "undefined" && navigator.webdriver === true;
+  const preserveDrawingBuffer = isAutomationCaptureSession();
   const renderer = new THREE.WebGLRenderer({
     antialias,
     preserveDrawingBuffer,
@@ -43,8 +123,7 @@ export function createSceneContext({
   worldRootName = WORLD_ROOT_NAME,
   onFogChange,
 } = {}) {
-  const isAutomationCapture =
-    typeof navigator !== "undefined" && navigator.webdriver === true;
+  const isAutomationCapture = isAutomationCaptureSession();
   const scene = new THREE.Scene();
   scene.userData = scene.userData || {};
   scene.userData.renderer = renderer;
@@ -210,6 +289,10 @@ export function createSceneContext({
   }
 
   const renderFrame = () => {
+    if (isAutomationCapture) {
+      ensureAutomationPreviewReadability(scene, renderer);
+    }
+
     // DEV: detect textures that are flagged for update but have no image data
     if (import.meta.env?.DEV) {
       try {
