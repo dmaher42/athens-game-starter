@@ -11,7 +11,7 @@ import { createHarbor } from "../world/harbor.js";
 import { BackdropMountains } from "../world/backdrop/BackdropMountains.js";
 import { createShorelineDressing } from "../world/backdrop/ShorelineDressing.js";
 import { createMainHillRoad } from "../world/roads_hillcity.js";
-import { createCityLayoutMetadata } from "../world/city.js";
+import { createCityLayoutMetadata } from "../world/legacyCityLayout.js";
 import { mount as mountGrass, update as updateGrass } from "../world/grass.js";
 import {
   AGORA_CENTER_3D,

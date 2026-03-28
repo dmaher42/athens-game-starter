@@ -565,7 +565,7 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     ? options.seaLevel
     : getSeaLevelY();
 
-  // Find the group named "LotPads" that city.js created
+  // Find the group named "LotPads" if a world builder created one
   const padsGroup = worldRoot.getObjectByName("LotPads");
   if (!padsGroup) return { count: 0 };
 
