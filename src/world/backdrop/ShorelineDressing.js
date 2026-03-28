@@ -85,7 +85,7 @@ export function createShorelineDressing(scene, terrain, seaLevel) {
     const seaNorth = Math.max(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
     const seaSouth = Math.min(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
 
-    const count = 34;
+    const count = 14;
     const seed = 999;
 
     const rockGeo = new THREE.DodecahedronGeometry(1, 0);
@@ -113,7 +113,7 @@ export function createShorelineDressing(scene, terrain, seaLevel) {
               : southLimit - 24 - seededRandom(seed + i * 5) * Math.max(12, southLimit - seaSouth - 26);
         }
 
-        const scale = 0.45 + seededRandom(seed + i * 4) * 1.0;
+        const scale = 0.3 + seededRandom(seed + i * 4) * 0.55;
 
         const mesh = new THREE.Mesh(rockGeo, rockMat);
         mesh.position.set(x, seaLevel, z);
@@ -141,7 +141,7 @@ export function createShorelineDressing(scene, terrain, seaLevel) {
         group.add(mesh);
     }
 
-    const clusterCount = 12;
+    const clusterCount = 8;
     for (let i = 0; i < clusterCount; i++) {
         const shorelineBand = seededRandom(seed + 200 + i) > 0.45 ? "mouth" : "openSea";
         const side = seededRandom(seed + 240 + i) > 0.5 ? 1 : -1;

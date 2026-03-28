@@ -872,10 +872,8 @@ function createQuayEndTransition(endZ, direction = 1) {
 
   const rubbleGeometry = new THREE.DodecahedronGeometry(0.9, 0);
   for (const [x, z, scale] of [
-    [QUAY_EDGE_X + 2.6, endZ + direction * 4.8, 1.05],
-    [QUAY_EDGE_X + 1.1, endZ + direction * 7.2, 0.76],
-    [QUAY_EDGE_X - 2.3, endZ + direction * 6.4, 0.88],
-    [QUAY_EDGE_X - 5.0, endZ + direction * 3.3, 1.18],
+    [QUAY_EDGE_X + 2.1, endZ + direction * 5.2, 0.76],
+    [QUAY_EDGE_X - 3.4, endZ + direction * 4.0, 0.88],
   ]) {
     const rock = new THREE.Mesh(rubbleGeometry, rubbleMaterial);
     rock.position.set(x, 0.34, z);
@@ -980,12 +978,10 @@ function createHarborShorelineApron() {
 
   const rubbleGeometry = new THREE.DodecahedronGeometry(0.82, 0);
   for (const [x, z, scale] of [
-    [getShoreCoveX(-22, 1), -22, 0.88],
-    [getShoreCoveX(-9, -1), -9, 1.05],
-    [getShoreCoveX(8, -2), 8, 0.92],
-    [getShoreCoveX(24, 2), 24, 1.18],
-    [46, localWaterNorth - 4, 0.82],
-    [49, localWaterSouth + 4, 0.9],
+    [getShoreCoveX(-20, 0), -20, 0.68],
+    [getShoreCoveX(10, -1), 10, 0.72],
+    [47, localWaterNorth - 4, 0.62],
+    [48, localWaterSouth + 4, 0.66],
   ]) {
     const rock = new THREE.Mesh(rubbleGeometry, rubbleMaterial);
     rock.position.set(x, 0.3, z);

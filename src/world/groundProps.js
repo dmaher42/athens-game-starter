@@ -21,8 +21,8 @@ export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush"];
 
 function pickPropType() {
   const r = Math.random();
-  if (r < 0.08) return "rock";
-  if (r < 0.74) return "grass-tuft";
+  if (r < 0.03) return "rock";
+  if (r < 0.76) return "grass-tuft";
   return "bush";
 }
 
@@ -121,7 +121,7 @@ function isInsideOpeningVista(x, z) {
 export function scatterGroundProps(scene, terrain, options = {}) {
   if (!scene || !terrain) return null;
 
-  const count = options.count ?? 14;
+  const count = options.count ?? 10;
   const seaLevel = Number.isFinite(options?.seaLevel)
     ? options.seaLevel
     : getSeaLevelY();
