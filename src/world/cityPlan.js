@@ -20,7 +20,7 @@ export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.2
 // Grid Constants
 const MIN_X = -10, MAX_X = 10;
 const MIN_Z = -10, MAX_Z = 20;
-const BLOCK_SIZE = 36; // Tighter block size keeps the city readable and walkable.
+const BLOCK_SIZE = 30; // Compact blocks help the city feel denser and more walkable.
 const AGORA_PLAZA_RADIUS = 2;
 const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.1;
 const AGORA_MARKET_RADIUS = BLOCK_SIZE * 3.2;

@@ -1,5 +1,7 @@
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
+import http from "node:http";
+import https from "node:https";
 import { fileURLToPath } from "node:url";
 import net from "node:net";
 import path from "node:path";
@@ -10,8 +12,13 @@ const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "..");
 const APP_BASE_PATH = "/athens-game-starter/";
 const PREVIEW_PORT_CANDIDATES = [4173, 4174, 4175, 4176];
-const STARTUP_TIMEOUT_MS = 30_000;
+const STARTUP_TIMEOUT_MS = 60_000;
 const VITE_BIN = path.resolve(REPO_ROOT, "node_modules", "vite", "bin", "vite.js");
+const ANSI_ESCAPE_PATTERN = /\u001B\[[0-9;]*m/g;
+
+function stripAnsi(text) {
+  return text.replace(ANSI_ESCAPE_PATTERN, "");
+}
 
 async function isPortAvailable(port) {
   return await new Promise((resolve) => {
@@ -62,6 +69,7 @@ function createPreviewServer(port) {
 
 async function waitForPreview(url, server) {
   const deadline = Date.now() + STARTUP_TIMEOUT_MS;
+  const parsedUrl = new URL(url);
 
   while (Date.now() < deadline) {
     if (server.child.exitCode !== null) {
@@ -70,12 +78,33 @@ async function waitForPreview(url, server) {
       );
     }
 
+    if (stripAnsi(server.getOutput()).includes(`http://127.0.0.1:${parsedUrl.port}`)) {
+      await sleep(1_000);
+      return;
+    }
+
     try {
-      const response = await fetch(url, {
-        method: "GET",
-        redirect: "manual",
+      const response = await new Promise((resolve, reject) => {
+        const client = parsedUrl.protocol === "https:" ? https : http;
+        const request = client.request(parsedUrl, {
+          method: "GET",
+          timeout: 1_500,
+          headers: {
+            Accept: "text/html",
+          },
+        }, (res) => {
+          res.resume();
+          resolve(res);
+        });
+
+        request.once("timeout", () => {
+          request.destroy(new Error("Preview probe timed out."));
+        });
+        request.once("error", reject);
+        request.end();
       });
-      if (response.ok) {
+
+      if (response.statusCode && response.statusCode >= 200 && response.statusCode < 400) {
         return;
       }
     } catch {
