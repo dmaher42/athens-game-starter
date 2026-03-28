@@ -288,9 +288,11 @@ function createPavedStrip(width, length, color = 0xb09370) {
     color: color,
     roughness: 0.98,
     metalness: 0,
+    transparent: true,
+    opacity: 0.94,
     polygonOffset: true,
-    polygonOffsetFactor: -1,
-    polygonOffsetUnits: -1,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
   });
   const mesh = new THREE.Mesh(geometry, material);
   mesh.rotation.x = -Math.PI / 2;
@@ -940,11 +942,11 @@ export async function createCivicDistrict(scene, options = {}) {
       // Avenue is now East-West (gridZ approx 0)
       const isMainAvenue = Math.abs(cell.gridZ) <= 1;
       const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0xb0895f : 0xa48463);
-      roadMesh.position.set(localX, localY + 0.018, localZ);
+      roadMesh.position.set(localX, localY + 0.006, localZ);
       group.add(roadMesh);
     } else if (cell.type === 'plaza') {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xb29e7e);
-      plazaMesh.position.set(localX, localY + 0.014, localZ);
+      plazaMesh.position.set(localX, localY + 0.004, localZ);
       if (plazaMat) plazaMesh.material = plazaMat;
       group.add(plazaMesh);
       if (cell.gridX === 0 && cell.gridZ === 0) {
@@ -1028,7 +1030,7 @@ export async function createCivicDistrict(scene, options = {}) {
       const pathWidth = pathTile.type === 'connector' ? 8 : 6;
       const pathColor = pathTile.type === 'connector' ? 0xc0a07b : 0xcfb18e;
       const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
-      pathMesh.position.set(localX, localY + 0.02, localZ); // Float slightly above the terrain to avoid dark cut lines.
+      pathMesh.position.set(localX, localY + 0.007, localZ); // Keep paths close to the terrain so they read as paving, not slabs.
       pathMesh.userData.isFootpath = true;
       group.add(pathMesh);
     }
