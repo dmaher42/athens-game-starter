@@ -487,8 +487,13 @@ export async function createOcean(scene, terrain, options = {}) {
   water.userData.seaLevel = seaLevel;
   water.userData.oceanSize = { width: oceanWidth, depth: oceanDepth };
   water.userData.horizonY = horizonY;
-  // Transparent water renders before opaque terrain via renderOrder
-  water.renderOrder = RENDER_LAYERS.WATER;
+  // Water should render after the terrain so the ocean surface covers the
+  // seabed instead of letting ground textures punch through it.
+  water.renderOrder = RENDER_LAYERS.DETAIL;
+  if (water.material) {
+    water.material.depthWrite = true;
+    water.material.depthTest = true;
+  }
 
   // Custom wave scaling keeps detail even on the rectangular expanse
   if (waterNormals) {

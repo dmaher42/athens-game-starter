@@ -590,7 +590,8 @@ export function createTerrain(scene) {
   terrain.rotation.x = -Math.PI / 2;
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
-  // Ensure terrain renders on top of transparent water layers via explicit renderOrder
+  // Terrain should render before the ocean surface so underwater ground stays
+  // hidden below the water instead of visually conflicting with it.
   terrain.renderOrder = RENDER_LAYERS.TERRAIN;
   
   // ✅ STEP 1: Validate and ensure UVs exist (required for city ground texture)
