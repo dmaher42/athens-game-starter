@@ -674,6 +674,10 @@ function isAgoraPlazaPerimeterCell(gridX, gridZ) {
   return isAgoraPlazaCell(gridX, gridZ) && Math.max(Math.abs(gridX), Math.abs(gridZ)) === AGORA_PLAZA_RADIUS;
 }
 
+function isAgoraArrivalPromenadeCell(gridX, gridZ) {
+  return gridX >= -4 && gridX <= 1 && gridZ >= 2 && gridZ <= 4;
+}
+
 function isAgoraFramingCell(gridX, gridZ) {
   const framingRing = AGORA_PLAZA_RADIUS + 1;
   return Math.abs(gridZ) === framingRing && Math.abs(gridX) <= 1;
@@ -776,7 +780,7 @@ function generateCityGrid(terrainSampler) {
       }
 
       // Keep the Agora core open as a readable civic plaza.
-      if (isAgoraPlazaCell(gridX, gridZ)) {
+      if (isAgoraPlazaCell(gridX, gridZ) || isAgoraArrivalPromenadeCell(gridX, gridZ)) {
         cell.type = 'plaza';
         cell.district = 'commercial';
         cell.buildable = true;

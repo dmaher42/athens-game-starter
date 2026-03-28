@@ -1,6 +1,6 @@
 // src/world/lighting.js
 
-import { DirectionalLight, AmbientLight, Color, Vector3, MathUtils } from "three";
+import { DirectionalLight, AmbientLight, HemisphereLight, Color, Vector3, MathUtils } from "three";
 
 // --- COLORS CONFIGURATION ---
 
@@ -9,8 +9,12 @@ const SUN_COLOR_NOON = new Color("#ffffff");
 const SUN_COLOR_DUSK = new Color("#ffb182");
 
 const AMBIENT_COLOR_NIGHT = new Color("#1c2438");
-const AMBIENT_COLOR_DAY = new Color("#d7e0ea");
+const AMBIENT_COLOR_DAY = new Color("#e6edf4");
 const AMBIENT_COLOR_SUNSET = new Color("#f2b886");
+const HEMI_SKY_NIGHT = new Color("#253148");
+const HEMI_SKY_DAY = new Color("#eef6ff");
+const HEMI_GROUND_NIGHT = new Color("#171314");
+const HEMI_GROUND_DAY = new Color("#8d7a66");
 // ------------------------------------------------------------------
 
 const scratchColor = new Color();
@@ -50,15 +54,18 @@ export function createLighting(scene, sunLightOverride = null, ambientOverride =
   if (scene && !sunLight.parent) scene.add(sunLight);
   if (scene && !sunLight.target.parent) scene.add(sunLight.target);
 
-  const ambientLight = ambientOverride || new AmbientLight(0xffffff, 0.18);
+  const ambientLight = ambientOverride || new AmbientLight(0xffffff, 0.22);
   if (scene && !ambientLight.parent) scene.add(ambientLight);
 
-  return { sunLight, ambientLight, nightFactor: 0 };
+  const hemisphereLight = new HemisphereLight(0xeef6ff, 0x8d7a66, 0.42);
+  if (scene && !hemisphereLight.parent) scene.add(hemisphereLight);
+
+  return { sunLight, ambientLight, hemisphereLight, nightFactor: 0 };
 }
 
 export function updateLighting(lights, sunDir, options = {}) {
   if (!lights || !lights.sunLight || !lights.ambientLight) return;
-  const { sunLight, ambientLight } = lights;
+  const { sunLight, ambientLight, hemisphereLight } = lights;
 
   const {
     applyPosition = true,
@@ -117,7 +124,7 @@ export function updateLighting(lights, sunDir, options = {}) {
   if (overrideAmbientIntensity != null) {
     ambientLight.intensity = overrideAmbientIntensity;
   } else {
-    const ambientTarget = MathUtils.lerp(0.08, 0.28, ambientFactor);
+    const ambientTarget = MathUtils.lerp(0.12, 0.34, ambientFactor);
     ambientLight.intensity = MathUtils.lerp(ambientLight.intensity, ambientTarget, 0.16);
   }
 
@@ -129,6 +136,12 @@ export function updateLighting(lights, sunDir, options = {}) {
     const warmBlend = lerpColor(scratchColor, AMBIENT_COLOR_DAY, AMBIENT_COLOR_SUNSET, 1 - Math.abs(0.5 - dayFactor) * 2);
     const ambientColor = warmBlend.lerp(AMBIENT_COLOR_NIGHT, nightFactor);
     ambientLight.color.copy(ambientColor);
+  }
+
+  if (hemisphereLight) {
+    hemisphereLight.intensity = MathUtils.lerp(0.05, 0.48, ambientFactor);
+    hemisphereLight.color.copy(HEMI_SKY_NIGHT).lerp(HEMI_SKY_DAY, ambientFactor);
+    hemisphereLight.groundColor.copy(HEMI_GROUND_NIGHT).lerp(HEMI_GROUND_DAY, ambientFactor);
   }
 
   lights.nightFactor = nightFactor;
