@@ -933,12 +933,24 @@ function createHarborShorelineApron() {
   const localWaterWest = HARBOR_WATER_BOUNDS.west - HARBOR_CENTER_3D.x;
   const localWaterNorth = HARBOR_WATER_BOUNDS.north - HARBOR_CENTER_3D.z;
   const localWaterSouth = HARBOR_WATER_BOUNDS.south - HARBOR_CENTER_3D.z;
+  const localShoreCenterZ = (localWaterNorth + localWaterSouth) * 0.5;
+  const localShoreHalfDepth = Math.max(1, (localWaterNorth - localWaterSouth) * 0.5);
+  const getShoreCoveX = (z, offset = 0) => {
+    const normalizedZ = THREE.MathUtils.clamp(
+      Math.abs(z - localShoreCenterZ) / localShoreHalfDepth,
+      0,
+      1,
+    );
+    const coveFactor = 1 - THREE.MathUtils.smoothstep(0.1, 0.95, normalizedZ);
+    const shoulderFactor = 1 - normalizedZ * 0.22;
+    return localWaterWest + 16 * coveFactor * shoulderFactor + offset;
+  };
 
   const shorelinePads = [
-    { x: localWaterWest + 18, z: -24, sx: 1.55, sz: 1.0, rot: -0.22 },
-    { x: localWaterWest + 16, z: -6, sx: 1.85, sz: 1.05, rot: -0.08 },
-    { x: localWaterWest + 18, z: 14, sx: 1.7, sz: 1.02, rot: 0.11 },
-    { x: localWaterWest + 22, z: 30, sx: 1.35, sz: 0.92, rot: 0.18 },
+    { x: getShoreCoveX(-24, 7), z: -24, sx: 1.55, sz: 1.0, rot: -0.22 },
+    { x: getShoreCoveX(-6, 3), z: -6, sx: 1.85, sz: 1.05, rot: -0.08 },
+    { x: getShoreCoveX(14, 5), z: 14, sx: 1.7, sz: 1.02, rot: 0.11 },
+    { x: getShoreCoveX(30, 10), z: 30, sx: 1.35, sz: 0.92, rot: 0.18 },
     { x: 44, z: localWaterNorth - 7, sx: 1.12, sz: 0.78, rot: 0.15 },
     { x: 48, z: localWaterSouth + 7, sx: 1.18, sz: 0.82, rot: -0.12 },
   ];
@@ -968,10 +980,10 @@ function createHarborShorelineApron() {
 
   const rubbleGeometry = new THREE.DodecahedronGeometry(0.82, 0);
   for (const [x, z, scale] of [
-    [localWaterWest + 8, -22, 0.88],
-    [localWaterWest + 10, -9, 1.05],
-    [localWaterWest + 9, 8, 0.92],
-    [localWaterWest + 11, 24, 1.18],
+    [getShoreCoveX(-22, 1), -22, 0.88],
+    [getShoreCoveX(-9, -1), -9, 1.05],
+    [getShoreCoveX(8, -2), 8, 0.92],
+    [getShoreCoveX(24, 2), 24, 1.18],
     [46, localWaterNorth - 4, 0.82],
     [49, localWaterSouth + 4, 0.9],
   ]) {

@@ -74,6 +74,7 @@ const HARBOR_BASIN_EDGE_BAND = 12;
 const HARBOR_COASTAL_BAND = 16;
 const HARBOR_SHELF_PADDING = 18;
 const HARBOR_SHELF_SLOPE_WIDTH = 20;
+const HARBOR_SHORE_COVE_INSET = 16;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
@@ -161,12 +162,13 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   const shelfSouth = south - HARBOR_SHELF_PADDING;
   const shelfCenterZ = (shelfNorth + shelfSouth) * 0.5;
   const shelfHalfDepth = Math.max(1, (shelfNorth - shelfSouth) * 0.5);
+  const shorelineWest = getHarborShorelineWest(z, west, north, south);
 
-  const withinWater = x >= west && x <= east && z >= south && z <= north;
+  const withinWater = x >= shorelineWest && x <= east && z >= south && z <= north;
   if (withinWater) {
     // Shape a softer basin: shallower near the shoreline, deeper toward the
     // middle, so the terrain owns the harbor edge instead of a hard cut.
-    const edgeDistance = Math.min(x - west, east - x, z - south, north - z);
+    const edgeDistance = Math.min(x - shorelineWest, east - x, z - south, north - z);
     const basinBlend = THREE.MathUtils.smoothstep(
       0,
       HARBOR_BASIN_EDGE_BAND,
@@ -187,7 +189,7 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   // supports the connector and waterfront buildings without becoming a large
   // rectangular patch across the whole district.
   const shelfWidth = 60;
-  const shelfStart = west - shelfWidth;
+  const shelfStart = shorelineWest - shelfWidth;
   const zDistanceFromShelfCenter = Math.abs(z - shelfCenterZ);
   const shelfDepthFactor = THREE.MathUtils.clamp(
     1 - zDistanceFromShelfCenter / shelfHalfDepth,
@@ -224,10 +226,20 @@ function getDistanceToHarborWaterBounds(x, z) {
   const east = Math.max(HARBOR_WATER_BOUNDS.west, HARBOR_WATER_BOUNDS.east);
   const north = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
   const south = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
+  const shorelineWest = getHarborShorelineWest(z, west, north, south);
 
-  const dx = x < west ? west - x : x > east ? x - east : 0;
+  const dx = x < shorelineWest ? shorelineWest - x : x > east ? x - east : 0;
   const dz = z < south ? south - z : z > north ? z - north : 0;
   return Math.hypot(dx, dz);
+}
+
+function getHarborShorelineWest(z, west, north, south) {
+  const centerZ = (north + south) * 0.5;
+  const halfDepth = Math.max(1, (north - south) * 0.5);
+  const normalizedZ = THREE.MathUtils.clamp(Math.abs(z - centerZ) / halfDepth, 0, 1);
+  const coveFactor = 1 - THREE.MathUtils.smoothstep(0.1, 0.95, normalizedZ);
+  const shoulderFactor = 1 - normalizedZ * 0.22;
+  return west + HARBOR_SHORE_COVE_INSET * coveFactor * shoulderFactor;
 }
 
 function isWithinOceanBounds(x, z) {
