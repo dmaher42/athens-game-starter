@@ -24,9 +24,9 @@ export class BackdropMountains {
   }
 
   createMountains() {
-    const count = 72; // Fewer, broader forms read more like distant ridges than repeated spikes.
-    const minRadius = 1100;
-    const maxRadius = 1800;
+    const count = 54; // Keep the mainland readable without boxing in the sea view.
+    const minRadius = 1550;
+    const maxRadius = 2600;
 
     // Use broader low-poly masses so the skyline reads like layered hills instead of sharp black pyramids.
     const geoms = [
@@ -56,11 +56,9 @@ export class BackdropMountains {
       const t = seededRandom(this.seed + i);
       const t2 = seededRandom(this.seed + i + 1000);
 
-      // Coverage: roughly 270 degrees centered on West (PI)
-      // Range: PI - 135deg to PI + 135deg -> 45deg to 315deg
-      // East gap: -45 to +45
-
-      const coverage = Math.PI * 1.5;
+      // Keep mountains mostly on the mainland side so the harbor has a much
+      // wider eastern opening to the sea.
+      const coverage = Math.PI * 0.92;
       const startAngle = Math.PI - coverage * 0.5;
       const angle = startAngle + t * coverage;
 
@@ -69,9 +67,9 @@ export class BackdropMountains {
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
 
-      const scaleW = 220 + seededRandom(this.seed + i * 2) * 430;
-      const scaleD = 180 + seededRandom(this.seed + i * 6) * 320;
-      const scaleH = 90 + seededRandom(this.seed + i * 3) * 180;
+      const scaleW = 280 + seededRandom(this.seed + i * 2) * 420;
+      const scaleD = 240 + seededRandom(this.seed + i * 6) * 360;
+      const scaleH = 80 + seededRandom(this.seed + i * 3) * 150;
 
       const geomIdx = Math.floor(seededRandom(this.seed + i * 4) * geoms.length);
       const geom = geoms[geomIdx].clone();

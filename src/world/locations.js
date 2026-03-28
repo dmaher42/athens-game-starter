@@ -84,9 +84,9 @@ export const HARBOR_WATER_BOUNDS = {
 // a rectangular dock pool.
 export const AEGEAN_OCEAN_BOUNDS = {
   west: HARBOR_WATER_BOUNDS.east - 14,
-  east: HARBOR_CENTER_3D.x + 1180,
-  north: HARBOR_CENTER_3D.z + 360,
-  south: HARBOR_CENTER_3D.z - 320,
+  east: HARBOR_CENTER_3D.x + 2400,
+  north: HARBOR_CENTER_3D.z + 920,
+  south: HARBOR_CENTER_3D.z - 860,
 };
 
 export const HARBOR_WATER_NORMAL_CANDIDATES = [
