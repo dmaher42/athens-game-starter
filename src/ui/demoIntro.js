@@ -4,7 +4,7 @@ export function showDemoIntro({
   title = "A Short Walk Through Athens",
   route = "Agora -> Harbor Quarter -> Acropolis",
   hint = "Start in the Agora, follow the blue beacon down to the sea, then climb toward the ivory glow above the city.",
-  durationMs = 16000,
+  durationMs = 9000,
 } = {}) {
   if (typeof document === "undefined") {
     return () => {};
@@ -16,12 +16,12 @@ export function showDemoIntro({
   root.setAttribute("aria-live", "polite");
   Object.assign(root.style, {
     position: "fixed",
-    top: "24px",
+    top: "18px",
     left: "50%",
     transform: "translateX(-50%) translateY(0)",
-    width: "min(560px, calc(100vw - 32px))",
-    padding: "16px 18px",
-    borderRadius: "18px",
+    width: "min(480px, calc(100vw - 32px))",
+    padding: "12px 16px",
+    borderRadius: "16px",
     background: "linear-gradient(180deg, rgba(26, 20, 11, 0.92), rgba(45, 33, 19, 0.88))",
     border: "1px solid rgba(247, 209, 123, 0.38)",
     boxShadow: "0 18px 42px rgba(0, 0, 0, 0.35)",
@@ -36,10 +36,10 @@ export function showDemoIntro({
   const titleEl = document.createElement("div");
   titleEl.textContent = title;
   Object.assign(titleEl.style, {
-    fontSize: "24px",
+    fontSize: "20px",
     fontWeight: "700",
     letterSpacing: "0.02em",
-    marginBottom: "6px",
+    marginBottom: "4px",
     color: "#f7d17b",
     textAlign: "center",
   });
@@ -48,20 +48,20 @@ export function showDemoIntro({
   const routeEl = document.createElement("div");
   routeEl.textContent = route;
   Object.assign(routeEl.style, {
-    fontSize: "13px",
-    letterSpacing: "0.2em",
+    fontSize: "11px",
+    letterSpacing: "0.16em",
     textTransform: "uppercase",
     textAlign: "center",
     color: "rgba(247, 241, 228, 0.82)",
-    marginBottom: "8px",
+    marginBottom: "6px",
   });
   root.appendChild(routeEl);
 
   const hintEl = document.createElement("div");
   hintEl.textContent = hint;
   Object.assign(hintEl.style, {
-    fontSize: "15px",
-    lineHeight: "1.45",
+    fontSize: "14px",
+    lineHeight: "1.35",
     textAlign: "center",
     color: "#f7f1e4",
   });
