@@ -677,12 +677,26 @@ function isAgoraPlazaPerimeterCell(gridX, gridZ) {
 }
 
 function isAgoraArrivalPromenadeCell(gridX, gridZ) {
-  return gridX >= -4 && gridX <= 1 && gridZ >= 2 && gridZ <= 4;
+  return gridX >= -2 && gridX <= 0 && gridZ >= 2 && gridZ <= 3;
 }
 
 function isAgoraFramingCell(gridX, gridZ) {
   const framingRing = AGORA_PLAZA_RADIUS + 1;
-  return Math.abs(gridZ) === framingRing && Math.abs(gridX) <= 1;
+  return (
+    (Math.abs(gridZ) === framingRing && Math.abs(gridX) <= 2) ||
+    (Math.abs(gridX) === framingRing && Math.abs(gridZ) <= 1)
+  );
+}
+
+function isAgoraEdgeBuildingCell(gridX, gridZ) {
+  const framingRing = AGORA_PLAZA_RADIUS + 2;
+  return (
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
+    Math.abs(gridX) <= framingRing &&
+    Math.abs(gridZ) <= framingRing &&
+    (Math.abs(gridX) >= framingRing - 1 || Math.abs(gridZ) >= framingRing - 1)
+  );
 }
 
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
@@ -786,21 +800,25 @@ function generateCityGrid(terrainSampler) {
         cell.type = 'plaza';
         cell.district = 'commercial';
         cell.buildable = true;
-      } else if (Math.abs(gridZ) <= 1) {
+      } else if (isAgoraEdgeBuildingCell(gridX, gridZ) && cell.district !== 'sacred') {
+        // Keep a continuous wall of city fabric around the Agora instead of letting roads eat the square.
+        cell.type = 'building';
+        cell.buildable = true;
+      } else if (gridZ === 0 && Math.abs(gridX) <= 7) {
         cell.type = 'road'; // Main E-W avenue
         cell.buildable = true;
-      } else if (Math.abs(gridX) <= 1 && cell.district !== 'sacred') {
+      } else if (gridX === 0 && gridZ >= -3 && gridZ <= 5 && cell.district !== 'sacred') {
         cell.type = 'road'; // Central N-S boulevard
         cell.buildable = true;
       } else if (cell.district === 'sacred') {
         cell.type = 'building';
       } else if (cell.district === 'commercial') {
-        if (gridX % 4 === 0 || gridZ % 4 === 0) {
+        if (gridX % 5 === 0 || gridZ % 5 === 0) {
           cell.type = 'road';
           cell.buildable = true;
         }
       } else {
-        if (gridX % 4 === 0 || gridZ % 4 === 0) {
+        if (gridX % 5 === 0 || gridZ % 5 === 0) {
           cell.type = 'road';
           cell.buildable = true;
         }
@@ -940,12 +958,13 @@ export async function createCivicDistrict(scene, options = {}) {
 
     if (cell.type === 'road') {
       // Avenue is now East-West (gridZ approx 0)
-      const isMainAvenue = Math.abs(cell.gridZ) <= 1;
-      const roadMesh = createPavedStrip(BLOCK_SIZE, BLOCK_SIZE, isMainAvenue ? 0xb0895f : 0xa48463);
+      const isMainAvenue = cell.gridZ === 0 || cell.gridX === 0;
+      const roadWidth = isMainAvenue ? BLOCK_SIZE - 8 : BLOCK_SIZE - 12;
+      const roadMesh = createPavedStrip(roadWidth, roadWidth, isMainAvenue ? 0xb0895f : 0xa48463);
       roadMesh.position.set(localX, localY + 0.006, localZ);
       group.add(roadMesh);
     } else if (cell.type === 'plaza') {
-      const plazaMesh = createPavedStrip(BLOCK_SIZE - 2, BLOCK_SIZE - 2, 0xb29e7e);
+      const plazaMesh = createPavedStrip(BLOCK_SIZE - 6, BLOCK_SIZE - 6, 0xb29e7e);
       plazaMesh.position.set(localX, localY + 0.004, localZ);
       if (plazaMat) plazaMesh.material = plazaMat;
       group.add(plazaMesh);
@@ -1027,7 +1046,7 @@ export async function createCivicDistrict(scene, options = {}) {
       if (isBlockedForCityLayout(worldX, worldZ)) continue;
 
       // Create narrow footpath (lighter color than roads)
-      const pathWidth = pathTile.type === 'connector' ? 8 : 6;
+      const pathWidth = pathTile.type === 'connector' ? 6 : 4;
       const pathColor = pathTile.type === 'connector' ? 0xc0a07b : 0xcfb18e;
       const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
       pathMesh.position.set(localX, localY + 0.007, localZ); // Keep paths close to the terrain so they read as paving, not slabs.
