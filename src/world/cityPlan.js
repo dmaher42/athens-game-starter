@@ -301,6 +301,99 @@ function createPavedStrip(width, length, color = 0xb09370) {
   return mesh;
 }
 
+function createStepFlight(width, stepDepth, stepHeight, stepCount, material) {
+  const group = new THREE.Group();
+  for (let i = 0; i < stepCount; i++) {
+    const tread = new THREE.Mesh(
+      new THREE.BoxGeometry(width, stepHeight, stepDepth),
+      material.clone()
+    );
+    tread.position.set(0, stepHeight * 0.5 + i * stepHeight, i * stepDepth);
+    tread.castShadow = true;
+    tread.receiveShadow = true;
+    group.add(tread);
+  }
+  return group;
+}
+
+function createRetainingWall(length, height, depth, material) {
+  const wall = new THREE.Mesh(
+    new THREE.BoxGeometry(length, height, depth),
+    material
+  );
+  wall.position.y = height * 0.5;
+  wall.castShadow = true;
+  wall.receiveShadow = true;
+  return wall;
+}
+
+function createStreetGradeAccent({
+  localX,
+  localZ,
+  localY,
+  sampleLocalHeight,
+  span = 7,
+  width = 6,
+  roadLike = false,
+}) {
+  if (typeof sampleLocalHeight !== 'function') return null;
+
+  const east = sampleLocalHeight(localX + span, localZ, localY);
+  const west = sampleLocalHeight(localX - span, localZ, localY);
+  const north = sampleLocalHeight(localX, localZ + span, localY);
+  const south = sampleLocalHeight(localX, localZ - span, localY);
+
+  const deltaX = east - west;
+  const deltaZ = north - south;
+  const dominantAxis = Math.abs(deltaX) >= Math.abs(deltaZ) ? 'x' : 'z';
+  const relief = Math.abs(dominantAxis === 'x' ? deltaX : deltaZ);
+
+  if (!Number.isFinite(relief) || relief < 0.22 || relief > 2.4) return null;
+
+  const slopeMaterial = new THREE.MeshStandardMaterial({
+    color: 0xb6a183,
+    roughness: 0.92,
+    metalness: 0.02,
+  });
+  const accent = new THREE.Group();
+  accent.name = roadLike ? 'StreetStepAccent' : 'RetainingEdgeAccent';
+
+  const wallHeight = THREE.MathUtils.clamp(relief * 0.42, 0.22, 0.95);
+  const wallDepth = 0.55;
+  const wallLength = width;
+  const downhillSign = (dominantAxis === 'x' ? deltaX : deltaZ) > 0 ? -1 : 1;
+
+  const wall = createRetainingWall(wallLength, wallHeight, wallDepth, slopeMaterial.clone());
+  if (dominantAxis === 'x') {
+    wall.rotation.y = Math.PI / 2;
+    wall.position.x = downhillSign * (span * 0.72);
+    wall.position.z = 0;
+  } else {
+    wall.position.x = 0;
+    wall.position.z = downhillSign * (span * 0.72);
+  }
+  accent.add(wall);
+
+  if (roadLike) {
+    const stepCount = THREE.MathUtils.clamp(Math.round(relief / 0.24), 1, 4);
+    const steps = createStepFlight(width * 0.6, 0.5, 0.12, stepCount, slopeMaterial.clone());
+    if (dominantAxis === 'x') {
+      steps.rotation.y = deltaX > 0 ? -Math.PI / 2 : Math.PI / 2;
+      steps.position.x = downhillSign * (span * 0.38);
+      steps.position.z = 0;
+    } else {
+      steps.rotation.y = deltaZ > 0 ? 0 : Math.PI;
+      steps.position.x = 0;
+      steps.position.z = downhillSign * (span * 0.38);
+    }
+    accent.add(steps);
+  }
+
+  accent.position.set(localX, localY, localZ);
+  enableShadowProps(accent);
+  return accent;
+}
+
 function enableShadowProps(group) {
   group.traverse((child) => {
     if (!child.isMesh) return;
@@ -832,8 +925,22 @@ function resolveBuildingDetailLevel(cell) {
     cell.position.x - AGORA_CENTER_3D.x,
     cell.position.z - AGORA_CENTER_3D.z,
   );
+  const harborDistance = Math.hypot(
+    cell.position.x - HARBOR_CENTER_3D.x,
+    cell.position.z - HARBOR_CENTER_3D.z,
+  );
 
-  if (cell.district === 'commercial' && agoraDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 0.8) {
+  // Keep the player-facing Agora walk and the immediate harbor approach in the
+  // fuller kit so the opening city fabric still reads as Athens, not placeholders.
+  if (agoraDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 2.4) {
+    return 'full';
+  }
+
+  if (harborDistance <= BLOCK_SIZE * 3.2) {
+    return 'full';
+  }
+
+  if (cell.district === 'commercial' && agoraDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.4) {
     return 'full';
   }
 
@@ -1080,6 +1187,19 @@ export async function createCivicDistrict(scene, options = {}) {
       const roadMesh = createPavedStrip(roadWidth, roadWidth, isMainAvenue ? 0xb0895f : 0xa48463);
       roadMesh.position.set(localX, localY + 0.006, localZ);
       group.add(roadMesh);
+
+      if (cell.slope > SLOPE_THRESHOLDS.FLAT * 0.75) {
+        const streetAccent = createStreetGradeAccent({
+          localX,
+          localZ,
+          localY,
+          sampleLocalHeight,
+          span: BLOCK_SIZE * 0.28,
+          width: roadWidth * 0.52,
+          roadLike: true,
+        });
+        if (streetAccent) group.add(streetAccent);
+      }
     } else if (cell.type === 'plaza') {
       const plazaMesh = createPavedStrip(BLOCK_SIZE - 6, BLOCK_SIZE - 6, 0xb29e7e);
       plazaMesh.position.set(localX, localY + 0.004, localZ);
@@ -1110,7 +1230,7 @@ export async function createCivicDistrict(scene, options = {}) {
          detailLevel: resolveBuildingDetailLevel(cell),
        });
 
-      if (buildingGroup) {
+       if (buildingGroup) {
            if (cell.district === 'harbor') {
              // Keep the generic city kit out of the waterfront so the authored
              // harbor owns that destination space more clearly.
@@ -1129,6 +1249,19 @@ export async function createCivicDistrict(scene, options = {}) {
            const rot = Math.floor(rng() * 4) * (Math.PI / 2);
            buildingGroup.rotation.y = rot;
            group.add(buildingGroup);
+
+           if (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.55) {
+             const retainingAccent = createStreetGradeAccent({
+               localX,
+               localZ,
+               localY,
+               sampleLocalHeight,
+               span: BLOCK_SIZE * 0.34,
+               width: BLOCK_SIZE * 0.5,
+               roadLike: false,
+             });
+             if (retainingAccent) group.add(retainingAccent);
+           }
 
            let districtAccent = null;
            if (isAgoraFramingCell(cell.gridX, cell.gridZ)) {
@@ -1176,6 +1309,19 @@ export async function createCivicDistrict(scene, options = {}) {
       pathMesh.position.set(localX, localY + 0.007, localZ); // Keep paths close to the terrain so they read as paving, not slabs.
       pathMesh.userData.isFootpath = true;
       group.add(pathMesh);
+
+      if ((pathTile.slope ?? 0) > SLOPE_THRESHOLDS.FLAT * 0.8) {
+        const pathAccent = createStreetGradeAccent({
+          localX,
+          localZ,
+          localY,
+          sampleLocalHeight,
+          span: BLOCK_SIZE * 0.22,
+          width: pathWidth * 0.8,
+          roadLike: true,
+        });
+        if (pathAccent) group.add(pathAccent);
+      }
     }
   }
 
