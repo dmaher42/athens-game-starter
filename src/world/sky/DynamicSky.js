@@ -19,20 +19,20 @@ const UP = new Vector3(0, 1, 0);
 
 const SKY_PRESETS = {
   high_noon: {
-    turbidity: 2.4,
-    rayleigh: 1.2,
-    mieCoefficient: 0.0035,
+    turbidity: 2.2,
+    rayleigh: 1.35,
+    mieCoefficient: 0.0032,
     mieDirectionalG: 0.82,
-    horizon: "#7aa6d8",
-    zenith: "#275c9f",
+    horizon: "#ffd9a3",
+    zenith: "#6fa7ff",
   },
   golden_hour: {
-    turbidity: 5.2,
-    rayleigh: 0.9,
-    mieCoefficient: 0.008,
+    turbidity: 3.4,
+    rayleigh: 1.05,
+    mieCoefficient: 0.0052,
     mieDirectionalG: 0.82,
-    horizon: "#f3c28b",
-    zenith: "#3b5f9f",
+    horizon: "#ffd4a6",
+    zenith: "#5f93e0",
   },
   blue_hour: {
     turbidity: 2.0,
@@ -80,7 +80,7 @@ function createCloudLayer(radius = 4200) {
     blending: AdditiveBlending,
     uniforms: {
       time: { value: 0 },
-      opacity: { value: 0.1 },
+      opacity: { value: 0.08 },
     },
     vertexShader: /* glsl */ `
       varying vec3 vWorldPosition;
@@ -119,7 +119,8 @@ function createCloudLayer(radius = 4200) {
         float falloff = clamp(dir.y * 0.5 + 0.5, 0.0, 1.0);
         float alpha = clouds * falloff * opacity;
         if (alpha < 0.01) discard;
-        gl_FragColor = vec4(vec3(1.0), alpha);
+        vec3 cloudColor = mix(vec3(1.0), vec3(1.0, 0.97, 0.92), clamp(1.0 - dir.y, 0.0, 1.0) * 0.4);
+        gl_FragColor = vec4(cloudColor, alpha);
       }
     `,
   });
@@ -150,7 +151,7 @@ export class DynamicSky {
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.set(2048, 2048);
     this.sunLight.shadow.bias = -0.0002;
-    this.sunLight.shadow.radius = 2;
+    this.sunLight.shadow.radius = 2.8;
     this.sunLight.shadow.normalBias = 0.02;
     this.sunLight.position.copy(this.sunDirection).multiplyScalar(this.sunDistance);
     this.sunLight.target.position.copy(this.sunTarget);
@@ -236,7 +237,7 @@ export class DynamicSky {
     const cloudUniforms = this.clouds.material.uniforms;
     if (cloudUniforms?.time) cloudUniforms.time.value += deltaTime;
     if (cloudUniforms?.opacity) {
-      cloudUniforms.opacity.value = MathUtils.lerp(0.04, 0.18, dayFactor);
+      cloudUniforms.opacity.value = MathUtils.lerp(0.03, 0.12, dayFactor);
     }
 
     if (this.stars.material) {

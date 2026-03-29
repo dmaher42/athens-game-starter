@@ -10,9 +10,9 @@ import {
 } from "three";
  
 const DEFAULT_SKY_SETTINGS = {
-  zenith: "#2f6cb5",
-  horizon: "#f2d3a5",
-  sun: "#ffd8a6",
+  zenith: "#6fa7ff",
+  horizon: "#ffd9a3",
+  sun: "#ffe2c4",
   fogNear: 300,
   fogFar: 1950,
 };
@@ -33,11 +33,11 @@ const SKY_PRESETS = {
     fogFar: 1825,
   },
   high_noon: {
-    zenith: "#4a9eff",
-    horizon: "#a8c8e8",
-    sun: "#fff8e8",
-    fogNear: 320,
-    fogFar: 2000,
+    zenith: "#6fa7ff",
+    horizon: "#ffd9a3",
+    sun: "#fff2dd",
+    fogNear: 900,
+    fogFar: 4200,
   },
   night_sky: {
     zenith: "#0b1d51",

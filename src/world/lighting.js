@@ -4,17 +4,17 @@ import { DirectionalLight, AmbientLight, HemisphereLight, Color, Vector3, MathUt
 
 // --- COLORS CONFIGURATION ---
 
-const SUN_COLOR_DAWN = new Color("#ffd1a3");
-const SUN_COLOR_NOON = new Color("#ffffff");
-const SUN_COLOR_DUSK = new Color("#ffb182");
+const SUN_COLOR_DAWN = new Color("#ffe2c4");
+const SUN_COLOR_NOON = new Color("#fff7ea");
+const SUN_COLOR_DUSK = new Color("#ffd0a6");
 
 const AMBIENT_COLOR_NIGHT = new Color("#1c2438");
-const AMBIENT_COLOR_DAY = new Color("#e6edf4");
-const AMBIENT_COLOR_SUNSET = new Color("#f2b886");
+const AMBIENT_COLOR_DAY = new Color("#edf3f8");
+const AMBIENT_COLOR_SUNSET = new Color("#edd3ad");
 const HEMI_SKY_NIGHT = new Color("#253148");
-const HEMI_SKY_DAY = new Color("#eef6ff");
+const HEMI_SKY_DAY = new Color("#f4f8ff");
 const HEMI_GROUND_NIGHT = new Color("#171314");
-const HEMI_GROUND_DAY = new Color("#8d7a66");
+const HEMI_GROUND_DAY = new Color("#b39b80");
 // ------------------------------------------------------------------
 
 const scratchColor = new Color();
@@ -29,7 +29,7 @@ export function createLighting(scene, sunLightOverride = null, ambientOverride =
   const sunLight = sunLightOverride || new DirectionalLight(0xffffff, 3.6);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(1024, 1024);
-  sunLight.shadow.radius = 2;
+  sunLight.shadow.radius = 2.8;
   sunLight.shadow.bias = -0.0002;
 
   // Setup initial sun position
