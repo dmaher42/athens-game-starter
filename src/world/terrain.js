@@ -553,14 +553,16 @@ export function createTerrain(scene) {
     const touchesWaterline = minHeight <= seaLevel + 0.12;
     const isOpenSeaTriangle = isWithinOceanBounds(centerX, centerZ);
     const harborDistance = getDistanceToHarborWaterBounds(centerX, centerZ);
+    const isWaterBodyTriangle =
+      isOpenSeaTriangle || harborDistance <= HARBOR_COASTAL_BAND;
     const isHarborShoreline =
       harborDistance <= HARBOR_COASTAL_BAND &&
       (isShallowWater || touchesWaterline);
     const shouldUseCoastalMaterial =
       dSea < 0.15 ||
       (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline)) ||
-      isUnderwaterTriangle ||
-      (isOpenSeaTriangle && (isShallowWater || touchesWaterline || isUnderwaterTriangle)) ||
+      (isWaterBodyTriangle &&
+        (isShallowWater || touchesWaterline || isUnderwaterTriangle)) ||
       isHarborShoreline;
 
     if (shouldUseCoastalMaterial) {
@@ -655,7 +657,9 @@ export function createTerrain(scene) {
 
     const halfSize = size / 2;
     const localX = local.x + halfSize;
-    const localZ = local.z + halfSize;
+    // PlaneGeometry uses local Y as its second ground axis before the terrain
+    // mesh rotates into world XZ space.
+    const localZ = -local.y + halfSize;
 
     if (localX < 0 || localX > size || localZ < 0 || localZ > size) {
       return null;
