@@ -23,7 +23,7 @@ const MIN_Z = -10, MAX_Z = 20;
 const BLOCK_SIZE = 24; // Smaller blocks make the city feel tighter and more urban.
 const AGORA_PLAZA_RADIUS = 1;
 const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.5;
-const AGORA_MARKET_RADIUS = BLOCK_SIZE * 3.8;
+const AGORA_MARKET_RADIUS = BLOCK_SIZE * 4.4;
 const ACROPOLIS_SACRED_RADIUS = BLOCK_SIZE * 1.4;
 
 // District Spacing Rules
@@ -617,6 +617,10 @@ function resolveDistrictForCell(worldX, worldZ) {
     return "commercial";
   }
 
+  if (agoraDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.4 && isWithinCivicClusterRange(worldX, worldZ)) {
+    return "commercial";
+  }
+
   return "residential";
 }
 
@@ -629,7 +633,7 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     : Infinity;
 
   if (district === 'civic') {
-    if (cell && isAgoraFramingCell(cell.gridX, cell.gridZ)) {
+    if (cell && isAgoraUrbanFrontCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
         allowedTypes: ['stoa', 'monument'],
@@ -649,19 +653,30 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     };
   }
 
-  if (district === 'commercial' && civicDistance <= AGORA_MARKET_RADIUS) {
-    if (cell && isAgoraFramingCell(cell.gridX, cell.gridZ)) {
+  if (district === 'commercial' && civicDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.4) {
+    if (cell && isAgoraUrbanFrontCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
-        allowedTypes: ['stoa', 'monument'],
-        heightRange: [3.0, 4.0],
+        allowedTypes: ['stoa', 'shop', 'market', 'workshop'],
+        heightRange: [3.2, 4.4],
         courtyardChance: 0,
       };
     }
 
     return {
       ...match,
-      heightRange: [3.2, 4.6],
+      allowedTypes: ['shop', 'market', 'workshop', 'stoa'],
+      heightRange: [3.2, 4.8],
+      courtyardChance: 0,
+    };
+  }
+
+  if (district === 'residential' && cell && civicDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE) {
+    return {
+      ...match,
+      allowedTypes: ['shop', 'workshop', 'courtyard', 'house'],
+      heightRange: [3.0, 4.2],
+      courtyardChance: 0.2,
     };
   }
 
@@ -699,6 +714,10 @@ function isAgoraEdgeBuildingCell(gridX, gridZ) {
   );
 }
 
+function isAgoraUrbanFrontCell(gridX, gridZ) {
+  return isAgoraFramingCell(gridX, gridZ) || isAgoraEdgeBuildingCell(gridX, gridZ);
+}
+
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
   if (gridZ === -AGORA_PLAZA_RADIUS && gridX === 0) return 0;
   if (gridX === AGORA_PLAZA_RADIUS && gridZ === 0) return -Math.PI / 2;
@@ -711,15 +730,15 @@ function applyAgoraScalePass(buildingGroup, cell) {
   if (!buildingGroup || !cell) return;
 
   if (isAgoraFramingCell(cell.gridX, cell.gridZ)) {
-    buildingGroup.scale.multiplyScalar(0.84);
+    buildingGroup.scale.multiplyScalar(0.9);
     return;
   }
 
   const agoraDistance = Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z);
   if (cell.district === 'civic' && agoraDistance <= AGORA_CIVIC_RADIUS + BLOCK_SIZE * 0.5) {
-    buildingGroup.scale.multiplyScalar(0.82);
-  } else if (cell.district === 'commercial' && agoraDistance <= AGORA_MARKET_RADIUS) {
-    buildingGroup.scale.multiplyScalar(0.9);
+    buildingGroup.scale.multiplyScalar(0.86);
+  } else if (cell.district === 'commercial' && agoraDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE) {
+    buildingGroup.scale.multiplyScalar(0.94);
   }
 }
 
