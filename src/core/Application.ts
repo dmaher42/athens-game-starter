@@ -780,7 +780,10 @@ export class Application {
         };
       };
 
-      if (civicDistrict.walkingLoop) {
+      let proceduralCrowdSpawned = false;
+      const spawnProceduralCrowdFallback = () => {
+        if (proceduralCrowdSpawned || !civicDistrict.walkingLoop) return;
+        proceduralCrowdSpawned = true;
         const crowd = spawnCitizenCrowd(worldRoot, civicDistrict.walkingLoop, {
           count: 8,
           minSpeed: 0.7,
@@ -788,16 +791,25 @@ export class Application {
           terrain,
         });
         this.npcUpdaters.push(...crowd.updaters);
-      }
+      };
+
       if (ENABLE_GLB_MODE) {
         spawnGLBNPCs(worldRoot, mainRoad, { terrain })
           .then((glbNpcs: any) => {
-            if (!glbNpcs) return;
-            if (Array.isArray(glbNpcs.updaters)) {
-              this.npcUpdaters.push(...glbNpcs.updaters);
+            const glbUpdaters = Array.isArray(glbNpcs?.updaters)
+              ? glbNpcs.updaters
+              : [];
+            if (glbUpdaters.length > 0) {
+              this.npcUpdaters.push(...glbUpdaters);
+              return;
             }
+            spawnProceduralCrowdFallback();
           })
-          .catch(() => {});
+          .catch(() => {
+            spawnProceduralCrowdFallback();
+          });
+      } else {
+        spawnProceduralCrowdFallback();
       }
 
       let propCullingTimer = 0;
