@@ -416,9 +416,9 @@ function createSkirtGeometry(sourceGeometry, seaLevel) {
 
 export function createTerrain(scene) {
   const size = TERRAIN_SIZE;
-  // Reduced segments to optimize performance (260k verts instead of 1M)
-  // 2400 / 512 ~= 4.7 meters per vertex, reasonable resolution.
-  const segments = 512;
+  // Keep the terrain dense enough for the city silhouette while trimming a
+  // large chunk of render + collision geometry from the default build.
+  const segments = 384;
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
   if (geometry.attributes.uv && !geometry.attributes.uv2) {
