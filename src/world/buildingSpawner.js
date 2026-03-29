@@ -221,11 +221,16 @@ function addEntrySteps(group, width, rng) {
   return steps;
 }
 
+function isLowDetail(detailLevel) {
+  return detailLevel === "low";
+}
+
 // Parametric “prefabs” (fast + zero textures). All return a Group.
 export const Prefabs = {
-  house({ w = 5, d = 7, h = 3.8, rng = Math.random, roofColor = null } = {}) {
+  house({ w = 5, d = 7, h = 3.8, rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralHouse";
+    const lowDetail = isLowDetail(detailLevel);
 
     const baseHeight = h * (0.65 + rng() * 0.2);
     const facadeMaterial = createMaterial(rng() < 0.35 ? "plaster" : "clay", rng);
@@ -244,7 +249,7 @@ export const Prefabs = {
     roof.position.y = baseHeight + roofHeight * 0.5 + 0.1;
     g.add(roof);
 
-    if (rng() < 0.45) {
+    if (!lowDetail && rng() < 0.45) {
       const annexW = w * (0.45 + rng() * 0.2);
       const annexD = d * (0.4 + rng() * 0.25);
       const annexH = baseHeight * (0.65 + rng() * 0.2);
@@ -253,7 +258,7 @@ export const Prefabs = {
       g.add(annex);
     }
 
-    if (rng() < 0.6) {
+    if (!lowDetail && rng() < 0.6) {
       addWindowBand(g, {
         count: 3 + Math.floor(rng() * 2),
         spacing: w / (2.2 + rng()),
@@ -278,37 +283,42 @@ export const Prefabs = {
       }
     }
 
-    if (rng() < 0.4) {
+    if (!lowDetail && rng() < 0.4) {
       const chimney = makeBox(0.6, roofHeight * 1.2, 0.6, createMaterial("stone", rng));
       chimney.position.set((w * 0.25) * (rng() < 0.5 ? -1 : 1), baseHeight + roofHeight, (d * 0.25) * (rng() < 0.5 ? -1 : 1));
       g.add(chimney);
     }
 
-    const forecourt = new THREE.Mesh(
-      new THREE.PlaneGeometry(w * 1.6, d * 1.8),
-      createMaterial("paving", rng, { side: THREE.DoubleSide })
-    );
-    forecourt.rotation.x = -Math.PI / 2;
-    forecourt.position.y = 0.01;
-    forecourt.receiveShadow = true;
-    g.add(forecourt);
+    if (!lowDetail) {
+      const forecourt = new THREE.Mesh(
+        new THREE.PlaneGeometry(w * 1.6, d * 1.8),
+        createMaterial("paving", rng, { side: THREE.DoubleSide })
+      );
+      forecourt.rotation.x = -Math.PI / 2;
+      forecourt.position.y = 0.01;
+      forecourt.receiveShadow = true;
+      g.add(forecourt);
+    }
 
-    if (rng() < 0.7) {
+    if (!lowDetail && rng() < 0.7) {
       addEntrySteps(g, Math.min(w, d) * 0.8, rng);
     }
 
     return g;
   },
-  courtyard({ rng = Math.random, roofColor = null, h = 4.4 } = {}) {
+  courtyard({ rng = Math.random, roofColor = null, h = 4.4, detailLevel = "full" } = {}) {
+    if (isLowDetail(detailLevel)) {
+      return Prefabs.house({ w: 6.4, d: 7.8, h, rng, roofColor, detailLevel });
+    }
     const g = new THREE.Group();
     g.name = "ProceduralCourtyard";
     const scale = 0.8 + rng() * 0.3;
     // Scale h relative to 4.4 base
     const mainH = h * scale;
-    const main = Prefabs.house({ w: 6 * scale, d: 7.5 * scale, h: mainH, rng, roofColor });
+    const main = Prefabs.house({ w: 6 * scale, d: 7.5 * scale, h: mainH, rng, roofColor, detailLevel });
     g.add(main);
 
-    const side = Prefabs.house({ w: 4.5 * scale, d: 5.2 * scale, h: mainH * 0.8, rng, roofColor });
+    const side = Prefabs.house({ w: 4.5 * scale, d: 5.2 * scale, h: mainH * 0.8, rng, roofColor, detailLevel });
     side.position.set(0, 0, -6 * scale);
     side.rotation.y = Math.PI / 2;
     g.add(side);
@@ -340,25 +350,28 @@ export const Prefabs = {
   },
   shop(opts) { return Prefabs.house({ ...opts, w: 6, d: 6, h: 3.4 }); },
   workshop(opts) { return Prefabs.house({ ...opts, w: 6, d: 8, h: 4.0 }); },
-  warehouse({ w = 9, d = 12, h = 5.2, rng = Math.random, roofColor = null } = {}) {
+  warehouse({ w = 9, d = 12, h = 5.2, rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralWarehouse";
+    const lowDetail = isLowDetail(detailLevel);
     const base = makeBox(w, h, d, createMaterial("wood", rng));
     base.position.y = h * 0.5; g.add(base);
     const roof = makeGableRoof(w * 1.05, d * 1.05, 1.4, rng, roofColor);
     roof.position.y = h + 0.7; g.add(roof);
 
-    if (rng() < 0.5) {
+    if (!lowDetail && rng() < 0.5) {
       const loading = makeBox(w * 0.6, h * 0.5, 0.6, createMaterial("stone", rng));
       loading.position.set(0, h * 0.25, d * 0.5 + 0.3);
       g.add(loading);
     }
 
-    const deck = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.2, d * 1.4), createMaterial("paving", rng));
-    deck.rotation.x = -Math.PI / 2;
-    deck.position.y = 0.01;
-    deck.receiveShadow = true;
-    g.add(deck);
+    if (!lowDetail) {
+      const deck = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.2, d * 1.4), createMaterial("paving", rng));
+      deck.rotation.x = -Math.PI / 2;
+      deck.position.y = 0.01;
+      deck.receiveShadow = true;
+      g.add(deck);
+    }
 
     return g;
   },
@@ -502,7 +515,7 @@ function getPadSeed(pad, baseSeed = 0) {
  * @param {object} options { seed, leavePadsVisible }
  */
 export function spawnBuilding(options = {}) {
-  const { district = 'residential', rng = Math.random, districtRules } = options;
+  const { district = 'residential', rng = Math.random, districtRules, detailLevel = "full" } = options;
 
   let allowed = ['house'];
   let roofColor = null;
@@ -536,7 +549,7 @@ export function spawnBuilding(options = {}) {
   const spawner = Prefabs[type] || Prefabs.house;
 
   // Override roof color in options if valid
-  const spawnOpts = { rng, ...options };
+  const spawnOpts = { rng, detailLevel, ...options };
   if (roofColor) spawnOpts.roofColor = roofColor;
   if (Array.isArray(districtRules?.heightRange) && districtRules.heightRange.length === 2) {
     const [minH, maxH] = districtRules.heightRange;

@@ -742,6 +742,23 @@ function applyAgoraScalePass(buildingGroup, cell) {
   }
 }
 
+function resolveBuildingDetailLevel(cell) {
+  if (!cell) return 'full';
+  if (cell.district === 'sacred' || cell.district === 'civic') return 'full';
+  if (isAgoraUrbanFrontCell(cell.gridX, cell.gridZ)) return 'full';
+
+  const agoraDistance = Math.hypot(
+    cell.position.x - AGORA_CENTER_3D.x,
+    cell.position.z - AGORA_CENTER_3D.z,
+  );
+
+  if (cell.district === 'commercial' && agoraDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 0.8) {
+    return 'full';
+  }
+
+  return 'low';
+}
+
 function generateCityGrid(terrainSampler) {
   const cells = [];
   
@@ -1009,6 +1026,7 @@ export async function createCivicDistrict(scene, options = {}) {
          district: cell.district,
          rng: rng,
          districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
+         detailLevel: resolveBuildingDetailLevel(cell),
        });
 
       if (buildingGroup) {
