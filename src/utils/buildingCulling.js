@@ -2,6 +2,41 @@
 
 import * as THREE from 'three';
 
+const frustum = new THREE.Frustum();
+const projScreenMatrix = new THREE.Matrix4();
+const cameraWorldPosition = new THREE.Vector3();
+const buildingWorldPosition = new THREE.Vector3();
+const buildingMeshCache = new WeakMap();
+
+function isBuildingMesh(object) {
+  if (!object?.isMesh) return false;
+  const name = (object.name || "").toLowerCase();
+  return (
+    name.includes("building") ||
+    name.includes("house") ||
+    name.includes("structure")
+  );
+}
+
+function getBuildingMeshes(scene, { refresh = false } = {}) {
+  if (!scene) return [];
+  if (!refresh) {
+    const cached = buildingMeshCache.get(scene);
+    if (Array.isArray(cached)) {
+      return cached;
+    }
+  }
+
+  const meshes = [];
+  scene.traverse((child) => {
+    if (isBuildingMesh(child)) {
+      meshes.push(child);
+    }
+  });
+  buildingMeshCache.set(scene, meshes);
+  return meshes;
+}
+
 /**
  * Main culling function
  * @param {THREE.Scene} scene
@@ -9,26 +44,23 @@ import * as THREE from 'three';
  * @param {number} maxDistance
  */
 export function cullDistantBuildings(scene, camera, maxDistance = 300) {
-  // Standard distance culling for generic buildings
-  const frustum = new THREE.Frustum();
-  const projScreenMatrix = new THREE.Matrix4();
-  
+  const buildingMeshes = getBuildingMeshes(scene);
+  if (buildingMeshes.length === 0) return;
+
   projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   frustum.setFromProjectionMatrix(projScreenMatrix);
+  camera.getWorldPosition(cameraWorldPosition);
 
-  scene.traverse((child) => {
-    if (!child.isMesh) return;
+  for (const child of buildingMeshes) {
+    if (!child?.parent) continue;
 
-    // Check if it's a building
-    const name = (child.name || "").toLowerCase();
-    if (name.includes("building") || name.includes("house") || name.includes("structure")) {
-      const dist = child.position.distanceTo(camera.position);
-      if (dist > maxDistance) {
-        child.visible = false;
-      } else {
-        // Only show if in frustum
-        child.visible = frustum.intersectsObject(child);
-      }
+    child.getWorldPosition(buildingWorldPosition);
+    const dist = buildingWorldPosition.distanceTo(cameraWorldPosition);
+    if (dist > maxDistance) {
+      child.visible = false;
+    } else {
+      // Only show if in frustum
+      child.visible = frustum.intersectsObject(child);
     }
-  });
+  }
 }

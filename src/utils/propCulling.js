@@ -7,11 +7,14 @@ import * as THREE from "three";
 
 const _box = new THREE.Box3();
 const _vec3 = new THREE.Vector3();
+const _cameraWorldPosition = new THREE.Vector3();
+const _propWorldPosition = new THREE.Vector3();
 const SMALL_PROP_THRESHOLD = 1.0; // Props with bounding box < 1x1x1
 const OVERLAP_THRESHOLD = 0.5; // Distance threshold for overlap detection
 const DISTANCE_CULLING_ENABLED = true;
 const CULL_DISTANCE_NEAR = 100; // Distance at which to start culling small props
 const CULL_DISTANCE_FAR = 200; // Distance at which all small props are culled
+const smallPropCache = new WeakMap();
 
 function isRigAttachment(mesh) {
   let current = mesh;
@@ -97,6 +100,28 @@ function calculateVisibilityScore(mesh, cameraPos) {
   return distanceScore + heightScore + scaleScore + visibilityPenalty;
 }
 
+function collectSmallProps(scene) {
+  const smallProps = [];
+  scene.traverse((obj) => {
+    if (isSmallProp(obj)) {
+      smallProps.push(obj);
+    }
+  });
+  smallPropCache.set(scene, smallProps);
+  return smallProps;
+}
+
+function getSmallProps(scene, { refresh = false } = {}) {
+  if (!scene) return [];
+  if (!refresh) {
+    const cached = smallPropCache.get(scene);
+    if (Array.isArray(cached)) {
+      return cached;
+    }
+  }
+  return collectSmallProps(scene);
+}
+
 /**
  * Remove overlapping props, keeping the most visible one in each cluster
  */
@@ -106,14 +131,9 @@ export function cullOverlappingProps(scene, options = {}) {
   
   console.log("[PropCulling] Scanning for overlapping props...");
   
-  const smallProps = [];
-  
-  // Collect all small props
-  scene.traverse((obj) => {
-    if (isSmallProp(obj)) {
-      smallProps.push(obj);
-    }
-  });
+  const smallProps = Array.isArray(options.smallProps)
+    ? options.smallProps
+    : getSmallProps(scene);
   
   console.log(`[PropCulling] Found ${smallProps.length} small props`);
   
@@ -203,14 +223,14 @@ export function updateDistanceCulling(scene, camera, options = {}) {
   
   const nearDistance = options.nearDistance || CULL_DISTANCE_NEAR;
   const farDistance = options.farDistance || CULL_DISTANCE_FAR;
-  
-  const cameraPos = camera.getWorldPosition(new THREE.Vector3());
-  
-  scene.traverse((obj) => {
-    // Only process small props that haven't been permanently culled
-    if (!isSmallProp(obj)) return;
-    if (obj.userData.culled) return; // Skip permanently culled props
-    const worldPos = getWorldPosition(obj, new THREE.Vector3());
+
+  const cameraPos = camera.getWorldPosition(_cameraWorldPosition);
+  const smallProps = getSmallProps(scene);
+
+  for (const obj of smallProps) {
+    if (!obj?.parent) continue;
+    if (obj.userData?.culled) continue;
+    const worldPos = getWorldPosition(obj, _propWorldPosition);
     const distance = worldPos.distanceTo(cameraPos);
     
     if (distance > farDistance) {
@@ -224,7 +244,7 @@ export function updateDistanceCulling(scene, camera, options = {}) {
       // Near - show if not permanently culled
       obj.visible = true;
     }
-  });
+  }
 }
 
 /**
@@ -255,10 +275,13 @@ export function initPropCulling(scene, camera, options = {}) {
 
     return false;
   });
+
+  const smallProps = getSmallProps(scene, { refresh: true });
   
   // Run initial overlap culling
   const result = cullOverlappingProps(scene, { 
     cameraPos,
+    smallProps,
     dryRun: options.dryRun || false 
   });
   

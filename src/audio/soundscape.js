@@ -150,6 +150,7 @@ export class Soundscape {
     this.manifestLoaded = false;
     this._manifest = null;
     this.zoneAmbience = null;
+    this._activeZoneSignature = "";
     const BASE = resolveBaseUrl();
     this._registerZoneTrack("harbor", {
       label: "Ocean Waves",
@@ -563,7 +564,11 @@ export class Soundscape {
     if (playerPos.y > 15) {
       activeZones.push("wind");
     }
-    this.zoneAmbience.setActiveZones(activeZones).catch(() => {});
+    const activeZoneSignature = activeZones.join("|");
+    if (activeZoneSignature !== this._activeZoneSignature) {
+      this._activeZoneSignature = activeZoneSignature;
+      this.zoneAmbience.setActiveZones(activeZones).catch(() => {});
+    }
     this.zoneAmbience.updateFades();
   }
 
