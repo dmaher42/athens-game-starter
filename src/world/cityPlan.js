@@ -753,6 +753,76 @@ function createHarborFrontAccent(rng) {
   return group;
 }
 
+function createHarborCompoundAccent(rng) {
+  const group = new THREE.Group();
+  group.name = "HarborCompoundAccent";
+
+  const forecourt = new THREE.Mesh(
+    new THREE.BoxGeometry(9.6, 0.22, 7.2),
+    new THREE.MeshStandardMaterial({ color: 0xb59c79, roughness: 0.9, metalness: 0.02 }),
+  );
+  forecourt.position.y = 0.11;
+  group.add(forecourt);
+
+  const stoaBase = new THREE.Mesh(
+    new THREE.BoxGeometry(8.2, 0.5, 2.5),
+    new THREE.MeshStandardMaterial({ color: 0xc2b093, roughness: 0.86, metalness: 0.02 }),
+  );
+  stoaBase.position.set(0, 0.25, -1.8);
+  group.add(stoaBase);
+
+  for (const x of [-2.8, -1.4, 0, 1.4, 2.8]) {
+    const column = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.22, 3.0, 12),
+      new THREE.MeshStandardMaterial({ color: 0xd3c3a7, roughness: 0.74, metalness: 0.02 }),
+    );
+    column.position.set(x, 1.95, -0.8);
+    group.add(column);
+  }
+
+  const lintel = new THREE.Mesh(
+    new THREE.BoxGeometry(7.8, 0.28, 0.55),
+    new THREE.MeshStandardMaterial({ color: 0xc7b596, roughness: 0.8, metalness: 0.02 }),
+  );
+  lintel.position.set(0, 3.4, -0.8);
+  group.add(lintel);
+
+  const cargoShed = new THREE.Mesh(
+    new THREE.BoxGeometry(3.6, 2.4, 2.6),
+    new THREE.MeshStandardMaterial({ color: 0x8c6f4d, roughness: 0.84, metalness: 0.02 }),
+  );
+  cargoShed.position.set(2.4, 1.2, 1.7);
+  group.add(cargoShed);
+
+  const canopy = new THREE.Mesh(
+    new THREE.BoxGeometry(4.2, 0.18, 2.4),
+    new THREE.MeshStandardMaterial({ color: rng() < 0.5 ? 0xb86d3f : 0x3d7f97, roughness: 0.72, metalness: 0.02 }),
+  );
+  canopy.position.set(-2.2, 2.0, 2.1);
+  group.add(canopy);
+
+  for (const side of [-3.6, -0.8]) {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.08, 0.09, 1.9, 8),
+      new THREE.MeshStandardMaterial({ color: 0x745b40, roughness: 0.84, metalness: 0.02 }),
+    );
+    post.position.set(side, 0.95, 1.9);
+    group.add(post);
+  }
+
+  for (const [x, z] of [[2.8, 3.0], [1.8, 3.1], [3.1, 2.3], [-2.5, 3.05]]) {
+    const jar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.2, 0.14, 0.72, 10),
+      new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.66, metalness: 0.03 }),
+    );
+    jar.position.set(x, 0.36, z);
+    group.add(jar);
+  }
+
+  enableShadowProps(group);
+  return group;
+}
+
 function createSacredAccent() {
   const group = new THREE.Group();
   group.name = "SacredAccent";
@@ -1059,6 +1129,10 @@ function applyAgoraScalePass(buildingGroup, cell) {
   }
 
   const agoraDistance = Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z);
+  if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(1.08);
+    return;
+  }
   if (cell.district === 'civic' && agoraDistance <= AGORA_CIVIC_RADIUS + BLOCK_SIZE * 0.5) {
     buildingGroup.scale.multiplyScalar(0.86);
   } else if (cell.district === 'commercial' && agoraDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE) {
@@ -1409,6 +1483,15 @@ export async function createCivicDistrict(scene, options = {}) {
         const plazaAccent = createAgoraPlazaAccent();
         plazaAccent.position.set(localX, localY, localZ);
         group.add(plazaAccent);
+      } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ) && Math.abs(cell.gridX + cell.gridZ) % 2 === 0) {
+        const harborCompound = createHarborCompoundAccent(() => {
+          const seed = Math.abs(cell.gridX * 92821 ^ cell.gridZ * 68917);
+          const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
+          return t - Math.floor(t);
+        });
+        harborCompound.position.set(localX, localY, localZ);
+        harborCompound.rotation.y = (Math.abs(cell.gridX - cell.gridZ) % 2) * (Math.PI / 2);
+        group.add(harborCompound);
       } else if (isAgoraPlazaPerimeterCell(cell.gridX, cell.gridZ)) {
         const perimeterAccent = createAgoraPerimeterAccent(cell.gridX, cell.gridZ);
         perimeterAccent.position.set(localX, localY, localZ);
