@@ -20,11 +20,11 @@ export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.2
 // Grid Constants
 const MIN_X = -10, MAX_X = 10;
 const MIN_Z = -10, MAX_Z = 20;
-const BLOCK_SIZE = 30; // Compact blocks help the city feel denser and more walkable.
-const AGORA_PLAZA_RADIUS = 2;
-const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.1;
-const AGORA_MARKET_RADIUS = BLOCK_SIZE * 3.2;
-const ACROPOLIS_SACRED_RADIUS = BLOCK_SIZE * 1.2;
+const BLOCK_SIZE = 24; // Smaller blocks make the city feel tighter and more urban.
+const AGORA_PLAZA_RADIUS = 1;
+const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.5;
+const AGORA_MARKET_RADIUS = BLOCK_SIZE * 3.8;
+const ACROPOLIS_SACRED_RADIUS = BLOCK_SIZE * 1.4;
 
 // District Spacing Rules
 export const SPACING_RULES = {
@@ -33,7 +33,7 @@ export const SPACING_RULES = {
 
 // Walkability Grid Constants
 export const WALKABILITY_CONFIG = {
-  PATH_SPACING: 4, // Tiles between paths
+  PATH_SPACING: 3, // Tighter path spacing suits a denser city fabric
   MAX_PATH_SLOPE: SLOPE_THRESHOLDS.MODERATE, // 0.75 max slope for paths
   MAX_REACHABILITY_DISTANCE: 60, // Max tiles to key buildings
   KEY_LOCATIONS: {
@@ -795,12 +795,12 @@ function generateCityGrid(terrainSampler) {
       } else if (cell.district === 'sacred') {
         cell.type = 'building';
       } else if (cell.district === 'commercial') {
-        if (gridX % 3 === 0 || gridZ % 3 === 0) {
+        if (gridX % 4 === 0 || gridZ % 4 === 0) {
           cell.type = 'road';
           cell.buildable = true;
         }
       } else {
-        if (gridX % 3 === 0 || gridZ % 3 === 0) {
+        if (gridX % 4 === 0 || gridZ % 4 === 0) {
           cell.type = 'road';
           cell.buildable = true;
         }
