@@ -18,8 +18,8 @@ import {
 export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.25 };
 
 // Grid Constants
-const MIN_X = -10, MAX_X = 10;
-const MIN_Z = -10, MAX_Z = 20;
+const MIN_X = -8, MAX_X = 8;
+const MIN_Z = -8, MAX_Z = 14;
 const BLOCK_SIZE = 24; // Smaller blocks make the city feel tighter and more urban.
 const AGORA_PLAZA_RADIUS = 1;
 const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.5;
@@ -903,12 +903,30 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     };
   }
 
+  if (district === 'commercial' && cell && isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
+    return {
+      ...match,
+      allowedTypes: ['workshop', 'courtyard', 'shop'],
+      heightRange: [3.2, 4.6],
+      courtyardChance: 0.35,
+    };
+  }
+
   if (district === 'residential' && cell && civicDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE) {
     return {
       ...match,
       allowedTypes: ['shop', 'workshop', 'courtyard', 'house'],
       heightRange: [3.0, 4.2],
       courtyardChance: 0.2,
+    };
+  }
+
+  if (district === 'residential' && cell && isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
+    return {
+      ...match,
+      allowedTypes: ['courtyard', 'workshop', 'house'],
+      heightRange: [3.2, 4.8],
+      courtyardChance: 0.45,
     };
   }
 
@@ -960,6 +978,16 @@ function shouldUseResidentialRoad(gridX, gridZ) {
   const verticalLane = gridX % 7 === 0 && Math.abs(gridZ % 5) <= 1;
   const horizontalLane = gridZ % 8 === 0 && Math.abs(gridX % 4) <= 1;
   return verticalLane || horizontalLane;
+}
+
+function isOuterNeighborhoodCell(gridX, gridZ) {
+  return Math.abs(gridX) >= 5 || gridZ >= 8 || gridZ <= -6;
+}
+
+function shouldReserveNeighborhoodCourt(gridX, gridZ) {
+  const staggeredBand = (Math.abs(gridX) + Math.abs(gridZ)) % 4 === 0;
+  const offsetPocket = Math.abs(gridX % 3) === 1 && Math.abs(gridZ % 5) === 2;
+  return staggeredBand || offsetPocket;
 }
 
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
@@ -1093,6 +1121,18 @@ function generateCityGrid(terrainSampler) {
       if (isAgoraPlazaCell(gridX, gridZ) || isAgoraArrivalPromenadeCell(gridX, gridZ)) {
         cell.type = 'plaza';
         cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isOuterNeighborhoodCell(gridX, gridZ) &&
+        cell.district !== 'sacred' &&
+        cell.district !== 'harbor' &&
+        !shouldUseCommercialRoad(gridX, gridZ) &&
+        !shouldUseResidentialRoad(gridX, gridZ) &&
+        shouldReserveNeighborhoodCourt(gridX, gridZ)
+      ) {
+        // Reserve shared courts and breathing pockets in the outer neighborhoods
+        // so the city reads as grouped blocks instead of a field of repeated tiny lots.
+        cell.type = 'plaza';
         cell.buildable = true;
       } else if (isAgoraEdgeBuildingCell(gridX, gridZ) && cell.district !== 'sacred') {
         // Keep a continuous wall of city fabric around the Agora instead of letting roads eat the square.
