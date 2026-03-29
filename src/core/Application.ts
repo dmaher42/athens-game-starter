@@ -735,10 +735,26 @@ export class Application {
       // Safe mode texture budgeting is intentionally disabled for normal gameplay.
 
       const loop = this.gameLoop;
-      const getPerformanceSnapshot = () => {
-        const loopMetrics = loop.getPerformanceMetrics?.() ?? {};
+      let lastRenderMetrics = {
+        drawCalls: 0,
+        triangles: 0,
+        textures: 0,
+        geometries: 0,
+      };
+
+      const captureRendererMetrics = () => {
         const renderInfo = renderer.info?.render ?? {};
         const memoryInfo = renderer.info?.memory ?? {};
+        lastRenderMetrics = {
+          drawCalls: Number.isFinite(renderInfo.calls) ? renderInfo.calls : 0,
+          triangles: Number.isFinite(renderInfo.triangles) ? renderInfo.triangles : 0,
+          textures: Number.isFinite(memoryInfo.textures) ? memoryInfo.textures : 0,
+          geometries: Number.isFinite(memoryInfo.geometries) ? memoryInfo.geometries : 0,
+        };
+      };
+
+      const getPerformanceSnapshot = () => {
+        const loopMetrics = loop.getPerformanceMetrics?.() ?? {};
         const heapInfo = (performance as any)?.memory;
         const jsHeapMb =
           Number.isFinite(heapInfo?.usedJSHeapSize)
@@ -756,10 +772,10 @@ export class Application {
           worstFrameMs: Number.isFinite(loopMetrics.worstFrameMs)
             ? Number(loopMetrics.worstFrameMs.toFixed(2))
             : 0,
-          drawCalls: Number.isFinite(renderInfo.calls) ? renderInfo.calls : 0,
-          triangles: Number.isFinite(renderInfo.triangles) ? renderInfo.triangles : 0,
-          textures: Number.isFinite(memoryInfo.textures) ? memoryInfo.textures : 0,
-          geometries: Number.isFinite(memoryInfo.geometries) ? memoryInfo.geometries : 0,
+          drawCalls: lastRenderMetrics.drawCalls,
+          triangles: lastRenderMetrics.triangles,
+          textures: lastRenderMetrics.textures,
+          geometries: lastRenderMetrics.geometries,
           jsHeapMb: jsHeapMb == null ? null : Number(jsHeapMb.toFixed(1)),
         };
       };
@@ -843,6 +859,7 @@ export class Application {
         }
 
         renderFrame();
+        captureRendererMetrics();
       };
 
       loop.onUpdate(onFrame);
