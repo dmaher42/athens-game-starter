@@ -394,6 +394,76 @@ function createStreetGradeAccent({
   return accent;
 }
 
+function createDistrictPlatformAccent({
+  localX,
+  localZ,
+  localY,
+  sampleLocalHeight,
+  radius = 8,
+  district = 'civic',
+}) {
+  if (typeof sampleLocalHeight !== 'function') return null;
+
+  const east = sampleLocalHeight(localX + radius, localZ, localY);
+  const west = sampleLocalHeight(localX - radius, localZ, localY);
+  const north = sampleLocalHeight(localX, localZ + radius, localY);
+  const south = sampleLocalHeight(localX, localZ - radius, localY);
+
+  const maxEdge = Math.max(east, west, north, south);
+  const minEdge = Math.min(east, west, north, south);
+  const relief = maxEdge - minEdge;
+  if (!Number.isFinite(relief) || relief < 0.28) return null;
+
+  const platform = new THREE.Group();
+  platform.name = district === 'sacred' ? 'SacredPlatformAccent' : 'CivicPlatformAccent';
+
+  const topColor = district === 'sacred' ? 0xcdbda0 : 0xb99f7c;
+  const wallColor = district === 'sacred' ? 0xb5a486 : 0xa88f6d;
+  const platformHeight = THREE.MathUtils.clamp(relief * 0.35, 0.22, district === 'sacred' ? 1.05 : 0.72);
+  const top = new THREE.Mesh(
+    new THREE.BoxGeometry(radius * 1.45, 0.18, radius * 1.45),
+    new THREE.MeshStandardMaterial({ color: topColor, roughness: 0.9, metalness: 0.02 })
+  );
+  top.position.y = 0.09;
+  platform.add(top);
+
+  const wallMaterial = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.92, metalness: 0.02 });
+  for (const side of [
+    { x: 0, z: radius * 0.72, w: radius * 1.45, d: 0.6 },
+    { x: 0, z: -radius * 0.72, w: radius * 1.45, d: 0.6 },
+    { x: radius * 0.72, z: 0, w: 0.6, d: radius * 1.45 },
+    { x: -radius * 0.72, z: 0, w: 0.6, d: radius * 1.45 },
+  ]) {
+    const wall = new THREE.Mesh(
+      new THREE.BoxGeometry(side.w, platformHeight, side.d),
+      wallMaterial.clone()
+    );
+    wall.position.set(side.x, -platformHeight * 0.5 + 0.02, side.z);
+    platform.add(wall);
+  }
+
+  const stepCount = THREE.MathUtils.clamp(Math.round(platformHeight / 0.16), 1, 4);
+  const steps = createStepFlight(radius * 0.52, 0.52, 0.12, stepCount, wallMaterial.clone());
+
+  const dominantSides = [
+    { key: 'south', value: localY - south, rot: 0, x: 0, z: radius * 0.42 },
+    { key: 'north', value: localY - north, rot: Math.PI, x: 0, z: -radius * 0.42 },
+    { key: 'west', value: localY - west, rot: Math.PI / 2, x: radius * 0.42, z: 0 },
+    { key: 'east', value: localY - east, rot: -Math.PI / 2, x: -radius * 0.42, z: 0 },
+  ].sort((a, b) => b.value - a.value);
+
+  const entrySide = dominantSides[0];
+  if (entrySide && entrySide.value > 0.08) {
+    steps.rotation.y = entrySide.rot;
+    steps.position.set(entrySide.x, 0, entrySide.z);
+    platform.add(steps);
+  }
+
+  platform.position.set(localX, localY, localZ);
+  enableShadowProps(platform);
+  return platform;
+}
+
 function enableShadowProps(group) {
   group.traverse((child) => {
     if (!child.isMesh) return;
@@ -1205,6 +1275,19 @@ export async function createCivicDistrict(scene, options = {}) {
       plazaMesh.position.set(localX, localY + 0.004, localZ);
       if (plazaMat) plazaMesh.material = plazaMat;
       group.add(plazaMesh);
+
+      if (cell.gridX === 0 && cell.gridZ === 0) {
+        const civicPlatform = createDistrictPlatformAccent({
+          localX,
+          localZ,
+          localY,
+          sampleLocalHeight,
+          radius: BLOCK_SIZE * 0.46,
+          district: 'civic',
+        });
+        if (civicPlatform) group.add(civicPlatform);
+      }
+
       if (cell.gridX === 0 && cell.gridZ === 0) {
         const plazaAccent = createAgoraPlazaAccent();
         plazaAccent.position.set(localX, localY, localZ);
@@ -1249,6 +1332,21 @@ export async function createCivicDistrict(scene, options = {}) {
            const rot = Math.floor(rng() * 4) * (Math.PI / 2);
            buildingGroup.rotation.y = rot;
            group.add(buildingGroup);
+
+           if (
+             (cell.district === 'civic' || cell.district === 'sacred') &&
+             (cell.slope > SLOPE_THRESHOLDS.FLAT * 0.65 || (cell.district === 'sacred' && rng() < 0.45))
+           ) {
+             const platformAccent = createDistrictPlatformAccent({
+               localX,
+               localZ,
+               localY,
+               sampleLocalHeight,
+               radius: cell.district === 'sacred' ? BLOCK_SIZE * 0.52 : BLOCK_SIZE * 0.4,
+               district: cell.district,
+             });
+             if (platformAccent) group.add(platformAccent);
+           }
 
            if (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.55) {
              const retainingAccent = createStreetGradeAccent({
