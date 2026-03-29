@@ -18,7 +18,7 @@ const MATERIAL_BASE = {
   wood: { color: 0x856041, roughness: 0.74, metalness: 0.0 },
   roof: { color: 0xa94a30, roughness: 0.62, metalness: 0.0 },
   plaster: { color: 0xf6f1e6, roughness: 0.8, metalness: 0.015 },
-  paving: { color: 0x4a7c3f, roughness: 0.9, metalness: 0.025 },  // Grass green
+  paving: { color: 0xb39a77, roughness: 0.9, metalness: 0.025 },
   accent: { color: 0xb07a45, roughness: 0.78, metalness: 0.035 },
   trim: { color: 0xddd0b7, roughness: 0.82, metalness: 0.025 },
 };
@@ -30,7 +30,7 @@ const MATERIAL_VARIANTS = {
   wood: [0x856041, 0x755639, 0x906c46],
   roof: [0xa94a30, 0x9f432d, 0xb55634],
   plaster: [0xf6f1e6, 0xebe0d4, 0xf9f4ea],
-  paving: [0x4a7c3f, 0x4c803d, 0x48783e],  // Grass green variants
+  paving: [0xb39a77, 0xa88d69, 0xc0a784],
   accent: [0xb07a45, 0xa46f3f, 0xba8450],
   trim: [0xddd0b7, 0xd3c6af, 0xe6dac2],
 };
@@ -221,6 +221,69 @@ function addEntrySteps(group, width, rng) {
   return steps;
 }
 
+function addStreetBench(group, rng, position = new THREE.Vector3()) {
+  const bench = new THREE.Group();
+  const seat = new THREE.Mesh(
+    new THREE.BoxGeometry(1.6, 0.14, 0.45),
+    createMaterial("wood", rng)
+  );
+  seat.position.y = 0.56;
+  bench.add(seat);
+
+  const back = new THREE.Mesh(
+    new THREE.BoxGeometry(1.6, 0.16, 0.18),
+    createMaterial("wood", rng)
+  );
+  back.position.set(0, 0.96, -0.14);
+  bench.add(back);
+
+  for (const x of [-0.58, 0.58]) {
+    const leg = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.52, 0.12),
+      createMaterial("stone", rng)
+    );
+    leg.position.set(x, 0.26, 0);
+    bench.add(leg);
+  }
+
+  bench.position.copy(position);
+  group.add(bench);
+}
+
+function addAmphoraCluster(group, rng, origin = new THREE.Vector3(), count = 3) {
+  for (let i = 0; i < count; i++) {
+    const jar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.2, 0.14, 0.72 + rng() * 0.18, 10),
+      createMaterial("clay", rng, { roughness: 0.68, metalness: 0.02 })
+    );
+    jar.position.set(
+      origin.x + (i - (count - 1) / 2) * 0.42,
+      origin.y + 0.36,
+      origin.z + (rng() - 0.5) * 0.22
+    );
+    group.add(jar);
+  }
+}
+
+function addFrontAwning(group, rng, color = null, width = 3.2, depth = 1.7, y = 2.15, z = 1.65) {
+  const awningColor = color ?? (rng() < 0.5 ? 0xc06b3c : 0xd4b064);
+  const awning = new THREE.Mesh(
+    new THREE.BoxGeometry(width, 0.18, depth),
+    new THREE.MeshStandardMaterial({ color: awningColor, roughness: 0.74, metalness: 0.02 })
+  );
+  awning.position.set(0, y, z);
+  group.add(awning);
+
+  for (const side of [-width * 0.38, width * 0.38]) {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.08, y - 0.15, 8),
+      createMaterial("wood", rng)
+    );
+    post.position.set(side, (y - 0.15) * 0.5, z - 0.1);
+    group.add(post);
+  }
+}
+
 function isLowDetail(detailLevel) {
   return detailLevel === "low";
 }
@@ -346,10 +409,39 @@ export const Prefabs = {
     greenery.position.y = 1.2 * scale;
     planter.add(greenery);
 
+    addStreetBench(g, rng, new THREE.Vector3(2.2 * scale, 0, -0.8 * scale));
+    addAmphoraCluster(g, rng, new THREE.Vector3(-2.0 * scale, 0, -5.6 * scale), 2);
+
     return g;
   },
-  shop(opts) { return Prefabs.house({ ...opts, w: 6, d: 6, h: 3.4 }); },
-  workshop(opts) { return Prefabs.house({ ...opts, w: 6, d: 8, h: 4.0 }); },
+  shop({ rng = Math.random, roofColor = null, detailLevel = "full", ...rest } = {}) {
+    const g = Prefabs.house({ ...rest, w: 6, d: 6, h: 3.4, rng, roofColor, detailLevel });
+    if (!isLowDetail(detailLevel)) {
+      addFrontAwning(g, rng, rng() < 0.5 ? 0xc35d33 : 0xd4b45d, 3.5, 1.9, 2.1, 1.85);
+      addAmphoraCluster(g, rng, new THREE.Vector3(1.0, 0, 2.05), 2);
+      const crate = makeBox(0.92, 0.58, 0.92, createMaterial("wood", rng));
+      crate.position.set(-0.95, 0.29, 2.05);
+      g.add(crate);
+    }
+    return g;
+  },
+  workshop({ rng = Math.random, roofColor = null, detailLevel = "full", ...rest } = {}) {
+    const g = Prefabs.house({ ...rest, w: 6, d: 8, h: 4.0, rng, roofColor, detailLevel });
+    if (!isLowDetail(detailLevel)) {
+      addFrontAwning(g, rng, 0x8d6b3f, 3.2, 1.6, 2.2, 2.05);
+      const workTable = makeBox(1.6, 0.2, 0.8, createMaterial("wood", rng));
+      workTable.position.set(-0.7, 0.7, 2.45);
+      g.add(workTable);
+      const wheel = new THREE.Mesh(
+        new THREE.TorusGeometry(0.34, 0.08, 8, 14),
+        createMaterial("wood", rng)
+      );
+      wheel.rotation.y = Math.PI / 2;
+      wheel.position.set(1.0, 0.45, 2.1);
+      g.add(wheel);
+    }
+    return g;
+  },
   warehouse({ w = 9, d = 12, h = 5.2, rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralWarehouse";

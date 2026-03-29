@@ -472,6 +472,75 @@ function createCommercialAccent(rng) {
   jar.position.set(0.9, 0.36, 2.1);
   group.add(jar);
 
+  const table = new THREE.Mesh(
+    new THREE.BoxGeometry(1.4, 0.12, 0.7),
+    new THREE.MeshStandardMaterial({ color: 0x8a6944, roughness: 0.82, metalness: 0.02 }),
+  );
+  table.position.set(0, 0.86, 2.25);
+  group.add(table);
+
+  for (const x of [-0.35, 0.15, 0.55]) {
+    const bowl = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.09, 0.16, 10),
+      new THREE.MeshStandardMaterial({ color: 0xc8b28d, roughness: 0.78, metalness: 0.02 }),
+    );
+    bowl.position.set(x, 1.01, 2.2 + (rng() - 0.5) * 0.18);
+    group.add(bowl);
+  }
+
+  enableShadowProps(group);
+  return group;
+}
+
+function createResidentialAccent(rng) {
+  const group = new THREE.Group();
+  group.name = "ResidentialAccent";
+
+  const bench = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.16, 0.48),
+    new THREE.MeshStandardMaterial({ color: 0x8a6944, roughness: 0.84, metalness: 0.02 }),
+  );
+  bench.position.set(0, 0.62, 1.8);
+  group.add(bench);
+
+  for (const x of [-0.65, 0.65]) {
+    const leg = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.5, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0xb59f7f, roughness: 0.86, metalness: 0.02 }),
+    );
+    leg.position.set(x, 0.25, 1.8);
+    group.add(leg);
+  }
+
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.22, 2.4, 8),
+    new THREE.MeshStandardMaterial({ color: 0x7a5b3d, roughness: 0.88, metalness: 0.02 }),
+  );
+  trunk.position.set(-1.55, 1.2, -1.2);
+  group.add(trunk);
+
+  for (const [x, y, z, r] of [
+    [-1.75, 2.35, -1.1, 0.85],
+    [-1.1, 2.2, -1.05, 0.7],
+    [-1.45, 2.7, -1.45, 0.78],
+  ]) {
+    const crown = new THREE.Mesh(
+      new THREE.SphereGeometry(r, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0x5f7d42, roughness: 0.9, metalness: 0.0 }),
+    );
+    crown.position.set(x, y, z);
+    group.add(crown);
+  }
+
+  for (const [x, z] of [[1.05, 1.2], [1.45, 1.45]]) {
+    const jar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.12, 0.66, 10),
+      new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.68, metalness: 0.03 }),
+    );
+    jar.position.set(x, 0.33, z);
+    group.add(jar);
+  }
+
   enableShadowProps(group);
   return group;
 }
@@ -1064,8 +1133,14 @@ export async function createCivicDistrict(scene, options = {}) {
            let districtAccent = null;
            if (isAgoraFramingCell(cell.gridX, cell.gridZ)) {
              districtAccent = null;
-           } else if (cell.district === 'commercial' && rng() < 0.38) {
+           } else if (cell.district === 'commercial' && rng() < 0.52) {
              districtAccent = createCommercialAccent(rng);
+           } else if (
+             cell.district === 'residential' &&
+             Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z) <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.8 &&
+             rng() < 0.34
+           ) {
+             districtAccent = createResidentialAccent(rng);
            } else if (cell.district === 'harbor' && rng() < 0.44) {
              districtAccent = createHarborFrontAccent(rng);
            } else if (cell.district === 'sacred' && rng() < 0.34) {
