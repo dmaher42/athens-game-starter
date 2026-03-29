@@ -51,13 +51,22 @@ export function queueSceneInteractable(scene, object, options = {}) {
 export function createInteractor(renderer, camera, scene) {
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
+  const hoverCameraPosition = new THREE.Vector3();
+  const lastHoverCameraPosition = new THREE.Vector3();
+  const hoverCameraQuaternion = new THREE.Quaternion();
+  const lastHoverCameraQuaternion = new THREE.Quaternion();
 
   const HOVER_COLOR = 0x222244;
   const HOVER_UPDATE_INTERVAL = 1 / 24; // limit expensive raycasts to ~24 Hz
+  const STATIONARY_HOVER_REFRESH_INTERVAL = 0.25;
+  const CAMERA_MOVE_EPSILON_SQ = 0.0004;
+  const CAMERA_ROTATION_DOT_THRESHOLD = 0.99995;
   const storedMaterialState = new Map();
   let currentHover = null;
   let currentCitizenHit = null;
   let hoverTimer = HOVER_UPDATE_INTERVAL; // ensure the first call performs a hit test
+  let stationaryHoverTimer = STATIONARY_HOVER_REFRESH_INTERVAL;
+  let hoverPoseInitialized = false;
 
   const trackedInteractables = new Map();
   const intersectTargets = [];
@@ -284,9 +293,37 @@ export function createInteractor(renderer, camera, scene) {
     return intersects.length > 0 ? intersects[0] : null;
   }
 
+  function hasHoverPoseChanged() {
+    camera.getWorldPosition(hoverCameraPosition);
+    camera.getWorldQuaternion(hoverCameraQuaternion);
+
+    if (!hoverPoseInitialized) {
+      lastHoverCameraPosition.copy(hoverCameraPosition);
+      lastHoverCameraQuaternion.copy(hoverCameraQuaternion);
+      hoverPoseInitialized = true;
+      return true;
+    }
+
+    const moved =
+      hoverCameraPosition.distanceToSquared(lastHoverCameraPosition) >
+      CAMERA_MOVE_EPSILON_SQ;
+    const rotated =
+      Math.abs(hoverCameraQuaternion.dot(lastHoverCameraQuaternion)) <
+      CAMERA_ROTATION_DOT_THRESHOLD;
+
+    if (!moved && !rotated) {
+      return false;
+    }
+
+    lastHoverCameraPosition.copy(hoverCameraPosition);
+    lastHoverCameraQuaternion.copy(hoverCameraQuaternion);
+    return true;
+  }
+
   function updateHover(deltaSeconds = HOVER_UPDATE_INTERVAL) {
     if (Number.isFinite(deltaSeconds)) {
       hoverTimer += deltaSeconds;
+      stationaryHoverTimer += deltaSeconds;
     }
 
     if (hoverTimer < HOVER_UPDATE_INTERVAL) {
@@ -294,6 +331,17 @@ export function createInteractor(renderer, camera, scene) {
     }
 
     hoverTimer = 0;
+    const poseChanged = hasHoverPoseChanged();
+    const shouldRefreshHover =
+      poseChanged ||
+      targetsDirty ||
+      stationaryHoverTimer >= STATIONARY_HOVER_REFRESH_INTERVAL;
+
+    if (!shouldRefreshHover) {
+      return currentHover;
+    }
+
+    stationaryHoverTimer = 0;
     const hit = pickCenter();
     const citizenHit = resolveCitizenHit(hit);
     setCitizenHover(citizenHit);
