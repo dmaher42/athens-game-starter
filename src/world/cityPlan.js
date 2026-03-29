@@ -718,6 +718,18 @@ function isAgoraUrbanFrontCell(gridX, gridZ) {
   return isAgoraFramingCell(gridX, gridZ) || isAgoraEdgeBuildingCell(gridX, gridZ);
 }
 
+function shouldUseCommercialRoad(gridX, gridZ) {
+  const verticalLane = gridX % 6 === 0 && Math.abs(gridZ % 4) <= 1;
+  const horizontalLane = gridZ % 7 === 0 && Math.abs(gridX % 3) <= 1;
+  return verticalLane || horizontalLane;
+}
+
+function shouldUseResidentialRoad(gridX, gridZ) {
+  const verticalLane = gridX % 7 === 0 && Math.abs(gridZ % 5) <= 1;
+  const horizontalLane = gridZ % 8 === 0 && Math.abs(gridX % 4) <= 1;
+  return verticalLane || horizontalLane;
+}
+
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
   if (gridZ === -AGORA_PLAZA_RADIUS && gridX === 0) return 0;
   if (gridX === AGORA_PLAZA_RADIUS && gridZ === 0) return -Math.PI / 2;
@@ -849,12 +861,12 @@ function generateCityGrid(terrainSampler) {
       } else if (cell.district === 'sacred') {
         cell.type = 'building';
       } else if (cell.district === 'commercial') {
-        if (gridX % 5 === 0 || gridZ % 5 === 0) {
+        if (shouldUseCommercialRoad(gridX, gridZ)) {
           cell.type = 'road';
           cell.buildable = true;
         }
       } else {
-        if (gridX % 5 === 0 || gridZ % 5 === 0) {
+        if (shouldUseResidentialRoad(gridX, gridZ)) {
           cell.type = 'road';
           cell.buildable = true;
         }
