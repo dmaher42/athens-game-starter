@@ -912,6 +912,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     };
   }
 
+  if (district === 'commercial' && cell && isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    return {
+      ...match,
+      allowedTypes: ['stoa', 'courtyard', 'workshop', 'shop'],
+      heightRange: [3.4, 5.0],
+      courtyardChance: 0.3,
+    };
+  }
+
   if (district === 'commercial' && cell && isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
@@ -936,6 +945,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
       allowedTypes: ['courtyard', 'workshop', 'shop'],
       heightRange: [3.4, 4.8],
       courtyardChance: 0.35,
+    };
+  }
+
+  if (district === 'residential' && cell && isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    return {
+      ...match,
+      allowedTypes: ['courtyard', 'workshop', 'shop', 'house'],
+      heightRange: [3.4, 4.8],
+      courtyardChance: 0.5,
     };
   }
 
@@ -1006,6 +1024,14 @@ function shouldReserveNeighborhoodCourt(gridX, gridZ) {
   const staggeredBand = (Math.abs(gridX) + Math.abs(gridZ)) % 4 === 0;
   const offsetPocket = Math.abs(gridX % 3) === 1 && Math.abs(gridZ % 5) === 2;
   return staggeredBand || offsetPocket;
+}
+
+function isInlandUrbanBlockCell(gridX, gridZ) {
+  return gridX <= -2 && gridX >= -7 && gridZ >= -4 && gridZ <= 9 && !isAgoraUrbanFrontCell(gridX, gridZ);
+}
+
+function shouldReserveInlandCourt(gridX, gridZ) {
+  return ((gridX * 3 + gridZ) % 5 === 0) || (Math.abs(gridX) % 2 === 0 && Math.abs(gridZ) % 3 === 1);
 }
 
 function isHarborUrbanFrontCell(gridX, gridZ) {
@@ -1145,6 +1171,19 @@ function generateCityGrid(terrainSampler) {
 
       // Keep the Agora core open as a readable civic plaza.
       if (isAgoraPlazaCell(gridX, gridZ) || isAgoraArrivalPromenadeCell(gridX, gridZ)) {
+        cell.type = 'plaza';
+        cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isInlandUrbanBlockCell(gridX, gridZ) &&
+        cell.district !== 'sacred' &&
+        cell.district !== 'harbor' &&
+        !shouldUseCommercialRoad(gridX, gridZ) &&
+        !shouldUseResidentialRoad(gridX, gridZ) &&
+        shouldReserveInlandCourt(gridX, gridZ)
+      ) {
+        // Break the inland west-side fabric into shared courts and larger grouped
+        // blocks so it reads as joined neighborhoods instead of repeated small pads.
         cell.type = 'plaza';
         cell.district = 'commercial';
         cell.buildable = true;
