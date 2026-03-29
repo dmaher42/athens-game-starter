@@ -903,6 +903,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     };
   }
 
+  if (district === 'commercial' && cell && isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    return {
+      ...match,
+      allowedTypes: ['stoa', 'workshop', 'warehouse', 'shop'],
+      heightRange: [3.6, 5.2],
+      courtyardChance: 0.1,
+    };
+  }
+
   if (district === 'commercial' && cell && isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
@@ -918,6 +927,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
       allowedTypes: ['shop', 'workshop', 'courtyard', 'house'],
       heightRange: [3.0, 4.2],
       courtyardChance: 0.2,
+    };
+  }
+
+  if (district === 'residential' && cell && isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    return {
+      ...match,
+      allowedTypes: ['courtyard', 'workshop', 'shop'],
+      heightRange: [3.4, 4.8],
+      courtyardChance: 0.35,
     };
   }
 
@@ -988,6 +1006,14 @@ function shouldReserveNeighborhoodCourt(gridX, gridZ) {
   const staggeredBand = (Math.abs(gridX) + Math.abs(gridZ)) % 4 === 0;
   const offsetPocket = Math.abs(gridX % 3) === 1 && Math.abs(gridZ % 5) === 2;
   return staggeredBand || offsetPocket;
+}
+
+function isHarborUrbanFrontCell(gridX, gridZ) {
+  return gridX >= 3 && gridX <= 6 && gridZ >= -1 && gridZ <= 6;
+}
+
+function shouldReserveHarborCourt(gridX, gridZ) {
+  return (gridX + gridZ) % 3 === 0 || (gridX % 2 === 0 && gridZ % 2 === 1);
 }
 
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
@@ -1119,6 +1145,18 @@ function generateCityGrid(terrainSampler) {
 
       // Keep the Agora core open as a readable civic plaza.
       if (isAgoraPlazaCell(gridX, gridZ) || isAgoraArrivalPromenadeCell(gridX, gridZ)) {
+        cell.type = 'plaza';
+        cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isHarborUrbanFrontCell(gridX, gridZ) &&
+        cell.district !== 'harbor' &&
+        !shouldUseCommercialRoad(gridX, gridZ) &&
+        !shouldUseResidentialRoad(gridX, gridZ) &&
+        shouldReserveHarborCourt(gridX, gridZ)
+      ) {
+        // Keep the harbor approach as a sequence of larger shared forecourts and
+        // working yards instead of a wall of tiny repeated building pads.
         cell.type = 'plaza';
         cell.district = 'commercial';
         cell.buildable = true;
