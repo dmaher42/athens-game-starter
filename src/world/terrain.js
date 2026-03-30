@@ -548,6 +548,11 @@ export function createTerrain(scene) {
     const heightC = positionAttribute.getZ(c);
     const avgHeight = (heightA + heightB + heightC) / 3;
     const minHeight = Math.min(heightA, heightB, heightC);
+    // Triangles whose average centre sits below sea level are fully underwater.
+    // Assigning them a coastal/city material (tan sand or brown dirt) causes
+    // those textures to bleed through the transparent water surface as brown
+    // patches.  Route them straight to InlandGroundMaterial instead.
+    const isFullyUnderwater = avgHeight < seaLevel;
     const isShallowWater = avgHeight <= seaLevel + SHALLOW_WATER_BAND;
     const isUnderwaterTriangle = avgHeight <= seaLevel + 0.05;
     const touchesWaterline = minHeight <= seaLevel + 0.12;
@@ -559,15 +564,17 @@ export function createTerrain(scene) {
       harborDistance <= HARBOR_COASTAL_BAND &&
       (isShallowWater || touchesWaterline);
     const shouldUseCoastalMaterial =
-      dSea < 0.15 ||
-      (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline)) ||
-      (isWaterBodyTriangle &&
-        (isShallowWater || touchesWaterline || isUnderwaterTriangle)) ||
-      isHarborShoreline;
+      !isFullyUnderwater && (
+        dSea < 0.15 ||
+        (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline)) ||
+        (isWaterBodyTriangle &&
+          (isShallowWater || touchesWaterline || isUnderwaterTriangle)) ||
+        isHarborShoreline
+      );
 
     if (shouldUseCoastalMaterial) {
       coastalIndices.push(a, b, c);
-    } else if (dSea <= SHORELINE_CITY_LIMIT) {
+    } else if (!isFullyUnderwater && dSea <= SHORELINE_CITY_LIMIT) {
       cityIndices.push(a, b, c);
     } else {
       inlandIndices.push(a, b, c);
