@@ -127,6 +127,7 @@ const DEFAULT_INLAND_CLIP = Number.isFinite(HARBOR_WATER_BOUNDS?.south)
   : 160;
 const TERRAIN_CLEARANCE_EPSILON = 0.02;
 const LAND_CLIP_CLEARANCE = 0.05;
+const SHALLOW_WATER_DISCARD_EPSILON = 0.015;
 const SHORE_PROBE_X_FRACTIONS = [0.2, 0.5, 0.8];
 const SHORE_PROBE_Z_FRACTIONS = [0.0, 0.5, 0.9];
 const DEFAULT_OCEAN_RADIUS = 4000;
@@ -449,11 +450,19 @@ export async function createOcean(scene, terrain, options = {}) {
         );
         terrainUV = clamp(terrainUV, vec2(0.0), vec2(1.0));
         float terrainHeight = texture2D(uHeightMap, terrainUV).r;
+        float terrainToSea = terrainHeight - uSeaLevel;
         float waterDepth = vWorldPosition.y - terrainHeight;
 
-        // If terrain rises even slightly above the waterline, stop rendering
+        // If terrain is meaningfully above the waterline, stop rendering
         // the water there so shoreline ground does not shimmer/fight through it.
-        if (terrainHeight > uSeaLevel + ${LAND_CLIP_CLEARANCE.toFixed(2)}) {
+        if (terrainToSea > ${LAND_CLIP_CLEARANCE.toFixed(2)}) {
+          discard;
+        }
+
+        // Also discard in ultra-shallow overlap where terrain sits almost
+        // exactly on the water plane. This removes patchy coplanar fighting
+        // without widening the shoreline cut in a visible way.
+        if (terrainToSea > -${SHALLOW_WATER_DISCARD_EPSILON.toFixed(3)} && waterDepth < ${SHALLOW_WATER_DISCARD_EPSILON.toFixed(3)}) {
           discard;
         }
 
