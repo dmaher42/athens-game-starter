@@ -179,8 +179,13 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
     return THREE.MathUtils.lerp(shallowEdgeY, basinFloorY, basinBlend);
   }
 
+  // Anchor the deep-ocean terrain floor to east of the harbor water east
+  // boundary regardless of AEGEAN_OCEAN_BOUNDS.west.  This lets us widen the
+  // ocean water plane westward to cover the harbor basin without accidentally
+  // carving land terrain (outside the harbor z-range) down to -7.5.
+  const deepOceanStartX = Math.max(oceanWest, east - 14);
   const withinOpenSea =
-    x >= oceanWest && x <= oceanEast && z >= oceanSouth && z <= oceanNorth;
+    x >= deepOceanStartX && x <= oceanEast && z >= oceanSouth && z <= oceanNorth;
   if (withinOpenSea) {
     return seaLevel - 7.5;
   }
@@ -574,7 +579,7 @@ export function createTerrain(scene) {
 
     if (shouldUseCoastalMaterial) {
       coastalIndices.push(a, b, c);
-    } else if (!isFullyUnderwater && dSea <= SHORELINE_CITY_LIMIT) {
+    } else if (!isFullyUnderwater && !isWaterBodyTriangle && dSea <= SHORELINE_CITY_LIMIT) {
       cityIndices.push(a, b, c);
     } else {
       inlandIndices.push(a, b, c);
