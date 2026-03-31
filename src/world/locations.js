@@ -81,9 +81,11 @@ export const HARBOR_WATER_BOUNDS = {
 
 // The harbor basin is only the sheltered waterfront. The visible Aegean needs
 // a much larger seaward sheet so the city reads as coastal rather than having
-// a rectangular dock pool.
+// a rectangular dock pool.  The west bound extends to cover the full harbor
+// basin so the water plane reaches the actual terrain shoreline rather than
+// ending with a hard geometric edge at the harbor water east boundary.
 export const AEGEAN_OCEAN_BOUNDS = {
-  west: HARBOR_WATER_BOUNDS.east - 14,
+  west: HARBOR_WATER_BOUNDS.west - 4, // 4-unit margin west of harbor basin edge so the water plane overlaps the terrain shoreline
   east: HARBOR_CENTER_3D.x + 2400,
   north: HARBOR_CENTER_3D.z + 920,
   south: HARBOR_CENTER_3D.z - 860,
