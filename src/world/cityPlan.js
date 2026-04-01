@@ -691,6 +691,51 @@ function createMarketCourtAccent(rng) {
   return group;
 }
 
+function createUrbanCourtAccent(rng) {
+  const group = new THREE.Group();
+  group.name = "UrbanCourtAccent";
+
+  const benchA = new THREE.Mesh(
+    new THREE.BoxGeometry(1.9, 0.16, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0x8a6944, roughness: 0.84, metalness: 0.02 }),
+  );
+  benchA.position.set(-1.15, 0.64, 0.55);
+  group.add(benchA);
+
+  const benchB = benchA.clone();
+  benchB.position.set(1.05, 0.64, -0.45);
+  benchB.rotation.y = Math.PI * 0.5;
+  group.add(benchB);
+
+  for (const [x, z] of [[-0.3, -0.95], [0.45, -1.15], [1.45, 0.9]]) {
+    const jar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.12, 0.64 + rng() * 0.1, 10),
+      new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.68, metalness: 0.03 }),
+    );
+    jar.position.set(x, 0.33, z);
+    group.add(jar);
+  }
+
+  const stallAwning = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 0.14, 1.2),
+    new THREE.MeshStandardMaterial({ color: rng() < 0.5 ? 0xc06b3c : 0xd4b064, roughness: 0.74, metalness: 0.02 }),
+  );
+  stallAwning.position.set(0, 2.05, 1.75);
+  group.add(stallAwning);
+
+  for (const side of [-0.85, 0.85]) {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.07, 1.95, 8),
+      new THREE.MeshStandardMaterial({ color: 0x7c6447, roughness: 0.82, metalness: 0.03 }),
+    );
+    post.position.set(side, 0.98, 1.62);
+    group.add(post);
+  }
+
+  enableShadowProps(group);
+  return group;
+}
+
 function createResidentialAccent(rng) {
   const group = new THREE.Group();
   group.name = "ResidentialAccent";
@@ -1028,6 +1073,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'commercial' && cell && isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    if (isInlandStoaEdgeCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'courtyard', 'workshop'],
+        heightRange: [3.8, 5.2],
+        courtyardChance: 0.45,
+      };
+    }
+
     return {
       ...match,
       allowedTypes: ['stoa', 'courtyard', 'workshop', 'shop'],
@@ -1039,9 +1093,9 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   if (district === 'commercial' && cell && isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
-      allowedTypes: ['workshop', 'courtyard', 'shop'],
-      heightRange: [3.2, 4.6],
-      courtyardChance: 0.35,
+      allowedTypes: ['courtyard', 'workshop', 'shop'],
+      heightRange: [3.4, 4.8],
+      courtyardChance: 0.45,
     };
   }
 
@@ -1064,6 +1118,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'residential' && cell && isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    if (isInlandStoaEdgeCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'courtyard', 'workshop'],
+        heightRange: [3.8, 5.1],
+        courtyardChance: 0.62,
+      };
+    }
+
     return {
       ...match,
       allowedTypes: ['courtyard', 'workshop', 'shop', 'stoa'],
@@ -1075,9 +1138,9 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   if (district === 'residential' && cell && isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
-      allowedTypes: ['courtyard', 'workshop', 'house'],
-      heightRange: [3.2, 4.8],
-      courtyardChance: 0.45,
+      allowedTypes: ['courtyard', 'workshop', 'shop'],
+      heightRange: [3.4, 4.9],
+      courtyardChance: 0.55,
     };
   }
 
@@ -1152,6 +1215,10 @@ function shouldUseResidentialRoad(gridX, gridZ) {
 
 function isOuterNeighborhoodCell(gridX, gridZ) {
   return Math.abs(gridX) >= 5 || gridZ >= 8 || gridZ <= -6;
+}
+
+function isInlandStoaEdgeCell(gridX, gridZ) {
+  return gridX <= -3 && gridX >= -7 && gridZ >= -2 && gridZ <= 7;
 }
 
 function shouldReserveNeighborhoodCourt(gridX, gridZ) {
@@ -1565,6 +1632,15 @@ export async function createCivicDistrict(scene, options = {}) {
         marketCourt.position.set(localX, localY, localZ);
         marketCourt.rotation.y = ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
         group.add(marketCourt);
+      } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ) || isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
+        const urbanCourt = createUrbanCourtAccent(() => {
+          const seed = Math.abs(cell.gridX * 73129 ^ cell.gridZ * 54121);
+          const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
+          return t - Math.floor(t);
+        });
+        urbanCourt.position.set(localX, localY, localZ);
+        urbanCourt.rotation.y = ((Math.abs(cell.gridX * 2) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
+        group.add(urbanCourt);
       } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ) && Math.abs(cell.gridX + cell.gridZ) % 2 === 0) {
         const harborCompound = createHarborCompoundAccent(() => {
           const seed = Math.abs(cell.gridX * 92821 ^ cell.gridZ * 68917);
