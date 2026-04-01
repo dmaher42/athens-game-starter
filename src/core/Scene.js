@@ -23,6 +23,16 @@ function isAutomationCaptureSession() {
   return navigator.webdriver === true && isHeadlessBrowser;
 }
 
+function isBloomEnabledByDefault() {
+  if (typeof window === "undefined") return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const forced = params.get("bloom");
+    return forced === "1" || forced === "true";
+  } catch {}
+  return false;
+}
+
 function createAutomationPreviewMaterial(material) {
   if (!material) return material;
   if (material.userData?.automationPreviewConverted) {
@@ -295,7 +305,9 @@ export function createSceneContext({
       0.6,
       0.85,
     );
-    bloomPass.enabled = true;
+    // Bloom is visually nice, but it is one of the most expensive always-on
+    // post effects in the current scene. Keep it opt-in for normal play.
+    bloomPass.enabled = isBloomEnabledByDefault();
     composer.addPass(bloomPass);
     colorGradePass = createColorGradePass();
     composer.addPass(colorGradePass);
