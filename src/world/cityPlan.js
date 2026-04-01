@@ -655,6 +655,42 @@ function createCommercialAccent(rng) {
   return group;
 }
 
+function createMarketCourtAccent(rng) {
+  const group = new THREE.Group();
+  group.name = "MarketCourtAccent";
+
+  const stallA = createCommercialAccent(rng);
+  stallA.position.set(-2.1, 0, -0.7);
+  stallA.rotation.y = Math.PI / 2;
+  stallA.scale.setScalar(0.92);
+  group.add(stallA);
+
+  const stallB = createCommercialAccent(rng);
+  stallB.position.set(2.0, 0, 0.8);
+  stallB.rotation.y = -Math.PI / 2;
+  stallB.scale.setScalar(0.88);
+  group.add(stallB);
+
+  const bench = new THREE.Mesh(
+    new THREE.BoxGeometry(2.6, 0.18, 0.62),
+    new THREE.MeshStandardMaterial({ color: 0x8a6944, roughness: 0.84, metalness: 0.02 }),
+  );
+  bench.position.set(0, 0.72, 0.1);
+  group.add(bench);
+
+  for (const x of [-0.9, 0.9]) {
+    const leg = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.52, 0.14),
+      new THREE.MeshStandardMaterial({ color: 0xb59f7f, roughness: 0.86, metalness: 0.02 }),
+    );
+    leg.position.set(x, 0.27, 0.1);
+    group.add(leg);
+  }
+
+  enableShadowProps(group);
+  return group;
+}
+
 function createResidentialAccent(rng) {
   const group = new THREE.Group();
   group.name = "ResidentialAccent";
@@ -956,6 +992,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'commercial' && civicDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.4) {
+    if (cell && isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'market', 'courtyard', 'shop', 'workshop'],
+        heightRange: [3.4, 4.8],
+        courtyardChance: 0.25,
+      };
+    }
+
     if (cell && isAgoraUrbanFrontCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
@@ -1003,27 +1048,27 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   if (district === 'residential' && cell && civicDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE) {
     return {
       ...match,
-      allowedTypes: ['shop', 'workshop', 'courtyard', 'house'],
-      heightRange: [3.0, 4.2],
-      courtyardChance: 0.2,
+      allowedTypes: ['shop', 'workshop', 'courtyard'],
+      heightRange: [3.2, 4.4],
+      courtyardChance: 0.32,
     };
   }
 
   if (district === 'residential' && cell && isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
-      allowedTypes: ['courtyard', 'workshop', 'shop'],
-      heightRange: [3.4, 4.8],
-      courtyardChance: 0.35,
+      allowedTypes: ['courtyard', 'workshop', 'shop', 'stoa'],
+      heightRange: [3.5, 4.9],
+      courtyardChance: 0.4,
     };
   }
 
   if (district === 'residential' && cell && isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
-      allowedTypes: ['courtyard', 'workshop', 'shop', 'house'],
-      heightRange: [3.4, 4.8],
-      courtyardChance: 0.5,
+      allowedTypes: ['courtyard', 'workshop', 'shop', 'stoa'],
+      heightRange: [3.5, 4.9],
+      courtyardChance: 0.58,
     };
   }
 
@@ -1074,15 +1119,34 @@ function isAgoraUrbanFrontCell(gridX, gridZ) {
   return isAgoraFramingCell(gridX, gridZ) || isAgoraEdgeBuildingCell(gridX, gridZ);
 }
 
+function isAgoraMarketCourtCell(gridX, gridZ) {
+  return (
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
+    !isAgoraUrbanFrontCell(gridX, gridZ) &&
+    Math.abs(gridX) <= 4 &&
+    Math.abs(gridZ) <= 4 &&
+    (Math.abs(gridX) + Math.abs(gridZ)) >= 3
+  );
+}
+
 function shouldUseCommercialRoad(gridX, gridZ) {
-  const verticalLane = gridX % 6 === 0 && Math.abs(gridZ % 4) <= 1;
-  const horizontalLane = gridZ % 7 === 0 && Math.abs(gridX % 3) <= 1;
+  if (isAgoraUrbanFrontCell(gridX, gridZ) || isAgoraMarketCourtCell(gridX, gridZ) || isHarborUrbanFrontCell(gridX, gridZ)) {
+    return false;
+  }
+
+  const verticalLane = gridX % 7 === 0 && Math.abs(gridZ % 5) <= 1;
+  const horizontalLane = gridZ % 8 === 0 && Math.abs(gridX % 4) <= 1;
   return verticalLane || horizontalLane;
 }
 
 function shouldUseResidentialRoad(gridX, gridZ) {
-  const verticalLane = gridX % 7 === 0 && Math.abs(gridZ % 5) <= 1;
-  const horizontalLane = gridZ % 8 === 0 && Math.abs(gridX % 4) <= 1;
+  if (isInlandUrbanBlockCell(gridX, gridZ) || isHarborUrbanFrontCell(gridX, gridZ)) {
+    return false;
+  }
+
+  const verticalLane = gridX % 8 === 0 && Math.abs(gridZ % 5) <= 1;
+  const horizontalLane = gridZ % 9 === 0 && Math.abs(gridX % 4) <= 1;
   return verticalLane || horizontalLane;
 }
 
@@ -1091,7 +1155,7 @@ function isOuterNeighborhoodCell(gridX, gridZ) {
 }
 
 function shouldReserveNeighborhoodCourt(gridX, gridZ) {
-  const staggeredBand = (Math.abs(gridX) + Math.abs(gridZ)) % 4 === 0;
+  const staggeredBand = (Math.abs(gridX) + Math.abs(gridZ)) % 3 === 0;
   const offsetPocket = Math.abs(gridX % 3) === 1 && Math.abs(gridZ % 5) === 2;
   return staggeredBand || offsetPocket;
 }
@@ -1101,15 +1165,15 @@ function isInlandUrbanBlockCell(gridX, gridZ) {
 }
 
 function shouldReserveInlandCourt(gridX, gridZ) {
-  return ((gridX * 3 + gridZ) % 5 === 0) || (Math.abs(gridX) % 2 === 0 && Math.abs(gridZ) % 3 === 1);
+  return ((gridX * 3 + gridZ) % 4 === 0) || (Math.abs(gridX) % 2 === 0 && Math.abs(gridZ) % 3 === 1);
 }
 
 function isHarborUrbanFrontCell(gridX, gridZ) {
-  return gridX >= 3 && gridX <= 6 && gridZ >= -1 && gridZ <= 6;
+  return gridX >= 2 && gridX <= 7 && gridZ >= -2 && gridZ <= 7;
 }
 
 function shouldReserveHarborCourt(gridX, gridZ) {
-  return (gridX + gridZ) % 3 === 0 || (gridX % 2 === 0 && gridZ % 2 === 1);
+  return (gridX + gridZ) % 2 === 0 || (gridX % 2 === 0 && gridZ % 2 === 1);
 }
 
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
@@ -1245,6 +1309,15 @@ function generateCityGrid(terrainSampler) {
 
       // Keep the Agora core open as a readable civic plaza.
       if (isAgoraPlazaCell(gridX, gridZ) || isAgoraArrivalPromenadeCell(gridX, gridZ)) {
+        cell.type = 'plaza';
+        cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isAgoraMarketCourtCell(gridX, gridZ) &&
+        !shouldUseCommercialRoad(gridX, gridZ)
+      ) {
+        // Break the market ring into shared courts so the Agora reads as joined
+        // urban blocks with active inner yards instead of detached little pads.
         cell.type = 'plaza';
         cell.district = 'commercial';
         cell.buildable = true;
@@ -1483,6 +1556,15 @@ export async function createCivicDistrict(scene, options = {}) {
         const plazaAccent = createAgoraPlazaAccent();
         plazaAccent.position.set(localX, localY, localZ);
         group.add(plazaAccent);
+      } else if (isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
+        const marketCourt = createMarketCourtAccent(() => {
+          const seed = Math.abs(cell.gridX * 91841 ^ cell.gridZ * 43117);
+          const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
+          return t - Math.floor(t);
+        });
+        marketCourt.position.set(localX, localY, localZ);
+        marketCourt.rotation.y = ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
+        group.add(marketCourt);
       } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ) && Math.abs(cell.gridX + cell.gridZ) % 2 === 0) {
         const harborCompound = createHarborCompoundAccent(() => {
           const seed = Math.abs(cell.gridX * 92821 ^ cell.gridZ * 68917);
