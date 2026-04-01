@@ -301,6 +301,64 @@ function createPavedStrip(width, length, color = 0xb09370) {
   return mesh;
 }
 
+function createReservedCourtSurface(cell) {
+  if (!cell) return null;
+
+  const seed = Math.abs(cell.gridX * 92821 ^ cell.gridZ * 68917);
+  const random01 = (offset = 0) => {
+    const value = seed + offset * 17.17;
+    const t = value + Math.sin(value * 12.9898) * 43758.5453;
+    return t - Math.floor(t);
+  };
+
+  let widthScale = 0.56 + random01(1) * 0.1;
+  let lengthScale = 0.56 + random01(2) * 0.1;
+  let color = 0xaf8d66;
+
+  if (isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
+    widthScale = 0.62 + random01(3) * 0.12;
+    lengthScale = 0.58 + random01(4) * 0.1;
+    color = 0xb29573;
+  } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    widthScale = 0.66 + random01(5) * 0.12;
+    lengthScale = 0.52 + random01(6) * 0.12;
+    color = 0xaa8861;
+  } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    widthScale = 0.54 + random01(7) * 0.1;
+    lengthScale = 0.5 + random01(8) * 0.12;
+    color = 0xa78661;
+  } else if (isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
+    widthScale = 0.48 + random01(9) * 0.1;
+    lengthScale = 0.48 + random01(10) * 0.1;
+    color = 0xa2805d;
+  }
+
+  const group = new THREE.Group();
+  const main = createPavedStrip(BLOCK_SIZE * widthScale, BLOCK_SIZE * lengthScale, color);
+  main.rotation.y = (random01(11) - 0.5) * 0.16;
+  main.position.y = 0.004;
+  if (main.material) {
+    main.material.opacity = 0.88;
+  }
+  group.add(main);
+
+  if (random01(12) < 0.45) {
+    const side = createPavedStrip(BLOCK_SIZE * 0.22, BLOCK_SIZE * 0.18, color + 0x080808);
+    side.rotation.y = (random01(13) - 0.5) * 0.25;
+    side.position.set(
+      (random01(14) - 0.5) * BLOCK_SIZE * 0.24,
+      0.005,
+      (random01(15) - 0.5) * BLOCK_SIZE * 0.22,
+    );
+    if (side.material) {
+      side.material.opacity = 0.74;
+    }
+    group.add(side);
+  }
+
+  return group;
+}
+
 function createStepFlight(width, stepDepth, stepHeight, stepCount, material) {
   const group = new THREE.Group();
   for (let i = 0; i < stepCount; i++) {
@@ -1602,10 +1660,22 @@ export async function createCivicDistrict(scene, options = {}) {
         if (streetAccent) group.add(streetAccent);
       }
     } else if (cell.type === 'plaza') {
-      const plazaMesh = createPavedStrip(BLOCK_SIZE - 6, BLOCK_SIZE - 6, 0xb29e7e);
-      plazaMesh.position.set(localX, localY + 0.004, localZ);
-      if (plazaMat) plazaMesh.material = plazaMat;
-      group.add(plazaMesh);
+      const isPrimaryPlazaCell =
+        isAgoraPlazaCell(cell.gridX, cell.gridZ) ||
+        isAgoraArrivalPromenadeCell(cell.gridX, cell.gridZ);
+
+      if (isPrimaryPlazaCell) {
+        const plazaMesh = createPavedStrip(BLOCK_SIZE - 6, BLOCK_SIZE - 6, 0xb29e7e);
+        plazaMesh.position.set(localX, localY + 0.004, localZ);
+        if (plazaMat) plazaMesh.material = plazaMat;
+        group.add(plazaMesh);
+      } else {
+        const courtSurface = createReservedCourtSurface(cell);
+        if (courtSurface) {
+          courtSurface.position.set(localX, localY, localZ);
+          group.add(courtSurface);
+        }
+      }
 
       if (cell.gridX === 0 && cell.gridZ === 0) {
         const civicPlatform = createDistrictPlatformAccent({
