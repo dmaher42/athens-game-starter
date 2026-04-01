@@ -290,7 +290,7 @@ function isLowDetail(detailLevel) {
 
 // Parametric “prefabs” (fast + zero textures). All return a Group.
 export const Prefabs = {
-  house({ w = 5, d = 7, h = 3.8, rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
+  house({ w = 5, d = 7, h = 3.8, rng = Math.random, roofColor = null, detailLevel = "full", showForecourt = false } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralHouse";
     const lowDetail = isLowDetail(detailLevel);
@@ -352,9 +352,9 @@ export const Prefabs = {
       g.add(chimney);
     }
 
-    if (!lowDetail) {
+    if (!lowDetail && showForecourt) {
       const forecourt = new THREE.Mesh(
-        new THREE.PlaneGeometry(w * 1.6, d * 1.8),
+        new THREE.PlaneGeometry(w * 1.15, d * 1.2),
         createMaterial("paving", rng, { side: THREE.DoubleSide })
       );
       forecourt.rotation.x = -Math.PI / 2;
@@ -371,7 +371,7 @@ export const Prefabs = {
   },
   courtyard({ rng = Math.random, roofColor = null, h = 4.4, detailLevel = "full" } = {}) {
     if (isLowDetail(detailLevel)) {
-      return Prefabs.house({ w: 6.4, d: 7.8, h, rng, roofColor, detailLevel });
+      return Prefabs.house({ w: 6.4, d: 7.8, h, rng, roofColor, detailLevel, showForecourt: false });
     }
     const g = new THREE.Group();
     g.name = "ProceduralCourtyard";
@@ -415,7 +415,7 @@ export const Prefabs = {
     return g;
   },
   shop({ rng = Math.random, roofColor = null, detailLevel = "full", ...rest } = {}) {
-    const g = Prefabs.house({ ...rest, w: 6, d: 6, h: 3.4, rng, roofColor, detailLevel });
+    const g = Prefabs.house({ ...rest, w: 6, d: 6, h: 3.4, rng, roofColor, detailLevel, showForecourt: true });
     if (!isLowDetail(detailLevel)) {
       addFrontAwning(g, rng, rng() < 0.5 ? 0xc35d33 : 0xd4b45d, 3.5, 1.9, 2.1, 1.85);
       addAmphoraCluster(g, rng, new THREE.Vector3(1.0, 0, 2.05), 2);
@@ -426,7 +426,7 @@ export const Prefabs = {
     return g;
   },
   workshop({ rng = Math.random, roofColor = null, detailLevel = "full", ...rest } = {}) {
-    const g = Prefabs.house({ ...rest, w: 6, d: 8, h: 4.0, rng, roofColor, detailLevel });
+    const g = Prefabs.house({ ...rest, w: 6, d: 8, h: 4.0, rng, roofColor, detailLevel, showForecourt: true });
     if (!isLowDetail(detailLevel)) {
       addFrontAwning(g, rng, 0x8d6b3f, 3.2, 1.6, 2.2, 2.05);
       const workTable = makeBox(1.6, 0.2, 0.8, createMaterial("wood", rng));
