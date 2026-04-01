@@ -294,6 +294,10 @@ export const Prefabs = {
     const g = new THREE.Group();
     g.name = "ProceduralHouse";
     const lowDetail = isLowDetail(detailLevel);
+    const footprintScale = lowDetail ? 1.18 : 1;
+    w *= footprintScale;
+    d *= footprintScale;
+    h *= lowDetail ? 1.06 : 1;
 
     const baseHeight = h * (0.65 + rng() * 0.2);
     const facadeMaterial = createMaterial(rng() < 0.35 ? "plaster" : "clay", rng);

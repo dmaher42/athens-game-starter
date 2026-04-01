@@ -1299,7 +1299,7 @@ function isInlandStoaEdgeCell(gridX, gridZ) {
 }
 
 function shouldReserveNeighborhoodCourt(gridX, gridZ) {
-  const staggeredBand = (Math.abs(gridX) + Math.abs(gridZ)) % 3 === 0;
+  const staggeredBand = (Math.abs(gridX) + Math.abs(gridZ)) % 4 === 0;
   const offsetPocket = Math.abs(gridX % 3) === 1 && Math.abs(gridZ % 5) === 2;
   return staggeredBand || offsetPocket;
 }
@@ -1309,7 +1309,7 @@ function isInlandUrbanBlockCell(gridX, gridZ) {
 }
 
 function shouldReserveInlandCourt(gridX, gridZ) {
-  return ((gridX * 3 + gridZ) % 4 === 0) || (Math.abs(gridX) % 2 === 0 && Math.abs(gridZ) % 3 === 1);
+  return ((gridX * 3 + gridZ) % 5 === 0) || (Math.abs(gridX) % 2 === 0 && Math.abs(gridZ) % 4 === 1);
 }
 
 function isHarborUrbanFrontCell(gridX, gridZ) {
