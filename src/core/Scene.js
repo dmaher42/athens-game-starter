@@ -125,6 +125,7 @@ export function createRenderer({ antialias = true } = {}) {
   renderer.toneMappingExposure = 0.9; // Look presets assume ACES with ~1.0 as the baseline exposure
   renderer.useLegacyLights = false;
   renderer.localClippingEnabled = true;
+  renderer.info.autoReset = false;
   configureRendererShadows(renderer);
   return renderer;
 }
@@ -304,6 +305,8 @@ export function createSceneContext({
     if (isAutomationCapture) {
       ensureAutomationPreviewReadability(scene, renderer);
     }
+
+    renderer.info?.reset?.();
 
     // DEV: detect textures that are flagged for update but have no image data
     if (import.meta.env?.DEV) {
