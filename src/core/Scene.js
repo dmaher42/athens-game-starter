@@ -8,7 +8,19 @@ import { CameraManager } from "./CameraManager.js";
 export const WORLD_ROOT_NAME = "WorldRoot";
 
 function isAutomationCaptureSession() {
-  return typeof navigator !== "undefined" && navigator.webdriver === true;
+  if (typeof window !== "undefined") {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const forced = params.get("automationPreview");
+      if (forced === "1" || forced === "true") return true;
+    } catch {}
+  }
+
+  if (typeof navigator === "undefined") return false;
+
+  const userAgent = navigator.userAgent || "";
+  const isHeadlessBrowser = /HeadlessChrome|Playwright/i.test(userAgent);
+  return navigator.webdriver === true && isHeadlessBrowser;
 }
 
 function createAutomationPreviewMaterial(material) {
