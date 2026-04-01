@@ -301,6 +301,25 @@ function createPavedStrip(width, length, color = 0xb09370) {
   return mesh;
 }
 
+function createCityFabricUnderlay(width, length, color = 0x7f6548, opacity = 0.42) {
+  const geometry = new THREE.PlaneGeometry(width, length);
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 1,
+    metalness: 0,
+    transparent: true,
+    opacity,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.receiveShadow = true;
+  mesh.castShadow = false;
+  return mesh;
+}
+
 function createReservedCourtSurface(cell) {
   if (!cell) return null;
 
@@ -1621,6 +1640,16 @@ export async function createCivicDistrict(scene, options = {}) {
   } catch (e) {
       console.warn("Failed to load plaza textures (marble fallback)", e);
   }
+
+  // Add a subtle urban ground underlay so the city reads as continuous fabric
+  // instead of detached pads over a dark field.
+  const inlandFabric = createCityFabricUnderlay(BLOCK_SIZE * 11.8, BLOCK_SIZE * 15.2, 0x7d6548, 0.48);
+  inlandFabric.position.set(-BLOCK_SIZE * 1.35, surfaceOffset * 0.2, BLOCK_SIZE * 1.6);
+  group.add(inlandFabric);
+
+  const harborFabric = createCityFabricUnderlay(BLOCK_SIZE * 5.8, BLOCK_SIZE * 10.8, 0x866a49, 0.44);
+  harborFabric.position.set(BLOCK_SIZE * 4.1, surfaceOffset * 0.22, BLOCK_SIZE * 1.5);
+  group.add(harborFabric);
 
   for (const cell of grid) {
     // Skip unbuildable cells (too steep or unsuitable terrain)
