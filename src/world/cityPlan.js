@@ -1082,6 +1082,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'commercial' && cell && isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    if (isAcropolisSlopeBandCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'workshop', 'courtyard'],
+        heightRange: [4.0, 5.5],
+        courtyardChance: 0.18,
+      };
+    }
+
     if (isInlandStoaEdgeCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
@@ -1136,6 +1145,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'residential' && cell && isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    if (isAcropolisSlopeBandCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['courtyard', 'stoa', 'workshop'],
+        heightRange: [3.9, 5.3],
+        courtyardChance: 0.22,
+      };
+    }
+
     if (isInlandStoaEdgeCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
@@ -1295,6 +1313,17 @@ function isInlandUrbanBlockCell(gridX, gridZ) {
   return gridX <= -2 && gridX >= -7 && gridZ >= -4 && gridZ <= 9 && !isAgoraUrbanFrontCell(gridX, gridZ);
 }
 
+function isAcropolisSlopeBandCell(gridX, gridZ) {
+  return (
+    gridX >= -3 &&
+    gridX <= 2 &&
+    gridZ >= -5 &&
+    gridZ <= 0 &&
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ)
+  );
+}
+
 function shouldReserveInlandCourt(gridX, gridZ) {
   // Keep a few shared west-side courts, but let more inland cells merge back
   // into continuous urban blocks around them.
@@ -1362,6 +1391,10 @@ function applyAgoraScalePass(buildingGroup, cell) {
   const agoraDistance = Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z);
   if (isHarborLaneFrontageCell(cell.gridX, cell.gridZ)) {
     buildingGroup.scale.multiplyScalar(1.22);
+    return;
+  }
+  if (isAcropolisSlopeBandCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(1.1);
     return;
   }
   if (cell.district === 'civic' && isCivicMonumentFrontageCell(cell.gridX, cell.gridZ)) {
@@ -1516,6 +1549,7 @@ function generateCityGrid(terrainSampler) {
         isInlandUrbanBlockCell(gridX, gridZ) &&
         cell.district !== 'sacred' &&
         cell.district !== 'harbor' &&
+        !isAcropolisSlopeBandCell(gridX, gridZ) &&
         !shouldUseCommercialRoad(gridX, gridZ) &&
         !shouldUseResidentialRoad(gridX, gridZ) &&
         shouldReserveInlandCourt(gridX, gridZ)
@@ -1524,6 +1558,16 @@ function generateCityGrid(terrainSampler) {
         // blocks so it reads as joined neighborhoods instead of repeated small pads.
         cell.type = 'plaza';
         cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isAcropolisSlopeBandCell(gridX, gridZ) &&
+        cell.district !== 'sacred' &&
+        cell.district !== 'harbor'
+      ) {
+        // Keep the city thicker on the Acropolis-facing side so the urban
+        // fabric steps up toward the sacred hill instead of staying evenly spread.
+        cell.type = 'building';
+        cell.district = cell.district === 'commercial' ? 'commercial' : 'residential';
         cell.buildable = true;
       } else if (
         isHarborUrbanFrontCell(gridX, gridZ) &&
