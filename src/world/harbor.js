@@ -1023,34 +1023,43 @@ function createQuayForecourt() {
   });
 
   const terrace = new THREE.Mesh(
-    new THREE.BoxGeometry(22, 0.38, 18),
+    new THREE.BoxGeometry(16, 0.22, 11.5),
     stoneMaterial,
   );
-  terrace.position.set(44, 0.12, 4);
+  terrace.position.set(43, 0.06, 3.5);
   enableShadows(terrace);
   group.add(terrace);
 
-  const lowerApron = new THREE.Mesh(
-    new THREE.BoxGeometry(18, 0.24, 11.5),
+  const eastLanding = new THREE.Mesh(
+    new THREE.BoxGeometry(7.6, 0.14, 4.8),
     stoneMaterial,
   );
-  lowerApron.position.set(52, -0.04, 4);
-  enableShadows(lowerApron);
-  group.add(lowerApron);
+  eastLanding.position.set(51, -0.02, 1.2);
+  enableShadows(eastLanding);
+  group.add(eastLanding);
+
+  const southLanding = new THREE.Mesh(
+    new THREE.BoxGeometry(6.8, 0.14, 4.2),
+    stoneMaterial,
+  );
+  southLanding.position.set(49.8, -0.03, 7.3);
+  southLanding.rotation.y = THREE.MathUtils.degToRad(-8);
+  enableShadows(southLanding);
+  group.add(southLanding);
 
   const trim = new THREE.Mesh(
-    new THREE.BoxGeometry(24, 0.16, 1.1),
+    new THREE.BoxGeometry(16.5, 0.12, 0.8),
     trimMaterial,
   );
-  trim.position.set(43, 0.34, -4.6);
+  trim.position.set(42.4, 0.18, -1.5);
   enableShadows(trim);
   group.add(trim);
 
   const cargoRows = [
-    { x: 39, z: -1.5, item: () => createCrateCluster(), scale: 1.1 },
-    { x: 46, z: 7.5, item: () => createAmphoraStack(6), scale: 1.0 },
-    { x: 51, z: -0.8, item: () => createBarrelCluster(), scale: 0.95 },
-    { x: 56, z: 7.2, item: () => createNetBundle({ width: 2.1, depth: 1.4 }), scale: 1.0 },
+    { x: 39.5, z: 0.2, item: () => createCrateCluster(), scale: 1.0 },
+    { x: 45.8, z: 6.3, item: () => createAmphoraStack(6), scale: 0.95 },
+    { x: 50.4, z: 0.7, item: () => createBarrelCluster(), scale: 0.9 },
+    { x: 53.8, z: 5.9, item: () => createNetBundle({ width: 2.1, depth: 1.4 }), scale: 0.94 },
   ];
   cargoRows.forEach(({ x, z, item, scale }) => {
     const cargo = item();
@@ -1060,9 +1069,9 @@ function createQuayForecourt() {
   });
 
   for (const [x, z, rot] of [
-    [37.5, -6.2, 4],
-    [48.5, -6.2, -3],
-    [59.5, -6.2, 6],
+    [38.2, -2.9, 4],
+    [46.8, -2.8, -3],
+    [54.4, -1.6, 6],
   ]) {
     const capstan = new THREE.Mesh(
       new THREE.CylinderGeometry(0.5, 0.58, 0.9, 10),
