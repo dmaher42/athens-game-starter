@@ -1220,6 +1220,17 @@ function isAgoraMarketCourtCell(gridX, gridZ) {
   );
 }
 
+function shouldReserveAgoraMarketCourt(gridX, gridZ) {
+  // Keep only a few deliberate market yards around the Agora so the center
+  // reads as one large civic void wrapped by dense frontage, not a ring of
+  // repeated court cells.
+  const axialYard =
+    (Math.abs(gridX) === 3 && Math.abs(gridZ) <= 1) ||
+    (Math.abs(gridZ) === 3 && Math.abs(gridX) <= 1);
+  const cornerYard = Math.abs(gridX) === 2 && Math.abs(gridZ) === 2;
+  return axialYard || cornerYard;
+}
+
 function shouldUseCommercialRoad(gridX, gridZ) {
   if (isAgoraUrbanFrontCell(gridX, gridZ) || isAgoraMarketCourtCell(gridX, gridZ) || isHarborUrbanFrontCell(gridX, gridZ)) {
     return false;
@@ -1251,8 +1262,8 @@ function isInlandStoaEdgeCell(gridX, gridZ) {
 function shouldReserveNeighborhoodCourt(gridX, gridZ) {
   // Reserve fewer outer-neighborhood courts so the edge of the city reads as
   // larger grouped blocks instead of a near-checkerboard of repeated pads.
-  const majorPocket = Math.abs(gridX) % 6 === 2 && Math.abs(gridZ) % 6 === 1;
-  const shoreEdgePocket = gridZ <= -6 && Math.abs(gridX) % 7 === 3 && Math.abs(gridZ) % 5 === 2;
+  const majorPocket = Math.abs(gridX) % 8 === 3 && Math.abs(gridZ) % 8 === 2;
+  const shoreEdgePocket = gridZ <= -6 && Math.abs(gridX) % 9 === 4 && Math.abs(gridZ) % 6 === 3;
   return majorPocket || shoreEdgePocket;
 }
 
@@ -1263,8 +1274,8 @@ function isInlandUrbanBlockCell(gridX, gridZ) {
 function shouldReserveInlandCourt(gridX, gridZ) {
   // Keep a few shared west-side courts, but let more inland cells merge back
   // into continuous urban blocks around them.
-  const sharedYard = Math.abs(gridX + gridZ) % 6 === 0 && Math.abs(gridZ) % 3 === 1;
-  const deepBlockPocket = Math.abs(gridX) % 5 === 2 && Math.abs(gridZ) % 6 === 3;
+  const sharedYard = Math.abs(gridX + gridZ) % 8 === 0 && Math.abs(gridZ) % 4 === 1;
+  const deepBlockPocket = Math.abs(gridX) % 7 === 3 && Math.abs(gridZ) % 7 === 2;
   return sharedYard || deepBlockPocket;
 }
 
@@ -1469,6 +1480,7 @@ function generateCityGrid(terrainSampler) {
         cell.buildable = true;
       } else if (
         isAgoraMarketCourtCell(gridX, gridZ) &&
+        shouldReserveAgoraMarketCourt(gridX, gridZ) &&
         !shouldUseCommercialRoad(gridX, gridZ)
       ) {
         // Break the market ring into shared courts so the Agora reads as joined
@@ -1766,7 +1778,7 @@ export async function createCivicDistrict(scene, options = {}) {
         plazaAccent.position.set(localX, localY, localZ);
         group.add(plazaAccent);
       } else if (isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
-        if ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 2 === 0) {
+        if (shouldReserveAgoraMarketCourt(cell.gridX, cell.gridZ)) {
           const marketCourt = createMarketCourtAccent(() => {
             const seed = Math.abs(cell.gridX * 91841 ^ cell.gridZ * 43117);
             const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
@@ -1777,7 +1789,7 @@ export async function createCivicDistrict(scene, options = {}) {
           group.add(marketCourt);
         }
       } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ) || isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
-        if ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 5 === 0) {
+        if ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 7 === 0) {
           const urbanCourt = createUrbanCourtAccent(() => {
             const seed = Math.abs(cell.gridX * 73129 ^ cell.gridZ * 54121);
             const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
