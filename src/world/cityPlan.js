@@ -689,15 +689,6 @@ function createCommercialAccent(rng) {
   awning.position.set(0, 2.2, 1.6);
   group.add(awning);
 
-  for (const side of [-1.35, 1.35]) {
-    const post = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.08, 2.1, 8),
-      new THREE.MeshStandardMaterial({ color: 0x7c6447, roughness: 0.82, metalness: 0.03 }),
-    );
-    post.position.set(side, 1.05, 1.45);
-    group.add(post);
-  }
-
   const crate = new THREE.Mesh(
     new THREE.BoxGeometry(0.9, 0.6, 0.9),
     new THREE.MeshStandardMaterial({ color: 0x8b6a46, roughness: 0.84, metalness: 0.02 }),
@@ -712,22 +703,6 @@ function createCommercialAccent(rng) {
   jar.position.set(0.9, 0.36, 2.1);
   group.add(jar);
 
-  const table = new THREE.Mesh(
-    new THREE.BoxGeometry(1.4, 0.12, 0.7),
-    new THREE.MeshStandardMaterial({ color: 0x8a6944, roughness: 0.82, metalness: 0.02 }),
-  );
-  table.position.set(0, 0.86, 2.25);
-  group.add(table);
-
-  for (const x of [-0.35, 0.15, 0.55]) {
-    const bowl = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.09, 0.16, 10),
-      new THREE.MeshStandardMaterial({ color: 0xc8b28d, roughness: 0.78, metalness: 0.02 }),
-    );
-    bowl.position.set(x, 1.01, 2.2 + (rng() - 0.5) * 0.18);
-    group.add(bowl);
-  }
-
   enableShadowProps(group);
   return group;
 }
@@ -737,32 +712,17 @@ function createMarketCourtAccent(rng) {
   group.name = "MarketCourtAccent";
 
   const stallA = createCommercialAccent(rng);
-  stallA.position.set(-2.1, 0, -0.7);
+  stallA.position.set(0, 0, 0);
   stallA.rotation.y = Math.PI / 2;
   stallA.scale.setScalar(0.92);
   group.add(stallA);
-
-  const stallB = createCommercialAccent(rng);
-  stallB.position.set(2.0, 0, 0.8);
-  stallB.rotation.y = -Math.PI / 2;
-  stallB.scale.setScalar(0.88);
-  group.add(stallB);
 
   const bench = new THREE.Mesh(
     new THREE.BoxGeometry(2.6, 0.18, 0.62),
     new THREE.MeshStandardMaterial({ color: 0x8a6944, roughness: 0.84, metalness: 0.02 }),
   );
-  bench.position.set(0, 0.72, 0.1);
+  bench.position.set(0, 0.72, 1.65);
   group.add(bench);
-
-  for (const x of [-0.9, 0.9]) {
-    const leg = new THREE.Mesh(
-      new THREE.BoxGeometry(0.14, 0.52, 0.14),
-      new THREE.MeshStandardMaterial({ color: 0xb59f7f, roughness: 0.86, metalness: 0.02 }),
-    );
-    leg.position.set(x, 0.27, 0.1);
-    group.add(leg);
-  }
 
   enableShadowProps(group);
   return group;
@@ -779,35 +739,12 @@ function createUrbanCourtAccent(rng) {
   benchA.position.set(-1.15, 0.64, 0.55);
   group.add(benchA);
 
-  const benchB = benchA.clone();
-  benchB.position.set(1.05, 0.64, -0.45);
-  benchB.rotation.y = Math.PI * 0.5;
-  group.add(benchB);
-
-  for (const [x, z] of [[-0.3, -0.95], [0.45, -1.15], [1.45, 0.9]]) {
-    const jar = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18, 0.12, 0.64 + rng() * 0.1, 10),
-      new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.68, metalness: 0.03 }),
-    );
-    jar.position.set(x, 0.33, z);
-    group.add(jar);
-  }
-
-  const stallAwning = new THREE.Mesh(
-    new THREE.BoxGeometry(2.4, 0.14, 1.2),
-    new THREE.MeshStandardMaterial({ color: rng() < 0.5 ? 0xc06b3c : 0xd4b064, roughness: 0.74, metalness: 0.02 }),
+  const jar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.12, 0.68, 10),
+    new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.68, metalness: 0.03 }),
   );
-  stallAwning.position.set(0, 2.05, 1.75);
-  group.add(stallAwning);
-
-  for (const side of [-0.85, 0.85]) {
-    const post = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.07, 1.95, 8),
-      new THREE.MeshStandardMaterial({ color: 0x7c6447, roughness: 0.82, metalness: 0.03 }),
-    );
-    post.position.set(side, 0.98, 1.62);
-    group.add(post);
-  }
+  jar.position.set(0.75, 0.34, -0.85);
+  group.add(jar);
 
   enableShadowProps(group);
   return group;
@@ -884,28 +821,12 @@ function createHarborFrontAccent(rng) {
   jar.position.set(0.8, 0.42, 1.9);
   group.add(jar);
 
-  const netFrame = new THREE.Mesh(
-    new THREE.BoxGeometry(2.5, 0.08, 1.6),
-    new THREE.MeshStandardMaterial({ color: 0x6a5740, roughness: 0.88, metalness: 0.03 }),
-  );
-  netFrame.position.set(0, 0.08, -1.6);
-  group.add(netFrame);
-
   const canopy = new THREE.Mesh(
     new THREE.BoxGeometry(2.8, 0.16, 1.5),
     new THREE.MeshStandardMaterial({ color: rng() < 0.5 ? 0x2e7c9a : 0x4b93aa, roughness: 0.72, metalness: 0.02 }),
   );
   canopy.position.set(0, 2.1, 1.45);
   group.add(canopy);
-
-  for (const side of [-1.05, 1.05]) {
-    const post = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.08, 2.0, 8),
-      new THREE.MeshStandardMaterial({ color: 0x725b44, roughness: 0.82, metalness: 0.03 }),
-    );
-    post.position.set(side, 1.0, 1.3);
-    group.add(post);
-  }
 
   enableShadowProps(group);
   return group;
@@ -1738,24 +1659,28 @@ export async function createCivicDistrict(scene, options = {}) {
         plazaAccent.position.set(localX, localY, localZ);
         group.add(plazaAccent);
       } else if (isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
-        const marketCourt = createMarketCourtAccent(() => {
-          const seed = Math.abs(cell.gridX * 91841 ^ cell.gridZ * 43117);
-          const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
-          return t - Math.floor(t);
-        });
-        marketCourt.position.set(localX, localY, localZ);
-        marketCourt.rotation.y = ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
-        group.add(marketCourt);
+        if ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 2 === 0) {
+          const marketCourt = createMarketCourtAccent(() => {
+            const seed = Math.abs(cell.gridX * 91841 ^ cell.gridZ * 43117);
+            const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
+            return t - Math.floor(t);
+          });
+          marketCourt.position.set(localX, localY, localZ);
+          marketCourt.rotation.y = ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
+          group.add(marketCourt);
+        }
       } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ) || isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
-        const urbanCourt = createUrbanCourtAccent(() => {
-          const seed = Math.abs(cell.gridX * 73129 ^ cell.gridZ * 54121);
-          const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
-          return t - Math.floor(t);
-        });
-        urbanCourt.position.set(localX, localY, localZ);
-        urbanCourt.rotation.y = ((Math.abs(cell.gridX * 2) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
-        group.add(urbanCourt);
-      } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ) && Math.abs(cell.gridX + cell.gridZ) % 2 === 0) {
+        if ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 3 === 0) {
+          const urbanCourt = createUrbanCourtAccent(() => {
+            const seed = Math.abs(cell.gridX * 73129 ^ cell.gridZ * 54121);
+            const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
+            return t - Math.floor(t);
+          });
+          urbanCourt.position.set(localX, localY, localZ);
+          urbanCourt.rotation.y = ((Math.abs(cell.gridX * 2) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
+          group.add(urbanCourt);
+        }
+      } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ) && Math.abs(cell.gridX + cell.gridZ) % 4 === 0) {
         const harborCompound = createHarborCompoundAccent(() => {
           const seed = Math.abs(cell.gridX * 92821 ^ cell.gridZ * 68917);
           const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
@@ -1790,7 +1715,7 @@ export async function createCivicDistrict(scene, options = {}) {
            if (cell.district === 'harbor') {
              // Keep the generic city kit out of the waterfront so the authored
              // harbor owns that destination space more clearly.
-             if (rng() < 0.6) {
+             if (rng() < 0.25) {
                const lowAccent = createHarborFrontAccent(rng);
                lowAccent.position.set(localX, localY, localZ);
                lowAccent.rotation.y = Math.floor(rng() * 4) * (Math.PI / 2);
@@ -1838,17 +1763,17 @@ export async function createCivicDistrict(scene, options = {}) {
            let districtAccent = null;
            if (isAgoraFramingCell(cell.gridX, cell.gridZ)) {
              districtAccent = null;
-           } else if (cell.district === 'commercial' && rng() < 0.52) {
+           } else if (cell.district === 'commercial' && rng() < 0.22) {
              districtAccent = createCommercialAccent(rng);
            } else if (
              cell.district === 'residential' &&
              Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z) <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.8 &&
-             rng() < 0.34
+             rng() < 0.14
            ) {
              districtAccent = createResidentialAccent(rng);
-           } else if (cell.district === 'harbor' && rng() < 0.44) {
+           } else if (cell.district === 'harbor' && rng() < 0.16) {
              districtAccent = createHarborFrontAccent(rng);
-           } else if (cell.district === 'sacred' && rng() < 0.34) {
+           } else if (cell.district === 'sacred' && rng() < 0.22) {
              districtAccent = createSacredAccent();
            }
 
