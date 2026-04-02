@@ -1249,9 +1249,11 @@ function isInlandStoaEdgeCell(gridX, gridZ) {
 }
 
 function shouldReserveNeighborhoodCourt(gridX, gridZ) {
-  const staggeredBand = (Math.abs(gridX) + Math.abs(gridZ)) % 4 === 0;
-  const offsetPocket = Math.abs(gridX % 3) === 1 && Math.abs(gridZ % 5) === 2;
-  return staggeredBand || offsetPocket;
+  // Reserve fewer outer-neighborhood courts so the edge of the city reads as
+  // larger grouped blocks instead of a near-checkerboard of repeated pads.
+  const majorPocket = Math.abs(gridX) % 6 === 2 && Math.abs(gridZ) % 6 === 1;
+  const shoreEdgePocket = gridZ <= -6 && Math.abs(gridX) % 7 === 3 && Math.abs(gridZ) % 5 === 2;
+  return majorPocket || shoreEdgePocket;
 }
 
 function isInlandUrbanBlockCell(gridX, gridZ) {
@@ -1259,7 +1261,11 @@ function isInlandUrbanBlockCell(gridX, gridZ) {
 }
 
 function shouldReserveInlandCourt(gridX, gridZ) {
-  return ((gridX * 3 + gridZ) % 5 === 0) || (Math.abs(gridX) % 2 === 0 && Math.abs(gridZ) % 4 === 1);
+  // Keep a few shared west-side courts, but let more inland cells merge back
+  // into continuous urban blocks around them.
+  const sharedYard = Math.abs(gridX + gridZ) % 6 === 0 && Math.abs(gridZ) % 3 === 1;
+  const deepBlockPocket = Math.abs(gridX) % 5 === 2 && Math.abs(gridZ) % 6 === 3;
+  return sharedYard || deepBlockPocket;
 }
 
 function isHarborUrbanFrontCell(gridX, gridZ) {
@@ -1771,7 +1777,7 @@ export async function createCivicDistrict(scene, options = {}) {
           group.add(marketCourt);
         }
       } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ) || isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
-        if ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 3 === 0) {
+        if ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 5 === 0) {
           const urbanCourt = createUrbanCourtAccent(() => {
             const seed = Math.abs(cell.gridX * 73129 ^ cell.gridZ * 54121);
             const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
