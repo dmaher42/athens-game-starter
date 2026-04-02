@@ -301,7 +301,7 @@ function createPavedStrip(width, length, color = 0xb09370) {
   return mesh;
 }
 
-function createCityFabricUnderlay(width, length, color = 0x7f6548, opacity = 0.42) {
+function createCityFabricUnderlay(width, length, color = 0x7f6548, opacity = 0.24) {
   const geometry = new THREE.PlaneGeometry(width, length);
   const material = new THREE.MeshStandardMaterial({
     color,
@@ -1595,15 +1595,11 @@ export async function createCivicDistrict(scene, options = {}) {
     center: center.clone()
   };
 
-  // Add a subtle urban ground underlay so the city reads as continuous fabric
-  // instead of detached pads over a dark field.
-  const inlandFabric = createCityFabricUnderlay(BLOCK_SIZE * 11.8, BLOCK_SIZE * 15.2, 0x7d6548, 0.48);
-  inlandFabric.position.set(-BLOCK_SIZE * 1.35, surfaceOffset * 0.2, BLOCK_SIZE * 1.6);
-  group.add(inlandFabric);
-
-  const harborFabric = createCityFabricUnderlay(BLOCK_SIZE * 5.8, BLOCK_SIZE * 10.8, 0x866a49, 0.44);
-  harborFabric.position.set(BLOCK_SIZE * 4.1, surfaceOffset * 0.22, BLOCK_SIZE * 1.5);
-  group.add(harborFabric);
+  // Keep a light civic underlay near the Agora only. Broad waterfront-sized
+  // rectangles were competing with the terrain and harbor shoreline.
+  const civicFabric = createCityFabricUnderlay(BLOCK_SIZE * 7.2, BLOCK_SIZE * 8.4, 0x7d6548, 0.22);
+  civicFabric.position.set(-BLOCK_SIZE * 1.9, surfaceOffset * 0.08, BLOCK_SIZE * 1.2);
+  group.add(civicFabric);
 
   for (const cell of grid) {
     // Skip unbuildable cells (too steep or unsuitable terrain)
