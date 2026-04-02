@@ -282,14 +282,14 @@ export function verifyReachability(grid, pathTiles, options = {}) {
   };
 }
 
-function createPavedStrip(width, length, color = 0xb09370) {
+function createPavedStrip(width, length, color = 0xb49673) {
   const geometry = new THREE.PlaneGeometry(width, length);
   const material = new THREE.MeshStandardMaterial({
     color: color,
-    roughness: 0.98,
+    roughness: 1,
     metalness: 0,
     transparent: true,
-    opacity: 0.94,
+    opacity: 0.82,
     polygonOffset: true,
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -2,
@@ -330,39 +330,39 @@ function createReservedCourtSurface(cell) {
     return t - Math.floor(t);
   };
 
-  let widthScale = 0.56 + random01(1) * 0.1;
-  let lengthScale = 0.56 + random01(2) * 0.1;
-  let color = 0xaf8d66;
+  let widthScale = 0.48 + random01(1) * 0.08;
+  let lengthScale = 0.48 + random01(2) * 0.08;
+  let color = 0xa88461;
 
   if (isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
-    widthScale = 0.62 + random01(3) * 0.12;
-    lengthScale = 0.58 + random01(4) * 0.1;
-    color = 0xb29573;
+    widthScale = 0.56 + random01(3) * 0.1;
+    lengthScale = 0.54 + random01(4) * 0.08;
+    color = 0xb19271;
   } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
-    widthScale = 0.66 + random01(5) * 0.12;
-    lengthScale = 0.52 + random01(6) * 0.12;
-    color = 0xaa8861;
+    widthScale = 0.58 + random01(5) * 0.1;
+    lengthScale = 0.46 + random01(6) * 0.1;
+    color = 0xa68560;
   } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
-    widthScale = 0.54 + random01(7) * 0.1;
-    lengthScale = 0.5 + random01(8) * 0.12;
-    color = 0xa78661;
+    widthScale = 0.46 + random01(7) * 0.08;
+    lengthScale = 0.44 + random01(8) * 0.1;
+    color = 0xa1805d;
   } else if (isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
-    widthScale = 0.48 + random01(9) * 0.1;
-    lengthScale = 0.48 + random01(10) * 0.1;
-    color = 0xa2805d;
+    widthScale = 0.42 + random01(9) * 0.08;
+    lengthScale = 0.42 + random01(10) * 0.08;
+    color = 0x9e7d59;
   }
 
   const group = new THREE.Group();
   const main = createPavedStrip(BLOCK_SIZE * widthScale, BLOCK_SIZE * lengthScale, color);
-  main.rotation.y = (random01(11) - 0.5) * 0.16;
+  main.rotation.y = (random01(11) - 0.5) * 0.24;
   main.position.y = 0.004;
   if (main.material) {
-    main.material.opacity = 0.88;
+    main.material.opacity = 0.68;
   }
   group.add(main);
 
-  if (random01(12) < 0.45) {
-    const side = createPavedStrip(BLOCK_SIZE * 0.22, BLOCK_SIZE * 0.18, color + 0x080808);
+  if (random01(12) < 0.28) {
+    const side = createPavedStrip(BLOCK_SIZE * 0.16, BLOCK_SIZE * 0.14, color + 0x060606);
     side.rotation.y = (random01(13) - 0.5) * 0.25;
     side.position.set(
       (random01(14) - 0.5) * BLOCK_SIZE * 0.24,
@@ -370,7 +370,7 @@ function createReservedCourtSurface(cell) {
       (random01(15) - 0.5) * BLOCK_SIZE * 0.22,
     );
     if (side.material) {
-      side.material.opacity = 0.74;
+      side.material.opacity = 0.5;
     }
     group.add(side);
   }
