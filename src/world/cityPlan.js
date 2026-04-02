@@ -1065,9 +1065,9 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     if (isHarborLaneFrontageCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
-        allowedTypes: ['warehouse', 'stoa', 'courtyard'],
-        heightRange: [4.2, 5.9],
-        courtyardChance: 0.45,
+        allowedTypes: ['warehouse', 'stoa', 'workshop'],
+        heightRange: [4.4, 6.2],
+        courtyardChance: 0.18,
       };
     }
 
@@ -1076,8 +1076,8 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
       // Bias the waterfront toward bigger working compounds and stoas so it
       // reads like a harbor district, not a row of repeated small plots.
       allowedTypes: ['warehouse', 'stoa', 'workshop', 'courtyard'],
-      heightRange: [3.9, 5.6],
-      courtyardChance: 0.28,
+      heightRange: [4.1, 5.8],
+      courtyardChance: 0.16,
     };
   }
 
@@ -1123,15 +1123,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
         ...match,
         allowedTypes: ['courtyard', 'stoa', 'workshop'],
         heightRange: [4.0, 5.4],
-        courtyardChance: 0.66,
+        courtyardChance: 0.34,
       };
     }
 
     return {
       ...match,
-      allowedTypes: ['courtyard', 'stoa', 'workshop'],
-      heightRange: [3.7, 5.1],
-      courtyardChance: 0.55,
+      allowedTypes: ['courtyard', 'workshop', 'stoa'],
+      heightRange: [3.9, 5.3],
+      courtyardChance: 0.28,
     };
   }
 
@@ -1275,9 +1275,9 @@ function isHarborUrbanFrontCell(gridX, gridZ) {
 function isHarborCompoundCourtCell(gridX, gridZ) {
   if (!isHarborUrbanFrontCell(gridX, gridZ)) return false;
 
-  const bandX = Math.floor((gridX - 2) / 2);
-  const bandZ = Math.floor((gridZ + 2) / 3);
-  return gridZ <= 6 && (bandX + bandZ) % 2 === 0;
+  const bandX = Math.floor((gridX - 2) / 3);
+  const bandZ = Math.floor((gridZ + 1) / 4);
+  return gridX >= 3 && gridZ >= 0 && gridZ <= 5 && (bandX + bandZ) % 2 === 0;
 }
 
 function isHarborWaterfrontLaneCell(gridX, gridZ) {
@@ -1305,7 +1305,7 @@ function shouldReserveHarborCourt(gridX, gridZ) {
     return false;
   }
   if (isHarborCompoundCourtCell(gridX, gridZ)) return true;
-  return gridX >= 4 && gridX <= 8 && gridZ >= 0 && gridZ <= 6 && (gridX + gridZ) % 4 === 1;
+  return gridX >= 6 && gridX <= 8 && gridZ >= 1 && gridZ <= 5 && (gridX + gridZ) % 5 === 2;
 }
 
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
