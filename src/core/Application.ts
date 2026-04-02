@@ -859,14 +859,14 @@ export class Application {
 
         if (propCullingTimer >= 0.6) {
           updateDistanceCulling(scene, camera, {
-            nearDistance: 100,
-            farDistance: 200
+            nearDistance: 70,
+            farDistance: 140
           });
           propCullingTimer = 0;
         }
 
         if (buildingCullingTimer >= 1.2) {
-          cullDistantBuildings(scene, camera, 400);
+          cullDistantBuildings(scene, camera, 260);
           buildingCullingTimer = 0;
         }
 
