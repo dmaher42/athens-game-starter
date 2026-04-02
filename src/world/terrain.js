@@ -418,7 +418,7 @@ export function createTerrain(scene) {
   const size = TERRAIN_SIZE;
   // Keep the terrain dense enough for the city silhouette while trimming a
   // large chunk of render + collision geometry from the default build.
-  const segments = 384;
+  const segments = 256;
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
   if (geometry.attributes.uv && !geometry.attributes.uv2) {

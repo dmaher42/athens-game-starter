@@ -131,7 +131,7 @@ const SHALLOW_WATER_DISCARD_EPSILON = 0.015;
 const SHORE_PROBE_X_FRACTIONS = [0.2, 0.5, 0.8];
 const SHORE_PROBE_Z_FRACTIONS = [0.0, 0.5, 0.9];
 const DEFAULT_OCEAN_RADIUS = 4000;
-const OCEAN_SEGMENTS = 96;
+const OCEAN_SEGMENTS = 64;
 
 let cachedWaterNormalsTexture = null;
 let cachedWaterNormalsKey = null;
