@@ -585,54 +585,54 @@ export class Application {
 
       if (landmarksEnabled) {
         await Promise.all([
-          placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-40, 0, -80)), {
-            width: 22,
-            depth: 40,
-            rotationRad: THREE.MathUtils.degToRad(25),
+          placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-18, 0, -56)), {
+            width: 18,
+            depth: 32,
+            rotationRad: THREE.MathUtils.degToRad(18),
           }),
-          placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(40, 0, -80)), {
-            width: 30,
-            depth: 54,
-            columnCountX: 8,
-            columnCountZ: 17,
-            rotationRad: THREE.MathUtils.degToRad(-10),
+          placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(24, 0, -52)), {
+            width: 22,
+            depth: 38,
+            columnCountX: 7,
+            columnCountZ: 12,
+            rotationRad: THREE.MathUtils.degToRad(-14),
           }),
           placeLandmark(
             worldRoot,
             terrain,
-            HARBOR_CENTER_3D.clone().add(new THREE.Vector3(0, 0, -140)),
+            HARBOR_CENTER_3D.clone().add(new THREE.Vector3(6, 0, -82)),
             {
-              width: 12,
-              depth: 34,
-              columnCountX: 6,
+              width: 10,
+              depth: 24,
+              columnCountX: 5,
               columnCountZ: 2,
               materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(0),
+              rotationRad: THREE.MathUtils.degToRad(-6),
             },
           ),
           placeLandmark(
             worldRoot,
             terrain,
-            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-42, 0, 38)),
+            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-22, 0, 24)),
             {
-              width: 18,
-              depth: 30,
+              width: 16,
+              depth: 26,
               colX: 6,
               colZ: 2,
               materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(112),
+              rotationRad: THREE.MathUtils.degToRad(98),
             },
           ),
           placeLandmark(
             worldRoot,
             terrain,
-            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(18, 0, -22)),
+            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(8, 0, -12)),
             {
-              width: 22,
-              depth: 42,
+              width: 24,
+              depth: 46,
               colX: 6,
               colZ: 11,
-              rotationRad: THREE.MathUtils.degToRad(-22),
+              rotationRad: THREE.MathUtils.degToRad(-18),
             },
           ),
         ]);
