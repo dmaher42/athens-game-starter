@@ -1247,7 +1247,18 @@ function isHarborCompoundCourtCell(gridX, gridZ) {
   return gridZ <= 6 && (bandX + bandZ) % 2 === 0;
 }
 
+function isHarborWaterfrontLaneCell(gridX, gridZ) {
+  return gridX === 4 && gridZ >= -1 && gridZ <= 7;
+}
+
+function isHarborCrossLaneCell(gridX, gridZ) {
+  return gridZ === 3 && gridX >= 2 && gridX <= 5;
+}
+
 function shouldReserveHarborCourt(gridX, gridZ) {
+  if (isHarborWaterfrontLaneCell(gridX, gridZ) || isHarborCrossLaneCell(gridX, gridZ)) {
+    return false;
+  }
   if (isHarborCompoundCourtCell(gridX, gridZ)) return true;
   return gridX >= 4 && gridX <= 8 && gridZ >= 0 && gridZ <= 6 && (gridX + gridZ) % 4 === 1;
 }
@@ -1435,6 +1446,15 @@ function generateCityGrid(terrainSampler) {
         // Keep the harbor approach as a sequence of larger shared forecourts and
         // working yards instead of a wall of tiny repeated building pads.
         cell.type = 'plaza';
+        cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isHarborUrbanFrontCell(gridX, gridZ) &&
+        (isHarborWaterfrontLaneCell(gridX, gridZ) || isHarborCrossLaneCell(gridX, gridZ))
+      ) {
+        // Give the waterfront one readable main lane and a single cross-connection
+        // back into the harbor district instead of many equal-priority strips.
+        cell.type = 'road';
         cell.district = 'commercial';
         cell.buildable = true;
       } else if (
