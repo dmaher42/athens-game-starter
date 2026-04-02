@@ -1231,9 +1231,29 @@ function shouldReserveAgoraMarketCourt(gridX, gridZ) {
   return axialYard || cornerYard;
 }
 
+function isCentralCityBlanketCell(gridX, gridZ) {
+  return (
+    gridX >= -8 &&
+    gridX <= 8 &&
+    gridZ >= -4 &&
+    gridZ <= 9 &&
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
+    !isHarborWaterfrontLaneCell(gridX, gridZ) &&
+    !isHarborCrossLaneCell(gridX, gridZ)
+  );
+}
+
 function shouldUseCommercialRoad(gridX, gridZ) {
   if (isAgoraUrbanFrontCell(gridX, gridZ) || isAgoraMarketCourtCell(gridX, gridZ) || isHarborUrbanFrontCell(gridX, gridZ)) {
     return false;
+  }
+
+  if (isCentralCityBlanketCell(gridX, gridZ)) {
+    const westSpine = gridX === -6 && (gridZ <= -1 || gridZ >= 3);
+    const marketConnector = gridZ === 6 && gridX >= -7 && gridX <= -2;
+    const harborConnector = gridZ === 7 && gridX >= 2 && gridX <= 6;
+    return westSpine || marketConnector || harborConnector;
   }
 
   const verticalLane = gridX % 7 === 0 && Math.abs(gridZ % 5) <= 1;
@@ -1243,6 +1263,10 @@ function shouldUseCommercialRoad(gridX, gridZ) {
 
 function shouldUseResidentialRoad(gridX, gridZ) {
   if (isInlandUrbanBlockCell(gridX, gridZ) || isHarborUrbanFrontCell(gridX, gridZ)) {
+    return false;
+  }
+
+  if (isCentralCityBlanketCell(gridX, gridZ)) {
     return false;
   }
 
