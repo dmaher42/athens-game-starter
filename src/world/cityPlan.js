@@ -1297,6 +1297,14 @@ function isOuterNeighborhoodCell(gridX, gridZ) {
   return Math.abs(gridX) >= 5 || gridZ >= 8 || gridZ <= -6;
 }
 
+function shouldThinFarEdgeCityCell(gridX, gridZ) {
+  // Thin the far east/north blanket so the city reads as denser around the
+  // Agora and Acropolis side instead of spreading evenly to the horizon.
+  const farEastBand = gridX >= 6 && gridZ >= -1 && ((gridX + gridZ) % 2 === 0);
+  const farNorthBand = gridZ >= 10 && gridX >= -1 && (Math.abs(gridX) % 2 === 1);
+  return farEastBand || farNorthBand;
+}
+
 function isInlandStoaEdgeCell(gridX, gridZ) {
   return gridX <= -3 && gridX >= -7 && gridZ >= -2 && gridZ <= 7;
 }
@@ -1483,6 +1491,19 @@ function generateCityGrid(terrainSampler) {
       };
 
       cell.district = resolveDistrictForCell(worldX, worldZ);
+
+      if (
+        cell.district !== 'sacred' &&
+        cell.district !== 'harbor' &&
+        isOuterNeighborhoodCell(gridX, gridZ) &&
+        shouldThinFarEdgeCityCell(gridX, gridZ)
+      ) {
+        cell.type = 'blocked';
+        cell.buildable = false;
+        cell.blocked = true;
+        cells.push(cell);
+        continue;
+      }
 
       if (isBlockedForCityLayout(worldX, worldZ)) {
         cell.type = 'blocked';
