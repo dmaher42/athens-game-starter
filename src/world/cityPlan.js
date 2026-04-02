@@ -1062,6 +1062,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'commercial' && cell && isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    if (isHarborLaneFrontageCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['warehouse', 'stoa', 'courtyard'],
+        heightRange: [4.2, 5.9],
+        courtyardChance: 0.45,
+      };
+    }
+
     return {
       ...match,
       // Bias the waterfront toward bigger working compounds and stoas so it
@@ -1109,6 +1118,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'residential' && cell && isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    if (isHarborLaneFrontageCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['courtyard', 'stoa', 'workshop'],
+        heightRange: [4.0, 5.4],
+        courtyardChance: 0.66,
+      };
+    }
+
     return {
       ...match,
       allowedTypes: ['courtyard', 'stoa', 'workshop'],
@@ -1255,8 +1273,20 @@ function isHarborCrossLaneCell(gridX, gridZ) {
   return gridZ === 3 && gridX >= 2 && gridX <= 5;
 }
 
+function isHarborLaneFrontageCell(gridX, gridZ) {
+  if (!isHarborUrbanFrontCell(gridX, gridZ)) return false;
+
+  const alongMainLane = (gridX === 3 || gridX === 5) && gridZ >= 0 && gridZ <= 7;
+  const alongCrossLane = (gridZ === 2 || gridZ === 4) && gridX >= 2 && gridX <= 6;
+  return alongMainLane || alongCrossLane;
+}
+
 function shouldReserveHarborCourt(gridX, gridZ) {
-  if (isHarborWaterfrontLaneCell(gridX, gridZ) || isHarborCrossLaneCell(gridX, gridZ)) {
+  if (
+    isHarborWaterfrontLaneCell(gridX, gridZ) ||
+    isHarborCrossLaneCell(gridX, gridZ) ||
+    isHarborLaneFrontageCell(gridX, gridZ)
+  ) {
     return false;
   }
   if (isHarborCompoundCourtCell(gridX, gridZ)) return true;
@@ -1280,6 +1310,10 @@ function applyAgoraScalePass(buildingGroup, cell) {
   }
 
   const agoraDistance = Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z);
+  if (isHarborLaneFrontageCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(1.22);
+    return;
+  }
   if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
     buildingGroup.scale.multiplyScalar(1.14);
     return;
@@ -1434,6 +1468,16 @@ function generateCityGrid(terrainSampler) {
         // Break the inland west-side fabric into shared courts and larger grouped
         // blocks so it reads as joined neighborhoods instead of repeated small pads.
         cell.type = 'plaza';
+        cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isHarborUrbanFrontCell(gridX, gridZ) &&
+        cell.district !== 'harbor' &&
+        isHarborLaneFrontageCell(gridX, gridZ)
+      ) {
+        // Keep the main harbor lane lined with larger frontage buildings so the
+        // route feels built up instead of cutting through empty pads.
+        cell.type = 'building';
         cell.district = 'commercial';
         cell.buildable = true;
       } else if (
