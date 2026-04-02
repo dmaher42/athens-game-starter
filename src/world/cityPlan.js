@@ -1492,8 +1492,45 @@ export async function createCivicDistrict(scene, options = {}) {
   group.name = 'CivicDistrict';
   scene.add(group);
 
-  // Load district rules
-  const districtRules = await loadDistrictRules();
+  // Start rule and texture fetches early so they can progress while we build
+  // the grid and pathing data for the district.
+  const districtRulesPromise = loadDistrictRules();
+  const tl = new THREE.TextureLoader();
+  const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
+  const resolvedBase = baseUrl || resolveBaseUrl();
+  const plazaMaterialPromise = (async () => {
+    try {
+      const normalUrl = joinPath(resolvedBase, "textures/marble_normal-dx.jpg");
+      const [baseMap, normalMap] = await Promise.all([
+        tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg")),
+        tl.loadAsync(normalUrl),
+      ]);
+
+      baseMap.wrapS = baseMap.wrapT = THREE.RepeatWrapping;
+      baseMap.repeat.set(4, 4);
+      baseMap.colorSpace = THREE.SRGBColorSpace;
+
+      applyNormalMapConvention(normalMap, normalUrl);
+      normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+      normalMap.repeat.set(4, 4);
+
+      return new THREE.MeshStandardMaterial({
+        color: 0xbca98a,
+        map: baseMap,
+        normalMap: normalMap,
+        normalScale: new THREE.Vector2(0.35, 0.35),
+        roughness: 1,
+        metalness: 0,
+        envMapIntensity: 0.08,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
+      });
+    } catch (e) {
+      console.warn("Failed to load plaza textures (marble fallback)", e);
+      return null;
+    }
+  })();
 
   const centerOption = options.center ?? AGORA_CENTER_3D;
   const terrainSampler =
@@ -1543,6 +1580,9 @@ export async function createCivicDistrict(scene, options = {}) {
     maxDistance: 60, // Max 60 tiles to key buildings
   });
 
+  const districtRules = await districtRulesPromise;
+  const plazaMat = await plazaMaterialPromise;
+
   group.userData.plan = {
     grid,
     pathTiles,
@@ -1554,39 +1594,6 @@ export async function createCivicDistrict(scene, options = {}) {
     blockSize: BLOCK_SIZE,
     center: center.clone()
   };
-
-  // Pre-load textures for roads/plazas
-  const tl = new THREE.TextureLoader();
-  const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
-  const resolvedBase = baseUrl || resolveBaseUrl();
-  let plazaMat;
-  try {
-      const baseMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
-      baseMap.wrapS = baseMap.wrapT = THREE.RepeatWrapping;
-      baseMap.repeat.set(4, 4);
-      baseMap.colorSpace = THREE.SRGBColorSpace;
-
-      const normalUrl = joinPath(resolvedBase, "textures/marble_normal-dx.jpg");
-      const normalMap = await tl.loadAsync(normalUrl);
-      applyNormalMapConvention(normalMap, normalUrl);
-      normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
-      normalMap.repeat.set(4, 4);
-
-      plazaMat = new THREE.MeshStandardMaterial({
-          color: 0xbca98a,
-          map: baseMap,
-          normalMap: normalMap,
-          normalScale: new THREE.Vector2(0.35, 0.35),
-          roughness: 1,
-          metalness: 0,
-          envMapIntensity: 0.08,
-          polygonOffset: true,
-          polygonOffsetFactor: -1,
-          polygonOffsetUnits: -1
-      });
-  } catch (e) {
-      console.warn("Failed to load plaza textures (marble fallback)", e);
-  }
 
   // Add a subtle urban ground underlay so the city reads as continuous fabric
   // instead of detached pads over a dark field.

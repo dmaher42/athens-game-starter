@@ -201,7 +201,17 @@ export class LightingSystem {
         this.lights = createLighting(scene, this.dynamicSky.sunLight);
         this.lights.moonLight = this.moonLight;
 
-        await this._loadEnvironmentWithFallback();
+        // Don't block startup on the HDR environment map. The fallback sky and
+        // base lighting are good enough for the first interactive frame.
+        createDefaultSky(scene, this.dynamicSky);
+        this.environmentLoadPromise = this._loadEnvironmentWithFallback()
+            .catch(() => null)
+            .then((env) => {
+                if (this.lastAppliedLightingPreset) {
+                    this._applyEnvironmentFallbackForProfile(this.lastAppliedLightingPreset);
+                }
+                return env;
+            });
 
         try {
             initEnvStubs({

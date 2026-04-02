@@ -54,7 +54,9 @@ export async function loadDistrictRules(baseUrlStr = "") {
   for (const url of buildDistrictRuleUrlCandidates(resolvedBase)) {
     tried.push(url);
     try {
-      const res = await fetch(url, { method: "GET", cache: "no-cache" });
+      // These rules are static project data, so let the browser cache them
+      // instead of forcing a full refetch on every startup.
+      const res = await fetch(url, { method: "GET" });
       if (res.ok) {
         const json = await res.json();
         return normalizeRules(json);
