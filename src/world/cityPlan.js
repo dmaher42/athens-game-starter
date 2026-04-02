@@ -1767,6 +1767,16 @@ export async function createCivicDistrict(scene, options = {}) {
         harborCompound.position.set(localX, localY, localZ);
         harborCompound.rotation.y = (Math.abs(cell.gridX - cell.gridZ) % 2) * (Math.PI / 2);
         group.add(harborCompound);
+
+        const harborCourtPlatform = createDistrictPlatformAccent({
+          localX,
+          localZ,
+          localY,
+          sampleLocalHeight,
+          radius: BLOCK_SIZE * 0.34,
+          district: 'civic',
+        });
+        if (harborCourtPlatform) group.add(harborCourtPlatform);
       } else if (isAgoraPlazaPerimeterCell(cell.gridX, cell.gridZ)) {
         const perimeterAccent = createAgoraPerimeterAccent(cell.gridX, cell.gridZ);
         perimeterAccent.position.set(localX, localY, localZ);
@@ -1823,9 +1833,25 @@ export async function createCivicDistrict(scene, options = {}) {
                district: cell.district,
              });
              if (platformAccent) group.add(platformAccent);
+           } else if (
+             isHarborLaneFrontageCell(cell.gridX, cell.gridZ) &&
+             rng() < 0.72
+           ) {
+             const harborFrontPlatform = createDistrictPlatformAccent({
+               localX,
+               localZ,
+               localY,
+               sampleLocalHeight,
+               radius: BLOCK_SIZE * 0.28,
+               district: 'civic',
+             });
+             if (harborFrontPlatform) group.add(harborFrontPlatform);
            }
 
-           if (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.55) {
+           if (
+             (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.55) ||
+             (isHarborLaneFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.68)
+           ) {
              const retainingAccent = createStreetGradeAccent({
                localX,
                localZ,
