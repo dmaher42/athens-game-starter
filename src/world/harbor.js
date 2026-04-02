@@ -1391,7 +1391,7 @@ function optimizeHarborShadowCost(harbor) {
     if (!child?.isMesh) return;
     if (shouldReceiveOnly(child)) {
       child.castShadow = false;
-      child.receiveShadow = true;
+      child.receiveShadow = false;
     }
   });
 }

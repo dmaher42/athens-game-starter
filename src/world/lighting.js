@@ -28,7 +28,7 @@ function lerpColor(target, c0, c1, t) {
 export function createLighting(scene, sunLightOverride = null, ambientOverride = null) {
   const sunLight = sunLightOverride || new DirectionalLight(0xffffff, 3.6);
   sunLight.castShadow = true;
-  sunLight.shadow.mapSize.set(1024, 1024);
+  sunLight.shadow.mapSize.set(512, 512);
   sunLight.shadow.radius = 2.8;
   sunLight.shadow.bias = -0.0002;
 
