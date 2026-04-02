@@ -1064,9 +1064,11 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   if (district === 'commercial' && cell && isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
-      allowedTypes: ['stoa', 'workshop', 'warehouse', 'shop'],
-      heightRange: [3.6, 5.2],
-      courtyardChance: 0.1,
+      // Bias the waterfront toward bigger working compounds and stoas so it
+      // reads like a harbor district, not a row of repeated small plots.
+      allowedTypes: ['warehouse', 'stoa', 'workshop', 'courtyard'],
+      heightRange: [3.9, 5.6],
+      courtyardChance: 0.28,
     };
   }
 
@@ -1109,9 +1111,9 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   if (district === 'residential' && cell && isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
-      allowedTypes: ['courtyard', 'workshop', 'shop', 'stoa'],
-      heightRange: [3.5, 4.9],
-      courtyardChance: 0.4,
+      allowedTypes: ['courtyard', 'stoa', 'workshop'],
+      heightRange: [3.7, 5.1],
+      courtyardChance: 0.55,
     };
   }
 
@@ -1234,11 +1236,20 @@ function shouldReserveInlandCourt(gridX, gridZ) {
 }
 
 function isHarborUrbanFrontCell(gridX, gridZ) {
-  return gridX >= 2 && gridX <= 7 && gridZ >= -2 && gridZ <= 7;
+  return gridX >= 2 && gridX <= 8 && gridZ >= -2 && gridZ <= 8;
+}
+
+function isHarborCompoundCourtCell(gridX, gridZ) {
+  if (!isHarborUrbanFrontCell(gridX, gridZ)) return false;
+
+  const bandX = Math.floor((gridX - 2) / 2);
+  const bandZ = Math.floor((gridZ + 2) / 3);
+  return gridZ <= 6 && (bandX + bandZ) % 2 === 0;
 }
 
 function shouldReserveHarborCourt(gridX, gridZ) {
-  return (gridX + gridZ) % 2 === 0 || (gridX % 2 === 0 && gridZ % 2 === 1);
+  if (isHarborCompoundCourtCell(gridX, gridZ)) return true;
+  return gridX >= 4 && gridX <= 8 && gridZ >= 0 && gridZ <= 6 && (gridX + gridZ) % 4 === 1;
 }
 
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
@@ -1259,7 +1270,7 @@ function applyAgoraScalePass(buildingGroup, cell) {
 
   const agoraDistance = Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z);
   if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
-    buildingGroup.scale.multiplyScalar(1.08);
+    buildingGroup.scale.multiplyScalar(1.14);
     return;
   }
   if (cell.district === 'civic' && agoraDistance <= AGORA_CIVIC_RADIUS + BLOCK_SIZE * 0.5) {
@@ -1680,7 +1691,7 @@ export async function createCivicDistrict(scene, options = {}) {
           urbanCourt.rotation.y = ((Math.abs(cell.gridX * 2) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
           group.add(urbanCourt);
         }
-      } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ) && Math.abs(cell.gridX + cell.gridZ) % 4 === 0) {
+      } else if (isHarborCompoundCourtCell(cell.gridX, cell.gridZ)) {
         const harborCompound = createHarborCompoundAccent(() => {
           const seed = Math.abs(cell.gridX * 92821 ^ cell.gridZ * 68917);
           const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
