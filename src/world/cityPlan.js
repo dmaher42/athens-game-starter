@@ -1196,6 +1196,15 @@ function isAgoraEdgeBuildingCell(gridX, gridZ) {
   );
 }
 
+function isCivicMonumentFrontageCell(gridX, gridZ) {
+  return (
+    Math.abs(gridX) <= AGORA_PLAZA_RADIUS + 3 &&
+    Math.abs(gridZ) <= AGORA_PLAZA_RADIUS + 3 &&
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ)
+  );
+}
+
 function isAgoraUrbanFrontCell(gridX, gridZ) {
   return isAgoraFramingCell(gridX, gridZ) || isAgoraEdgeBuildingCell(gridX, gridZ);
 }
@@ -1312,6 +1321,10 @@ function applyAgoraScalePass(buildingGroup, cell) {
   const agoraDistance = Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z);
   if (isHarborLaneFrontageCell(cell.gridX, cell.gridZ)) {
     buildingGroup.scale.multiplyScalar(1.22);
+    return;
+  }
+  if (cell.district === 'civic' && isCivicMonumentFrontageCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(0.92);
     return;
   }
   if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
@@ -1720,20 +1733,30 @@ export async function createCivicDistrict(scene, options = {}) {
         }
       }
 
-      if (cell.gridX === 0 && cell.gridZ === 0) {
-        const civicPlatform = createDistrictPlatformAccent({
-          localX,
-          localZ,
-          localY,
+        if (cell.gridX === 0 && cell.gridZ === 0) {
+          const civicPlatform = createDistrictPlatformAccent({
+            localX,
+            localZ,
+            localY,
           sampleLocalHeight,
           radius: BLOCK_SIZE * 0.46,
           district: 'civic',
-        });
-        if (civicPlatform) group.add(civicPlatform);
-      }
+          });
+          if (civicPlatform) group.add(civicPlatform);
+        } else if (isCivicMonumentFrontageCell(cell.gridX, cell.gridZ)) {
+          const civicCourtPlatform = createDistrictPlatformAccent({
+            localX,
+            localZ,
+            localY,
+            sampleLocalHeight,
+            radius: BLOCK_SIZE * 0.26,
+            district: 'civic',
+          });
+          if (civicCourtPlatform) group.add(civicCourtPlatform);
+        }
 
-      if (cell.gridX === 0 && cell.gridZ === 0) {
-        const plazaAccent = createAgoraPlazaAccent();
+        if (cell.gridX === 0 && cell.gridZ === 0) {
+          const plazaAccent = createAgoraPlazaAccent();
         plazaAccent.position.set(localX, localY, localZ);
         group.add(plazaAccent);
       } else if (isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
@@ -1834,6 +1857,20 @@ export async function createCivicDistrict(scene, options = {}) {
              });
              if (platformAccent) group.add(platformAccent);
            } else if (
+             cell.district === 'civic' &&
+             isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) &&
+             rng() < 0.78
+           ) {
+             const civicFrontPlatform = createDistrictPlatformAccent({
+               localX,
+               localZ,
+               localY,
+               sampleLocalHeight,
+               radius: BLOCK_SIZE * 0.24,
+               district: 'civic',
+             });
+             if (civicFrontPlatform) group.add(civicFrontPlatform);
+           } else if (
              isHarborLaneFrontageCell(cell.gridX, cell.gridZ) &&
              rng() < 0.72
            ) {
@@ -1850,7 +1887,8 @@ export async function createCivicDistrict(scene, options = {}) {
 
            if (
              (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.55) ||
-             (isHarborLaneFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.68)
+             (isHarborLaneFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.68) ||
+             (cell.district === 'civic' && isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.62)
            ) {
              const retainingAccent = createStreetGradeAccent({
                localX,
