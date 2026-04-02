@@ -1379,6 +1379,21 @@ function resolveBuildingDetailLevel(cell) {
   return 'low';
 }
 
+function applyBuildingShadowProfile(buildingGroup, cell, detailLevel) {
+  if (!buildingGroup) return;
+
+  const preserveLandmarkShadows =
+    cell?.district === 'sacred' || cell?.district === 'civic';
+  const castsShadows = preserveLandmarkShadows && detailLevel !== 'low';
+  const receivesShadows = detailLevel !== 'low';
+
+  buildingGroup.traverse((child) => {
+    if (!child?.isMesh) return;
+    child.castShadow = castsShadows;
+    child.receiveShadow = receivesShadows;
+  });
+}
+
 function generateCityGrid(terrainSampler) {
   const cells = [];
   
@@ -1763,11 +1778,12 @@ export async function createCivicDistrict(scene, options = {}) {
           return t - Math.floor(t);
        };
 
+       const detailLevel = resolveBuildingDetailLevel(cell);
        const buildingGroup = spawnBuilding({
          district: cell.district,
          rng: rng,
          districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
-         detailLevel: resolveBuildingDetailLevel(cell),
+         detailLevel,
        });
 
        if (buildingGroup) {
@@ -1784,6 +1800,7 @@ export async function createCivicDistrict(scene, options = {}) {
            }
 
            applyAgoraScalePass(buildingGroup, cell);
+           applyBuildingShadowProfile(buildingGroup, cell, detailLevel);
            buildingGroup.position.set(localX, localY, localZ);
            // Random 90 degree rotation
            const rot = Math.floor(rng() * 4) * (Math.PI / 2);
