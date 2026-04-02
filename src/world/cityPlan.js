@@ -301,7 +301,7 @@ function createPavedStrip(width, length, color = 0xb49673) {
   return mesh;
 }
 
-function createCityFabricUnderlay(width, length, color = 0x7f6548, opacity = 0.24) {
+function createCityFabricUnderlay(width, length, color = 0x97785a, opacity = 0.16) {
   const geometry = new THREE.PlaneGeometry(width, length);
   const material = new THREE.MeshStandardMaterial({
     color,
@@ -1680,7 +1680,7 @@ export async function createCivicDistrict(scene, options = {}) {
 
   // Keep a light civic underlay near the Agora only. Broad waterfront-sized
   // rectangles were competing with the terrain and harbor shoreline.
-  const civicFabric = createCityFabricUnderlay(BLOCK_SIZE * 7.2, BLOCK_SIZE * 8.4, 0x7d6548, 0.22);
+  const civicFabric = createCityFabricUnderlay(BLOCK_SIZE * 7.2, BLOCK_SIZE * 8.4, 0x96775a, 0.15);
   civicFabric.position.set(-BLOCK_SIZE * 1.9, surfaceOffset * 0.08, BLOCK_SIZE * 1.2);
   group.add(civicFabric);
 
