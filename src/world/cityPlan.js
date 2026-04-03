@@ -1343,8 +1343,8 @@ function isInlandStoaEdgeCell(gridX, gridZ) {
 function shouldReserveNeighborhoodCourt(gridX, gridZ) {
   // Reserve fewer outer-neighborhood courts so the edge of the city reads as
   // larger grouped blocks instead of a near-checkerboard of repeated pads.
-  const majorPocket = Math.abs(gridX) % 8 === 3 && Math.abs(gridZ) % 8 === 2;
-  const shoreEdgePocket = gridZ <= -6 && Math.abs(gridX) % 9 === 4 && Math.abs(gridZ) % 6 === 3;
+  const majorPocket = Math.abs(gridX) % 10 === 4 && Math.abs(gridZ) % 9 === 3;
+  const shoreEdgePocket = gridZ <= -6 && Math.abs(gridX) % 11 === 5 && Math.abs(gridZ) % 7 === 4;
   return majorPocket || shoreEdgePocket;
 }
 
@@ -1923,7 +1923,11 @@ export async function createCivicDistrict(scene, options = {}) {
           group.add(marketCourt);
         }
       } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ) || isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
-        if ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 7 === 0) {
+        if (
+          isInlandUrbanBlockCell(cell.gridX, cell.gridZ)
+            ? (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 7 === 0
+            : (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 11 === 0
+        ) {
           const urbanCourt = createUrbanCourtAccent(() => {
             const seed = Math.abs(cell.gridX * 73129 ^ cell.gridZ * 54121);
             const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
