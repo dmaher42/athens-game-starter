@@ -476,6 +476,8 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       THREE.MathUtils.lerp(minSpeed, maxSpeed, rng()) * roleProfile.paceMultiplier;
     let progress = (i / count + rng() * 0.1) % 1;
     let stepPhase = rng() * Math.PI * 2;
+    const gaitScale = randomBetween(0.85, 1.18, rng);
+    const swayScale = randomBetween(0.85, 1.15, rng);
     let moveTimeRemaining = randomBetween(2.8, 6.2, rng);
     let idleTimeRemaining = 0;
     let targetYaw = 0;
@@ -524,8 +526,8 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       );
 
       stepPhase += dt * speed * (isIdle ? 1.8 : 6.4);
-      const gait = Math.sin(stepPhase);
-      const sway = Math.cos(stepPhase * 0.5);
+      const gait = Math.sin(stepPhase) * gaitScale;
+      const sway = Math.cos(stepPhase * 0.5) * swayScale;
       if (isIdle) {
         headYawTimer -= dt;
         if (headYawTimer <= 0) {
