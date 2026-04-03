@@ -2,6 +2,7 @@ import * as THREE from "three";
 import {
   getSeaLevelY,
   AGORA_CENTER_3D,
+  ACROPOLIS_PEAK_3D,
   AEGEAN_OCEAN_BOUNDS,
   HARBOR_CENTER_3D,
   HARBOR_GROUND_HEIGHT,
@@ -78,6 +79,12 @@ const HARBOR_SHORE_COVE_INSET = 16;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
+const ACROPOLIS_TO_AGORA_X = AGORA_CENTER_3D.x - ACROPOLIS_PEAK_3D.x;
+const ACROPOLIS_TO_AGORA_Z = AGORA_CENTER_3D.z - ACROPOLIS_PEAK_3D.z;
+const ACROPOLIS_TO_AGORA_LENGTH =
+  Math.hypot(ACROPOLIS_TO_AGORA_X, ACROPOLIS_TO_AGORA_Z) || 1;
+const ACROPOLIS_APPROACH_DIR_X = ACROPOLIS_TO_AGORA_X / ACROPOLIS_TO_AGORA_LENGTH;
+const ACROPOLIS_APPROACH_DIR_Z = ACROPOLIS_TO_AGORA_Z / ACROPOLIS_TO_AGORA_LENGTH;
 
 // Harbor configuration (East Facing)
 // HARBOR_GROUND_HEIGHT imported from locations.js at line 6
@@ -314,6 +321,29 @@ function getElevation(
   // Carves
   h = applyHarbourCarve(x, z, seaLevel, h);
   h = clampHarborBandHeight(x, z, seaLevel, h);
+
+  const acropolisDx = x - ACROPOLIS_PEAK_3D.x;
+  const acropolisDz = z - ACROPOLIS_PEAK_3D.z;
+  const acropolisDist = Math.hypot(acropolisDx, acropolisDz);
+  if (acropolisDist < 90) {
+    const summitMask = 1 - THREE.MathUtils.smoothstep(12, 36, acropolisDist);
+    const shoulderMask = 1 - THREE.MathUtils.smoothstep(18, 78, acropolisDist);
+    const approachDistance =
+      acropolisDx * ACROPOLIS_APPROACH_DIR_X +
+      acropolisDz * ACROPOLIS_APPROACH_DIR_Z;
+    const lateralDistance = Math.abs(
+      -acropolisDx * ACROPOLIS_APPROACH_DIR_Z +
+        acropolisDz * ACROPOLIS_APPROACH_DIR_X,
+    );
+    const cityApproachMask =
+      shoulderMask *
+      THREE.MathUtils.smoothstep(4, 46, approachDistance) *
+      (1 - THREE.MathUtils.smoothstep(10, 40, lateralDistance));
+
+    // Give the Acropolis a clearer summit and a broader city-facing shoulder
+    // so the surrounding urban fabric can read as climbing toward it.
+    h += summitMask * 8.5 + cityApproachMask * 4.5;
+  }
 
   // Agora Flattening
   const agoraDist = Math.hypot(x - AGORA_CENTER_3D.x, z - AGORA_CENTER_3D.z);
