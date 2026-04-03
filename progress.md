@@ -265,3 +265,4 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-04-04: Added a shallow underwater band in `src/world/terrain.js` so near-shore seabed uses the coastal material instead of the inland pass, reducing the dark shelf under shallow water. Verified with `npm.cmd run verify`.
 - 2026-04-04: Expanded shoreline foam and lightened shallow water tint in `src/world/ocean.js` to soften the water/ground transition. Verified with `npm.cmd run verify` and captured `verification/ground-water-step3.png`.
 - 2026-04-04: Tweaked shoreline polish in `src/world/ocean.js` by reducing the shallow-water discard epsilon and extending the shallow tint blend so the shoreline edge is less harsh. Verified with `npm.cmd run verify`.
+- 2026-04-04: Continued shoreline fix by reducing `LAND_CLIP_CLEARANCE` and the shallow discard epsilon in `src/world/ocean.js` so the water plane hugs the shoreline with fewer visible gaps. Verified with `npm.cmd run verify`.
