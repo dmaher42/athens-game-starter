@@ -1329,11 +1329,19 @@ function isOuterNeighborhoodCell(gridX, gridZ) {
 }
 
 function shouldThinFarEdgeCityCell(gridX, gridZ) {
-  // Thin the far east/north blanket so the city reads as denser around the
-  // Agora and Acropolis side instead of spreading evenly to the horizon.
-  const farEastBand = gridX >= 6 && gridZ >= -1 && ((gridX + gridZ) % 2 === 0);
-  const farNorthBand = gridZ >= 10 && gridX >= -1 && (Math.abs(gridX) % 2 === 1);
-  return farEastBand || farNorthBand;
+  // Thin the opposite side of the hill more aggressively so the city mass
+  // reads as gathering around the Agora/Acropolis rather than blanketing the
+  // far east and north edges with the same density.
+  const farEastBand =
+    gridX >= 5 &&
+    gridZ >= -2 &&
+    (((gridX + gridZ) % 2 === 0) || gridX >= 8);
+  const farNorthBand =
+    gridZ >= 9 &&
+    gridX >= -2 &&
+    ((Math.abs(gridX + gridZ) % 2 === 1) || gridZ >= 11);
+  const farNorthEastPocket = gridX >= 4 && gridZ >= 7 && ((gridX * 2 + gridZ) % 3 === 0);
+  return farEastBand || farNorthBand || farNorthEastPocket;
 }
 
 function isInlandStoaEdgeCell(gridX, gridZ) {
