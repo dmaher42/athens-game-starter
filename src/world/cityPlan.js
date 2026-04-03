@@ -1925,8 +1925,8 @@ export async function createCivicDistrict(scene, options = {}) {
       } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ) || isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
         if (
           isInlandUrbanBlockCell(cell.gridX, cell.gridZ)
-            ? (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 7 === 0
-            : (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 11 === 0
+            ? (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 11 === 0
+            : (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 17 === 0
         ) {
           const urbanCourt = createUrbanCourtAccent(() => {
             const seed = Math.abs(cell.gridX * 73129 ^ cell.gridZ * 54121);
@@ -1975,7 +1975,7 @@ export async function createCivicDistrict(scene, options = {}) {
            if (cell.district === 'harbor') {
              // Keep the generic city kit out of the waterfront so the authored
              // harbor owns that destination space more clearly.
-             if (rng() < 0.25) {
+             if (rng() < 0.12) {
                const lowAccent = createHarborFrontAccent(rng);
                lowAccent.position.set(localX, localY, localZ);
                lowAccent.rotation.y = Math.floor(rng() * 4) * (Math.PI / 2);
@@ -2021,7 +2021,7 @@ export async function createCivicDistrict(scene, options = {}) {
              if (civicFrontPlatform) group.add(civicFrontPlatform);
            } else if (
              isHarborLaneFrontageCell(cell.gridX, cell.gridZ) &&
-             rng() < 0.24
+             rng() < 0.12
            ) {
              const harborFrontPlatform = createDistrictPlatformAccent({
                localX,
@@ -2035,9 +2035,9 @@ export async function createCivicDistrict(scene, options = {}) {
            }
 
            if (
-             (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.55) ||
-             (isHarborLaneFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.68) ||
-             (cell.district === 'civic' && isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.18)
+             (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.34) ||
+             (isHarborLaneFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.28) ||
+             (cell.district === 'civic' && isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.08)
            ) {
              const retainingAccent = createStreetGradeAccent({
                localX,
@@ -2057,19 +2057,19 @@ export async function createCivicDistrict(scene, options = {}) {
            } else if (
              cell.district === 'commercial' &&
              !isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) &&
-             rng() < 0.18
+             rng() < 0.1
            ) {
              districtAccent = createCommercialAccent(rng);
            } else if (
              cell.district === 'residential' &&
              !isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) &&
              Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z) <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.8 &&
-             rng() < 0.1
+             rng() < 0.06
            ) {
              districtAccent = createResidentialAccent(rng);
            } else if (cell.district === 'harbor' && rng() < 0.16) {
              districtAccent = createHarborFrontAccent(rng);
-           } else if (cell.district === 'sacred' && rng() < 0.22) {
+           } else if (cell.district === 'sacred' && rng() < 0.12) {
              districtAccent = createSacredAccent();
            }
 
