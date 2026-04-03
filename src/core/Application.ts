@@ -780,15 +780,27 @@ export class Application {
       const spawnProceduralCrowdFallback = () => {
         if (proceduralCrowdSpawned || !civicDistrict.walkingLoop) return;
         proceduralCrowdSpawned = true;
-        const crowd = spawnCitizenCrowd(worldRoot, civicDistrict.walkingLoop, {
-          count: 8,
-          minSpeed: 0.7,
-          maxSpeed: 1.4,
-          roles: ["merchant", "scholar", "guard", "artisan", "citizen", "merchant", "priest", "citizen"],
-          terrain,
-          camera,
+        const loops = Array.isArray(civicDistrict.walkingLoops) && civicDistrict.walkingLoops.length > 0
+          ? civicDistrict.walkingLoops
+          : [civicDistrict.walkingLoop];
+        const loopCounts = [4, 3, 3];
+        const loopRoles = [
+          ["merchant", "scholar", "guard", "citizen"],
+          ["artisan", "citizen", "merchant"],
+          ["priest", "citizen", "dockworker"],
+        ];
+
+        loops.forEach((loop, index) => {
+          const crowd = spawnCitizenCrowd(worldRoot, loop, {
+            count: loopCounts[index] ?? 3,
+            minSpeed: 0.65 + index * 0.05,
+            maxSpeed: 1.25 + index * 0.05,
+            roles: loopRoles[index] ?? loopRoles[0],
+            terrain,
+            camera,
+          });
+          this.npcUpdaters.push(...crowd.updaters);
         });
-        this.npcUpdaters.push(...crowd.updaters);
       };
 
       if (ENABLE_GLB_MODE) {

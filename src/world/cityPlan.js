@@ -2129,15 +2129,31 @@ export async function createCivicDistrict(scene, options = {}) {
   }
 
   const walkingLoop = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(center.x + 10, baseHeight, center.z + 10),
-      new THREE.Vector3(center.x - 10, baseHeight, center.z + 10),
-      new THREE.Vector3(center.x - 10, baseHeight, center.z - 10),
-      new THREE.Vector3(center.x + 10, baseHeight, center.z - 10)
+    new THREE.Vector3(center.x + 10, baseHeight, center.z + 10),
+    new THREE.Vector3(center.x - 10, baseHeight, center.z + 10),
+    new THREE.Vector3(center.x - 10, baseHeight, center.z - 10),
+    new THREE.Vector3(center.x + 10, baseHeight, center.z - 10)
   ], true);
+
+  const walkingLoopInner = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(center.x + 6, baseHeight, center.z + 4),
+    new THREE.Vector3(center.x - 8, baseHeight, center.z + 6),
+    new THREE.Vector3(center.x - 6, baseHeight, center.z - 6),
+    new THREE.Vector3(center.x + 8, baseHeight, center.z - 4)
+  ], true);
+
+  const walkingLoopOuter = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(center.x + 16, baseHeight, center.z + 12),
+    new THREE.Vector3(center.x - 18, baseHeight, center.z + 14),
+    new THREE.Vector3(center.x - 14, baseHeight, center.z - 16),
+    new THREE.Vector3(center.x + 18, baseHeight, center.z - 12)
+  ], true);
+  const walkingLoops = [walkingLoop, walkingLoopInner, walkingLoopOuter];
 
   return {
     group,
     walkingLoop,
+    walkingLoops,
     plazaLength: 80, // Legacy support
     promenadeWidth: 14 // Legacy support
   };
