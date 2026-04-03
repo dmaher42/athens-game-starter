@@ -478,6 +478,7 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
     let stepPhase = rng() * Math.PI * 2;
     const gaitScale = randomBetween(0.85, 1.18, rng);
     const swayScale = randomBetween(0.85, 1.15, rng);
+    const armSwingScale = randomBetween(0.85, 1.2, rng);
     let moveTimeRemaining = randomBetween(2.8, 6.2, rng);
     let idleTimeRemaining = 0;
     let targetYaw = 0;
@@ -542,8 +543,12 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       body.position.y = 1.08 + (isIdle ? sway * 0.02 : gait * 0.06);
       body.rotation.z = isIdle ? sway * 0.05 : gait * 0.16;
       head.rotation.y = isIdle ? headYaw + Math.sin(stepPhase * 0.35) * 0.12 : headYaw * 0.35;
-      leftArm.rotation.z = isIdle ? 0.08 + sway * 0.06 : 0.16 + gait * 0.32;
-      rightArm.rotation.z = isIdle ? -0.08 - sway * 0.06 : -0.16 - gait * 0.32;
+      leftArm.rotation.z = isIdle
+        ? 0.08 + sway * 0.06
+        : 0.16 + gait * 0.32 * armSwingScale;
+      rightArm.rotation.z = isIdle
+        ? -0.08 - sway * 0.06
+        : -0.16 - gait * 0.32 * armSwingScale;
       leftLeg.rotation.x = isIdle ? 0 : gait * 0.45;
       rightLeg.rotation.x = isIdle ? 0 : -gait * 0.45;
       leftFoot.position.z = isIdle ? 0.08 : 0.08 + gait * 0.06;
