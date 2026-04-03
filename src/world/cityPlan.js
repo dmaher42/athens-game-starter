@@ -1035,6 +1035,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'commercial' && civicDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.4) {
+    if (cell && isAgoraHousingBandCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'shop', 'workshop'],
+        heightRange: [3.8, 5.2],
+        courtyardChance: 0.08,
+      };
+    }
+
     if (cell && isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
@@ -1118,6 +1127,15 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'residential' && cell && civicDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE) {
+    if (cell && isAgoraHousingBandCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['courtyard', 'workshop', 'shop', 'stoa'],
+        heightRange: [3.8, 5.0],
+        courtyardChance: 0.14,
+      };
+    }
+
     return {
       ...match,
       allowedTypes: ['shop', 'workshop', 'courtyard'],
@@ -1235,6 +1253,19 @@ function isAgoraMarketCourtCell(gridX, gridZ) {
     Math.abs(gridX) <= 4 &&
     Math.abs(gridZ) <= 4 &&
     (Math.abs(gridX) + Math.abs(gridZ)) >= 3
+  );
+}
+
+function isAgoraHousingBandCell(gridX, gridZ) {
+  return (
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
+    !isAgoraUrbanFrontCell(gridX, gridZ) &&
+    !isAgoraMarketCourtCell(gridX, gridZ) &&
+    gridX >= -6 &&
+    gridX <= 4 &&
+    gridZ >= -4 &&
+    gridZ <= 6
   );
 }
 
@@ -1401,6 +1432,10 @@ function applyAgoraScalePass(buildingGroup, cell) {
     buildingGroup.scale.multiplyScalar(1.22);
     return;
   }
+  if (isAgoraHousingBandCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(1.08);
+    return;
+  }
   if (isAcropolisSlopeBandCell(cell.gridX, cell.gridZ)) {
     buildingGroup.scale.multiplyScalar(1.1);
     return;
@@ -1565,6 +1600,16 @@ function generateCityGrid(terrainSampler) {
         // urban blocks with active inner yards instead of detached little pads.
         cell.type = 'plaza';
         cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isAgoraHousingBandCell(gridX, gridZ) &&
+        cell.district !== 'sacred' &&
+        cell.district !== 'harbor'
+      ) {
+        // Keep the blocks just outside the Agora consistently filled so the
+        // center reads as one civic opening wrapped by dense urban fabric.
+        cell.type = 'building';
+        cell.district = cell.district === 'commercial' ? 'commercial' : 'residential';
         cell.buildable = true;
       } else if (
         isInlandUrbanBlockCell(gridX, gridZ) &&
