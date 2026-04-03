@@ -31,6 +31,28 @@ const manifestWarnings = new Set();
 const npcWarnings = new Set();
 const npcAvailability = new Map();
 const DEFAULT_ROLE_SEQUENCE = ['merchant', 'scholar', 'guard', 'artisan', 'citizen', 'dockworker', 'priest'];
+const SHARED_GEOMETRIES = {
+  body: new THREE.CapsuleGeometry(0.38, 1.12, 8, 16),
+  head: new THREE.SphereGeometry(0.31, 16, 16),
+  arm: new THREE.CapsuleGeometry(0.11, 0.6, 6, 10),
+  leg: new THREE.CapsuleGeometry(0.12, 0.6, 6, 10),
+  foot: new THREE.BoxGeometry(0.18, 0.06, 0.3),
+  belt: new THREE.TorusGeometry(0.3, 0.05, 8, 16),
+  cloak: new THREE.BoxGeometry(0.58, 0.9, 0.06),
+  apron: new THREE.BoxGeometry(0.34, 0.68, 0.04),
+  headwrap: new THREE.TorusGeometry(0.23, 0.05, 8, 18),
+  helmet: new THREE.SphereGeometry(0.28, 12, 12),
+  cap: new THREE.CylinderGeometry(0.22, 0.26, 0.12, 12),
+  basket: new THREE.CylinderGeometry(0.18, 0.24, 0.28, 12),
+  scroll: new THREE.CylinderGeometry(0.05, 0.05, 0.34, 10),
+  spearShaft: new THREE.CylinderGeometry(0.026, 0.03, 1.8, 8),
+  spearTip: new THREE.ConeGeometry(0.055, 0.18, 8),
+  staff: new THREE.CylinderGeometry(0.028, 0.03, 1.55, 8),
+  satchel: new THREE.BoxGeometry(0.24, 0.28, 0.12),
+  toolHandle: new THREE.CylinderGeometry(0.025, 0.025, 0.42, 8),
+  toolHead: new THREE.BoxGeometry(0.16, 0.06, 0.08),
+  sash: new THREE.TorusGeometry(0.44, 0.075, 8, 18, Math.PI * 1.25),
+};
 const ROLE_PROFILES = {
   citizen: {
     id: 'citizen',
@@ -185,14 +207,14 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
 
   if (roleProfile.accessory === 'basket') {
     const basket = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18, 0.24, 0.28, 12),
+      SHARED_GEOMETRIES.basket,
       accentMaterial.clone(),
     );
     basket.position.set(0.34, 0.84, 0.12);
     accessoryRoot.add(basket);
   } else if (roleProfile.accessory === 'scroll') {
     const scroll = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.05, 0.05, 0.34, 10),
+      SHARED_GEOMETRIES.scroll,
       trimMaterial.clone(),
     );
     scroll.rotation.z = Math.PI / 2;
@@ -200,27 +222,27 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
     accessoryRoot.add(scroll);
   } else if (roleProfile.accessory === 'spear') {
     const shaft = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.026, 0.03, 1.8, 8),
+      SHARED_GEOMETRIES.spearShaft,
       accentMaterial.clone(),
     );
     shaft.position.set(0.42, 1.12, 0.02);
     accessoryRoot.add(shaft);
     const tip = new THREE.Mesh(
-      new THREE.ConeGeometry(0.055, 0.18, 8),
+      SHARED_GEOMETRIES.spearTip,
       trimMaterial.clone(),
     );
     tip.position.set(0.42, 2.02, 0.02);
     accessoryRoot.add(tip);
   } else if (roleProfile.accessory === 'staff') {
     const staff = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.028, 0.03, 1.55, 8),
+      SHARED_GEOMETRIES.staff,
       accentMaterial.clone(),
     );
     staff.position.set(-0.34, 1.02, 0.05);
     accessoryRoot.add(staff);
   } else if (roleProfile.accessory === 'satchel') {
     const satchel = new THREE.Mesh(
-      new THREE.BoxGeometry(0.24, 0.28, 0.12),
+      SHARED_GEOMETRIES.satchel,
       accentMaterial.clone(),
     );
     satchel.position.set(-0.28, 0.96, 0.22);
@@ -228,14 +250,14 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
     accessoryRoot.add(satchel);
   } else if (roleProfile.accessory === 'tool') {
     const handle = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.025, 0.025, 0.42, 8),
+      SHARED_GEOMETRIES.toolHandle,
       accentMaterial.clone(),
     );
     handle.position.set(0.36, 0.88, 0.08);
     handle.rotation.z = 0.55;
     accessoryRoot.add(handle);
     const head = new THREE.Mesh(
-      new THREE.BoxGeometry(0.16, 0.06, 0.08),
+      SHARED_GEOMETRIES.toolHead,
       trimMaterial.clone(),
     );
     head.position.set(0.45, 1.0, 0.08);
@@ -243,7 +265,7 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
     accessoryRoot.add(head);
   } else {
     const sash = new THREE.Mesh(
-      new THREE.TorusGeometry(0.44, 0.075, 8, 18, Math.PI * 1.25),
+      SHARED_GEOMETRIES.sash,
       trimMaterial.clone(),
     );
     sash.rotation.set(Math.PI / 2, Math.PI / 3 + randomBetween(-0.08, 0.08, rng), 0);
@@ -318,48 +340,48 @@ function createCitizenModel(roleProfile, rng = Math.random) {
     fog: true,
   });
 
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.38, 1.12, 8, 16), garmentMaterial);
+  const body = new THREE.Mesh(SHARED_GEOMETRIES.body, garmentMaterial);
   body.position.y = 1.08;
   group.add(body);
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.31, 16, 16), skinMaterial);
+  const head = new THREE.Mesh(SHARED_GEOMETRIES.head, skinMaterial);
   head.position.y = 2.02;
   group.add(head);
 
-  const leftArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.6, 6, 10), trimMaterial.clone());
+  const leftArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial.clone());
   leftArm.position.set(-0.5, 1.18, 0);
   leftArm.rotation.z = 0.08;
   group.add(leftArm);
 
-  const rightArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.6, 6, 10), trimMaterial.clone());
+  const rightArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial.clone());
   rightArm.position.set(0.5, 1.18, 0);
   rightArm.rotation.z = -0.08;
   group.add(rightArm);
 
-  const leftLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.6, 6, 10), garmentMaterial.clone());
+  const leftLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial.clone());
   leftLeg.position.set(-0.18, 0.42, 0);
   group.add(leftLeg);
 
-  const rightLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.6, 6, 10), garmentMaterial.clone());
+  const rightLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial.clone());
   rightLeg.position.set(0.18, 0.42, 0);
   group.add(rightLeg);
 
   const leftFoot = new THREE.Mesh(
-    new THREE.BoxGeometry(0.18, 0.06, 0.3),
+    SHARED_GEOMETRIES.foot,
     accentMaterial.clone(),
   );
   leftFoot.position.set(-0.18, 0.05, 0.08);
   group.add(leftFoot);
 
   const rightFoot = new THREE.Mesh(
-    new THREE.BoxGeometry(0.18, 0.06, 0.3),
+    SHARED_GEOMETRIES.foot,
     accentMaterial.clone(),
   );
   rightFoot.position.set(0.18, 0.05, 0.08);
   group.add(rightFoot);
 
   const belt = new THREE.Mesh(
-    new THREE.TorusGeometry(0.3, 0.05, 8, 16),
+    SHARED_GEOMETRIES.belt,
     accentMaterial.clone(),
   );
   belt.rotation.x = Math.PI / 2;
@@ -368,14 +390,14 @@ function createCitizenModel(roleProfile, rng = Math.random) {
 
   if (roleProfile.id === 'guard' || roleProfile.id === 'priest') {
     const cloak = new THREE.Mesh(
-      new THREE.BoxGeometry(0.58, 0.9, 0.06),
+      SHARED_GEOMETRIES.cloak,
       garmentMaterial.clone(),
     );
     cloak.position.set(0, 1.18, -0.2);
     group.add(cloak);
   } else if (roleProfile.id === 'merchant' || roleProfile.id === 'artisan') {
     const apron = new THREE.Mesh(
-      new THREE.BoxGeometry(0.34, 0.68, 0.04),
+      SHARED_GEOMETRIES.apron,
       trimMaterial.clone(),
     );
     apron.position.set(0, 0.94, 0.26);
@@ -384,7 +406,7 @@ function createCitizenModel(roleProfile, rng = Math.random) {
 
   if (roleProfile.id === 'priest') {
     const headwrap = new THREE.Mesh(
-      new THREE.TorusGeometry(0.23, 0.05, 8, 18),
+      SHARED_GEOMETRIES.headwrap,
       trimMaterial.clone(),
     );
     headwrap.rotation.x = Math.PI / 2;
@@ -392,7 +414,7 @@ function createCitizenModel(roleProfile, rng = Math.random) {
     group.add(headwrap);
   } else if (roleProfile.id === 'guard') {
     const helmet = new THREE.Mesh(
-      new THREE.SphereGeometry(0.28, 12, 12),
+      SHARED_GEOMETRIES.helmet,
       accentMaterial.clone(),
     );
     helmet.scale.y = 0.7;
@@ -400,7 +422,7 @@ function createCitizenModel(roleProfile, rng = Math.random) {
     group.add(helmet);
   } else if (roleProfile.id === 'scholar') {
     const cap = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.22, 0.26, 0.12, 12),
+      SHARED_GEOMETRIES.cap,
       trimMaterial.clone(),
     );
     cap.position.y = 2.08;
