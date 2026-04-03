@@ -821,11 +821,6 @@ function createQuayEndTransition(endZ, direction = 1) {
   const group = new THREE.Group();
   group.name = `HarborQuayTransition_${direction > 0 ? "south" : "north"}`;
 
-  const shoreMaterial = new THREE.MeshStandardMaterial({
-    color: 0xc5baa0,
-    roughness: 0.94,
-    metalness: 0.02,
-  });
   const rubbleMaterial = new THREE.MeshStandardMaterial({
     color: 0x8d8479,
     roughness: 0.92,
@@ -837,35 +832,25 @@ function createQuayEndTransition(endZ, direction = 1) {
     metalness: 0.02,
   });
 
-  const shoreApron = new THREE.Mesh(
-    new THREE.CylinderGeometry(7.4, 10.2, 0.2, 22),
-    shoreMaterial,
-  );
-  shoreApron.scale.set(1.15, 1, 0.88);
-  shoreApron.position.set(QUAY_EDGE_X - 7.2, 0.08, endZ + direction * 4.8);
-  shoreApron.rotation.y = THREE.MathUtils.degToRad(direction * 8);
-  shoreApron.receiveShadow = true;
-  group.add(shoreApron);
-
   const embankment = new THREE.Mesh(
-    new THREE.BoxGeometry(7.8, 0.92, 11.4),
+    new THREE.BoxGeometry(4.8, 0.42, 5.8),
     new THREE.MeshStandardMaterial({
       color: 0xb2a58f,
       roughness: 0.88,
       metalness: 0.03,
     }),
   );
-  embankment.position.set(QUAY_EDGE_X - 3.9, -0.28, endZ + direction * 2.3);
-  embankment.rotation.z = THREE.MathUtils.degToRad(-11);
+  embankment.position.set(QUAY_EDGE_X - 2.9, -0.08, endZ + direction * 1.9);
+  embankment.rotation.z = THREE.MathUtils.degToRad(-6);
   embankment.rotation.y = THREE.MathUtils.degToRad(direction * 6);
   enableShadows(embankment);
   group.add(embankment);
 
   const retainingStone = new THREE.Mesh(
-    new THREE.BoxGeometry(2.6, 1.7, 7.2),
+    new THREE.BoxGeometry(1.8, 1.2, 4.8),
     rubbleMaterial,
   );
-  retainingStone.position.set(QUAY_EDGE_X + 0.2, -0.58, endZ + direction * 1.1);
+  retainingStone.position.set(QUAY_EDGE_X + 0.5, -0.34, endZ + direction * 0.9);
   retainingStone.rotation.y = THREE.MathUtils.degToRad(direction * 5);
   enableShadows(retainingStone);
   group.add(retainingStone);
@@ -1023,35 +1008,35 @@ function createQuayForecourt() {
   });
 
   const terrace = new THREE.Mesh(
-    new THREE.BoxGeometry(16, 0.22, 11.5),
+    new THREE.BoxGeometry(10.5, 0.16, 6.2),
     stoneMaterial,
   );
-  terrace.position.set(43, 0.06, 3.5);
+  terrace.position.set(44.2, 0.04, 3.1);
   enableShadows(terrace);
   group.add(terrace);
 
   const eastLanding = new THREE.Mesh(
-    new THREE.BoxGeometry(7.6, 0.14, 4.8),
+    new THREE.BoxGeometry(4.6, 0.1, 2.8),
     stoneMaterial,
   );
-  eastLanding.position.set(51, -0.02, 1.2);
+  eastLanding.position.set(49.2, -0.01, 1.8);
   enableShadows(eastLanding);
   group.add(eastLanding);
 
   const southLanding = new THREE.Mesh(
-    new THREE.BoxGeometry(6.8, 0.14, 4.2),
+    new THREE.BoxGeometry(4.2, 0.1, 2.6),
     stoneMaterial,
   );
-  southLanding.position.set(49.8, -0.03, 7.3);
+  southLanding.position.set(48.7, -0.01, 5.8);
   southLanding.rotation.y = THREE.MathUtils.degToRad(-8);
   enableShadows(southLanding);
   group.add(southLanding);
 
   const trim = new THREE.Mesh(
-    new THREE.BoxGeometry(16.5, 0.12, 0.8),
+    new THREE.BoxGeometry(9.8, 0.08, 0.55),
     trimMaterial,
   );
-  trim.position.set(42.4, 0.18, -1.5);
+  trim.position.set(43.8, 0.12, 0.1);
   enableShadows(trim);
   group.add(trim);
 
@@ -1063,7 +1048,7 @@ function createQuayForecourt() {
   ];
   cargoRows.forEach(({ x, z, item, scale }) => {
     const cargo = item();
-    cargo.position.set(x, 0.18, z);
+    cargo.position.set(x - 1.2, 0.14, z - 0.8);
     cargo.scale.setScalar(scale);
     group.add(cargo);
   });
