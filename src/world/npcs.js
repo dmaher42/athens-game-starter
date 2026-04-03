@@ -52,6 +52,9 @@ const SHARED_GEOMETRIES = {
   toolHandle: new THREE.CylinderGeometry(0.025, 0.025, 0.42, 8),
   toolHead: new THREE.BoxGeometry(0.16, 0.06, 0.08),
   sash: new THREE.TorusGeometry(0.44, 0.075, 8, 18, Math.PI * 1.25),
+  lowBody: new THREE.BoxGeometry(0.65, 1.25, 0.35),
+  lowHead: new THREE.SphereGeometry(0.28, 12, 12),
+  lowBase: new THREE.CylinderGeometry(0.28, 0.34, 0.18, 10),
 };
 const ROLE_MATERIALS = new Map();
 const ROLE_PROFILES = {
@@ -350,49 +353,56 @@ function tuneMaterialPresentation(material, roleProfile, rng) {
 function createCitizenModel(roleProfile, rng = Math.random) {
   const group = new THREE.Group();
   group.name = `${roleProfile.label}NPC`;
+  const highGroup = new THREE.Group();
+  highGroup.name = `${roleProfile.label}High`;
+  group.add(highGroup);
+  const lowGroup = new THREE.Group();
+  lowGroup.name = `${roleProfile.label}Low`;
+  lowGroup.visible = false;
+  group.add(lowGroup);
 
   const { garmentMaterial, skinMaterial, trimMaterial, accentMaterial } =
     getRoleMaterials(roleProfile);
 
   const body = new THREE.Mesh(SHARED_GEOMETRIES.body, garmentMaterial);
   body.position.y = 1.08;
-  group.add(body);
+  highGroup.add(body);
 
   const head = new THREE.Mesh(SHARED_GEOMETRIES.head, skinMaterial);
   head.position.y = 2.02;
-  group.add(head);
+  highGroup.add(head);
 
   const leftArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial);
   leftArm.position.set(-0.5, 1.18, 0);
   leftArm.rotation.z = 0.08;
-  group.add(leftArm);
+  highGroup.add(leftArm);
 
   const rightArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial);
   rightArm.position.set(0.5, 1.18, 0);
   rightArm.rotation.z = -0.08;
-  group.add(rightArm);
+  highGroup.add(rightArm);
 
   const leftLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial);
   leftLeg.position.set(-0.18, 0.42, 0);
-  group.add(leftLeg);
+  highGroup.add(leftLeg);
 
   const rightLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial);
   rightLeg.position.set(0.18, 0.42, 0);
-  group.add(rightLeg);
+  highGroup.add(rightLeg);
 
   const leftFoot = new THREE.Mesh(
     SHARED_GEOMETRIES.foot,
     accentMaterial,
   );
   leftFoot.position.set(-0.18, 0.05, 0.08);
-  group.add(leftFoot);
+  highGroup.add(leftFoot);
 
   const rightFoot = new THREE.Mesh(
     SHARED_GEOMETRIES.foot,
     accentMaterial,
   );
   rightFoot.position.set(0.18, 0.05, 0.08);
-  group.add(rightFoot);
+  highGroup.add(rightFoot);
 
   const belt = new THREE.Mesh(
     SHARED_GEOMETRIES.belt,
@@ -400,7 +410,7 @@ function createCitizenModel(roleProfile, rng = Math.random) {
   );
   belt.rotation.x = Math.PI / 2;
   belt.position.y = 1.0;
-  group.add(belt);
+  highGroup.add(belt);
 
   if (roleProfile.id === 'guard' || roleProfile.id === 'priest') {
     const cloak = new THREE.Mesh(
@@ -408,14 +418,14 @@ function createCitizenModel(roleProfile, rng = Math.random) {
       garmentMaterial,
     );
     cloak.position.set(0, 1.18, -0.2);
-    group.add(cloak);
+    highGroup.add(cloak);
   } else if (roleProfile.id === 'merchant' || roleProfile.id === 'artisan') {
     const apron = new THREE.Mesh(
       SHARED_GEOMETRIES.apron,
       trimMaterial,
     );
     apron.position.set(0, 0.94, 0.26);
-    group.add(apron);
+    highGroup.add(apron);
   }
 
   if (roleProfile.id === 'priest') {
@@ -425,7 +435,7 @@ function createCitizenModel(roleProfile, rng = Math.random) {
     );
     headwrap.rotation.x = Math.PI / 2;
     headwrap.position.y = 2.08;
-    group.add(headwrap);
+    highGroup.add(headwrap);
   } else if (roleProfile.id === 'guard') {
     const helmet = new THREE.Mesh(
       SHARED_GEOMETRIES.helmet,
@@ -433,18 +443,28 @@ function createCitizenModel(roleProfile, rng = Math.random) {
     );
     helmet.scale.y = 0.7;
     helmet.position.y = 2.05;
-    group.add(helmet);
+    highGroup.add(helmet);
   } else if (roleProfile.id === 'scholar') {
     const cap = new THREE.Mesh(
       SHARED_GEOMETRIES.cap,
       trimMaterial,
     );
     cap.position.y = 2.08;
-    group.add(cap);
+    highGroup.add(cap);
   }
 
   const accessory = createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial);
-  group.add(accessory);
+  highGroup.add(accessory);
+
+  const lowBody = new THREE.Mesh(SHARED_GEOMETRIES.lowBody, garmentMaterial);
+  lowBody.position.y = 1.0;
+  lowGroup.add(lowBody);
+  const lowHead = new THREE.Mesh(SHARED_GEOMETRIES.lowHead, skinMaterial);
+  lowHead.position.y = 1.82;
+  lowGroup.add(lowHead);
+  const lowBase = new THREE.Mesh(SHARED_GEOMETRIES.lowBase, accentMaterial);
+  lowBase.position.y = 0.12;
+  lowGroup.add(lowBase);
 
   group.traverse((child) => {
     if (!child.isMesh) return;
@@ -457,6 +477,8 @@ function createCitizenModel(roleProfile, rng = Math.random) {
 
   return {
     group,
+    highGroup,
+    lowGroup,
     body,
     head,
     leftArm,
@@ -486,6 +508,12 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
   const maxSpeed = options.maxSpeed ?? 1.2;
   const terrain = options.terrain ?? null;
   const camera = options.camera ?? null;
+  const lodDistance = options.lodDistance ?? 70;
+  const lodHysteresis = options.lodHysteresis ?? 6;
+  const lodDistanceIn = Math.max(5, lodDistance - lodHysteresis);
+  const lodDistanceOut = lodDistance + lodHysteresis;
+  const lodDistanceInSq = lodDistanceIn * lodDistanceIn;
+  const lodDistanceOutSq = lodDistanceOut * lodDistanceOut;
   const farUpdateDistance = options.farUpdateDistance ?? 140;
   const farUpdateStride = options.farUpdateStride ?? 2;
   const farUpdateDistanceSq = farUpdateDistance * farUpdateDistance;
@@ -502,7 +530,20 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
   for (let i = 0; i < count; i++) {
     const rng = createSeededRng((i + 1) * 97.31);
     const roleProfile = pickRoleProfile(options.role, i, roles);
-    const { group, body, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, accessory } =
+    const {
+      group,
+      highGroup,
+      lowGroup,
+      body,
+      head,
+      leftArm,
+      rightArm,
+      leftLeg,
+      rightLeg,
+      leftFoot,
+      rightFoot,
+      accessory,
+    } =
       createCitizenModel(roleProfile, rng);
     const scale = randomBetween(roleProfile.scaleRange[0], roleProfile.scaleRange[1], rng);
     group.scale.setScalar(scale);
@@ -529,6 +570,7 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
     let idleTurnTarget = 0;
     let idleTurnTimer = randomBetween(1.4, 3.2, rng);
     let skipFrameCounter = 0;
+    let usingHighDetail = true;
 
     const update = (dt) => {
       if (!Number.isFinite(dt)) return;
@@ -570,11 +612,28 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
         Math.min(1, dt * (isIdle ? 3.2 : 6.8)),
       );
 
+      let distanceSq = null;
+      if (camera) {
+        const dx = group.position.x - camera.position.x;
+        const dy = group.position.y - camera.position.y;
+        const dz = group.position.z - camera.position.z;
+        distanceSq = dx * dx + dy * dy + dz * dz;
+        if (usingHighDetail && distanceSq > lodDistanceOutSq) {
+          usingHighDetail = false;
+          highGroup.visible = false;
+          lowGroup.visible = true;
+        } else if (!usingHighDetail && distanceSq < lodDistanceInSq) {
+          usingHighDetail = true;
+          highGroup.visible = true;
+          lowGroup.visible = false;
+        }
+      }
+
       if (camera && farUpdateStride > 1) {
         const dx = group.position.x - camera.position.x;
         const dy = group.position.y - camera.position.y;
         const dz = group.position.z - camera.position.z;
-        const distanceSq = dx * dx + dy * dy + dz * dz;
+        distanceSq = distanceSq ?? (dx * dx + dy * dy + dz * dz);
         if (distanceSq > farUpdateDistanceSq) {
           skipFrameCounter = (skipFrameCounter + 1) % farUpdateStride;
           if (skipFrameCounter !== 0) {
