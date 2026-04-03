@@ -788,13 +788,17 @@ export class Application {
           count: 8,
           minSpeed: 0.7,
           maxSpeed: 1.4,
+          roles: ["merchant", "scholar", "guard", "artisan", "citizen", "merchant", "priest", "citizen"],
           terrain,
         });
         this.npcUpdaters.push(...crowd.updaters);
       };
 
       if (ENABLE_GLB_MODE) {
-        spawnGLBNPCs(worldRoot, mainRoad, { terrain })
+        spawnGLBNPCs(worldRoot, mainRoad, {
+          terrain,
+          roles: ["dockworker", "merchant", "guard", "citizen", "artisan", "dockworker"],
+        })
           .then((glbNpcs: any) => {
             const glbUpdaters = Array.isArray(glbNpcs?.updaters)
               ? glbNpcs.updaters

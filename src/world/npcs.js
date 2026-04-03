@@ -30,76 +30,349 @@ async function headOk(url) {
 const manifestWarnings = new Set();
 const npcWarnings = new Set();
 const npcAvailability = new Map();
+const DEFAULT_ROLE_SEQUENCE = ['merchant', 'scholar', 'guard', 'artisan', 'citizen', 'dockworker', 'priest'];
+const ROLE_PROFILES = {
+  citizen: {
+    id: 'citizen',
+    label: 'Citizen',
+    garmentColor: 0xcd9f72,
+    trimColor: 0xf2ead8,
+    accentColor: 0x8d5f3f,
+    skinColor: 0xd6b087,
+    accessory: 'sash',
+    paceMultiplier: 0.96,
+    scaleRange: [0.94, 1.05],
+    moveAction: 'Walk',
+    idleAction: 'Idle',
+    stopChance: 0.16,
+    stopDuration: [0.7, 1.8],
+  },
+  merchant: {
+    id: 'merchant',
+    label: 'Merchant',
+    garmentColor: 0xc35d33,
+    trimColor: 0xf6e5bf,
+    accentColor: 0x7b4f2b,
+    skinColor: 0xd8b690,
+    accessory: 'basket',
+    paceMultiplier: 0.9,
+    scaleRange: [0.95, 1.06],
+    moveAction: 'Walk',
+    idleAction: 'Idle',
+    stopChance: 0.24,
+    stopDuration: [1.2, 2.8],
+  },
+  scholar: {
+    id: 'scholar',
+    label: 'Scholar',
+    garmentColor: 0x4a68a8,
+    trimColor: 0xf5efe3,
+    accentColor: 0x324a77,
+    skinColor: 0xd0ac83,
+    accessory: 'scroll',
+    paceMultiplier: 0.85,
+    scaleRange: [0.92, 1.01],
+    moveAction: 'Walk',
+    idleAction: 'Idle',
+    stopChance: 0.3,
+    stopDuration: [1.4, 3.2],
+  },
+  guard: {
+    id: 'guard',
+    label: 'Guard',
+    garmentColor: 0x5f4a33,
+    trimColor: 0xd9ccb5,
+    accentColor: 0x8d6a32,
+    skinColor: 0xcda780,
+    accessory: 'spear',
+    paceMultiplier: 1.05,
+    scaleRange: [1.0, 1.12],
+    moveAction: 'Swagger',
+    idleAction: 'Idle',
+    stopChance: 0.14,
+    stopDuration: [0.6, 1.5],
+  },
+  dockworker: {
+    id: 'dockworker',
+    label: 'Dockworker',
+    garmentColor: 0x7e6653,
+    trimColor: 0xe7d3b0,
+    accentColor: 0x5a4636,
+    skinColor: 0xc89d75,
+    accessory: 'satchel',
+    paceMultiplier: 1.12,
+    scaleRange: [0.98, 1.1],
+    moveAction: 'Walk',
+    idleAction: 'Idle',
+    stopChance: 0.18,
+    stopDuration: [0.6, 1.6],
+  },
+  priest: {
+    id: 'priest',
+    label: 'Priest',
+    garmentColor: 0xddd2bd,
+    trimColor: 0xf7f1e4,
+    accentColor: 0xb2905a,
+    skinColor: 0xd2ae86,
+    accessory: 'staff',
+    paceMultiplier: 0.82,
+    scaleRange: [0.96, 1.05],
+    moveAction: 'Walk',
+    idleAction: 'Idle',
+    stopChance: 0.32,
+    stopDuration: [1.6, 3.6],
+  },
+  artisan: {
+    id: 'artisan',
+    label: 'Artisan',
+    garmentColor: 0x6b8a5e,
+    trimColor: 0xefeadc,
+    accentColor: 0x7f5632,
+    skinColor: 0xcfab84,
+    accessory: 'tool',
+    paceMultiplier: 0.98,
+    scaleRange: [0.95, 1.05],
+    moveAction: 'Walk',
+    idleAction: 'Idle',
+    stopChance: 0.2,
+    stopDuration: [0.8, 2.2],
+  },
+};
 
-function warnOnce(set, key, ...args) {
-  if (!key) return;
-  if (set.has(key)) {
-    return;
-  }
-  set.add(key);
-  console.warn(...args);
+function clamp01(value) {
+  return THREE.MathUtils.clamp(value, 0, 1);
 }
 
-async function resolveNpcUrl(key, candidates) {
-  if (npcAvailability.has(key)) {
-    return npcAvailability.get(key);
-  }
-
-  let resolved = null;
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    const ok = await headOk(candidate);
-    if (ok) {
-      resolved = candidate;
-      break;
-    }
-  }
-
-  npcAvailability.set(key, resolved);
-  return resolved;
+function randomBetween(min, max, rng = Math.random) {
+  return THREE.MathUtils.lerp(min, max, rng());
 }
 
-function createCitizenModel(primaryColor, secondaryColor) {
-  const group = new THREE.Group();
-  group.name = 'CitizenNPC';
+function createSeededRng(seed) {
+  let state = Math.floor(seed * 1000) || 1;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+}
 
-  const bodyMaterial = new THREE.MeshStandardMaterial({
-    color: primaryColor,
-    roughness: 0.6,
-    metalness: 0.1,
-    fog: false,
+function smoothAngle(current, target, alpha) {
+  const delta = Math.atan2(Math.sin(target - current), Math.cos(target - current));
+  return current + delta * alpha;
+}
+
+function pickRoleProfile(roleId, index = 0, roles = DEFAULT_ROLE_SEQUENCE) {
+  const roleKey =
+    typeof roleId === 'string' && ROLE_PROFILES[roleId]
+      ? roleId
+      : roles[index % roles.length] ?? 'citizen';
+  return ROLE_PROFILES[roleKey] ?? ROLE_PROFILES.citizen;
+}
+
+function inferRoleFromFileName(fileName, fallbackIndex = 0, roles = DEFAULT_ROLE_SEQUENCE) {
+  const lower = String(fileName || '').toLowerCase();
+  if (lower.includes('guard') || lower.includes('soldier')) return 'guard';
+  if (lower.includes('dock') || lower.includes('porter') || lower.includes('worker')) return 'dockworker';
+  if (lower.includes('priest') || lower.includes('oracle')) return 'priest';
+  if (lower.includes('merchant') || lower.includes('vendor') || lower.includes('seller')) return 'merchant';
+  if (lower.includes('scribe') || lower.includes('scholar') || lower.includes('philos')) return 'scholar';
+  if (lower.includes('artisan') || lower.includes('smith') || lower.includes('maker')) return 'artisan';
+  return roles[fallbackIndex % roles.length] ?? 'citizen';
+}
+
+function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
+  const accessoryRoot = new THREE.Group();
+  accessoryRoot.name = `${roleProfile.label}Accessory`;
+
+  if (roleProfile.accessory === 'basket') {
+    const basket = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.24, 0.28, 12),
+      accentMaterial.clone(),
+    );
+    basket.position.set(0.34, 0.84, 0.12);
+    accessoryRoot.add(basket);
+  } else if (roleProfile.accessory === 'scroll') {
+    const scroll = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.05, 0.34, 10),
+      trimMaterial.clone(),
+    );
+    scroll.rotation.z = Math.PI / 2;
+    scroll.position.set(-0.34, 1.08, 0.18);
+    accessoryRoot.add(scroll);
+  } else if (roleProfile.accessory === 'spear') {
+    const shaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.026, 0.03, 1.8, 8),
+      accentMaterial.clone(),
+    );
+    shaft.position.set(0.42, 1.12, 0.02);
+    accessoryRoot.add(shaft);
+    const tip = new THREE.Mesh(
+      new THREE.ConeGeometry(0.055, 0.18, 8),
+      trimMaterial.clone(),
+    );
+    tip.position.set(0.42, 2.02, 0.02);
+    accessoryRoot.add(tip);
+  } else if (roleProfile.accessory === 'staff') {
+    const staff = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.028, 0.03, 1.55, 8),
+      accentMaterial.clone(),
+    );
+    staff.position.set(-0.34, 1.02, 0.05);
+    accessoryRoot.add(staff);
+  } else if (roleProfile.accessory === 'satchel') {
+    const satchel = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.28, 0.12),
+      accentMaterial.clone(),
+    );
+    satchel.position.set(-0.28, 0.96, 0.22);
+    satchel.rotation.z = -0.2;
+    accessoryRoot.add(satchel);
+  } else if (roleProfile.accessory === 'tool') {
+    const handle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.025, 0.42, 8),
+      accentMaterial.clone(),
+    );
+    handle.position.set(0.36, 0.88, 0.08);
+    handle.rotation.z = 0.55;
+    accessoryRoot.add(handle);
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(0.16, 0.06, 0.08),
+      trimMaterial.clone(),
+    );
+    head.position.set(0.45, 1.0, 0.08);
+    head.rotation.z = 0.55;
+    accessoryRoot.add(head);
+  } else {
+    const sash = new THREE.Mesh(
+      new THREE.TorusGeometry(0.44, 0.075, 8, 18, Math.PI * 1.25),
+      trimMaterial.clone(),
+    );
+    sash.rotation.set(Math.PI / 2, Math.PI / 3 + randomBetween(-0.08, 0.08, rng), 0);
+    sash.position.y = 1.3;
+    accessoryRoot.add(sash);
+  }
+
+  accessoryRoot.traverse((child) => {
+    if (!child.isMesh) return;
+    child.castShadow = true;
+    child.receiveShadow = true;
+    child.userData.noCollision = true;
   });
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.1, 8, 16), bodyMaterial);
-  body.position.y = 1.1;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  body.userData.noCollision = true;
+
+  return accessoryRoot;
+}
+
+function tuneMaterialPresentation(material, roleProfile, rng) {
+  if (!material || material.userData?.npcPresentationApplied) return material;
+  material.userData = material.userData || {};
+
+  if (material.color?.isColor) {
+    const hsl = { h: 0, s: 0, l: 0 };
+    material.color.getHSL(hsl);
+    hsl.h = (hsl.h + randomBetween(-0.015, 0.015, rng) + 1) % 1;
+    hsl.s = clamp01(hsl.s * randomBetween(0.92, 1.08, rng));
+    hsl.l = clamp01(hsl.l * randomBetween(0.94, 1.04, rng));
+    material.color.setHSL(hsl.h, hsl.s, hsl.l);
+  }
+
+  if (typeof material.roughness === 'number') {
+    material.roughness = Math.max(material.roughness, 0.68);
+  }
+  if (typeof material.metalness === 'number') {
+    material.metalness = Math.min(material.metalness, roleProfile.id === 'guard' ? 0.18 : 0.08);
+  }
+  if (typeof material.envMapIntensity === 'number') {
+    material.envMapIntensity = Math.min(material.envMapIntensity, roleProfile.id === 'guard' ? 0.18 : 0.1);
+  }
+
+  material.userData.npcPresentationApplied = true;
+  material.needsUpdate = true;
+  return material;
+}
+
+function createCitizenModel(roleProfile, rng = Math.random) {
+  const group = new THREE.Group();
+  group.name = `${roleProfile.label}NPC`;
+
+  const garmentMaterial = new THREE.MeshStandardMaterial({
+    color: roleProfile.garmentColor,
+    roughness: 0.86,
+    metalness: roleProfile.id === 'guard' ? 0.06 : 0.02,
+    fog: true,
+  });
+  const skinMaterial = new THREE.MeshStandardMaterial({
+    color: roleProfile.skinColor,
+    roughness: 0.78,
+    metalness: 0.01,
+    fog: true,
+  });
+  const trimMaterial = new THREE.MeshStandardMaterial({
+    color: roleProfile.trimColor,
+    roughness: 0.74,
+    metalness: 0.02,
+    fog: true,
+  });
+  const accentMaterial = new THREE.MeshStandardMaterial({
+    color: roleProfile.accentColor,
+    roughness: 0.8,
+    metalness: roleProfile.id === 'guard' ? 0.08 : 0.02,
+    fog: true,
+  });
+
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.38, 1.12, 8, 16), garmentMaterial);
+  body.position.y = 1.08;
   group.add(body);
 
-  const headMaterial = new THREE.MeshStandardMaterial({
-    color: secondaryColor,
-    roughness: 0.4,
-    fog: false,
-  });
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), headMaterial);
-  head.position.y = 2.0;
-  head.castShadow = true;
-  head.userData.noCollision = true;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.31, 16, 16), skinMaterial);
+  head.position.y = 2.02;
   group.add(head);
 
-  const sash = new THREE.Mesh(
-    new THREE.TorusGeometry(0.45, 0.08, 8, 18, Math.PI * 1.25),
-    new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.5, fog: false })
+  const leftArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.6, 6, 10), trimMaterial.clone());
+  leftArm.position.set(-0.5, 1.18, 0);
+  leftArm.rotation.z = 0.08;
+  group.add(leftArm);
+
+  const rightArm = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.6, 6, 10), trimMaterial.clone());
+  rightArm.position.set(0.5, 1.18, 0);
+  rightArm.rotation.z = -0.08;
+  group.add(rightArm);
+
+  const belt = new THREE.Mesh(
+    new THREE.TorusGeometry(0.3, 0.05, 8, 16),
+    accentMaterial.clone(),
   );
-  sash.rotation.set(Math.PI / 2, Math.PI / 3, 0);
-  sash.position.y = 1.3;
-  sash.castShadow = true;
-  sash.userData.noCollision = true;
-  group.add(sash);
+  belt.rotation.x = Math.PI / 2;
+  belt.position.y = 1.0;
+  group.add(belt);
+
+  if (roleProfile.id === 'guard' || roleProfile.id === 'priest') {
+    const cloak = new THREE.Mesh(
+      new THREE.BoxGeometry(0.58, 0.9, 0.06),
+      garmentMaterial.clone(),
+    );
+    cloak.position.set(0, 1.18, -0.2);
+    group.add(cloak);
+  } else if (roleProfile.id === 'merchant' || roleProfile.id === 'artisan') {
+    const apron = new THREE.Mesh(
+      new THREE.BoxGeometry(0.34, 0.68, 0.04),
+      trimMaterial.clone(),
+    );
+    apron.position.set(0, 0.94, 0.26);
+    group.add(apron);
+  }
+
+  const accessory = createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial);
+  group.add(accessory);
+
+  group.traverse((child) => {
+    if (!child.isMesh) return;
+    child.castShadow = true;
+    child.receiveShadow = true;
+    child.userData.noCollision = true;
+  });
 
   applyForegroundFogPolicy(group);
 
-  return { group, body };
+  return { group, body, head, leftArm, rightArm, accessory };
 }
 
 function createCurveLengthLookup(curve) {
@@ -118,13 +391,9 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
   const minSpeed = options.minSpeed ?? 0.6;
   const maxSpeed = options.maxSpeed ?? 1.2;
   const terrain = options.terrain ?? null;
-  const palette = options.palette ?? [
-    { primary: 0x4e8ef7, secondary: 0xf5f5f5 },
-    { primary: 0xf06292, secondary: 0xffecb3 },
-    { primary: 0x81c784, secondary: 0xe8f5e9 },
-    { primary: 0xffb74d, secondary: 0xfff3e0 },
-    { primary: 0x9575cd, secondary: 0xf3e5f5 },
-  ];
+  const roles = Array.isArray(options.roles) && options.roles.length > 0
+    ? options.roles
+    : DEFAULT_ROLE_SEQUENCE;
 
   const { totalLength } = createCurveLengthLookup(pathCurve);
   const getHeightAt = terrain?.userData?.getHeightAt?.bind(terrain?.userData);
@@ -133,21 +402,46 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
   const updaters = [];
 
   for (let i = 0; i < count; i++) {
-    const paletteEntry = palette[i % palette.length];
-    const { group, body } = createCitizenModel(paletteEntry.primary, paletteEntry.secondary);
+    const rng = createSeededRng((i + 1) * 97.31);
+    const roleProfile = pickRoleProfile(options.role, i, roles);
+    const { group, body, head, leftArm, rightArm, accessory } = createCitizenModel(roleProfile, rng);
+    const scale = randomBetween(roleProfile.scaleRange[0], roleProfile.scaleRange[1], rng);
+    group.scale.setScalar(scale);
+    group.userData.npcRole = roleProfile.id;
+    group.userData.npcLabel = roleProfile.label;
     group.userData.noCollision = true;
     scene.add(group);
     citizens.push(group);
 
-    const speed = THREE.MathUtils.lerp(minSpeed, maxSpeed, Math.random());
-    let progress = (i / count + Math.random() * 0.1) % 1;
-    let stepPhase = Math.random() * Math.PI * 2;
+    const speed =
+      THREE.MathUtils.lerp(minSpeed, maxSpeed, rng()) * roleProfile.paceMultiplier;
+    let progress = (i / count + rng() * 0.1) % 1;
+    let stepPhase = rng() * Math.PI * 2;
+    let moveTimeRemaining = randomBetween(2.8, 6.2, rng);
+    let idleTimeRemaining = 0;
+    let targetYaw = 0;
 
     const update = (dt) => {
       if (!Number.isFinite(dt)) return;
-      const distancePerSecond = speed;
-      const deltaProgress = (distancePerSecond * dt) / totalLength;
-      progress = (progress + deltaProgress) % 1;
+      const isIdle = idleTimeRemaining > 0;
+      if (isIdle) {
+        idleTimeRemaining = Math.max(0, idleTimeRemaining - dt);
+        if (idleTimeRemaining === 0) {
+          moveTimeRemaining = randomBetween(2.6, 6.4, rng);
+        }
+      } else {
+        const distancePerSecond = speed;
+        const deltaProgress = (distancePerSecond * dt) / totalLength;
+        progress = (progress + deltaProgress) % 1;
+        moveTimeRemaining -= dt;
+        if (moveTimeRemaining <= 0 && rng() < roleProfile.stopChance) {
+          idleTimeRemaining = randomBetween(
+            roleProfile.stopDuration[0],
+            roleProfile.stopDuration[1],
+            rng,
+          );
+        }
+      }
 
       const position = pathCurve.getPointAt(progress);
       const tangent = pathCurve.getTangentAt(progress);
@@ -158,12 +452,27 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       const sampledY = getHeightAt ? getHeightAt(group.position.x, group.position.z) : position.y;
       group.position.y = Number.isFinite(sampledY) ? sampledY + 0.05 : position.y + 0.05;
 
-      const yaw = Math.atan2(tangent.x, tangent.z);
-      group.rotation.set(0, yaw, 0);
+      if (tangent) {
+        targetYaw = Math.atan2(tangent.x, tangent.z);
+      }
+      group.rotation.y = smoothAngle(
+        group.rotation.y,
+        targetYaw,
+        Math.min(1, dt * (isIdle ? 3.2 : 6.8)),
+      );
 
-      stepPhase += dt * speed * 6;
-      body.position.y = 1.1 + Math.sin(stepPhase) * 0.07;
-      body.rotation.z = Math.sin(stepPhase) * 0.2;
+      stepPhase += dt * speed * (isIdle ? 1.8 : 6.4);
+      const gait = Math.sin(stepPhase);
+      const sway = Math.cos(stepPhase * 0.5);
+      body.position.y = 1.08 + (isIdle ? sway * 0.02 : gait * 0.06);
+      body.rotation.z = isIdle ? sway * 0.05 : gait * 0.16;
+      head.rotation.y = isIdle ? Math.sin(stepPhase * 0.35) * 0.18 : 0;
+      leftArm.rotation.z = isIdle ? 0.08 + sway * 0.06 : 0.16 + gait * 0.32;
+      rightArm.rotation.z = isIdle ? -0.08 - sway * 0.06 : -0.16 - gait * 0.32;
+      if (accessory) {
+        accessory.rotation.y = isIdle ? Math.sin(stepPhase * 0.2) * 0.12 : 0;
+        accessory.position.y = isIdle ? 0.01 : Math.sin(stepPhase * 2) * 0.02;
+      }
     };
 
     updaters.push(update);
@@ -208,11 +517,35 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
     return { npcs: [], updaters: [] };
   }
 
-  const fileNames = entries
-    .map((value) => (typeof value === 'string' ? sanitizeRelativePath(value) : ''))
-    .filter((value) => value.length > 0);
+  const roles = Array.isArray(options.roles) && options.roles.length > 0
+    ? options.roles
+    : DEFAULT_ROLE_SEQUENCE;
+  const manifestEntries = entries
+    .map((value, index) => {
+      if (typeof value === 'string') {
+        const fileName = sanitizeRelativePath(value);
+        return fileName
+          ? {
+              fileName,
+              role: inferRoleFromFileName(fileName, index, roles),
+            }
+          : null;
+      }
+      if (value && typeof value === 'object') {
+        const fileName = sanitizeRelativePath(value.file ?? value.path ?? value.url ?? '');
+        if (!fileName) return null;
+        return {
+          fileName,
+          role: typeof value.role === 'string' ? value.role : inferRoleFromFileName(fileName, index, roles),
+          moveAction: typeof value.moveAction === 'string' ? value.moveAction : null,
+          idleAction: typeof value.idleAction === 'string' ? value.idleAction : null,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
 
-  if (!fileNames.length) {
+  if (!manifestEntries.length) {
     return { npcs: [], updaters: [] };
   }
 
@@ -225,8 +558,11 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
   const npcs = [];
   const updaters = [];
 
-  for (let i = 0; i < fileNames.length; i += 1) {
-    const fileName = fileNames[i];
+  for (let i = 0; i < manifestEntries.length; i += 1) {
+    const manifestEntry = manifestEntries[i];
+    const fileName = manifestEntry.fileName;
+    const rng = createSeededRng((i + 11) * 53.17);
+    const roleProfile = pickRoleProfile(manifestEntry.role, i, roles);
     const npcDir = joinPath(baseUrl, 'models/npcs');
     const relativeNpcPath = `models/npcs/${fileName}`;
     const urlCandidates = Array.from(
@@ -256,10 +592,24 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
     const character = new Character();
     character.name = `GLBNPC:${fileName}`;
     character.userData.noCollision = true;
+    character.userData.npcRole = roleProfile.id;
+    character.userData.npcLabel = roleProfile.label;
 
     try {
       await character.load(prioritizedCandidates, scene.userData?.renderer, { targetHeight: 1.7 });
       applyForegroundFogPolicy(character);
+      const scale = randomBetween(roleProfile.scaleRange[0], roleProfile.scaleRange[1], rng);
+      character.scale.setScalar(scale);
+      character.traverse((child) => {
+        if (!child?.isMesh || !child.material) return;
+        if (Array.isArray(child.material)) {
+          child.material = child.material.map((material) =>
+            tuneMaterialPresentation(material, roleProfile, rng)
+          );
+        } else {
+          child.material = tuneMaterialPresentation(child.material, roleProfile, rng);
+        }
+      });
     } catch (error) {
       const message = error?.message || String(error);
       if (message && message.includes('Downloaded HTML instead of GLB')) {
@@ -284,21 +634,32 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
     scene.add(character);
     npcs.push(character);
 
-    const targetAction = character.actions?.get('Swagger')
-      ? 'Swagger'
-      : character.actions?.get('Walk')
-      ? 'Walk'
-      : 'Idle';
+    const moveAction = manifestEntry.moveAction
+      ?? (character.actions?.get(roleProfile.moveAction) ? roleProfile.moveAction : null)
+      ?? (character.actions?.get('Swagger') ? 'Swagger' : null)
+      ?? (character.actions?.get('Walk') ? 'Walk' : null)
+      ?? 'Idle';
+    const idleAction = manifestEntry.idleAction
+      ?? (character.actions?.get(roleProfile.idleAction) ? roleProfile.idleAction : null)
+      ?? 'Idle';
+    const targetAction = moveAction;
     if (targetAction) {
       try {
         character.play(targetAction, 0.4);
+        if (character.current) {
+          character.current.timeScale = THREE.MathUtils.clamp(roleProfile.paceMultiplier, 0.8, 1.2);
+        }
       } catch (error) {
         console.warn('[NPC Loader] Unable to play animation for', fileName, error);
       }
     }
 
-    const speed = THREE.MathUtils.lerp(minSpeed, maxSpeed, Math.random());
-    let progress = ((i / fileNames.length) + Math.random() * 0.1) % 1;
+    const speed =
+      THREE.MathUtils.lerp(minSpeed, maxSpeed, rng()) * roleProfile.paceMultiplier;
+    let progress = ((i / manifestEntries.length) + rng() * 0.1) % 1;
+    let moveTimeRemaining = randomBetween(3.0, 7.0, rng);
+    let idleTimeRemaining = 0;
+    let targetYaw = 0;
 
     const initialPosition = pathCurve.getPointAt(progress);
     if (initialPosition) {
@@ -309,9 +670,9 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
       character.position.y = Number.isFinite(sampledY) ? sampledY : initialPosition.y;
       const tangent = pathCurve.getTangentAt(progress);
       if (tangent) {
-        const yaw = Math.atan2(tangent.x, tangent.z);
-        if (Number.isFinite(yaw)) {
-          character.rotation.set(0, yaw, 0);
+        targetYaw = Math.atan2(tangent.x, tangent.z);
+        if (Number.isFinite(targetYaw)) {
+          character.rotation.set(0, targetYaw, 0);
         }
       }
     }
@@ -319,10 +680,34 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
     const update = (dt) => {
       if (!Number.isFinite(dt)) return;
 
-      const distancePerSecond = speed;
-      const length = totalLength > 0 ? totalLength : 1;
-      const deltaProgress = (distancePerSecond * dt) / length;
-      progress = (progress + deltaProgress) % 1;
+      const isIdle = idleTimeRemaining > 0;
+      if (isIdle) {
+        idleTimeRemaining = Math.max(0, idleTimeRemaining - dt);
+        if (idleTimeRemaining === 0 && moveAction) {
+          character.play(moveAction, 0.28);
+          if (character.current) {
+            character.current.timeScale = THREE.MathUtils.clamp(roleProfile.paceMultiplier, 0.8, 1.2);
+          }
+          moveTimeRemaining = randomBetween(3.0, 7.4, rng);
+        }
+      } else {
+        const distancePerSecond = speed;
+        const length = totalLength > 0 ? totalLength : 1;
+        const deltaProgress = (distancePerSecond * dt) / length;
+        progress = (progress + deltaProgress) % 1;
+        moveTimeRemaining -= dt;
+        if (moveTimeRemaining <= 0 && rng() < roleProfile.stopChance) {
+          idleTimeRemaining = randomBetween(
+            roleProfile.stopDuration[0],
+            roleProfile.stopDuration[1],
+            rng,
+          );
+          if (idleAction) {
+            character.play(idleAction, 0.3);
+            if (character.current) character.current.timeScale = 1;
+          }
+        }
+      }
 
       const position = pathCurve.getPointAt(progress);
       if (!position) {
@@ -338,11 +723,13 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
       character.position.y = Number.isFinite(sampledY) ? sampledY : position.y;
 
       if (tangent) {
-        const yaw = Math.atan2(tangent.x, tangent.z);
-        if (Number.isFinite(yaw)) {
-          character.rotation.set(0, yaw, 0);
-        }
+        targetYaw = Math.atan2(tangent.x, tangent.z);
       }
+      character.rotation.y = smoothAngle(
+        character.rotation.y,
+        targetYaw,
+        Math.min(1, dt * (isIdle ? 2.8 : 6.4)),
+      );
 
       character.update(dt);
     };
