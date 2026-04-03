@@ -61,9 +61,8 @@ export class BackdropMountains {
 
       const curve = new THREE.CatmullRomCurve3(points);
       const segments = pointCount * 6;
-      const tubeRadius = 22 + r * 6;
+      const tubeRadius = 16 + r * 4;
       const geometry = new THREE.TubeGeometry(curve, segments, tubeRadius, 6, false);
-      geometry.rotateX(Math.PI * 0.5);
       const material = new THREE.MeshLambertMaterial({
         color: materialPalette[r % materialPalette.length],
         fog: true,
