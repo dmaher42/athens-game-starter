@@ -19,6 +19,7 @@ export class BackdropMountains {
   create() {
     // Enable procedural peak mesh generation to provide distant landmarks on the mainland side.
     this.createMountains();
+    this.createMidgroundHills();
     // Enable mainland extension ring to ensure the world is not an island.
     this.createMainlandExtension();
   }
@@ -44,9 +45,9 @@ export class BackdropMountains {
     });
 
     const ridgeMaterials = [
-      new THREE.MeshLambertMaterial({ color: 0x64737d, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0x6d7d83, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0x58665f, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x73848e, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x7b8c92, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x64736b, fog: true, side: THREE.DoubleSide }),
     ];
 
     const mountainGeoms = [];
@@ -93,6 +94,61 @@ export class BackdropMountains {
              m.updateMatrix();
              this.group.add(m);
         });
+    }
+  }
+
+  createMidgroundHills() {
+    const count = 28;
+    const minRadius = 900;
+    const maxRadius = 1400;
+
+    const geoms = [
+      new THREE.DodecahedronGeometry(1, 0),
+      new THREE.IcosahedronGeometry(1, 0),
+    ];
+
+    geoms.forEach(g => {
+      g.computeBoundingBox();
+      const minY = g.boundingBox?.min.y ?? 0;
+      g.translate(0, -minY, 0);
+      g.computeVertexNormals();
+    });
+
+    const hillMaterials = [
+      new THREE.MeshLambertMaterial({ color: 0x7e8b8f, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x88939a, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x6f7b72, fog: true, side: THREE.DoubleSide }),
+    ];
+
+    for (let i = 0; i < count; i++) {
+      const t = seededRandom(this.seed + i * 11);
+      const t2 = seededRandom(this.seed + i * 17);
+      const coverage = Math.PI * 0.78;
+      const startAngle = Math.PI - coverage * 0.5;
+      const angle = startAngle + t * coverage;
+      const radius = minRadius + t2 * (maxRadius - minRadius);
+
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+
+      const scaleW = 140 + seededRandom(this.seed + i * 3) * 240;
+      const scaleD = 120 + seededRandom(this.seed + i * 5) * 220;
+      const scaleH = 30 + seededRandom(this.seed + i * 7) * 70;
+
+      const geomIdx = Math.floor(seededRandom(this.seed + i * 13) * geoms.length);
+      const geom = geoms[geomIdx].clone();
+
+      geom.scale(scaleW, scaleH, scaleD);
+      geom.rotateY(seededRandom(this.seed + i * 9) * Math.PI * 2);
+      geom.translate(x, this.seaLevel - 6, z);
+
+      const material = hillMaterials[i % hillMaterials.length];
+      const mesh = new THREE.Mesh(geom, material);
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      mesh.matrixAutoUpdate = false;
+      mesh.updateMatrix();
+      this.group.add(mesh);
     }
   }
 
@@ -151,7 +207,7 @@ export class BackdropMountains {
       geometry.rotateX(-Math.PI / 2);
 
       const material = new THREE.MeshLambertMaterial({
-          color: 0x706a58,
+          color: 0x7a735f,
           side: THREE.FrontSide,
           fog: true
       });
@@ -161,6 +217,35 @@ export class BackdropMountains {
       mesh.receiveShadow = true;
 
       this.group.add(mesh);
+
+      const scrubInnerRadius = 1200;
+      const scrubOuterRadius = 1700;
+      const scrubGeometry = new THREE.RingGeometry(scrubInnerRadius, scrubOuterRadius, 84, 4);
+      const scrubPos = scrubGeometry.attributes.position;
+
+      for (let i = 0; i < scrubPos.count; i++) {
+        const x = scrubPos.getX(i);
+        const y = scrubPos.getY(i);
+        const r = Math.hypot(x, y);
+        const angle = Math.atan2(y, x);
+        const eastness = Math.cos(angle);
+        const landFactor = 1.0 - smoothstep(-0.1, 0.45, eastness);
+        const baseHeight = (r - scrubInnerRadius) * 0.02;
+        const noise = (seededRandom(this.seed + i * 13) - 0.5) * 10;
+        const height = THREE.MathUtils.lerp(-18, baseHeight + noise, landFactor);
+        scrubPos.setZ(i, height);
+      }
+
+      scrubGeometry.rotateX(-Math.PI / 2);
+      const scrubMaterial = new THREE.MeshLambertMaterial({
+        color: 0x7f7864,
+        side: THREE.FrontSide,
+        fog: true,
+      });
+      const scrubMesh = new THREE.Mesh(scrubGeometry, scrubMaterial);
+      scrubMesh.position.set(AGORA_CENTER_3D.x, this.seaLevel - 0.4, AGORA_CENTER_3D.z);
+      scrubMesh.receiveShadow = false;
+      this.group.add(scrubMesh);
   }
 }
 
