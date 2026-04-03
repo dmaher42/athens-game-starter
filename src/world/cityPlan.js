@@ -330,25 +330,25 @@ function createReservedCourtSurface(cell) {
     return t - Math.floor(t);
   };
 
-  let widthScale = 0.48 + random01(1) * 0.08;
-  let lengthScale = 0.48 + random01(2) * 0.08;
+  let widthScale = 0.42 + random01(1) * 0.07;
+  let lengthScale = 0.42 + random01(2) * 0.07;
   let color = 0xa88461;
 
   if (isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
-    widthScale = 0.56 + random01(3) * 0.1;
-    lengthScale = 0.54 + random01(4) * 0.08;
+    widthScale = 0.5 + random01(3) * 0.08;
+    lengthScale = 0.48 + random01(4) * 0.07;
     color = 0xb19271;
   } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
-    widthScale = 0.58 + random01(5) * 0.1;
-    lengthScale = 0.46 + random01(6) * 0.1;
+    widthScale = 0.48 + random01(5) * 0.08;
+    lengthScale = 0.4 + random01(6) * 0.08;
     color = 0xa68560;
   } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
-    widthScale = 0.46 + random01(7) * 0.08;
-    lengthScale = 0.44 + random01(8) * 0.1;
+    widthScale = 0.4 + random01(7) * 0.07;
+    lengthScale = 0.38 + random01(8) * 0.08;
     color = 0xa1805d;
   } else if (isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
-    widthScale = 0.42 + random01(9) * 0.08;
-    lengthScale = 0.42 + random01(10) * 0.08;
+    widthScale = 0.36 + random01(9) * 0.06;
+    lengthScale = 0.36 + random01(10) * 0.06;
     color = 0x9e7d59;
   }
 
@@ -357,11 +357,11 @@ function createReservedCourtSurface(cell) {
   main.rotation.y = (random01(11) - 0.5) * 0.24;
   main.position.y = 0.004;
   if (main.material) {
-    main.material.opacity = 0.68;
+    main.material.opacity = 0.52;
   }
   group.add(main);
 
-  if (random01(12) < 0.28) {
+  if (random01(12) < 0.18) {
     const side = createPavedStrip(BLOCK_SIZE * 0.16, BLOCK_SIZE * 0.14, color + 0x060606);
     side.rotation.y = (random01(13) - 0.5) * 0.25;
     side.position.set(
@@ -370,7 +370,7 @@ function createReservedCourtSurface(cell) {
       (random01(15) - 0.5) * BLOCK_SIZE * 0.22,
     );
     if (side.material) {
-      side.material.opacity = 0.5;
+      side.material.opacity = 0.36;
     }
     group.add(side);
   }
@@ -1882,7 +1882,12 @@ export async function createCivicDistrict(scene, options = {}) {
         if (plazaMat) plazaMesh.material = plazaMat;
         group.add(plazaMesh);
       } else {
-        const courtSurface = createReservedCourtSurface(cell);
+        const shouldRenderCourtSurface =
+          shouldReserveAgoraMarketCourt(cell.gridX, cell.gridZ) ||
+          isHarborCompoundCourtCell(cell.gridX, cell.gridZ) ||
+          (isInlandUrbanBlockCell(cell.gridX, cell.gridZ) &&
+            (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 13 === 0);
+        const courtSurface = shouldRenderCourtSurface ? createReservedCourtSurface(cell) : null;
         if (courtSurface) {
           courtSurface.position.set(localX, localY, localZ);
           group.add(courtSurface);
@@ -1940,16 +1945,6 @@ export async function createCivicDistrict(scene, options = {}) {
         harborCompound.position.set(localX, localY, localZ);
         harborCompound.rotation.y = (Math.abs(cell.gridX - cell.gridZ) % 2) * (Math.PI / 2);
         group.add(harborCompound);
-
-        const harborCourtPlatform = createDistrictPlatformAccent({
-          localX,
-          localZ,
-          localY,
-          sampleLocalHeight,
-          radius: BLOCK_SIZE * 0.34,
-          district: 'civic',
-        });
-        if (harborCourtPlatform) group.add(harborCourtPlatform);
       } else if (isAgoraPlazaPerimeterCell(cell.gridX, cell.gridZ)) {
         const perimeterAccent = createAgoraPerimeterAccent(cell.gridX, cell.gridZ);
         perimeterAccent.position.set(localX, localY, localZ);
@@ -1998,7 +1993,7 @@ export async function createCivicDistrict(scene, options = {}) {
 
            if (
              (cell.district === 'civic' || cell.district === 'sacred') &&
-             (cell.slope > SLOPE_THRESHOLDS.FLAT * 0.65 || (cell.district === 'sacred' && rng() < 0.45))
+             (cell.slope > SLOPE_THRESHOLDS.FLAT * 0.9 || (cell.district === 'sacred' && rng() < 0.24))
            ) {
              const platformAccent = createDistrictPlatformAccent({
                localX,
@@ -2012,7 +2007,7 @@ export async function createCivicDistrict(scene, options = {}) {
            } else if (
              cell.district === 'civic' &&
              isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) &&
-             rng() < 0.78
+             rng() < 0.28
            ) {
              const civicFrontPlatform = createDistrictPlatformAccent({
                localX,
@@ -2025,7 +2020,7 @@ export async function createCivicDistrict(scene, options = {}) {
              if (civicFrontPlatform) group.add(civicFrontPlatform);
            } else if (
              isHarborLaneFrontageCell(cell.gridX, cell.gridZ) &&
-             rng() < 0.72
+             rng() < 0.24
            ) {
              const harborFrontPlatform = createDistrictPlatformAccent({
                localX,
