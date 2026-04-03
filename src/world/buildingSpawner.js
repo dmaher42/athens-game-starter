@@ -418,6 +418,37 @@ export const Prefabs = {
 
     return g;
   },
+  rowhouse({ rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
+    if (!isLowDetail(detailLevel)) {
+      return Prefabs.house({ w: 7.4, d: 8.8, h: 4.2, rng, roofColor, detailLevel, showForecourt: false });
+    }
+
+    const g = new THREE.Group();
+    g.name = "ProceduralRowHouse";
+    const span = 9.8 + rng() * 2.2;
+    const depth = 6.8 + rng() * 1.1;
+    const height = 4.0 + rng() * 0.5;
+
+    const base = makeBox(span, height, depth, createMaterial(rng() < 0.45 ? "plaster" : "clay", rng));
+    base.position.y = height * 0.5;
+    g.add(base);
+
+    const roofA = makeGableRoof(span * 0.54, depth * 1.03, 1.1, rng, roofColor);
+    roofA.position.set(-span * 0.23, height + 0.55, 0);
+    g.add(roofA);
+
+    const roofB = makeGableRoof(span * 0.54, depth * 1.03, 1.1, rng, roofColor);
+    roofB.position.set(span * 0.23, height + 0.55, 0);
+    g.add(roofB);
+
+    if (rng() < 0.7) {
+      const trim = makeBox(span * 1.03, 0.22, depth * 1.02, createMaterial("trim", rng));
+      trim.position.y = height + 0.11;
+      g.add(trim);
+    }
+
+    return g;
+  },
   shop({ rng = Math.random, roofColor = null, detailLevel = "full", ...rest } = {}) {
     const g = Prefabs.house({ ...rest, w: 6, d: 6, h: 3.4, rng, roofColor, detailLevel, showForecourt: true });
     if (!isLowDetail(detailLevel)) {
@@ -566,6 +597,7 @@ export const Prefabs = {
 // Map allowedTypes → prefab id (GLB fallback removed)
 const TYPE_MAP = {
   house:     { prefab: "house" },
+  rowhouse:  { prefab: "rowhouse" },
   shop:      { prefab: "shop" },
   workshop:  { prefab: "workshop" },
   warehouse: { prefab: "warehouse" },
@@ -642,7 +674,16 @@ export function spawnBuilding(options = {}) {
   }
 
   const type = allowed[Math.floor(rng() * allowed.length)];
-  const spawner = Prefabs[type] || Prefabs.house;
+  const lowDetail = isLowDetail(detailLevel);
+  let spawner = Prefabs[type] || Prefabs.house;
+
+  if (
+    lowDetail &&
+    ['house', 'shop', 'workshop'].includes(type) &&
+    (district === 'residential' || district === 'commercial')
+  ) {
+    spawner = Prefabs.rowhouse;
+  }
 
   // Override roof color in options if valid
   const spawnOpts = { rng, detailLevel, ...options };
