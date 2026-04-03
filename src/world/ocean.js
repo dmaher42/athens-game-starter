@@ -127,7 +127,7 @@ const DEFAULT_INLAND_CLIP = Number.isFinite(HARBOR_WATER_BOUNDS?.south)
   : 160;
 const TERRAIN_CLEARANCE_EPSILON = 0.02;
 const LAND_CLIP_CLEARANCE = 0.05;
-const SHALLOW_WATER_DISCARD_EPSILON = 0.015;
+const SHALLOW_WATER_DISCARD_EPSILON = 0.008;
 const SHORE_PROBE_X_FRACTIONS = [0.2, 0.5, 0.8];
 const SHORE_PROBE_Z_FRACTIONS = [0.0, 0.5, 0.9];
 const DEFAULT_OCEAN_RADIUS = 4000;
@@ -473,8 +473,8 @@ export async function createOcean(scene, terrain, options = {}) {
         foamFactor = clamp(foamFactor, 0.0, 1.0);
 
         // Shallow water color
-        float shallowFactor = smoothstep(0.0, 14.0, waterDepth);
-        finalColor = mix(vec3(0.6, 0.85, 0.95), finalColor, shallowFactor);
+        float shallowFactor = smoothstep(0.0, 18.0, waterDepth);
+        finalColor = mix(vec3(0.58, 0.84, 0.92), finalColor, shallowFactor);
 
         // Add a deeper offshore tint so the far sea reads more open and less like
         // a uniformly lit inland lake.
