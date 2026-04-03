@@ -53,6 +53,7 @@ const SHARED_GEOMETRIES = {
   toolHead: new THREE.BoxGeometry(0.16, 0.06, 0.08),
   sash: new THREE.TorusGeometry(0.44, 0.075, 8, 18, Math.PI * 1.25),
 };
+const ROLE_MATERIALS = new Map();
 const ROLE_PROFILES = {
   citizen: {
     id: 'citizen',
@@ -208,14 +209,14 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
   if (roleProfile.accessory === 'basket') {
     const basket = new THREE.Mesh(
       SHARED_GEOMETRIES.basket,
-      accentMaterial.clone(),
+      accentMaterial,
     );
     basket.position.set(0.34, 0.84, 0.12);
     accessoryRoot.add(basket);
   } else if (roleProfile.accessory === 'scroll') {
     const scroll = new THREE.Mesh(
       SHARED_GEOMETRIES.scroll,
-      trimMaterial.clone(),
+      trimMaterial,
     );
     scroll.rotation.z = Math.PI / 2;
     scroll.position.set(-0.34, 1.08, 0.18);
@@ -223,27 +224,27 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
   } else if (roleProfile.accessory === 'spear') {
     const shaft = new THREE.Mesh(
       SHARED_GEOMETRIES.spearShaft,
-      accentMaterial.clone(),
+      accentMaterial,
     );
     shaft.position.set(0.42, 1.12, 0.02);
     accessoryRoot.add(shaft);
     const tip = new THREE.Mesh(
       SHARED_GEOMETRIES.spearTip,
-      trimMaterial.clone(),
+      trimMaterial,
     );
     tip.position.set(0.42, 2.02, 0.02);
     accessoryRoot.add(tip);
   } else if (roleProfile.accessory === 'staff') {
     const staff = new THREE.Mesh(
       SHARED_GEOMETRIES.staff,
-      accentMaterial.clone(),
+      accentMaterial,
     );
     staff.position.set(-0.34, 1.02, 0.05);
     accessoryRoot.add(staff);
   } else if (roleProfile.accessory === 'satchel') {
     const satchel = new THREE.Mesh(
       SHARED_GEOMETRIES.satchel,
-      accentMaterial.clone(),
+      accentMaterial,
     );
     satchel.position.set(-0.28, 0.96, 0.22);
     satchel.rotation.z = -0.2;
@@ -251,14 +252,14 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
   } else if (roleProfile.accessory === 'tool') {
     const handle = new THREE.Mesh(
       SHARED_GEOMETRIES.toolHandle,
-      accentMaterial.clone(),
+      accentMaterial,
     );
     handle.position.set(0.36, 0.88, 0.08);
     handle.rotation.z = 0.55;
     accessoryRoot.add(handle);
     const head = new THREE.Mesh(
       SHARED_GEOMETRIES.toolHead,
-      trimMaterial.clone(),
+      trimMaterial,
     );
     head.position.set(0.45, 1.0, 0.08);
     head.rotation.z = 0.55;
@@ -266,7 +267,7 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
   } else {
     const sash = new THREE.Mesh(
       SHARED_GEOMETRIES.sash,
-      trimMaterial.clone(),
+      trimMaterial,
     );
     sash.rotation.set(Math.PI / 2, Math.PI / 3 + randomBetween(-0.08, 0.08, rng), 0);
     sash.position.y = 1.3;
@@ -281,6 +282,41 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
   });
 
   return accessoryRoot;
+}
+
+function getRoleMaterials(roleProfile) {
+  const cached = ROLE_MATERIALS.get(roleProfile.id);
+  if (cached) return cached;
+
+  const materials = {
+    garmentMaterial: new THREE.MeshStandardMaterial({
+      color: roleProfile.garmentColor,
+      roughness: 0.86,
+      metalness: roleProfile.id === 'guard' ? 0.06 : 0.02,
+      fog: true,
+    }),
+    skinMaterial: new THREE.MeshStandardMaterial({
+      color: roleProfile.skinColor,
+      roughness: 0.78,
+      metalness: 0.01,
+      fog: true,
+    }),
+    trimMaterial: new THREE.MeshStandardMaterial({
+      color: roleProfile.trimColor,
+      roughness: 0.74,
+      metalness: 0.02,
+      fog: true,
+    }),
+    accentMaterial: new THREE.MeshStandardMaterial({
+      color: roleProfile.accentColor,
+      roughness: 0.8,
+      metalness: roleProfile.id === 'guard' ? 0.08 : 0.02,
+      fog: true,
+    }),
+  };
+
+  ROLE_MATERIALS.set(roleProfile.id, materials);
+  return materials;
 }
 
 function tuneMaterialPresentation(material, roleProfile, rng) {
@@ -315,30 +351,8 @@ function createCitizenModel(roleProfile, rng = Math.random) {
   const group = new THREE.Group();
   group.name = `${roleProfile.label}NPC`;
 
-  const garmentMaterial = new THREE.MeshStandardMaterial({
-    color: roleProfile.garmentColor,
-    roughness: 0.86,
-    metalness: roleProfile.id === 'guard' ? 0.06 : 0.02,
-    fog: true,
-  });
-  const skinMaterial = new THREE.MeshStandardMaterial({
-    color: roleProfile.skinColor,
-    roughness: 0.78,
-    metalness: 0.01,
-    fog: true,
-  });
-  const trimMaterial = new THREE.MeshStandardMaterial({
-    color: roleProfile.trimColor,
-    roughness: 0.74,
-    metalness: 0.02,
-    fog: true,
-  });
-  const accentMaterial = new THREE.MeshStandardMaterial({
-    color: roleProfile.accentColor,
-    roughness: 0.8,
-    metalness: roleProfile.id === 'guard' ? 0.08 : 0.02,
-    fog: true,
-  });
+  const { garmentMaterial, skinMaterial, trimMaterial, accentMaterial } =
+    getRoleMaterials(roleProfile);
 
   const body = new THREE.Mesh(SHARED_GEOMETRIES.body, garmentMaterial);
   body.position.y = 1.08;
@@ -348,41 +362,41 @@ function createCitizenModel(roleProfile, rng = Math.random) {
   head.position.y = 2.02;
   group.add(head);
 
-  const leftArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial.clone());
+  const leftArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial);
   leftArm.position.set(-0.5, 1.18, 0);
   leftArm.rotation.z = 0.08;
   group.add(leftArm);
 
-  const rightArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial.clone());
+  const rightArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial);
   rightArm.position.set(0.5, 1.18, 0);
   rightArm.rotation.z = -0.08;
   group.add(rightArm);
 
-  const leftLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial.clone());
+  const leftLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial);
   leftLeg.position.set(-0.18, 0.42, 0);
   group.add(leftLeg);
 
-  const rightLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial.clone());
+  const rightLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial);
   rightLeg.position.set(0.18, 0.42, 0);
   group.add(rightLeg);
 
   const leftFoot = new THREE.Mesh(
     SHARED_GEOMETRIES.foot,
-    accentMaterial.clone(),
+    accentMaterial,
   );
   leftFoot.position.set(-0.18, 0.05, 0.08);
   group.add(leftFoot);
 
   const rightFoot = new THREE.Mesh(
     SHARED_GEOMETRIES.foot,
-    accentMaterial.clone(),
+    accentMaterial,
   );
   rightFoot.position.set(0.18, 0.05, 0.08);
   group.add(rightFoot);
 
   const belt = new THREE.Mesh(
     SHARED_GEOMETRIES.belt,
-    accentMaterial.clone(),
+    accentMaterial,
   );
   belt.rotation.x = Math.PI / 2;
   belt.position.y = 1.0;
@@ -391,14 +405,14 @@ function createCitizenModel(roleProfile, rng = Math.random) {
   if (roleProfile.id === 'guard' || roleProfile.id === 'priest') {
     const cloak = new THREE.Mesh(
       SHARED_GEOMETRIES.cloak,
-      garmentMaterial.clone(),
+      garmentMaterial,
     );
     cloak.position.set(0, 1.18, -0.2);
     group.add(cloak);
   } else if (roleProfile.id === 'merchant' || roleProfile.id === 'artisan') {
     const apron = new THREE.Mesh(
       SHARED_GEOMETRIES.apron,
-      trimMaterial.clone(),
+      trimMaterial,
     );
     apron.position.set(0, 0.94, 0.26);
     group.add(apron);
@@ -407,7 +421,7 @@ function createCitizenModel(roleProfile, rng = Math.random) {
   if (roleProfile.id === 'priest') {
     const headwrap = new THREE.Mesh(
       SHARED_GEOMETRIES.headwrap,
-      trimMaterial.clone(),
+      trimMaterial,
     );
     headwrap.rotation.x = Math.PI / 2;
     headwrap.position.y = 2.08;
@@ -415,7 +429,7 @@ function createCitizenModel(roleProfile, rng = Math.random) {
   } else if (roleProfile.id === 'guard') {
     const helmet = new THREE.Mesh(
       SHARED_GEOMETRIES.helmet,
-      accentMaterial.clone(),
+      accentMaterial,
     );
     helmet.scale.y = 0.7;
     helmet.position.y = 2.05;
@@ -423,7 +437,7 @@ function createCitizenModel(roleProfile, rng = Math.random) {
   } else if (roleProfile.id === 'scholar') {
     const cap = new THREE.Mesh(
       SHARED_GEOMETRIES.cap,
-      trimMaterial.clone(),
+      trimMaterial,
     );
     cap.position.y = 2.08;
     group.add(cap);
