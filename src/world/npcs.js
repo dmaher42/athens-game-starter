@@ -287,6 +287,99 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
   return accessoryRoot;
 }
 
+function buildAccessoryParts(roleProfile, rng) {
+  if (roleProfile.accessory === 'basket') {
+    return [
+      {
+        partKey: 'basket',
+        geometry: SHARED_GEOMETRIES.basket,
+        materialKey: 'accent',
+        position: new THREE.Vector3(0.34, 0.84, 0.12),
+        rotation: new THREE.Euler(0, 0, 0),
+      },
+    ];
+  }
+  if (roleProfile.accessory === 'scroll') {
+    return [
+      {
+        partKey: 'scroll',
+        geometry: SHARED_GEOMETRIES.scroll,
+        materialKey: 'trim',
+        position: new THREE.Vector3(-0.34, 1.08, 0.18),
+        rotation: new THREE.Euler(0, 0, Math.PI / 2),
+      },
+    ];
+  }
+  if (roleProfile.accessory === 'spear') {
+    return [
+      {
+        partKey: 'spearShaft',
+        geometry: SHARED_GEOMETRIES.spearShaft,
+        materialKey: 'accent',
+        position: new THREE.Vector3(0.42, 1.12, 0.02),
+        rotation: new THREE.Euler(0, 0, 0),
+      },
+      {
+        partKey: 'spearTip',
+        geometry: SHARED_GEOMETRIES.spearTip,
+        materialKey: 'trim',
+        position: new THREE.Vector3(0.42, 2.02, 0.02),
+        rotation: new THREE.Euler(0, 0, 0),
+      },
+    ];
+  }
+  if (roleProfile.accessory === 'staff') {
+    return [
+      {
+        partKey: 'staff',
+        geometry: SHARED_GEOMETRIES.staff,
+        materialKey: 'accent',
+        position: new THREE.Vector3(-0.34, 1.02, 0.05),
+        rotation: new THREE.Euler(0, 0, 0),
+      },
+    ];
+  }
+  if (roleProfile.accessory === 'satchel') {
+    return [
+      {
+        partKey: 'satchel',
+        geometry: SHARED_GEOMETRIES.satchel,
+        materialKey: 'accent',
+        position: new THREE.Vector3(-0.28, 0.96, 0.22),
+        rotation: new THREE.Euler(0, 0, -0.2),
+      },
+    ];
+  }
+  if (roleProfile.accessory === 'tool') {
+    return [
+      {
+        partKey: 'toolHandle',
+        geometry: SHARED_GEOMETRIES.toolHandle,
+        materialKey: 'accent',
+        position: new THREE.Vector3(0.36, 0.88, 0.08),
+        rotation: new THREE.Euler(0, 0, 0.55),
+      },
+      {
+        partKey: 'toolHead',
+        geometry: SHARED_GEOMETRIES.toolHead,
+        materialKey: 'trim',
+        position: new THREE.Vector3(0.45, 1.0, 0.08),
+        rotation: new THREE.Euler(0, 0, 0.55),
+      },
+    ];
+  }
+
+  return [
+    {
+      partKey: 'sash',
+      geometry: SHARED_GEOMETRIES.sash,
+      materialKey: 'trim',
+      position: new THREE.Vector3(0, 1.3, 0),
+      rotation: new THREE.Euler(Math.PI / 2, Math.PI / 3 + randomBetween(-0.08, 0.08, rng), 0),
+    },
+  ];
+}
+
 function getRoleMaterials(roleProfile) {
   const cached = ROLE_MATERIALS.get(roleProfile.id);
   if (cached) return cached;
@@ -350,7 +443,7 @@ function tuneMaterialPresentation(material, roleProfile, rng) {
   return material;
 }
 
-function createCitizenModel(roleProfile, rng = Math.random) {
+function createCitizenModel(roleProfile, rng = Math.random, instancingContext = null) {
   const group = new THREE.Group();
   group.name = `${roleProfile.label}NPC`;
   const highGroup = new THREE.Group();
@@ -363,6 +456,8 @@ function createCitizenModel(roleProfile, rng = Math.random) {
 
   const { garmentMaterial, skinMaterial, trimMaterial, accentMaterial } =
     getRoleMaterials(roleProfile);
+
+  let accessoryInstances = [];
 
   const body = new THREE.Mesh(SHARED_GEOMETRIES.body, garmentMaterial);
   body.position.y = 1.08;
@@ -453,8 +548,38 @@ function createCitizenModel(roleProfile, rng = Math.random) {
     highGroup.add(cap);
   }
 
-  const accessory = createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial);
-  highGroup.add(accessory);
+  let accessory = null;
+  if (instancingContext?.accessoryBatches) {
+    const parts = buildAccessoryParts(roleProfile, rng);
+    const materialMap = {
+      accent: accentMaterial,
+      trim: trimMaterial,
+      garment: garmentMaterial,
+      skin: skinMaterial,
+    };
+
+    parts.forEach((part) => {
+      const material = materialMap[part.materialKey] ?? accentMaterial;
+      const batch = instancingContext.getBatch(
+        roleProfile.id,
+        part.partKey,
+        part.geometry,
+        material
+      );
+      if (!batch) return;
+      const index = batch.nextIndex;
+      batch.nextIndex += 1;
+      accessoryInstances.push({
+        mesh: batch.mesh,
+        index,
+        basePosition: part.position.clone(),
+        baseRotation: part.rotation.clone(),
+      });
+    });
+  } else {
+    accessory = createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial);
+    highGroup.add(accessory);
+  }
 
   const lowBody = new THREE.Mesh(SHARED_GEOMETRIES.lowBody, garmentMaterial);
   lowBody.position.y = 1.0;
@@ -488,6 +613,7 @@ function createCitizenModel(roleProfile, rng = Math.random) {
     leftFoot,
     rightFoot,
     accessory,
+    accessoryInstances,
   };
 }
 
@@ -508,6 +634,7 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
   const maxSpeed = options.maxSpeed ?? 1.2;
   const terrain = options.terrain ?? null;
   const camera = options.camera ?? null;
+  const instancedAccessories = options.instancedAccessories !== false;
   const lodDistance = options.lodDistance ?? 70;
   const lodHysteresis = options.lodHysteresis ?? 6;
   const lodDistanceIn = Math.max(5, lodDistance - lodHysteresis);
@@ -526,6 +653,27 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
 
   const citizens = [];
   const updaters = [];
+  const accessoryBatches = instancedAccessories ? new Map() : null;
+  const getAccessoryBatch = instancedAccessories
+    ? (roleId, partKey, geometry, material) => {
+        const key = `${roleId}:${partKey}`;
+        const existing = accessoryBatches.get(key);
+        if (existing) return existing;
+        const mesh = new THREE.InstancedMesh(geometry, material, count);
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.userData.noCollision = true;
+        scene.add(mesh);
+        const batch = { mesh, nextIndex: 0 };
+        accessoryBatches.set(key, batch);
+        return batch;
+      }
+    : null;
+  const instancingContext = instancedAccessories
+    ? { accessoryBatches, getBatch: getAccessoryBatch }
+    : null;
+  const tempAccessoryObject = instancedAccessories ? new THREE.Object3D() : null;
 
   for (let i = 0; i < count; i++) {
     const rng = createSeededRng((i + 1) * 97.31);
@@ -543,8 +691,9 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       leftFoot,
       rightFoot,
       accessory,
+      accessoryInstances,
     } =
-      createCitizenModel(roleProfile, rng);
+      createCitizenModel(roleProfile, rng, instancingContext);
     const scale = randomBetween(roleProfile.scaleRange[0], roleProfile.scaleRange[1], rng);
     group.scale.setScalar(scale);
     group.userData.npcRole = roleProfile.id;
@@ -611,6 +760,7 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
         targetYaw,
         Math.min(1, dt * (isIdle ? 3.2 : 6.8)),
       );
+      group.updateMatrixWorld(true);
 
       let distanceSq = null;
       if (camera) {
@@ -683,6 +833,22 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       if (accessory) {
         accessory.rotation.y = isIdle ? Math.sin(stepPhase * 0.2) * 0.12 : 0;
         accessory.position.y = isIdle ? 0.01 : Math.sin(stepPhase * 2) * 0.02;
+      }
+      if (accessoryInstances && accessoryInstances.length && tempAccessoryObject) {
+        const accessoryYaw = isIdle ? Math.sin(stepPhase * 0.2) * 0.12 : 0;
+        const accessoryBob = isIdle ? 0.01 : Math.sin(stepPhase * 2) * 0.02;
+        const accessoryScale = usingHighDetail ? 1 : 0;
+        accessoryInstances.forEach((instance) => {
+          tempAccessoryObject.position.copy(instance.basePosition);
+          tempAccessoryObject.position.y += accessoryBob;
+          tempAccessoryObject.rotation.copy(instance.baseRotation);
+          tempAccessoryObject.rotation.y += accessoryYaw;
+          tempAccessoryObject.scale.setScalar(accessoryScale);
+          tempAccessoryObject.updateMatrix();
+          tempAccessoryObject.matrix.premultiply(group.matrixWorld);
+          instance.mesh.setMatrixAt(instance.index, tempAccessoryObject.matrix);
+          instance.mesh.instanceMatrix.needsUpdate = true;
+        });
       }
     };
 
