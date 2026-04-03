@@ -2034,10 +2034,14 @@ export async function createCivicDistrict(scene, options = {}) {
              if (harborFrontPlatform) group.add(harborFrontPlatform);
            }
 
+           const allowRetainingAccent = detailLevel !== 'low';
            if (
-             (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.34) ||
-             (isHarborLaneFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.28) ||
-             (cell.district === 'civic' && isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.08)
+             allowRetainingAccent &&
+             (
+               (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.34) ||
+               (isHarborLaneFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.28) ||
+               (cell.district === 'civic' && isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.08)
+             )
            ) {
              const retainingAccent = createStreetGradeAccent({
                localX,
