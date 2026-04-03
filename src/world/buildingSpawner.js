@@ -520,9 +520,10 @@ export const Prefabs = {
 
     return g;
   },
-  stoa({ w = 10, d = 6, h = 4.5, rng = Math.random, roofColor = null } = {}) {
+  stoa({ w = 10, d = 6, h = 4.5, rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralStoa";
+    const lowDetail = isLowDetail(detailLevel);
     const plinth = makeBox(w, 0.6, d, createMaterial("marble", rng));
     plinth.position.y = 0.3; g.add(plinth);
     const hall = makeBox(w * 0.96, h, d * 0.9, createMaterial("stone", rng));
@@ -530,8 +531,8 @@ export const Prefabs = {
     const roof = makeGableRoof(w * 1.02, d * 1.02, 1.4, rng, roofColor);
     roof.position.y = 0.6 + h + 0.7; g.add(roof);
 
-    const colCount = 6;
-    const colGeom = new THREE.CylinderGeometry(0.35, 0.35, h, 20);
+    const colCount = lowDetail ? 4 : 6;
+    const colGeom = new THREE.CylinderGeometry(0.35, 0.35, h, lowDetail ? 12 : 20);
     const colMat = createMaterial("marble", rng, { metalness: 0.04 });
     for (let i = 0; i < colCount; i++) {
       const t = i / (colCount - 1);
@@ -541,9 +542,11 @@ export const Prefabs = {
       columnFront.castShadow = columnFront.receiveShadow = true;
       g.add(columnFront);
 
-      const columnBack = columnFront.clone();
-      columnBack.position.z = -d * 0.48;
-      g.add(columnBack);
+      if (!lowDetail) {
+        const columnBack = columnFront.clone();
+        columnBack.position.z = -d * 0.48;
+        g.add(columnBack);
+      }
     }
 
     return g;
