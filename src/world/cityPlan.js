@@ -1222,7 +1222,7 @@ function isAgoraFramingCell(gridX, gridZ) {
 }
 
 function isAgoraEdgeBuildingCell(gridX, gridZ) {
-  const framingRing = AGORA_PLAZA_RADIUS + 2;
+  const framingRing = AGORA_PLAZA_RADIUS + 3;
   return (
     !isAgoraPlazaCell(gridX, gridZ) &&
     !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
@@ -1401,8 +1401,8 @@ function isHarborCrossLaneCell(gridX, gridZ) {
 function isHarborLaneFrontageCell(gridX, gridZ) {
   if (!isHarborUrbanFrontCell(gridX, gridZ)) return false;
 
-  const alongMainLane = (gridX === 3 || gridX === 5) && gridZ >= 0 && gridZ <= 7;
-  const alongCrossLane = (gridZ === 2 || gridZ === 4) && gridX >= 2 && gridX <= 6;
+  const alongMainLane = (gridX === 3 || gridX === 5 || gridX === 2 || gridX === 6) && gridZ >= 0 && gridZ <= 7;
+  const alongCrossLane = (gridZ === 2 || gridZ === 4 || gridZ === 1 || gridZ === 5) && gridX >= 2 && gridX <= 6;
   return alongMainLane || alongCrossLane;
 }
 
@@ -1415,7 +1415,7 @@ function shouldReserveHarborCourt(gridX, gridZ) {
     return false;
   }
   if (isHarborCompoundCourtCell(gridX, gridZ)) return true;
-  return gridX >= 6 && gridX <= 8 && gridZ >= 1 && gridZ <= 5 && (gridX + gridZ) % 5 === 2;
+  return false;
 }
 
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
