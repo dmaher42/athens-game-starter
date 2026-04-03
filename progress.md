@@ -260,3 +260,4 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-04-03: Fixed the jagged ridge lines to sit correctly on the horizon by removing the extra rotation and slimming their tube radius in `src/world/backdrop/BackdropMountains.js`. Verified with `npm.cmd run verify`.
 - 2026-04-03: Lifted the mountain readability by switching backdrop materials to emissive-tinted standard materials in `src/world/backdrop/BackdropMountains.js` so ridges stay visible in shadowed lighting. Verified with `npm.cmd run verify`.
 - 2026-04-03: Replaced the mountain border with a clean horizon wall + haze ring in `src/world/backdrop/BackdropMountains.js` to create a subtle boundary without distracting shapes. Verified with `npm.cmd run verify`.
+- 2026-04-03: Softened the horizon wall by pushing it farther out, lowering its opacity, and adding a lighter upper band so the border blends into the sky without a visible hard ring. Verified with `npm.cmd run verify`.

@@ -24,43 +24,61 @@ export class BackdropMountains {
   }
 
   createHorizonBorder() {
-    const radius = 2600;
-    const height = 520;
+    const radius = 3200;
+    const height = 360;
     const segments = 72;
 
     const wallGeometry = new THREE.CylinderGeometry(radius, radius, height, segments, 1, true);
     const wallMaterial = new THREE.MeshStandardMaterial({
-      color: 0x7f8890,
-      emissive: new THREE.Color(0x7f8890).multiplyScalar(0.22),
+      color: 0x97a4ad,
+      emissive: new THREE.Color(0x97a4ad).multiplyScalar(0.18),
       emissiveIntensity: 1,
-      roughness: 0.95,
+      roughness: 0.98,
       metalness: 0,
       fog: true,
       side: THREE.BackSide,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.28,
     });
     const wall = new THREE.Mesh(wallGeometry, wallMaterial);
-    wall.position.set(AGORA_CENTER_3D.x, this.seaLevel + height * 0.5 - 20, AGORA_CENTER_3D.z);
+    wall.position.set(AGORA_CENTER_3D.x, this.seaLevel + height * 0.5 - 35, AGORA_CENTER_3D.z);
     wall.receiveShadow = false;
     wall.castShadow = false;
     this.group.add(wall);
 
-    const hazeGeometry = new THREE.RingGeometry(radius - 420, radius - 120, 84, 1);
+    const upperGeometry = new THREE.CylinderGeometry(radius + 20, radius + 20, height * 0.65, segments, 1, true);
+    const upperMaterial = new THREE.MeshStandardMaterial({
+      color: 0xa7b2ba,
+      emissive: new THREE.Color(0xa7b2ba).multiplyScalar(0.16),
+      emissiveIntensity: 1,
+      roughness: 0.99,
+      metalness: 0,
+      fog: true,
+      side: THREE.BackSide,
+      transparent: true,
+      opacity: 0.18,
+    });
+    const upper = new THREE.Mesh(upperGeometry, upperMaterial);
+    upper.position.set(AGORA_CENTER_3D.x, this.seaLevel + height * 0.85, AGORA_CENTER_3D.z);
+    upper.receiveShadow = false;
+    upper.castShadow = false;
+    this.group.add(upper);
+
+    const hazeGeometry = new THREE.RingGeometry(radius - 680, radius - 220, 84, 1);
     hazeGeometry.rotateX(-Math.PI / 2);
     const hazeMaterial = new THREE.MeshStandardMaterial({
-      color: 0x8a9298,
-      emissive: new THREE.Color(0x8a9298).multiplyScalar(0.2),
+      color: 0x9aa5ad,
+      emissive: new THREE.Color(0x9aa5ad).multiplyScalar(0.16),
       emissiveIntensity: 1,
       roughness: 1,
       metalness: 0,
       fog: true,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.22,
     });
     const haze = new THREE.Mesh(hazeGeometry, hazeMaterial);
-    haze.position.set(AGORA_CENTER_3D.x, this.seaLevel + 18, AGORA_CENTER_3D.z);
+    haze.position.set(AGORA_CENTER_3D.x, this.seaLevel + 12, AGORA_CENTER_3D.z);
     haze.receiveShadow = false;
     haze.castShadow = false;
     this.group.add(haze);
