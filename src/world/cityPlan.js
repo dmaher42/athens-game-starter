@@ -1038,9 +1038,9 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     if (cell && isAgoraHousingBandCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
-        allowedTypes: ['stoa', 'shop', 'workshop'],
-        heightRange: [3.8, 5.2],
-        courtyardChance: 0.08,
+        allowedTypes: ['stoa', 'shop', 'workshop', 'courtyard'],
+        heightRange: [4.1, 5.6],
+        courtyardChance: 0.05,
       };
     }
 
@@ -1130,9 +1130,9 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     if (cell && isAgoraHousingBandCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
-        allowedTypes: ['courtyard', 'workshop', 'shop', 'stoa'],
-        heightRange: [3.8, 5.0],
-        courtyardChance: 0.14,
+        allowedTypes: ['stoa', 'courtyard', 'workshop', 'shop'],
+        heightRange: [4.0, 5.3],
+        courtyardChance: 0.1,
       };
     }
 
@@ -1250,9 +1250,9 @@ function isAgoraMarketCourtCell(gridX, gridZ) {
     !isAgoraPlazaCell(gridX, gridZ) &&
     !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
     !isAgoraUrbanFrontCell(gridX, gridZ) &&
-    Math.abs(gridX) <= 4 &&
-    Math.abs(gridZ) <= 4 &&
-    (Math.abs(gridX) + Math.abs(gridZ)) >= 3
+    Math.abs(gridX) <= 3 &&
+    Math.abs(gridZ) <= 3 &&
+    (Math.abs(gridX) + Math.abs(gridZ)) >= 4
   );
 }
 
@@ -1262,10 +1262,10 @@ function isAgoraHousingBandCell(gridX, gridZ) {
     !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
     !isAgoraUrbanFrontCell(gridX, gridZ) &&
     !isAgoraMarketCourtCell(gridX, gridZ) &&
-    gridX >= -6 &&
-    gridX <= 4 &&
-    gridZ >= -4 &&
-    gridZ <= 6
+    gridX >= -7 &&
+    gridX <= 5 &&
+    gridZ >= -5 &&
+    gridZ <= 7
   );
 }
 
@@ -1276,8 +1276,7 @@ function shouldReserveAgoraMarketCourt(gridX, gridZ) {
   const axialYard =
     (Math.abs(gridX) === 3 && Math.abs(gridZ) <= 1) ||
     (Math.abs(gridZ) === 3 && Math.abs(gridX) <= 1);
-  const cornerYard = Math.abs(gridX) === 2 && Math.abs(gridZ) === 2;
-  return axialYard || cornerYard;
+  return axialYard;
 }
 
 function isCentralCityBlanketCell(gridX, gridZ) {
