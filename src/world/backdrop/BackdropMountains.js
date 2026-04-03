@@ -17,13 +17,53 @@ export class BackdropMountains {
   }
 
   create() {
-    // Enable procedural peak mesh generation to provide distant landmarks on the mainland side.
-    this.createRidgeBands();
-    this.createJaggedRidgeLines();
-    this.createMountains();
-    this.createMidgroundHills();
+    // Use a clean horizon band instead of mountains to keep the border subtle.
+    this.createHorizonBorder();
     // Enable mainland extension ring to ensure the world is not an island.
     this.createMainlandExtension();
+  }
+
+  createHorizonBorder() {
+    const radius = 2600;
+    const height = 520;
+    const segments = 72;
+
+    const wallGeometry = new THREE.CylinderGeometry(radius, radius, height, segments, 1, true);
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: 0x7f8890,
+      emissive: new THREE.Color(0x7f8890).multiplyScalar(0.22),
+      emissiveIntensity: 1,
+      roughness: 0.95,
+      metalness: 0,
+      fog: true,
+      side: THREE.BackSide,
+      transparent: true,
+      opacity: 0.55,
+    });
+    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall.position.set(AGORA_CENTER_3D.x, this.seaLevel + height * 0.5 - 20, AGORA_CENTER_3D.z);
+    wall.receiveShadow = false;
+    wall.castShadow = false;
+    this.group.add(wall);
+
+    const hazeGeometry = new THREE.RingGeometry(radius - 420, radius - 120, 84, 1);
+    hazeGeometry.rotateX(-Math.PI / 2);
+    const hazeMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8a9298,
+      emissive: new THREE.Color(0x8a9298).multiplyScalar(0.2),
+      emissiveIntensity: 1,
+      roughness: 1,
+      metalness: 0,
+      fog: true,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.35,
+    });
+    const haze = new THREE.Mesh(hazeGeometry, hazeMaterial);
+    haze.position.set(AGORA_CENTER_3D.x, this.seaLevel + 18, AGORA_CENTER_3D.z);
+    haze.receiveShadow = false;
+    haze.castShadow = false;
+    this.group.add(haze);
   }
 
   createBackdropMaterial(color, { emissiveStrength = 0.22, roughness = 0.95 } = {}) {
