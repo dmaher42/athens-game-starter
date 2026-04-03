@@ -27,7 +27,7 @@ export class BackdropMountains {
 
   createRidgeBands() {
     const innerRadius = 1500;
-    const outerRadius = 2300;
+    const outerRadius = 2350;
     const coverage = Math.PI * 0.9;
     const startAngle = Math.PI - coverage * 0.5;
     const thetaSegments = 72;
@@ -51,7 +51,7 @@ export class BackdropMountains {
         const t = seededRandom(this.seed + i * 17);
         const ridgeNoise = (t - 0.5) * 2;
         const radialFactor = THREE.MathUtils.clamp((r - innerRadius) / (outerRadius - innerRadius), 0, 1);
-        const height = THREE.MathUtils.lerp(minH, maxH, radialFactor * 0.75 + heightBias)
+        const height = THREE.MathUtils.lerp(minH, maxH, radialFactor * 0.8 + heightBias)
           + ridgeNoise * (maxH - minH) * 0.3;
         pos.setZ(i, height);
       }
@@ -65,14 +65,16 @@ export class BackdropMountains {
       });
 
       const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(AGORA_CENTER_3D.x, this.seaLevel - 4, AGORA_CENTER_3D.z);
+      mesh.position.set(AGORA_CENTER_3D.x, this.seaLevel - 6, AGORA_CENTER_3D.z);
       mesh.receiveShadow = false;
       mesh.castShadow = false;
       this.group.add(mesh);
     };
 
-    makeRidge(40, 150, 0x9aa8b2, 0.25);
-    makeRidge(60, 190, 0x87939c, 0.4);
+    makeRidge(60, 190, 0x9aa8b2, 0.25);
+    makeRidge(90, 250, 0x87939c, 0.4);
+    makeRidge(150, 330, 0x9fb2bf, 0.55);
+    makeRidge(210, 380, 0xd6dee2, 0.7);
   }
 
   createMountains() {
