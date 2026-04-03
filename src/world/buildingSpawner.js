@@ -453,30 +453,42 @@ export const Prefabs = {
     return g;
   },
   shop({ rng = Math.random, roofColor = null, detailLevel = "full", ...rest } = {}) {
-    const g = Prefabs.house({ ...rest, w: 6, d: 6, h: 3.4, rng, roofColor, detailLevel, showForecourt: true });
-    if (!isLowDetail(detailLevel)) {
-      addFrontAwning(g, rng, rng() < 0.5 ? 0xc35d33 : 0xd4b45d, 3.5, 1.9, 2.1, 1.85);
-      addAmphoraCluster(g, rng, new THREE.Vector3(1.0, 0, 2.05), 2);
-      const crate = makeBox(0.92, 0.58, 0.92, createMaterial("wood", rng));
-      crate.position.set(-0.95, 0.29, 2.05);
-      g.add(crate);
+    const lowDetail = isLowDetail(detailLevel);
+    const g = Prefabs.house({ ...rest, w: 6, d: 6, h: 3.4, rng, roofColor, detailLevel, showForecourt: false });
+    if (!lowDetail) {
+      if (rng() < 0.65) {
+        addFrontAwning(g, rng, rng() < 0.5 ? 0xc35d33 : 0xd4b45d, 3.2, 1.7, 2.05, 1.82);
+      }
+      if (rng() < 0.45) {
+        addAmphoraCluster(g, rng, new THREE.Vector3(0.85, 0, 2.0), 2);
+      } else if (rng() < 0.45) {
+        const crate = makeBox(0.92, 0.58, 0.92, createMaterial("wood", rng));
+        crate.position.set(-0.95, 0.29, 2.0);
+        g.add(crate);
+      }
     }
     return g;
   },
   workshop({ rng = Math.random, roofColor = null, detailLevel = "full", ...rest } = {}) {
-    const g = Prefabs.house({ ...rest, w: 6, d: 8, h: 4.0, rng, roofColor, detailLevel, showForecourt: true });
-    if (!isLowDetail(detailLevel)) {
-      addFrontAwning(g, rng, 0x8d6b3f, 3.2, 1.6, 2.2, 2.05);
-      const workTable = makeBox(1.6, 0.2, 0.8, createMaterial("wood", rng));
-      workTable.position.set(-0.7, 0.7, 2.45);
-      g.add(workTable);
-      const wheel = new THREE.Mesh(
-        new THREE.TorusGeometry(0.34, 0.08, 8, 14),
-        createMaterial("wood", rng)
-      );
-      wheel.rotation.y = Math.PI / 2;
-      wheel.position.set(1.0, 0.45, 2.1);
-      g.add(wheel);
+    const lowDetail = isLowDetail(detailLevel);
+    const g = Prefabs.house({ ...rest, w: 6, d: 8, h: 4.0, rng, roofColor, detailLevel, showForecourt: false });
+    if (!lowDetail) {
+      if (rng() < 0.6) {
+        addFrontAwning(g, rng, 0x8d6b3f, 3.0, 1.5, 2.15, 2.0);
+      }
+      if (rng() < 0.5) {
+        const workTable = makeBox(1.6, 0.2, 0.8, createMaterial("wood", rng));
+        workTable.position.set(-0.7, 0.7, 2.35);
+        g.add(workTable);
+      } else if (rng() < 0.4) {
+        const wheel = new THREE.Mesh(
+          new THREE.TorusGeometry(0.34, 0.08, 8, 14),
+          createMaterial("wood", rng)
+        );
+        wheel.rotation.y = Math.PI / 2;
+        wheel.position.set(1.0, 0.45, 2.05);
+        g.add(wheel);
+      }
     }
     return g;
   },
