@@ -19,10 +19,62 @@ export class BackdropMountains {
   create() {
     // Enable procedural peak mesh generation to provide distant landmarks on the mainland side.
     this.createRidgeBands();
+    this.createJaggedRidgeLines();
     this.createMountains();
     this.createMidgroundHills();
     // Enable mainland extension ring to ensure the world is not an island.
     this.createMainlandExtension();
+  }
+
+  createJaggedRidgeLines() {
+    const ridgeCount = 4;
+    const minRadius = 1350;
+    const maxRadius = 2100;
+    const coverage = Math.PI * 0.86;
+    const startAngle = Math.PI - coverage * 0.5;
+    const materialPalette = [
+      0x8d99a3,
+      0x7f8b94,
+      0x99a8b2,
+      0xa6b2ba,
+    ];
+
+    for (let r = 0; r < ridgeCount; r++) {
+      const points = [];
+      const pointCount = 18 + r * 4;
+      const radius = THREE.MathUtils.lerp(minRadius, maxRadius, r / (ridgeCount - 1));
+      const heightBase = 90 + r * 45;
+      const heightVariation = 120 + r * 40;
+
+      for (let i = 0; i < pointCount; i++) {
+        const t = i / (pointCount - 1);
+        const angle = startAngle + t * coverage;
+        const jitter = (seededRandom(this.seed + r * 97 + i * 13) - 0.5) * 0.18;
+        const radiusJitter = (seededRandom(this.seed + r * 53 + i * 11) - 0.5) * 160;
+        const heightNoise = (seededRandom(this.seed + r * 71 + i * 19) - 0.5) * 2;
+        const localRadius = radius + radiusJitter;
+        const x = Math.cos(angle + jitter) * localRadius;
+        const z = Math.sin(angle + jitter) * localRadius;
+        const y = heightBase + heightVariation * Math.max(0, heightNoise);
+        points.push(new THREE.Vector3(x, this.seaLevel + y, z));
+      }
+
+      const curve = new THREE.CatmullRomCurve3(points);
+      const segments = pointCount * 6;
+      const tubeRadius = 22 + r * 6;
+      const geometry = new THREE.TubeGeometry(curve, segments, tubeRadius, 6, false);
+      geometry.rotateX(Math.PI * 0.5);
+      const material = new THREE.MeshLambertMaterial({
+        color: materialPalette[r % materialPalette.length],
+        fog: true,
+        side: THREE.DoubleSide,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(AGORA_CENTER_3D.x, 0, AGORA_CENTER_3D.z);
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      this.group.add(mesh);
+    }
   }
 
   createRidgeBands() {
