@@ -336,6 +336,28 @@ function createCitizenModel(roleProfile, rng = Math.random) {
   rightArm.rotation.z = -0.08;
   group.add(rightArm);
 
+  const leftLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.6, 6, 10), garmentMaterial.clone());
+  leftLeg.position.set(-0.18, 0.42, 0);
+  group.add(leftLeg);
+
+  const rightLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.6, 6, 10), garmentMaterial.clone());
+  rightLeg.position.set(0.18, 0.42, 0);
+  group.add(rightLeg);
+
+  const leftFoot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 0.06, 0.3),
+    accentMaterial.clone(),
+  );
+  leftFoot.position.set(-0.18, 0.05, 0.08);
+  group.add(leftFoot);
+
+  const rightFoot = new THREE.Mesh(
+    new THREE.BoxGeometry(0.18, 0.06, 0.3),
+    accentMaterial.clone(),
+  );
+  rightFoot.position.set(0.18, 0.05, 0.08);
+  group.add(rightFoot);
+
   const belt = new THREE.Mesh(
     new THREE.TorusGeometry(0.3, 0.05, 8, 16),
     accentMaterial.clone(),
@@ -360,6 +382,31 @@ function createCitizenModel(roleProfile, rng = Math.random) {
     group.add(apron);
   }
 
+  if (roleProfile.id === 'priest') {
+    const headwrap = new THREE.Mesh(
+      new THREE.TorusGeometry(0.23, 0.05, 8, 18),
+      trimMaterial.clone(),
+    );
+    headwrap.rotation.x = Math.PI / 2;
+    headwrap.position.y = 2.08;
+    group.add(headwrap);
+  } else if (roleProfile.id === 'guard') {
+    const helmet = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 12, 12),
+      accentMaterial.clone(),
+    );
+    helmet.scale.y = 0.7;
+    helmet.position.y = 2.05;
+    group.add(helmet);
+  } else if (roleProfile.id === 'scholar') {
+    const cap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 0.26, 0.12, 12),
+      trimMaterial.clone(),
+    );
+    cap.position.y = 2.08;
+    group.add(cap);
+  }
+
   const accessory = createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial);
   group.add(accessory);
 
@@ -372,7 +419,18 @@ function createCitizenModel(roleProfile, rng = Math.random) {
 
   applyForegroundFogPolicy(group);
 
-  return { group, body, head, leftArm, rightArm, accessory };
+  return {
+    group,
+    body,
+    head,
+    leftArm,
+    rightArm,
+    leftLeg,
+    rightLeg,
+    leftFoot,
+    rightFoot,
+    accessory,
+  };
 }
 
 function createCurveLengthLookup(curve) {
@@ -404,7 +462,8 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
   for (let i = 0; i < count; i++) {
     const rng = createSeededRng((i + 1) * 97.31);
     const roleProfile = pickRoleProfile(options.role, i, roles);
-    const { group, body, head, leftArm, rightArm, accessory } = createCitizenModel(roleProfile, rng);
+    const { group, body, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, accessory } =
+      createCitizenModel(roleProfile, rng);
     const scale = randomBetween(roleProfile.scaleRange[0], roleProfile.scaleRange[1], rng);
     group.scale.setScalar(scale);
     group.userData.npcRole = roleProfile.id;
@@ -469,6 +528,10 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       head.rotation.y = isIdle ? Math.sin(stepPhase * 0.35) * 0.18 : 0;
       leftArm.rotation.z = isIdle ? 0.08 + sway * 0.06 : 0.16 + gait * 0.32;
       rightArm.rotation.z = isIdle ? -0.08 - sway * 0.06 : -0.16 - gait * 0.32;
+      leftLeg.rotation.x = isIdle ? 0 : gait * 0.45;
+      rightLeg.rotation.x = isIdle ? 0 : -gait * 0.45;
+      leftFoot.position.z = isIdle ? 0.08 : 0.08 + gait * 0.06;
+      rightFoot.position.z = isIdle ? 0.08 : 0.08 - gait * 0.06;
       if (accessory) {
         accessory.rotation.y = isIdle ? Math.sin(stepPhase * 0.2) * 0.12 : 0;
         accessory.position.y = isIdle ? 0.01 : Math.sin(stepPhase * 2) * 0.02;
