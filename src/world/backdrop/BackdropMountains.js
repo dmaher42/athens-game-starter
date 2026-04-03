@@ -18,16 +18,67 @@ export class BackdropMountains {
 
   create() {
     // Enable procedural peak mesh generation to provide distant landmarks on the mainland side.
+    this.createRidgeBands();
     this.createMountains();
     this.createMidgroundHills();
     // Enable mainland extension ring to ensure the world is not an island.
     this.createMainlandExtension();
   }
 
+  createRidgeBands() {
+    const innerRadius = 1500;
+    const outerRadius = 2300;
+    const coverage = Math.PI * 0.9;
+    const startAngle = Math.PI - coverage * 0.5;
+    const thetaSegments = 72;
+    const radialSegments = 4;
+
+    const makeRidge = (minH, maxH, color, heightBias) => {
+      const geometry = new THREE.RingGeometry(
+        innerRadius,
+        outerRadius,
+        thetaSegments,
+        radialSegments,
+        startAngle,
+        coverage
+      );
+
+      const pos = geometry.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
+        const r = Math.hypot(x, y);
+        const t = seededRandom(this.seed + i * 17);
+        const ridgeNoise = (t - 0.5) * 2;
+        const radialFactor = THREE.MathUtils.clamp((r - innerRadius) / (outerRadius - innerRadius), 0, 1);
+        const height = THREE.MathUtils.lerp(minH, maxH, radialFactor * 0.75 + heightBias)
+          + ridgeNoise * (maxH - minH) * 0.3;
+        pos.setZ(i, height);
+      }
+
+      geometry.rotateX(-Math.PI / 2);
+
+      const material = new THREE.MeshLambertMaterial({
+        color,
+        fog: true,
+        side: THREE.DoubleSide,
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(AGORA_CENTER_3D.x, this.seaLevel - 4, AGORA_CENTER_3D.z);
+      mesh.receiveShadow = false;
+      mesh.castShadow = false;
+      this.group.add(mesh);
+    };
+
+    makeRidge(40, 150, 0x9aa8b2, 0.25);
+    makeRidge(60, 190, 0x87939c, 0.4);
+  }
+
   createMountains() {
-    const count = 54; // Keep the mainland readable without boxing in the sea view.
-    const minRadius = 1550;
-    const maxRadius = 2600;
+    const count = 26; // Keep the mainland readable without boxing in the sea view.
+    const minRadius = 2100;
+    const maxRadius = 3000;
 
     // Use broader low-poly masses so the skyline reads like layered hills instead of sharp black pyramids.
     const geoms = [
@@ -68,9 +119,9 @@ export class BackdropMountains {
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
 
-      const scaleW = 280 + seededRandom(this.seed + i * 2) * 420;
-      const scaleD = 240 + seededRandom(this.seed + i * 6) * 360;
-      const scaleH = 80 + seededRandom(this.seed + i * 3) * 150;
+      const scaleW = 240 + seededRandom(this.seed + i * 2) * 360;
+      const scaleD = 220 + seededRandom(this.seed + i * 6) * 320;
+      const scaleH = 60 + seededRandom(this.seed + i * 3) * 120;
 
       const geomIdx = Math.floor(seededRandom(this.seed + i * 4) * geoms.length);
       const geom = geoms[geomIdx].clone();
