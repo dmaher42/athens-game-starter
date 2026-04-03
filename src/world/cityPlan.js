@@ -1273,10 +1273,7 @@ function shouldReserveAgoraMarketCourt(gridX, gridZ) {
   // Keep only a few deliberate market yards around the Agora so the center
   // reads as one large civic void wrapped by dense frontage, not a ring of
   // repeated court cells.
-  const axialYard =
-    (Math.abs(gridX) === 3 && Math.abs(gridZ) <= 1) ||
-    (Math.abs(gridZ) === 3 && Math.abs(gridX) <= 1);
-  return axialYard;
+  return Math.abs(gridZ) === 3 && Math.abs(gridX) <= 1;
 }
 
 function isCentralCityBlanketCell(gridX, gridZ) {
@@ -1902,16 +1899,6 @@ export async function createCivicDistrict(scene, options = {}) {
           district: 'civic',
           });
           if (civicPlatform) group.add(civicPlatform);
-        } else if (isCivicMonumentFrontageCell(cell.gridX, cell.gridZ)) {
-          const civicCourtPlatform = createDistrictPlatformAccent({
-            localX,
-            localZ,
-            localY,
-            sampleLocalHeight,
-            radius: BLOCK_SIZE * 0.26,
-            district: 'civic',
-          });
-          if (civicCourtPlatform) group.add(civicCourtPlatform);
         }
 
         if (cell.gridX === 0 && cell.gridZ === 0) {
