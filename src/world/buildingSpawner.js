@@ -501,18 +501,21 @@ export const Prefabs = {
     const roof = makeGableRoof(w * 1.05, d * 1.05, 1.4, rng, roofColor);
     roof.position.y = h + 0.7; g.add(roof);
 
-    if (!lowDetail && rng() < 0.5) {
-      const loading = makeBox(w * 0.6, h * 0.5, 0.6, createMaterial("stone", rng));
-      loading.position.set(0, h * 0.25, d * 0.5 + 0.3);
+    if (!lowDetail && rng() < 0.35) {
+      const loading = makeBox(w * 0.42, h * 0.34, 0.48, createMaterial("stone", rng));
+      loading.position.set(0, h * 0.17, d * 0.5 + 0.24);
       g.add(loading);
     }
 
-    if (!lowDetail) {
-      const deck = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.2, d * 1.4), createMaterial("paving", rng));
-      deck.rotation.x = -Math.PI / 2;
-      deck.position.y = 0.01;
-      deck.receiveShadow = true;
-      g.add(deck);
+    if (!lowDetail && rng() < 0.3) {
+      const pad = new THREE.Mesh(
+        new THREE.PlaneGeometry(w * 0.72, d * 0.34),
+        createMaterial("paving", rng)
+      );
+      pad.rotation.x = -Math.PI / 2;
+      pad.position.set(0, 0.01, d * 0.42);
+      pad.receiveShadow = true;
+      g.add(pad);
     }
 
     return g;
