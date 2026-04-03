@@ -485,6 +485,10 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
   const minSpeed = options.minSpeed ?? 0.6;
   const maxSpeed = options.maxSpeed ?? 1.2;
   const terrain = options.terrain ?? null;
+  const camera = options.camera ?? null;
+  const farUpdateDistance = options.farUpdateDistance ?? 140;
+  const farUpdateStride = options.farUpdateStride ?? 2;
+  const farUpdateDistanceSq = farUpdateDistance * farUpdateDistance;
   const roles = Array.isArray(options.roles) && options.roles.length > 0
     ? options.roles
     : DEFAULT_ROLE_SEQUENCE;
@@ -524,6 +528,7 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
     let idleTurnYaw = 0;
     let idleTurnTarget = 0;
     let idleTurnTimer = randomBetween(1.4, 3.2, rng);
+    let skipFrameCounter = 0;
 
     const update = (dt) => {
       if (!Number.isFinite(dt)) return;
@@ -564,6 +569,21 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
         targetYaw,
         Math.min(1, dt * (isIdle ? 3.2 : 6.8)),
       );
+
+      if (camera && farUpdateStride > 1) {
+        const dx = group.position.x - camera.position.x;
+        const dy = group.position.y - camera.position.y;
+        const dz = group.position.z - camera.position.z;
+        const distanceSq = dx * dx + dy * dy + dz * dz;
+        if (distanceSq > farUpdateDistanceSq) {
+          skipFrameCounter = (skipFrameCounter + 1) % farUpdateStride;
+          if (skipFrameCounter !== 0) {
+            return;
+          }
+        } else {
+          skipFrameCounter = 0;
+        }
+      }
 
       stepPhase += dt * speed * (isIdle ? 1.8 : 6.4);
       const gait = Math.sin(stepPhase) * gaitScale;

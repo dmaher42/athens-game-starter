@@ -786,6 +786,7 @@ export class Application {
           maxSpeed: 1.4,
           roles: ["merchant", "scholar", "guard", "artisan", "citizen", "merchant", "priest", "citizen"],
           terrain,
+          camera,
         });
         this.npcUpdaters.push(...crowd.updaters);
       };
