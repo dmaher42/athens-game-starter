@@ -420,7 +420,7 @@ export const Prefabs = {
   },
   rowhouse({ rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
     if (!isLowDetail(detailLevel)) {
-      return Prefabs.house({ w: 7.4, d: 8.8, h: 4.2, rng, roofColor, detailLevel, showForecourt: false });
+      return Prefabs.house({ w: 10.2, d: 7.4, h: 4.2, rng, roofColor, detailLevel, showForecourt: false });
     }
 
     const g = new THREE.Group();
@@ -675,11 +675,12 @@ export function spawnBuilding(options = {}) {
 
   const type = allowed[Math.floor(rng() * allowed.length)];
   const lowDetail = isLowDetail(detailLevel);
+  const preferRowhouseMass = options.preferRowhouseMass === true;
   let spawner = Prefabs[type] || Prefabs.house;
 
   if (
-    lowDetail &&
-    ['house', 'shop', 'workshop'].includes(type) &&
+    (lowDetail || preferRowhouseMass) &&
+    ['house', 'shop', 'workshop', 'courtyard'].includes(type) &&
     (district === 'residential' || district === 'commercial')
   ) {
     spawner = Prefabs.rowhouse;

@@ -1983,6 +1983,7 @@ export async function createCivicDistrict(scene, options = {}) {
          rng: rng,
          districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
          detailLevel,
+         preferRowhouseMass: isHarborLaneFrontageCell(cell.gridX, cell.gridZ),
        });
 
        if (buildingGroup) {
