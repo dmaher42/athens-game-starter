@@ -45,9 +45,9 @@ export class BackdropMountains {
     });
 
     const ridgeMaterials = [
-      new THREE.MeshLambertMaterial({ color: 0x73848e, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0x7b8c92, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0x64736b, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x8a97a0, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x94a2aa, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x7a857b, fog: true, side: THREE.DoubleSide }),
     ];
 
     const mountainGeoms = [];
@@ -98,9 +98,9 @@ export class BackdropMountains {
   }
 
   createMidgroundHills() {
-    const count = 28;
-    const minRadius = 900;
-    const maxRadius = 1400;
+    const count = 42;
+    const minRadius = 700;
+    const maxRadius = 1350;
 
     const geoms = [
       new THREE.DodecahedronGeometry(1, 0),
@@ -115,9 +115,9 @@ export class BackdropMountains {
     });
 
     const hillMaterials = [
-      new THREE.MeshLambertMaterial({ color: 0x7e8b8f, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0x88939a, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0x6f7b72, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x9aa5aa, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0xa3adb3, fog: true, side: THREE.DoubleSide }),
+      new THREE.MeshLambertMaterial({ color: 0x879184, fog: true, side: THREE.DoubleSide }),
     ];
 
     for (let i = 0; i < count; i++) {
@@ -131,16 +131,16 @@ export class BackdropMountains {
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
 
-      const scaleW = 140 + seededRandom(this.seed + i * 3) * 240;
-      const scaleD = 120 + seededRandom(this.seed + i * 5) * 220;
-      const scaleH = 30 + seededRandom(this.seed + i * 7) * 70;
+      const scaleW = 180 + seededRandom(this.seed + i * 3) * 300;
+      const scaleD = 160 + seededRandom(this.seed + i * 5) * 260;
+      const scaleH = 45 + seededRandom(this.seed + i * 7) * 100;
 
       const geomIdx = Math.floor(seededRandom(this.seed + i * 13) * geoms.length);
       const geom = geoms[geomIdx].clone();
 
       geom.scale(scaleW, scaleH, scaleD);
       geom.rotateY(seededRandom(this.seed + i * 9) * Math.PI * 2);
-      geom.translate(x, this.seaLevel - 6, z);
+      geom.translate(x, this.seaLevel + 4, z);
 
       const material = hillMaterials[i % hillMaterials.length];
       const mesh = new THREE.Mesh(geom, material);
@@ -218,8 +218,8 @@ export class BackdropMountains {
 
       this.group.add(mesh);
 
-      const scrubInnerRadius = 1200;
-      const scrubOuterRadius = 1700;
+      const scrubInnerRadius = 900;
+      const scrubOuterRadius = 1650;
       const scrubGeometry = new THREE.RingGeometry(scrubInnerRadius, scrubOuterRadius, 84, 4);
       const scrubPos = scrubGeometry.attributes.position;
 
@@ -230,20 +230,20 @@ export class BackdropMountains {
         const angle = Math.atan2(y, x);
         const eastness = Math.cos(angle);
         const landFactor = 1.0 - smoothstep(-0.1, 0.45, eastness);
-        const baseHeight = (r - scrubInnerRadius) * 0.02;
-        const noise = (seededRandom(this.seed + i * 13) - 0.5) * 10;
-        const height = THREE.MathUtils.lerp(-18, baseHeight + noise, landFactor);
+        const baseHeight = (r - scrubInnerRadius) * 0.03;
+        const noise = (seededRandom(this.seed + i * 13) - 0.5) * 16;
+        const height = THREE.MathUtils.lerp(-14, baseHeight + noise, landFactor);
         scrubPos.setZ(i, height);
       }
 
       scrubGeometry.rotateX(-Math.PI / 2);
       const scrubMaterial = new THREE.MeshLambertMaterial({
-        color: 0x7f7864,
+        color: 0x8d846f,
         side: THREE.FrontSide,
         fog: true,
       });
       const scrubMesh = new THREE.Mesh(scrubGeometry, scrubMaterial);
-      scrubMesh.position.set(AGORA_CENTER_3D.x, this.seaLevel - 0.4, AGORA_CENTER_3D.z);
+      scrubMesh.position.set(AGORA_CENTER_3D.x, this.seaLevel + 0.8, AGORA_CENTER_3D.z);
       scrubMesh.receiveShadow = false;
       this.group.add(scrubMesh);
   }
