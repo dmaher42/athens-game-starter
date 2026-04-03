@@ -64,9 +64,9 @@ function gradientNoise(x, z) {
 }
 
 const NOISE_SCALE = 0.05;
-const NOISE_AMPLITUDE = 0.45;
+const NOISE_AMPLITUDE = 0.55;
 const OCEAN_DEPTH = -12.0;
-const CITY_HEIGHT = 2.5; // Base city height (above sea level)
+const CITY_HEIGHT = 3.0; // Base city height (above sea level)
 const MAINLAND_EDGE_BUFFER = 0.8;
 const SHORELINE_CITY_LIMIT = 0.46;
 const SHORELINE_SAND_BAND = 0.3;
@@ -291,7 +291,8 @@ function getElevation(
     (z + noiseOffset.z) * NOISE_SCALE,
   );
   // Keep noise below the inland bias so geography reads clearly and stay calmer to the east
-  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + dSea * 0.65);
+  const midDistanceBoost = THREE.MathUtils.smoothstep(0.18, 0.55, dSea);
+  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + dSea * 0.65) * (0.9 + midDistanceBoost * 0.2);
 
   // Attenuate noise near coast
   const coastalNoiseAttenuation = 1 - coast.coastMask;
