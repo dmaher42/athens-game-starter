@@ -26,6 +26,20 @@ export class BackdropMountains {
     this.createMainlandExtension();
   }
 
+  createBackdropMaterial(color, { emissiveStrength = 0.22, roughness = 0.95 } = {}) {
+    const base = new THREE.Color(color);
+    const emissive = base.clone().multiplyScalar(emissiveStrength);
+    return new THREE.MeshStandardMaterial({
+      color: base,
+      emissive,
+      emissiveIntensity: 1,
+      roughness,
+      metalness: 0,
+      fog: true,
+      side: THREE.DoubleSide,
+    });
+  }
+
   createJaggedRidgeLines() {
     const ridgeCount = 4;
     const minRadius = 1350;
@@ -63,11 +77,10 @@ export class BackdropMountains {
       const segments = pointCount * 6;
       const tubeRadius = 16 + r * 4;
       const geometry = new THREE.TubeGeometry(curve, segments, tubeRadius, 6, false);
-      const material = new THREE.MeshLambertMaterial({
-        color: materialPalette[r % materialPalette.length],
-        fog: true,
-        side: THREE.DoubleSide,
-      });
+      const material = this.createBackdropMaterial(
+        materialPalette[r % materialPalette.length],
+        { emissiveStrength: 0.24 }
+      );
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(AGORA_CENTER_3D.x, 0, AGORA_CENTER_3D.z);
       mesh.castShadow = false;
@@ -109,11 +122,7 @@ export class BackdropMountains {
 
       geometry.rotateX(-Math.PI / 2);
 
-      const material = new THREE.MeshLambertMaterial({
-        color,
-        fog: true,
-        side: THREE.DoubleSide,
-      });
+      const material = this.createBackdropMaterial(color, { emissiveStrength: 0.26 });
 
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(AGORA_CENTER_3D.x, this.seaLevel - 6, AGORA_CENTER_3D.z);
@@ -149,9 +158,9 @@ export class BackdropMountains {
     });
 
     const ridgeMaterials = [
-      new THREE.MeshLambertMaterial({ color: 0x8a97a0, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0x94a2aa, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0x7a857b, fog: true, side: THREE.DoubleSide }),
+      this.createBackdropMaterial(0x8a97a0, { emissiveStrength: 0.2 }),
+      this.createBackdropMaterial(0x94a2aa, { emissiveStrength: 0.22 }),
+      this.createBackdropMaterial(0x7a857b, { emissiveStrength: 0.18 }),
     ];
 
     const mountainGeoms = [];
@@ -219,9 +228,9 @@ export class BackdropMountains {
     });
 
     const hillMaterials = [
-      new THREE.MeshLambertMaterial({ color: 0x9aa5aa, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0xa3adb3, fog: true, side: THREE.DoubleSide }),
-      new THREE.MeshLambertMaterial({ color: 0x879184, fog: true, side: THREE.DoubleSide }),
+      this.createBackdropMaterial(0x9aa5aa, { emissiveStrength: 0.2 }),
+      this.createBackdropMaterial(0xa3adb3, { emissiveStrength: 0.22 }),
+      this.createBackdropMaterial(0x879184, { emissiveStrength: 0.18 }),
     ];
 
     for (let i = 0; i < count; i++) {
@@ -310,11 +319,8 @@ export class BackdropMountains {
 
       geometry.rotateX(-Math.PI / 2);
 
-      const material = new THREE.MeshLambertMaterial({
-          color: 0x7a735f,
-          side: THREE.FrontSide,
-          fog: true
-      });
+      const material = this.createBackdropMaterial(0x7a735f, { emissiveStrength: 0.15 });
+      material.side = THREE.FrontSide;
 
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(AGORA_CENTER_3D.x, this.seaLevel - 0.5, AGORA_CENTER_3D.z);
@@ -341,11 +347,8 @@ export class BackdropMountains {
       }
 
       scrubGeometry.rotateX(-Math.PI / 2);
-      const scrubMaterial = new THREE.MeshLambertMaterial({
-        color: 0x8d846f,
-        side: THREE.FrontSide,
-        fog: true,
-      });
+      const scrubMaterial = this.createBackdropMaterial(0x8d846f, { emissiveStrength: 0.16 });
+      scrubMaterial.side = THREE.FrontSide;
       const scrubMesh = new THREE.Mesh(scrubGeometry, scrubMaterial);
       scrubMesh.position.set(AGORA_CENTER_3D.x, this.seaLevel + 0.8, AGORA_CENTER_3D.z);
       scrubMesh.receiveShadow = false;
