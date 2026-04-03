@@ -521,6 +521,9 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
     let headYaw = 0;
     let headYawTarget = 0;
     let headYawTimer = randomBetween(0.6, 1.8, rng);
+    let idleTurnYaw = 0;
+    let idleTurnTarget = 0;
+    let idleTurnTimer = randomBetween(1.4, 3.2, rng);
 
     const update = (dt) => {
       if (!Number.isFinite(dt)) return;
@@ -571,13 +574,22 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
           headYawTarget = randomBetween(-0.55, 0.55, rng);
           headYawTimer = randomBetween(0.9, 2.4, rng);
         }
+        idleTurnTimer -= dt;
+        if (idleTurnTimer <= 0) {
+          idleTurnTarget = randomBetween(-0.28, 0.28, rng);
+          idleTurnTimer = randomBetween(1.6, 3.6, rng);
+        }
       } else {
         headYawTarget = 0;
         headYawTimer = Math.min(headYawTimer, randomBetween(0.6, 1.2, rng));
+        idleTurnTarget = 0;
+        idleTurnTimer = Math.min(idleTurnTimer, randomBetween(1.2, 2.2, rng));
       }
       headYaw = smoothAngle(headYaw, headYawTarget, Math.min(1, dt * 3.2));
+      idleTurnYaw = smoothAngle(idleTurnYaw, idleTurnTarget, Math.min(1, dt * 2.4));
       body.position.y = 1.08 + (isIdle ? sway * 0.02 : gait * 0.06);
       body.rotation.z = isIdle ? sway * 0.05 : gait * 0.16;
+      body.rotation.y = isIdle ? idleTurnYaw : 0;
       head.rotation.y = isIdle ? headYaw + Math.sin(stepPhase * 0.35) * 0.12 : headYaw * 0.35;
       leftArm.rotation.z = isIdle
         ? 0.08 + sway * 0.06
