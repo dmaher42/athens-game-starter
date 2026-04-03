@@ -1056,8 +1056,8 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
     if (cell && isAgoraUrbanFrontCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
-        allowedTypes: ['stoa', 'shop', 'market', 'workshop'],
-        heightRange: [3.2, 4.4],
+        allowedTypes: ['stoa', 'shop', 'workshop'],
+        heightRange: [3.6, 4.8],
         courtyardChance: 0,
       };
     }
@@ -1983,7 +1983,9 @@ export async function createCivicDistrict(scene, options = {}) {
          rng: rng,
          districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
          detailLevel,
-         preferRowhouseMass: isHarborLaneFrontageCell(cell.gridX, cell.gridZ),
+         preferRowhouseMass:
+           isHarborLaneFrontageCell(cell.gridX, cell.gridZ) ||
+           isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ),
        });
 
        if (buildingGroup) {
