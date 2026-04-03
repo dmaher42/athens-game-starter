@@ -469,12 +469,12 @@ export async function createOcean(scene, terrain, options = {}) {
         vec3 finalColor = color;
 
         // Shoreline foam
-        float foamFactor = smoothstep(0.0, 2.0, waterDepth) - smoothstep(2.0, 4.0, waterDepth);
+        float foamFactor = smoothstep(0.0, 3.0, waterDepth) - smoothstep(3.0, 6.0, waterDepth);
         foamFactor = clamp(foamFactor, 0.0, 1.0);
 
         // Shallow water color
-        float shallowFactor = smoothstep(0.0, 10.0, waterDepth);
-        finalColor = mix(vec3(0.5, 0.8, 0.9), finalColor, shallowFactor);
+        float shallowFactor = smoothstep(0.0, 14.0, waterDepth);
+        finalColor = mix(vec3(0.6, 0.85, 0.95), finalColor, shallowFactor);
 
         // Add a deeper offshore tint so the far sea reads more open and less like
         // a uniformly lit inland lake.
@@ -484,7 +484,7 @@ export async function createOcean(scene, terrain, options = {}) {
 
         float n = oceanNoise(vWorldPosition.xz * 0.5);
         if (foamFactor > 0.0 && n > 0.7) {
-          finalColor = mix(finalColor, vec3(1.0), foamFactor * 0.5);
+          finalColor = mix(finalColor, vec3(1.0), foamFactor * 0.6);
         }
 
 
