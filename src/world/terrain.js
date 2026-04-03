@@ -584,6 +584,7 @@ export function createTerrain(scene) {
     // those textures to bleed through the transparent water surface as brown
     // patches.  Route them straight to InlandGroundMaterial instead.
     const isFullyUnderwater = avgHeight < seaLevel;
+    const isShallowUnderwater = avgHeight >= seaLevel - 1.2;
     const isShallowWater = avgHeight <= seaLevel + SHALLOW_WATER_BAND;
     const isUnderwaterTriangle = avgHeight <= seaLevel + 0.05;
     const touchesWaterline = minHeight <= seaLevel + 0.12;
@@ -595,7 +596,7 @@ export function createTerrain(scene) {
       harborDistance <= HARBOR_COASTAL_BAND &&
       (isShallowWater || touchesWaterline);
     const shouldUseCoastalMaterial =
-      !isFullyUnderwater && (
+      (isShallowUnderwater || !isFullyUnderwater) && (
         dSea < 0.15 ||
         (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline)) ||
         (isWaterBodyTriangle &&

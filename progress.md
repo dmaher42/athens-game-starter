@@ -262,3 +262,4 @@ Original prompt: once complete start and finish the 5 most important issues
 - 2026-04-03: Replaced the mountain border with a clean horizon wall + haze ring in `src/world/backdrop/BackdropMountains.js` to create a subtle boundary without distracting shapes. Verified with `npm.cmd run verify`.
 - 2026-04-03: Softened the horizon wall by pushing it farther out, lowering its opacity, and adding a lighter upper band so the border blends into the sky without a visible hard ring. Verified with `npm.cmd run verify`.
 - 2026-04-04: Lifted ground relief subtly by raising `CITY_HEIGHT` and boosting mid-distance noise in `src/world/terrain.js` so the terrain reads less flat without reshaping the core city plateau. Verified with `npm.cmd run verify`.
+- 2026-04-04: Added a shallow underwater band in `src/world/terrain.js` so near-shore seabed uses the coastal material instead of the inland pass, reducing the dark shelf under shallow water. Verified with `npm.cmd run verify`.
