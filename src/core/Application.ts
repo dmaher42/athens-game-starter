@@ -585,50 +585,56 @@ export class Application {
 
       if (landmarksEnabled) {
         await Promise.all([
-          placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-18, 0, -56)), {
-            width: 14,
-            depth: 28,
-            colX: 6,
-            colZ: 2,
-            materialPreset: "plaster",
-            rotationRad: THREE.MathUtils.degToRad(22),
-          }),
           placeLandmark(
             worldRoot,
             terrain,
-            HARBOR_CENTER_3D.clone().add(new THREE.Vector3(10, 0, -74)),
+            HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-18, 0, -56)),
             {
-              width: 9,
-              depth: 20,
-              columnCountX: 5,
-              columnCountZ: 2,
+              width: 14,
+              depth: 28,
+              colX: 6,
+              colZ: 2,
               materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(8),
+              rotationRad: THREE.MathUtils.degToRad(22),
+            },
+          ),
+          // Keep one smaller district temple away from the harbor/Agora skyline.
+          placeLandmark(
+            worldRoot,
+            terrain,
+            AGORA_CENTER_3D.clone().add(new THREE.Vector3(58, 0, 44)),
+            {
+              width: 8,
+              depth: 18,
+              colX: 5,
+              colZ: 2,
+              materialPreset: "plaster",
+              rotationRad: THREE.MathUtils.degToRad(-18),
             },
           ),
           placeLandmark(
             worldRoot,
             terrain,
-            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-16, 0, 18)),
+            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-20, 0, 14)),
             {
               width: 18,
               depth: 30,
               colX: 6,
               colZ: 2,
               materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(86),
+              rotationRad: THREE.MathUtils.degToRad(82),
             },
           ),
           placeLandmark(
             worldRoot,
             terrain,
-            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(6, 0, -10)),
+            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(8, 0, -14)),
             {
               width: 26,
               depth: 48,
               colX: 6,
               colZ: 11,
-              rotationRad: THREE.MathUtils.degToRad(-12),
+              rotationRad: THREE.MathUtils.degToRad(-18),
             },
           ),
         ]);
