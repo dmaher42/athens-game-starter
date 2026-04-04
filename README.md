@@ -119,6 +119,10 @@ E - Interact
 
 Arrow Keys - Look around
 
+PageUp / PageDown - Zoom camera
+
+End - Reset camera behind player
+
 H - Show / hide controls
 
 Development & Deployment
