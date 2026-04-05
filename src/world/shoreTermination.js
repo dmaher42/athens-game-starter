@@ -135,7 +135,7 @@ function createWaterFadeRing({
   const mesh = new THREE.Mesh(geometry, material);
   mesh.name = "WaterHorizonFade";
   mesh.position.y = seaLevel + 0.12;
-  mesh.renderOrder = RENDER_LAYERS.WATER;
+  mesh.renderOrder = RENDER_LAYERS.HORIZON;
   mesh.userData.nonInteractive = true;
   return mesh;
 }
