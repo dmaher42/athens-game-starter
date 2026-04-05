@@ -426,9 +426,15 @@ export class Application {
         westRadiusScale: 2.02,
       });
     }
+    const combinedOceanBounds = {
+      west: Math.min(HARBOR_WATER_BOUNDS.west, AEGEAN_OCEAN_BOUNDS.west),
+      east: Math.max(HARBOR_WATER_BOUNDS.east, AEGEAN_OCEAN_BOUNDS.east),
+      north: Math.max(HARBOR_WATER_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.north),
+      south: Math.min(HARBOR_WATER_BOUNDS.south, AEGEAN_OCEAN_BOUNDS.south),
+    };
     if (!this.ocean) {
       this.ocean = await (createOcean as any)(this.scene, terrain, {
-        bounds: AEGEAN_OCEAN_BOUNDS,
+        bounds: combinedOceanBounds,
         waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
         seaLevel,
         shoreBlendWidth: 4,
@@ -508,7 +514,7 @@ export class Application {
       onFogChange(fogEnabled);
       pendingOceanStatus = {
         seaLevel: resolvedSeaLevel,
-        bounds: AEGEAN_OCEAN_BOUNDS,
+        bounds: combinedOceanBounds,
       };
       this.pendingOceanStatus = pendingOceanStatus;
       updateOceanHudStatus();
