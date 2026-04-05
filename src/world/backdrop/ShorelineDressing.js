@@ -1,9 +1,5 @@
 import * as THREE from "three";
-import {
-  AEGEAN_OCEAN_BOUNDS,
-  HARBOR_WATER_BOUNDS,
-  HARBOR_WATER_EAST_LIMIT,
-} from "../locations.js";
+import { AEGEAN_OCEAN_BOUNDS } from "../locations.js";
 
 function seededRandom(seed) {
   let x = Math.sin(seed++) * 10000;
@@ -78,25 +74,39 @@ export function createShorelineDressing(scene, terrain, seaLevel) {
     group.name = "ShorelineDressing";
     scene.add(group);
 
-    const northLimit = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
-    const southLimit = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
-    const seaMouthWest = AEGEAN_OCEAN_BOUNDS.west + 28;
-    const seaMouthEast = Math.min(AEGEAN_OCEAN_BOUNDS.west + 124, AEGEAN_OCEAN_BOUNDS.east - 40);
-    const seaNorth = Math.max(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
-    const seaSouth = Math.min(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
+    // Beach terrain exists only at the east coastal tips where the terrain's
+    // coast-fade brings elevation into the valid cluster range
+    // (seaLevel + 0.08 m to seaLevel + 1.7 m).  That narrow transition band
+    // requires x to be within ~35 units of the terrain east edge (x = 1200).
+    //
+    // In the z direction, clusters must sit *outside* AEGEAN_OCEAN_BOUNDS so
+    // that clampHarborBandHeight does not clamp terrain to the seabed.
+    // Due to the PlaneGeometry y-axis orientation used during terrain
+    // generation the effective ocean boundary is symmetric at
+    // |worldZ| > oceanEdge (≈ 930) for both north and south coasts.
+    const TERRAIN_EAST_EDGE = 1200;
+    const coastXWest = TERRAIN_EAST_EDGE - 35; // 1165 – noise-safe lower bound
+    const coastXEast = TERRAIN_EAST_EDGE - 10; // 1190 – noise-safe upper bound
+
+    const oceanEdge = Math.max(
+        Math.abs(AEGEAN_OCEAN_BOUNDS.north),
+        Math.abs(AEGEAN_OCEAN_BOUNDS.south),
+    ); // ≈ 930 – |worldZ| threshold for both coasts
+
+    const northBandMin =  oceanEdge + 12;  //  942 – inside north coastal tip
+    const northBandMax =  oceanEdge + 200; // 1130
+    const southBandMin = -(oceanEdge + 200); // -1130
+    const southBandMax = -(oceanEdge + 12);  //  -942 – inside south coastal tip
 
     const seed = 999;
     const clusterCount = 5;
     for (let i = 0; i < clusterCount; i++) {
         const side = seededRandom(seed + 240 + i) > 0.5 ? 1 : -1;
 
-        const x = Math.max(
-            HARBOR_WATER_EAST_LIMIT + 20,
-            seaMouthWest + 6 + seededRandom(seed + 300 + i) * (seaMouthEast - seaMouthWest - 12),
-        );
+        const x = coastXWest + seededRandom(seed + 300 + i) * (coastXEast - coastXWest);
         const z = side > 0
-          ? northLimit + 34 + seededRandom(seed + 320 + i) * Math.max(10, seaNorth - northLimit - 42)
-          : southLimit - 34 - seededRandom(seed + 320 + i) * Math.max(10, southLimit - seaSouth - 42);
+            ? northBandMin + seededRandom(seed + 320 + i) * (northBandMax - northBandMin)
+            : southBandMin + seededRandom(seed + 320 + i) * (southBandMax - southBandMin);
 
         const cluster = createShoreCluster(x, z, terrain, seaLevel, seed + 400 + i * 17);
         if (cluster) {
