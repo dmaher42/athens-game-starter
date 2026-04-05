@@ -34,8 +34,9 @@ Any AI assistant working on this project must:
 - All loading feedback should be visible in the UI, not just console logs.
 - GLB loading should fallback gracefully if assets are missing.
 - Do not use dev-only texture flags in production.
-- Post-processing chain: `RenderPass → UnrealBloomPass → ColorGradePass`
+- Post-processing chain: `RenderPass → UnrealBloomPass → ColorGradePass` (bloom is disabled by default for performance)
 - Renderer uses SRGB, ACES Filmic tone mapping, and fog settings are exposed via `scene.userData`.
+- Performance is strictly managed: culling systems (`propCulling.js`, `buildingCulling.js`) are used to hide distant meshes and lower draw calls dynamically.
 
 ## 6. Asset Handling
 - All assets must live under `/docs` to be picked up by GitHub Pages.
@@ -45,7 +46,7 @@ Any AI assistant working on this project must:
 ## 7. Deployment Workflow
 - Dev builds are removed — everything builds into `/docs`.
 - GitHub Actions automatically deploys to the `gh-pages` branch.
-- No verification scripts are run.
+- Verification scripts (`npm run verify`, `npm run typecheck`) are used before deployment.
 - README or other reference files should be auto-updated when content changes.
 
 ## 8. How to Update This Document
