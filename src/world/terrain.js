@@ -319,9 +319,8 @@ function getElevation(
     h = Math.max(h, seaLevel + MAINLAND_EDGE_BUFFER * nonSeaBorderMask);
   }
 
-  // Carves
+  // Harbour circular carve (applied before coast fade so it shapes the basin)
   h = applyHarbourCarve(x, z, seaLevel, h);
-  h = clampHarborBandHeight(x, z, seaLevel, h);
 
   const acropolisDx = x - ACROPOLIS_PEAK_3D.x;
   const acropolisDz = z - ACROPOLIS_PEAK_3D.z;
@@ -381,6 +380,10 @@ function getElevation(
 
       h = THREE.MathUtils.lerp(seaLevel, h, finalMask);
   }
+
+  // Apply harbor/ocean band clamping AFTER the coast fade so that the carved
+  // seabed depth is never overridden by the shoreline fade near the east coast.
+  h = clampHarborBandHeight(x, z, seaLevel, h);
 
   return h;
 }
