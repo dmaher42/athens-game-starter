@@ -5,6 +5,7 @@ import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { IS_DEV } from '../utils/env.js';
 import { Prefabs, spawnBuilding } from './buildingSpawner.js';
 import { loadDistrictRules } from './districtRules.js';
+import { roadNoise } from '../utils/noise.js';
 import { 
   getSlope, 
   getAverageSlope, 
@@ -21,6 +22,7 @@ export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.2
 const MIN_X = -8, MAX_X = 8;
 const MIN_Z = -8, MAX_Z = 14;
 const BLOCK_SIZE = 24; // Smaller blocks make the city feel tighter and more urban.
+const GRID_WARP_STRENGTH = 4.0; // Max offset in meters to break grid rigidity
 const AGORA_PLAZA_RADIUS = 1;
 const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.5;
 const AGORA_MARKET_RADIUS = BLOCK_SIZE * 4.4;
@@ -1515,8 +1517,16 @@ function generateCityGrid(terrainSampler) {
   
   for (let gridX = MIN_X; gridX <= MAX_X; gridX++) {
     for (let gridZ = MIN_Z; gridZ <= MAX_Z; gridZ++) {
-      const worldX = CITY_CENTER_ORIGIN.x + (gridX * BLOCK_SIZE);
-      const worldZ = CITY_CENTER_ORIGIN.z + (gridZ * BLOCK_SIZE);
+      let worldX = CITY_CENTER_ORIGIN.x + (gridX * BLOCK_SIZE);
+      let worldZ = CITY_CENTER_ORIGIN.z + (gridZ * BLOCK_SIZE);
+
+      // Apply deterministic organic warp to break the grid, EXCEPT for the core Agora which stays flat and formal.
+      if (!isAgoraPlazaCell(gridX, gridZ) && !isAgoraArrivalPromenadeCell(gridX, gridZ)) {
+          const warpSeedX = gridX * 0.123 + gridZ * 0.456;
+          const warpSeedZ = gridX * 0.789 + gridZ * 0.321;
+          worldX += roadNoise(warpSeedX, 100) * GRID_WARP_STRENGTH;
+          worldZ += roadNoise(warpSeedZ, 200) * GRID_WARP_STRENGTH;
+      }
       
       const cell = {
         gridX,
@@ -1858,6 +1868,29 @@ export async function createCivicDistrict(scene, options = {}) {
       const roadWidth = isMainAvenue ? BLOCK_SIZE - 8 : BLOCK_SIZE - 12;
       const roadMesh = createPavedStrip(roadWidth, roadWidth, isMainAvenue ? 0xb0895f : 0xa48463);
       roadMesh.position.set(localX, localY + 0.006, localZ);
+
+      // Calculate rotation based on neighboring road cells to smooth out the warped grid overlap
+      let nextRoadX = localX;
+      let nextRoadZ = localZ;
+      let neighbors = 0;
+
+      for (const tCell of grid) {
+        if (tCell.type === 'road' && tCell !== cell) {
+            const dist = Math.hypot(tCell.position.x - cell.position.x, tCell.position.z - cell.position.z);
+            if (dist > 0 && dist < BLOCK_SIZE * 1.5) {
+                nextRoadX += (tCell.position.x - center.x);
+                nextRoadZ += (tCell.position.z - center.z);
+                neighbors++;
+            }
+        }
+      }
+
+      if (neighbors > 0) {
+          nextRoadX /= (neighbors + 1);
+          nextRoadZ /= (neighbors + 1);
+          roadMesh.rotation.y = Math.atan2(nextRoadX - localX, nextRoadZ - localZ);
+      }
+
       group.add(roadMesh);
 
       if (cell.slope > SLOPE_THRESHOLDS.FLAT * 0.75) {
@@ -1987,8 +2020,53 @@ export async function createCivicDistrict(scene, options = {}) {
            applyAgoraScalePass(buildingGroup, cell);
            applyBuildingShadowProfile(buildingGroup, cell, detailLevel);
            buildingGroup.position.set(localX, localY, localZ);
-           // Random 90 degree rotation
-           const rot = Math.floor(rng() * 4) * (Math.PI / 2);
+
+           // Organic Rotation Logic
+           let rot = Math.floor(rng() * 4) * (Math.PI / 2);
+
+           // Find nearest road or plaza to face
+           let nearestTarget = null;
+           let nearestDist = Infinity;
+           for (const targetCell of grid) {
+               if (targetCell.type === 'road' || targetCell.type === 'plaza') {
+                   const dist = Math.hypot(targetCell.position.x - cell.position.x, targetCell.position.z - cell.position.z);
+                   if (dist < nearestDist) {
+                       nearestDist = dist;
+                       nearestTarget = targetCell;
+                   }
+               }
+           }
+
+           if (nearestTarget && nearestDist <= BLOCK_SIZE * 1.5) {
+               // Face the target
+               const dx = nearestTarget.position.x - cell.position.x;
+               const dz = nearestTarget.position.z - cell.position.z;
+               rot = Math.atan2(dx, dz);
+
+               // In civic/agora areas, favor snapping back to grid slightly for formality
+               if (cell.district === 'civic' || cell.district === 'commercial') {
+                   const snapped = Math.round(rot / (Math.PI / 2)) * (Math.PI / 2);
+                   // Lerp 80% towards rigid grid
+                   rot = rot * 0.2 + snapped * 0.8;
+               }
+           } else if (cell.slope > SLOPE_THRESHOLDS.FLAT) {
+               // If no nearby road, but on a slope, face downhill
+               const north = sampleLocalHeight(localX, localZ + 5, localY);
+               const south = sampleLocalHeight(localX, localZ - 5, localY);
+               const east = sampleLocalHeight(localX + 5, localZ, localY);
+               const west = sampleLocalHeight(localX - 5, localZ, localY);
+
+               const dz = south - north; // Positive if south is higher (downhill is north)
+               const dx = west - east;   // Positive if west is higher (downhill is east)
+
+               rot = Math.atan2(dx, dz);
+           }
+
+           // Add small organic jitter (+- 5 degrees) except for strictly formal buildings
+           if (cell.district !== 'civic' && cell.district !== 'sacred') {
+               rot += (rng() - 0.5) * (Math.PI / 18);
+           }
+
            buildingGroup.rotation.y = rot;
            group.add(buildingGroup);
 
@@ -2104,6 +2182,29 @@ export async function createCivicDistrict(scene, options = {}) {
       const pathColor = pathTile.type === 'connector' ? 0xc0a07b : 0xcfb18e;
       const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
       pathMesh.position.set(localX, localY + 0.007, localZ); // Keep paths close to the terrain so they read as paving, not slabs.
+
+      // Calculate rotation based on neighboring path cells to smooth out the warped grid overlap
+      let nextPathX = localX;
+      let nextPathZ = localZ;
+      let pathNeighbors = 0;
+
+      for (const tTile of pathTiles) {
+        if ((tTile.type === 'footpath' || tTile.type === 'connector') && tTile !== pathTile) {
+            const dist = Math.hypot(tTile.position.x - pathTile.position.x, tTile.position.z - pathTile.position.z);
+            if (dist > 0 && dist < BLOCK_SIZE * 1.5) {
+                nextPathX += (tTile.position.x - center.x);
+                nextPathZ += (tTile.position.z - center.z);
+                pathNeighbors++;
+            }
+        }
+      }
+
+      if (pathNeighbors > 0) {
+          nextPathX /= (pathNeighbors + 1);
+          nextPathZ /= (pathNeighbors + 1);
+          pathMesh.rotation.y = Math.atan2(nextPathX - localX, nextPathZ - localZ);
+      }
+
       pathMesh.userData.isFootpath = true;
       group.add(pathMesh);
 
