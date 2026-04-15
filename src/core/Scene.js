@@ -284,7 +284,7 @@ export function createSceneContext({
   };
 
   // Create camera using CameraManager for consistency
-  const camera = CameraManager.createCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+  const camera = CameraManager.createCamera(75, window.innerWidth / window.innerHeight, 0.1, 1200);
 
   const composer = isAutomationCapture ? null : new EffectComposer(renderer);
   let bloomPass = null;
@@ -321,7 +321,11 @@ export function createSceneContext({
     renderer.info?.reset?.();
 
     // DEV: detect textures that are flagged for update but have no image data
+    // Throttled to avoid per-frame traversal of 1700+ meshes
     if (import.meta.env?.DEV) {
+      if (!renderFrame._debugFrameCount) renderFrame._debugFrameCount = 0;
+      renderFrame._debugFrameCount++;
+      if (renderFrame._debugFrameCount % 120 === 0) {
       try {
         scene.traverse((obj) => {
           if (!obj || !obj.material) return;
@@ -346,6 +350,7 @@ export function createSceneContext({
         // eslint-disable-next-line no-console
         console.warn('[debug] texture scan failed', e);
       }
+      }
     }
 
     if (composer) {
@@ -356,7 +361,7 @@ export function createSceneContext({
   };
 
   camera.near = 0.1;
-  camera.far = 5000;
+  camera.far = 1200;
   camera.updateProjectionMatrix();
   camera.position.set(0, 5, 10);
 

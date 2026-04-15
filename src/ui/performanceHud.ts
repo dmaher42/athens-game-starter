@@ -45,7 +45,7 @@ export function mountPerformanceHud(
   }
 
   const runtimeWindow = window as WindowWithPerfHudFlag;
-  let visible = runtimeWindow.SHOW_PERF_HUD !== false;
+  let visible = runtimeWindow.SHOW_PERF_HUD === true;
   const toggleKey = options.toggleKey ?? "F10";
 
   const panel = createHudPanel({

@@ -75,7 +75,7 @@ export const CoastalGroundMaterial = createGroundMaterial({
 
 export const CityGroundMaterial = createGroundMaterial({
   name: "CityGroundMaterial",
-  color: new THREE.Color(0xc8ab83),
+  color: new THREE.Color(0xd4bf9a),
   repeat: [42, 42],
   map: "textures/ground/dirt-albedo.jpg",
   normalMap: "textures/sand/normal_gl.jpg",
@@ -90,7 +90,7 @@ export const CityGroundMaterial = createGroundMaterial({
 
 export const InlandGroundMaterial = createGroundMaterial({
   name: "InlandGroundMaterial",
-  color: new THREE.Color(0x8ea071),
+  color: new THREE.Color(0xa8b88a),
   repeat: [72, 72],
   map: "textures/grass/albedo.jpg",
   normalMap: "textures/grass/normal_dx.jpg",

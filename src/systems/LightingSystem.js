@@ -151,7 +151,7 @@ export class LightingSystem {
 
         this.dayCycle = startTimeOfDayCycle(lightingConfig.cycle || {});
         this.timeOfDayState = { timeOfDayPhase: 0 };
-        setTimeOfDayPhase(this.timeOfDayState, 0.18);
+        setTimeOfDayPhase(this.timeOfDayState, 0.4);
 
         this.LIGHTING_PHASE_WINDOWS = [
             { name: "Blue Hour", start: 0.0, end: 0.12 },
@@ -256,7 +256,7 @@ export class LightingSystem {
             };
         }
 
-        const initialPreset = "Golden Hour";
+        const initialPreset = "Bright Noon";
         this.applyLookProfile(initialPreset, {
             immediate: true,
             forceReapply: true,

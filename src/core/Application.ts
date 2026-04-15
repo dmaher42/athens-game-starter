@@ -795,7 +795,7 @@ export class Application {
         const loops = Array.isArray(civicDistrict.walkingLoops) && civicDistrict.walkingLoops.length > 0
           ? civicDistrict.walkingLoops
           : [civicDistrict.walkingLoop];
-        const loopCounts = [4, 3, 3];
+        const loopCounts = [2, 1, 1];
         const loopRoles = [
           ["merchant", "scholar", "guard", "citizen"],
           ["artisan", "citizen", "merchant"],
@@ -882,16 +882,16 @@ export class Application {
         propCullingTimer += deltaTime;
         buildingCullingTimer += deltaTime;
 
-        if (propCullingTimer >= 0.6) {
+        if (propCullingTimer >= 0.4) {
           updateDistanceCulling(scene, camera, {
-            nearDistance: 70,
-            farDistance: 140
+            nearDistance: 35,
+            farDistance: 65
           });
           propCullingTimer = 0;
         }
 
-        if (buildingCullingTimer >= 1.2) {
-          cullDistantBuildings(scene, camera, 260);
+        if (buildingCullingTimer >= 0.8) {
+          cullDistantBuildings(scene, camera, 100);
           buildingCullingTimer = 0;
         }
 

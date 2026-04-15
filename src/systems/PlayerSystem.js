@@ -10,11 +10,11 @@ import { joinPath } from "../utils/baseUrl.js";
 
 const USE_THIRD_PERSON = true;
 const ENABLE_HERO_GLB = true;
-const DEMO_SPAWN_OFFSET = new THREE.Vector3(-26, 0, 14);
-const DEMO_LOOK_BLEND = 0.42;
-const DEMO_LOOK_OFFSET = new THREE.Vector3(18, 0, 8);
-const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(19);
-const DEMO_CAMERA_DISTANCE = 9.6;
+const DEMO_SPAWN_OFFSET = new THREE.Vector3(0, 0, 0);
+const DEMO_LOOK_BLEND = 0.0;
+const DEMO_LOOK_OFFSET = new THREE.Vector3(-20, 0, -15);
+const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(18);
+const DEMO_CAMERA_DISTANCE = 8;
 const HERO_MAX_ENVMAP_INTENSITY = 0.06;
 const HERO_MAX_GLOSSINESS = 0.16;
 const HERO_MAX_SPECULAR = 0.18;
@@ -157,7 +157,7 @@ export class PlayerSystem {
           minPitch: -0.6,
           maxPitch: 0.6,
           minDist: 2.5,
-          maxDist: 7.5,
+          maxDist: 18,
           zoomSpeed: 4,
         },
       });

@@ -2,7 +2,7 @@ import { deepFreeze, getRuntimeEnvironment, mergeDeep, assert } from "./utils.js
 
 export const DEFAULT_LIGHTING_CONFIG = {
   cycle: {
-    minutesPerDay: 20,
+    minutesPerDay: 60,
   },
   bloom: {
     threshold: 0.8,

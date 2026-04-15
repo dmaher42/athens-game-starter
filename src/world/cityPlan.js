@@ -1382,6 +1382,17 @@ function isHarborUrbanFrontCell(gridX, gridZ) {
   return gridX >= 2 && gridX <= 8 && gridZ >= -2 && gridZ <= 8;
 }
 
+// --- Civic Route Spine (minimal, non-invasive) ---
+function isMainCivicRouteCell(gridX, gridZ) {
+  // Harbor → Agora (east-west)
+  const harborApproach = Math.abs(gridZ) <= 1 && gridX >= 0 && gridX <= 6;
+
+  // Agora → Acropolis (north-south)
+  const acropolisClimb = Math.abs(gridX) <= 1 && gridZ >= -5 && gridZ <= 1;
+
+  return harborApproach || acropolisClimb;
+}
+
 function isHarborCompoundCourtCell(gridX, gridZ) {
   if (!isHarborUrbanFrontCell(gridX, gridZ)) return false;
 
@@ -1697,10 +1708,14 @@ function generateCityGrid(terrainSampler) {
         // Keep a continuous wall of city fabric around the Agora instead of letting roads eat the square.
         cell.type = 'building';
         cell.buildable = true;
-      } else if (gridZ === 0 && Math.abs(gridX) <= 7) {
+      } else if (isMainCivicRouteCell(gridX, gridZ) && cell.district !== 'sacred') {
+        // Enforce continuous civic spine (harbor → agora → acropolis)
+        cell.type = 'road';
+        cell.buildable = true;
+      } else if (Math.abs(gridZ) <= 1 && Math.abs(gridX) <= 7) {
         cell.type = 'road'; // Main E-W avenue
         cell.buildable = true;
-      } else if (gridX === 0 && gridZ >= -3 && gridZ <= 5 && cell.district !== 'sacred') {
+      } else if (Math.abs(gridX) <= 1 && gridZ >= -3 && gridZ <= 5 && cell.district !== 'sacred') {
         cell.type = 'road'; // Central N-S boulevard
         cell.buildable = true;
       } else if (cell.district === 'sacred') {
@@ -1864,7 +1879,10 @@ export async function createCivicDistrict(scene, options = {}) {
 
     if (cell.type === 'road') {
       // Avenue is now East-West (gridZ approx 0)
-      const isMainAvenue = cell.gridZ === 0 || cell.gridX === 0;
+      const isMainAvenue =
+        isMainCivicRouteCell(cell.gridX, cell.gridZ) ||
+        (Math.abs(cell.gridZ) <= 1 && Math.abs(cell.gridX) <= 7) ||
+        (Math.abs(cell.gridX) <= 1 && cell.gridZ >= -3 && cell.gridZ <= 5);
       const roadWidth = isMainAvenue ? BLOCK_SIZE - 8 : BLOCK_SIZE - 12;
       const roadMesh = createPavedStrip(roadWidth, roadWidth, isMainAvenue ? 0xb0895f : 0xa48463);
       roadMesh.position.set(localX, localY + 0.006, localZ);
