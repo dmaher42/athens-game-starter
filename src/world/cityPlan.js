@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, HARBOR_WATER_BOUNDS, CITY_CENTER_ORIGIN, getCityGroundY } from './locations.js';
+import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, HARBOR_WATER_BOUNDS, CITY_CENTER_ORIGIN, getCityGroundY, getSeaLevelY } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { IS_DEV } from '../utils/env.js';
-import { Prefabs, spawnBuilding } from './buildingSpawner.js';
+import { Prefabs, spawnBuilding, poolMaterialsAndMerge } from './buildingSpawner.js';
 import { loadDistrictRules } from './districtRules.js';
 import { roadNoise } from '../utils/noise.js';
 import { 
@@ -22,7 +22,7 @@ export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.2
 const MIN_X = -8, MAX_X = 8;
 const MIN_Z = -8, MAX_Z = 14;
 const BLOCK_SIZE = 24; // Smaller blocks make the city feel tighter and more urban.
-const GRID_WARP_STRENGTH = 4.0; // Max offset in meters to break grid rigidity
+const GRID_WARP_STRENGTH = 7.2; // Increased to deeply blur the rigid grid structure
 const AGORA_PLAZA_RADIUS = 1;
 const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.5;
 const AGORA_MARKET_RADIUS = BLOCK_SIZE * 4.4;
@@ -1605,6 +1605,13 @@ function generateCityGrid(terrainSampler) {
           slopeRejects++;
         }
 
+        // Strict Water Cutoff
+        if (elevation <= getSeaLevelY() + 0.35) {
+          cell.type = 'blocked';
+          cell.buildable = false;
+          elevationRejects++;
+        }
+
         // Extra strict validation for civic/sacred buildings (need flat land)
         if ((cell.district === 'sacred' || cell.district === 'civic') && slope > SLOPE_THRESHOLDS.FLAT) {
           cell.buildable = false;
@@ -2012,81 +2019,91 @@ export async function createCivicDistrict(scene, options = {}) {
        };
 
        const detailLevel = resolveBuildingDetailLevel(cell);
-       const buildingGroup = spawnBuilding({
-         district: cell.district,
-         rng: rng,
-         districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
-         detailLevel,
-         preferRowhouseMass:
-           isHarborLaneFrontageCell(cell.gridX, cell.gridZ) ||
-           isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ),
-       });
+       
+       const isClusterable = (cell.district === 'residential' || cell.district === 'commercial') && !isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ);
+       const numSubBuildings = isClusterable ? Math.floor(rng() * 3) + 1 : 1;
 
-       if (buildingGroup) {
-           if (cell.district === 'harbor') {
-             // Keep the generic city kit out of the waterfront so the authored
-             // harbor owns that destination space more clearly.
-             if (rng() < 0.12) {
-               const lowAccent = createHarborFrontAccent(rng);
-               lowAccent.position.set(localX, localY, localZ);
-               lowAccent.rotation.y = Math.floor(rng() * 4) * (Math.PI / 2);
-               group.add(lowAccent);
-             }
-             continue;
-           }
+       for (let i = 0; i < numSubBuildings; i++) {
+           const buildingGroup = spawnBuilding({
+             district: cell.district,
+             rng: rng,
+             districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
+             detailLevel,
+             preferRowhouseMass:
+               isHarborLaneFrontageCell(cell.gridX, cell.gridZ) ||
+               isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ) ||
+               (numSubBuildings > 1),
+           });
 
-           applyAgoraScalePass(buildingGroup, cell);
-           applyBuildingShadowProfile(buildingGroup, cell, detailLevel);
-           buildingGroup.position.set(localX, localY, localZ);
+           if (buildingGroup) {
+               if (cell.district === 'harbor') {
+                 if (i === 0 && rng() < 0.12) {
+                   const lowAccent = createHarborFrontAccent(rng);
+                   lowAccent.position.set(localX, localY, localZ);
+                   lowAccent.rotation.y = Math.floor(rng() * 4) * (Math.PI / 2);
+                   group.add(lowAccent);
+                 }
+                 continue;
+               }
 
-           // Organic Rotation Logic
-           let rot = Math.floor(rng() * 4) * (Math.PI / 2);
+               let subX = localX;
+               let subZ = localZ;
 
-           // Find nearest road or plaza to face
-           let nearestTarget = null;
-           let nearestDist = Infinity;
-           for (const targetCell of grid) {
-               if (targetCell.type === 'road' || targetCell.type === 'plaza') {
-                   const dist = Math.hypot(targetCell.position.x - cell.position.x, targetCell.position.z - cell.position.z);
-                   if (dist < nearestDist) {
-                       nearestDist = dist;
-                       nearestTarget = targetCell;
+               if (numSubBuildings > 1) {
+                   subX += (rng() - 0.5) * 14.5;
+                   subZ += (rng() - 0.5) * 14.5;
+               }
+
+               const subY = sampleLocalHeight(subX, subZ, localY);
+               const subCell = { ...cell, position: { x: subX, y: subY, z: subZ } };
+
+               applyAgoraScalePass(buildingGroup, subCell);
+               applyBuildingShadowProfile(buildingGroup, subCell, detailLevel);
+               buildingGroup.position.set(subX, subY, subZ);
+
+               let rot = Math.floor(rng() * 4) * (Math.PI / 2);
+
+               let nearestTarget = null;
+               let nearestDist = Infinity;
+               for (const targetCell of grid) {
+                   if (targetCell.type === 'road' || targetCell.type === 'plaza') {
+                       const dist = Math.hypot(targetCell.position.x - subX, targetCell.position.z - subZ);
+                       if (dist < nearestDist) {
+                           nearestDist = dist;
+                           nearestTarget = targetCell;
+                       }
                    }
                }
-           }
 
-           if (nearestTarget && nearestDist <= BLOCK_SIZE * 1.5) {
-               // Face the target
-               const dx = nearestTarget.position.x - cell.position.x;
-               const dz = nearestTarget.position.z - cell.position.z;
-               rot = Math.atan2(dx, dz);
+               if (nearestTarget && nearestDist <= BLOCK_SIZE * 1.5) {
+                   const dx = nearestTarget.position.x - subX;
+                   const dz = nearestTarget.position.z - subZ;
+                   rot = Math.atan2(dx, dz);
 
-               // In civic/agora areas, favor snapping back to grid slightly for formality
-               if (cell.district === 'civic' || cell.district === 'commercial') {
-                   const snapped = Math.round(rot / (Math.PI / 2)) * (Math.PI / 2);
-                   // Lerp 80% towards rigid grid
-                   rot = rot * 0.2 + snapped * 0.8;
+                   if (cell.district === 'civic' || cell.district === 'commercial') {
+                       const snapped = Math.round(rot / (Math.PI / 2)) * (Math.PI / 2);
+                       rot = rot * 0.65 + snapped * 0.35;
+                   }
+               } else if (cell.slope > SLOPE_THRESHOLDS.FLAT) {
+                   const north = sampleLocalHeight(subX, subZ + 5, subY);
+                   const south = sampleLocalHeight(subX, subZ - 5, subY);
+                   const east = sampleLocalHeight(subX + 5, subZ, subY);
+                   const west = sampleLocalHeight(subX - 5, subZ, subY);
+
+                   const dz = south - north;
+                   const dx = west - east;
+
+                   rot = Math.atan2(dx, dz);
                }
-           } else if (cell.slope > SLOPE_THRESHOLDS.FLAT) {
-               // If no nearby road, but on a slope, face downhill
-               const north = sampleLocalHeight(localX, localZ + 5, localY);
-               const south = sampleLocalHeight(localX, localZ - 5, localY);
-               const east = sampleLocalHeight(localX + 5, localZ, localY);
-               const west = sampleLocalHeight(localX - 5, localZ, localY);
 
-               const dz = south - north; // Positive if south is higher (downhill is north)
-               const dx = west - east;   // Positive if west is higher (downhill is east)
+               if (cell.district !== 'civic' && cell.district !== 'sacred') {
+                   rot += (rng() - 0.5) * (Math.PI / 5.0);
+               }
 
-               rot = Math.atan2(dx, dz);
+               buildingGroup.rotation.y = rot;
+               group.add(buildingGroup);
            }
-
-           // Add small organic jitter (+- 5 degrees) except for strictly formal buildings
-           if (cell.district !== 'civic' && cell.district !== 'sacred') {
-               rot += (rng() - 0.5) * (Math.PI / 18);
-           }
-
-           buildingGroup.rotation.y = rot;
-           group.add(buildingGroup);
+       }
 
            if (
              (cell.district === 'civic' || cell.district === 'sacred') &&
@@ -2262,6 +2279,9 @@ export async function createCivicDistrict(scene, options = {}) {
     new THREE.Vector3(center.x + 18, baseHeight, center.z - 12)
   ], true);
   const walkingLoops = [walkingLoop, walkingLoopInner, walkingLoopOuter];
+
+  // Optimize: Batch all generated buildings, props, and paths into merged geometries
+  poolMaterialsAndMerge(group);
 
   return {
     group,

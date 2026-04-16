@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { getSeaLevelY, HARBOR_WATER_EAST_LIMIT } from "./locations.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 // Procedural generation logic only - GLB loading removed as per user request.
 
@@ -940,8 +941,81 @@ export async function spawnBuildingsFromPads(worldRoot, options = {}) {
     if (chosen) chosen.shouldGlow = true;
   }
 
+  // Optimize: Batch identical materials and merge geometries
+  poolMaterialsAndMerge(buildingsGroup);
+
   applyForegroundFogPolicy(buildingsGroup);
   return { count, group: buildingsGroup };
+}
+
+export function poolMaterialsAndMerge(group) {
+  const materialPool = new Map();
+  const geomMap = new Map();
+
+  function getPooledMaterial(mat) {
+    const colorHex = mat.color ? mat.color.getHex() : 0;
+    const r = Math.round((mat.roughness || 0) * 100) / 100;
+    const m = Math.round((mat.metalness || 0) * 100) / 100;
+    const t = mat.userData?.materialType || "none";
+    const o = Math.round((mat.opacity || 1) * 100) / 100;
+    const tp = Boolean(mat.transparent);
+
+    const key = `${t}_${colorHex}_${r}_${m}_${o}_${tp}`;
+    if (!materialPool.has(key)) {
+      materialPool.set(key, mat);
+    }
+    return materialPool.get(key);
+  }
+
+  group.updateMatrixWorld(true);
+  const toRemove = [];
+
+  group.traverse((child) => {
+    if (!child.isMesh || !child.geometry || !child.material) return;
+    if (child.userData?.isWindowPane) return; // Keep emissive/transparent windows separate
+
+    // Ensure geometry has uvs to avoid merge errors
+    if (!child.geometry.attributes.uv) {
+      const positionAttr = child.geometry.attributes.position;
+      const uvAttr = new Float32Array(positionAttr.count * 2);
+      child.geometry.setAttribute('uv', new THREE.BufferAttribute(uvAttr, 2));
+    }
+
+    const pooledMat = getPooledMaterial(child.material);
+    const matId = pooledMat.uuid;
+
+    if (!geomMap.has(matId)) {
+      geomMap.set(matId, { material: pooledMat, geoms: [] });
+    }
+
+    const clonedGeom = child.geometry.clone();
+    clonedGeom.applyMatrix4(child.matrixWorld);
+    geomMap.get(matId).geoms.push(clonedGeom);
+
+    toRemove.push(child);
+  });
+
+  // Remove individual meshes that were merged
+  toRemove.forEach((child) => {
+    if (child.parent) child.parent.remove(child);
+  });
+
+  // Add the merged batches
+  for (const batch of geomMap.values()) {
+    if (batch.geoms.length === 0) continue;
+    try {
+      const mergedGeom = BufferGeometryUtils.mergeGeometries(batch.geoms, false);
+      if (mergedGeom) {
+        const mergedMesh = new THREE.Mesh(mergedGeom, batch.material);
+        mergedMesh.castShadow = true;
+        mergedMesh.receiveShadow = true;
+        mergedMesh.name = `MergedBatch_${batch.material.userData?.materialType || 'Generic'}`;
+        group.add(mergedMesh);
+      }
+    } catch (e) {
+      console.warn("[buildingSpawner] Failed to merge geometry batch", e);
+    }
+  }
 }
 
 function clamp(v, a, b) { return Math.min(Math.max(v, a), b); }
