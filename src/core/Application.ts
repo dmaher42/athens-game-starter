@@ -202,29 +202,13 @@ export class Application {
 
     updateLoadingProgress(0, totalLoadingStages);
     updateLoadingStatus("Preparing renderer and interface...");
-    const quickCheckResult = await assetLoader.runAssetQuickChecks().catch((err: any) => {
+    
+    // Start asset checks in background while we initialize systems
+    const assetCheckPromise = assetLoader.runAssetQuickChecks().catch((err: any) => {
+      console.warn("Asset check failed in background:", err);
       return null;
     });
-    if (quickCheckResult?.hasMissingCritical || quickCheckResult?.hasRepeatedFailures) {
-      const missingCriticalLabels = quickCheckResult.missingCriticalChecks.map(
-        (entry: any) => entry.label,
-      );
-      const uniqueMissing = Array.from(new Set(missingCriticalLabels));
-      const criticalSummary =
-        uniqueMissing.length > 0
-          ? `Missing critical asset${uniqueMissing.length > 1 ? "s" : ""}: ${uniqueMissing.join(", ")}.`
-          : "Multiple critical assets failed to load.";
-      const repeatedSummary =
-        quickCheckResult.hasRepeatedFailures && !quickCheckResult.hasMissingCritical
-          ? "Multiple asset checks failed to load."
-          : "";
-      showLoadingError(
-        [criticalSummary, repeatedSummary, "Please verify the asset bundle and refresh."]
-          .filter(Boolean)
-          .join(" "),
-      );
-      return;
-    }
+
     this.renderer = createRenderer();
     const renderer = this.renderer;
 
@@ -356,7 +340,14 @@ export class Application {
     });
     this.lightingSystem = lightingSystem;
 
-    await lightingSystem.initialize();
+    console.time("Boot: Lighting Init");
+    const lightingInitPromise = lightingSystem.initialize();
+    
+    // We will await this just before creating the Soundscape, allowing it
+    // to run in parallel with Terrain creation.
+
+    await lightingInitPromise;
+    console.timeEnd("Boot: Lighting Init");
 
     const soundscape = new Soundscape(
       scene,
@@ -384,7 +375,9 @@ export class Application {
       });
     updateLoadingStatus("Sculpting the Attic landscape...");
 
+    console.time("Boot: Terrain Create");
     const terrain = createTerrain(scene);
+    console.timeEnd("Boot: Terrain Create");
     this.terrain = terrain;
     const terrainDebugScope = debugGlobalScope ?? (typeof window !== "undefined" ? window : null);
     if (terrainDebugScope && terrain) {
@@ -425,15 +418,21 @@ export class Application {
       north: Math.max(HARBOR_WATER_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.north),
       south: Math.min(HARBOR_WATER_BOUNDS.south, AEGEAN_OCEAN_BOUNDS.south),
     };
+    let oceanPromise = null;
     if (!this.ocean) {
-      this.ocean = await (createOcean as any)(this.scene, terrain, {
+      console.time("Boot: Ocean Create");
+      oceanPromise = (createOcean as any)(this.scene, terrain, {
         bounds: combinedOceanBounds,
         waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
         seaLevel,
         shoreBlendWidth: 4,
         waterColor: 0x0a5566,
+      }).then((oceanObj: any) => {
+        console.timeEnd("Boot: Ocean Create");
+        this.ocean = oceanObj;
+        if (this.ocean) this.ocean.scale.set(1, 1, 1);
+        return oceanObj;
       });
-      if (this.ocean) this.ocean.scale.set(1, 1, 1);
     }
     // Far-ocean plane removed - was causing blue reflective shimmer on inland areas
     // The ocean.js Water shader positioned far east is sufficient for the Aegean Sea
@@ -527,8 +526,14 @@ export class Application {
         worldRoot,
         baseUrl: BASE_URL,
       });
-      await playerSystem.initialize();
       this.playerSystem = playerSystem;
+
+      console.time("Boot: Final Parallel Systems");
+      await Promise.all([
+        oceanPromise,
+        playerSystem.initialize()
+      ]);
+      console.timeEnd("Boot: Final Parallel Systems");
 
       let grassRoot: any = null;
       let atmosphericParticles: any = null;
@@ -566,7 +571,23 @@ export class Application {
       if (grassEnabled) {
         grassRoot = mountGrass(scene);
       }
+      
+      updateLoadingStatus("Calculating urban fabric...");
 
+      // Await asset checks before we start placing buildings and landmarks
+      console.time("Boot: Asset Quick Check Reveal");
+      const quickCheckResult = await assetCheckPromise;
+      console.timeEnd("Boot: Asset Quick Check Reveal");
+
+      if (quickCheckResult?.hasMissingCritical || quickCheckResult?.hasRepeatedFailures) {
+        const missingCriticalLabels = quickCheckResult.missingCriticalChecks.map(
+          (entry: any) => entry.label,
+        );
+        showLoadingError(`Failed to load essential Athens assets: ${missingCriticalLabels.join(", ")}`);
+        return;
+      }
+
+      console.time("Boot: City Layout Meta");
       const {
         roadCurves,
         buildingPlacements,
@@ -579,6 +600,7 @@ export class Application {
           seaLevel: resolvedSeaLevel,
         },
       );
+      console.timeEnd("Boot: City Layout Meta");
 
       updateLoadingStatus("Raising temples, homes, and harbors...");
 

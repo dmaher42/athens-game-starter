@@ -1886,6 +1886,8 @@ function generateCityGrid(terrainSampler) {
 }
 
 export async function createCivicDistrict(scene, options = {}) {
+  console.time("City: Total Generation");
+
   const group = new THREE.Group();
   group.name = 'CivicDistrict';
   scene.add(group);
@@ -1963,22 +1965,28 @@ export async function createCivicDistrict(scene, options = {}) {
   };
 
   // Generate grid and road network
+  console.time("City: Grid & Road Init");
   const { grid, roadNetwork } = (function() {
     const result = generateCityGrid(terrainSampler);
     return { grid: result.cells, roadNetwork: result.roadNetwork };
   })();
+  console.timeEnd("City: Grid & Road Init");
 
   // Generate pedestrian paths
+  console.time("City: Pathfinding");
   const pathTiles = generatePaths(grid, {
     spacing: 4,
     avoidSteepSlopes: true,
     connectAllDistricts: true,
   });
+  console.timeEnd("City: Pathfinding");
 
   // Verify reachability to key buildings
+  console.time("City: Reachability Verify");
   const reachability = verifyReachability(grid, pathTiles, {
     maxDistance: 60, // Max 60 tiles to key buildings
   });
+  console.timeEnd("City: Reachability Verify");
 
   const districtRules = await districtRulesPromise;
   const plazaMat = await plazaMaterialPromise;
@@ -2000,6 +2008,15 @@ export async function createCivicDistrict(scene, options = {}) {
   const civicFabric = createCityFabricUnderlay(BLOCK_SIZE * 7.2, BLOCK_SIZE * 8.4, 0x96775a, 0.15);
   civicFabric.position.set(-BLOCK_SIZE * 1.9, surfaceOffset * 0.08, BLOCK_SIZE * 1.2);
   group.add(civicFabric);
+
+  const gridMap = new Map();
+  for (const c of grid) {
+    gridMap.set(`${c.gridX},${c.gridZ}`, c);
+  }
+
+  console.time("City: Total Grid Render");
+  let roadSearchCount = 0;
+  let roadSearchTimeTotal = 0;
 
   for (const cell of grid) {
     let cellRot = 0;
@@ -2032,16 +2049,28 @@ export async function createCivicDistrict(scene, options = {}) {
       let nextRoadZ = localZ;
       let neighbors = 0;
 
-      for (const tCell of grid) {
-        if (tCell.type === 'road' && tCell !== cell) {
-            const dist = Math.hypot(tCell.position.x - cell.position.x, tCell.position.z - cell.position.z);
-            if (dist > 0 && dist < BLOCK_SIZE * 1.5) {
-                nextRoadX += (tCell.position.x - center.x);
-                nextRoadZ += (tCell.position.z - center.z);
-                neighbors++;
-            }
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          if (dx === 0 && dz === 0) continue;
+          const tCell = gridMap.get(`${cell.gridX + dx},${cell.gridZ + dz}`);
+          if (tCell && tCell.type === 'road') {
+            nextRoadX += (tCell.position.x - center.x);
+            nextRoadZ += (tCell.position.z - center.z);
+            neighbors++;
+          }
         }
       }
+
+
+
+
+
+
+
+
+
+
+
 
       if (neighbors > 0) {
           nextRoadX /= (neighbors + 1);
@@ -2201,16 +2230,19 @@ export async function createCivicDistrict(scene, options = {}) {
                let nearestDist = Infinity;
                let nearestPoint = new THREE.Vector3();
 
-               for (const seg of roadNetwork) {
-                   const closest = new THREE.Vector3();
+               const startSearch = performance.now();
+                for (const seg of roadNetwork) {
+                    const closest = new THREE.Vector3();
                    seg.line.closestPointToPoint(subCell.position, true, closest);
                    const dist = subCell.position.distanceTo(closest);
                    if (dist < nearestDist) {
                        nearestDist = dist;
                        nearestSeg = seg;
                        nearestPoint.copy(closest);
-                   }
-               }
+                    }
+                }
+                roadSearchTimeTotal += (performance.now() - startSearch);
+                roadSearchCount++;
 
                if (nearestSeg && nearestDist <= BLOCK_SIZE * 1.5) {
                    const dx = nearestPoint.x - subX;
@@ -2423,10 +2455,20 @@ export async function createCivicDistrict(scene, options = {}) {
     new THREE.Vector3(center.x - 14, baseHeight, center.z - 16),
     new THREE.Vector3(center.x + 18, baseHeight, center.z - 12)
   ], true);
+  console.timeEnd("City: Total Grid Render");
+  console.log(`City: Road proximity search executed ${roadSearchCount} times, total time: ${roadSearchTimeTotal.toFixed(2)}ms`);
+
   const walkingLoops = [walkingLoop, walkingLoopInner, walkingLoopOuter];
 
   // Optimize: Batch all generated buildings, props, and paths into merged geometries
-  poolMaterialsAndMerge(group);
+  setTimeout(() => {
+    console.time("City: poolMaterialsAndMerge (Deferred)");
+    poolMaterialsAndMerge(group);
+    console.timeEnd("City: poolMaterialsAndMerge (Deferred)");
+  }, 100);
+
+
+  console.timeEnd("City: Total Generation");
 
   return {
     group,
