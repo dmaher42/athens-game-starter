@@ -2197,7 +2197,6 @@ export async function createCivicDistrict(scene, options = {}) {
            }
        }
     }
-  }
 
   // Render footpaths (non-road paths for pedestrian connectivity)
   if (IS_DEV) console.log(`[CityPlan] Rendering ${pathTiles.length} path tiles...`);
