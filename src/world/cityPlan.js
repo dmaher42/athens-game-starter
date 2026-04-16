@@ -676,26 +676,33 @@ function createCommercialAccent(rng) {
   const group = new THREE.Group();
   group.name = "CommercialAccent";
 
+  // More detailed awning
+  const awningColor = rng() < 0.3 ? 0xc06b3c : (rng() < 0.6 ? 0xd4b064 : 0x4b93aa);
   const awning = new THREE.Mesh(
-    new THREE.BoxGeometry(3.4, 0.18, 1.8),
-    new THREE.MeshStandardMaterial({ color: rng() < 0.5 ? 0xc06b3c : 0xd4b064, roughness: 0.74, metalness: 0.02 }),
+    new THREE.BoxGeometry(3.6, 0.12, 2.0),
+    new THREE.MeshStandardMaterial({ color: awningColor, roughness: 0.8, metalness: 0.05 }),
   );
-  awning.position.set(0, 2.2, 1.6);
+  awning.rotation.x = 0.25; // Slight tilt
+  awning.position.set(0, 2.3, 1.4);
   group.add(awning);
 
-  const crate = new THREE.Mesh(
-    new THREE.BoxGeometry(0.9, 0.6, 0.9),
-    new THREE.MeshStandardMaterial({ color: 0x8b6a46, roughness: 0.84, metalness: 0.02 }),
-  );
-  crate.position.set(-0.8, 0.3, 2.2);
-  group.add(crate);
+  // Stacked crates
+  const crateMat = new THREE.MeshStandardMaterial({ color: 0x8b6a46, roughness: 0.9, metalness: 0.02 });
+  for (let i = 0; i < 2; i++) {
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.55, 0.8), crateMat);
+    crate.position.set(-0.8, 0.275 + (i * 0.56), 2.1);
+    crate.rotation.y = (rng() - 0.5) * 0.2;
+    group.add(crate);
+  }
 
-  const jar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.22, 0.16, 0.72, 10),
-    new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.64, metalness: 0.05 }),
-  );
-  jar.position.set(0.9, 0.36, 2.1);
-  group.add(jar);
+  // Clump of jars
+  const jarMat = new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.6, metalness: 0.04 });
+  for (let i = 0; i < 3; i++) {
+    const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.65, 10), jarMat);
+    const angle = (i / 3) * Math.PI * 2;
+    jar.position.set(0.9 + Math.cos(angle) * 0.3, 0.325, 2.0 + Math.sin(angle) * 0.3);
+    group.add(jar);
+  }
 
   enableShadowProps(group);
   return group;
@@ -799,26 +806,47 @@ function createResidentialAccent(rng) {
 
 function createTree(rng) {
   const group = new THREE.Group();
-  const height = 1.8 + rng() * 1.5;
+  const height = 2.0 + rng() * 1.8;
+  
+  // Tapered trunk
   const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.12, 0.18, height, 8),
-    new THREE.MeshStandardMaterial({ color: 0x7a5b3d, roughness: 0.85 })
+    new THREE.CylinderGeometry(0.08, 0.22, height, 8),
+    new THREE.MeshStandardMaterial({ 
+      color: 0x6d503b, 
+      roughness: 0.9, 
+      metalness: 0.05 
+    })
   );
   trunk.position.y = height * 0.5;
   group.add(trunk);
   
-  const crownCount = 2 + Math.floor(rng() * 3);
+  // More clumped, varied foliage
+  const crownCount = 4 + Math.floor(rng() * 4);
+  const leafColors = [0x4a6a3a, 0x5a7a3a, 0x3d5a2a, 0x445c2f];
+  const color = leafColors[Math.floor(rng() * leafColors.length)];
+  
   for (let i = 0; i < crownCount; i++) {
-    const size = 0.6 + rng() * 0.8;
+    const size = 0.5 + rng() * 0.9;
     const crown = new THREE.Mesh(
-      new THREE.SphereGeometry(size, 8, 8),
-      new THREE.MeshStandardMaterial({ color: 0x4a6a3a, roughness: 0.9 })
+      new THREE.IcosahedronGeometry(size, 1), // More faceted, "low-poly premium" look
+      new THREE.MeshStandardMaterial({ 
+        color: color, 
+        roughness: 0.85,
+        flatShading: true // Gives a nice faceted look that catches light well
+      })
     );
+    
+    // Position clumps along the upper half of the trunk
+    const offsetT = (i / (crownCount - 1)) * 0.6 + 0.4;
     crown.position.set(
-      (rng() - 0.5) * 0.5,
-      height + (rng() * 0.5),
-      (rng() - 0.5) * 0.5
+      (rng() - 0.5) * (size * 1.2),
+      height * offsetT + (rng() - 0.5) * 0.3,
+      (rng() - 0.5) * (size * 1.2)
     );
+    
+    // Randomized scale for each clump
+    const s = 0.8 + rng() * 0.4;
+    crown.scale.set(s, s * 0.85, s);
     group.add(crown);
   }
   return group;
@@ -828,54 +856,70 @@ function createPocketPark(cell, rng) {
   const group = new THREE.Group();
   group.name = "PocketPark";
   
-  // Low stone border or curb
+  // Tiered stone base
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0x9a8a7a, roughness: 0.8, metalness: 0.05 });
   const curb = new THREE.Mesh(
-    new THREE.BoxGeometry(BLOCK_SIZE * 0.85, 0.25, BLOCK_SIZE * 0.85),
-    new THREE.MeshStandardMaterial({ color: 0x9a8a7a, roughness: 0.9 })
+    new THREE.BoxGeometry(BLOCK_SIZE * 0.9, 0.4, BLOCK_SIZE * 0.9),
+    baseMat
   );
-  curb.position.y = 0.12;
+  curb.position.y = 0.2;
   group.add(curb);
 
-  // Grass/Garden soil area
-  const lawnWidth = BLOCK_SIZE * 0.78;
+  const upperPlat = new THREE.Mesh(
+    new THREE.BoxGeometry(BLOCK_SIZE * 0.7, 0.2, BLOCK_SIZE * 0.7),
+    baseMat
+  );
+  upperPlat.position.y = 0.5;
+  group.add(upperPlat);
+
+  // Grass/Garden soil area (elevated)
+  const lawnWidth = BLOCK_SIZE * 0.65;
   const lawn = new THREE.Mesh(
     new THREE.PlaneGeometry(lawnWidth, lawnWidth),
-    new THREE.MeshStandardMaterial({ color: 0x5a7a3a, roughness: 1.0, side: THREE.DoubleSide })
+    new THREE.MeshStandardMaterial({ color: 0x4a6a3a, roughness: 1.0, side: THREE.DoubleSide })
   );
   lawn.rotation.x = -Math.PI / 2;
-  lawn.position.y = 0.26;
+  lawn.position.y = 0.61;
   group.add(lawn);
   
-  // Central Feature: Either a big tree or a small stone monument
-  if (rng() < 0.6) {
+  // Central Feature: Improved Tree or Monument
+  if (rng() < 0.7) {
     const tree = createTree(rng);
-    tree.scale.multiplyScalar(1.2);
-    tree.position.y = 0.2;
+    tree.scale.multiplyScalar(1.1);
+    tree.position.y = 0.55;
     group.add(tree);
   } else {
-    const monument = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.8, 1.0, 1.2, 8),
-        new THREE.MeshStandardMaterial({ color: 0xcbbba1, roughness: 0.7 })
+    const monumentBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.8, 1.0, 0.4, 8),
+        new THREE.MeshStandardMaterial({ color: 0xcbbba1, roughness: 0.6 })
     );
-    monument.position.y = 0.8;
-    group.add(monument);
+    monumentBase.position.y = 0.8;
+    group.add(monumentBase);
+    
+    const obelisk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.4, 3.5, 4),
+        new THREE.MeshStandardMaterial({ color: 0xdfd3bc, roughness: 0.5 })
+    );
+    obelisk.position.y = 2.75;
+    group.add(obelisk);
   }
 
-  // Scattered shrubs
-  const shrubCount = 2 + Math.floor(rng() * 4);
+  // Clumped shrubs
+  const shrubCount = 4 + Math.floor(rng() * 4);
+  const shrubMat = new THREE.MeshStandardMaterial({ color: 0x3d5a2a, roughness: 0.9, flatShading: true });
   for (let i = 0; i < shrubCount; i++) {
     const sSize = 0.3 + rng() * 0.4;
-    const shrub = new THREE.Mesh(
-        new THREE.SphereGeometry(sSize, 6, 6),
-        new THREE.MeshStandardMaterial({ color: 0x3d5a2a, roughness: 1.0 })
-    );
-    shrub.position.set((rng()-0.5)*lawnWidth*0.8, 0.4, (rng()-0.5)*lawnWidth*0.8);
+    const shrub = new THREE.Mesh(new THREE.IcosahedronGeometry(sSize, 0), shrubMat);
+    const angle = rng() * Math.PI * 2;
+    const dist = rng() * lawnWidth * 0.4;
+    shrub.position.set(Math.cos(angle) * dist, 0.7, Math.sin(angle) * dist);
     group.add(shrub);
   }
 
   enableShadowProps(group);
   return group;
 }
+
 
 function createHarborFrontAccent(rng) {
   const group = new THREE.Group();

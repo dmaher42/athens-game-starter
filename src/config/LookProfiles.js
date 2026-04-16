@@ -39,7 +39,7 @@ export const LIGHTING_PRESETS = {
       highlightTint: "#fff8ef",
     },
     env: {
-      envMapIntensity: 0.22
+      envMapIntensity: 1.15
     },
     moon: {
       visible: false,
@@ -85,7 +85,7 @@ export const LIGHTING_PRESETS = {
       highlightTint: "#fff1df",
     },
     env: {
-      envMapIntensity: 0.38
+      envMapIntensity: 1.45
     },
     moon: {
       visible: false,
@@ -130,7 +130,7 @@ export const LIGHTING_PRESETS = {
       highlightTint: "#9bb5e1",
     },
     env: {
-      envMapIntensity: 0.45 // Gentle reflections to match twilight sky
+      envMapIntensity: 1.1 // Boosted reflections for twilight
     },
     moon: {
       visible: true,
@@ -175,7 +175,7 @@ export const LIGHTING_PRESETS = {
       highlightTint: "#c6d7ff",
     },
     env: {
-      envMapIntensity: 0.2
+      envMapIntensity: 0.65
     },
     moon: {
       visible: true,

@@ -30,7 +30,7 @@ function isBloomEnabledByDefault() {
     const forced = params.get("bloom");
     return forced === "1" || forced === "true";
   } catch {}
-  return false;
+  return true;
 }
 
 function createAutomationPreviewMaterial(material) {
