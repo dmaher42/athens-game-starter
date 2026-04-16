@@ -2020,10 +2020,11 @@ export async function createCivicDistrict(scene, options = {}) {
 
        const detailLevel = resolveBuildingDetailLevel(cell);
        
-       const isClusterable = (cell.district === 'residential' || cell.district === 'commercial') && !isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ);
-       const numSubBuildings = isClusterable ? Math.floor(rng() * 3) + 1 : 1;
+        const isClusterable = (cell.district === 'residential' || cell.district === 'commercial') && !isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ);
+        const numSubBuildings = isClusterable ? Math.floor(rng() * 3) + 1 : 1;
+        let cellRot = Math.floor(rng() * 4) * (Math.PI / 2);
 
-       for (let i = 0; i < numSubBuildings; i++) {
+        for (let i = 0; i < numSubBuildings; i++) {
            const buildingGroup = spawnBuilding({
              district: cell.district,
              rng: rng,
@@ -2100,8 +2101,9 @@ export async function createCivicDistrict(scene, options = {}) {
                    rot += (rng() - 0.5) * (Math.PI / 5.0);
                }
 
-               buildingGroup.rotation.y = rot;
-               group.add(buildingGroup);
+                buildingGroup.rotation.y = rot;
+                if (i === 0) cellRot = rot;
+                group.add(buildingGroup);
            }
        }
 
@@ -2192,11 +2194,15 @@ export async function createCivicDistrict(scene, options = {}) {
 
            if (districtAccent) {
              districtAccent.position.set(localX, localY, localZ);
-             districtAccent.rotation.y = rot;
+             districtAccent.rotation.y = cellRot;
              group.add(districtAccent);
            }
        }
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> df3ccaca (Fix build error: resolved syntax error in cityPlan.js and updated production assets)
 
   // Render footpaths (non-road paths for pedestrian connectivity)
   if (IS_DEV) console.log(`[CityPlan] Rendering ${pathTiles.length} path tiles...`);
