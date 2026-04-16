@@ -70,8 +70,6 @@ import { mountPerformanceHud } from "../ui/performanceHud.js";
 
 // Expose THREE globally for debugging in devtools.
 (window as any).THREE = THREE;
-console.log("✅ THREE exposed globally for debugging");
-
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
   engineConfig.districtRuleCandidates || [];
@@ -81,7 +79,6 @@ const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 const ENABLE_GLB_MODE = true;
 
 if (!ENABLE_GLB_MODE) {
-  console.log("[glb] GLB mode disabled");
 }
 
 const DEFAULT_FORCE_GLB =
@@ -191,7 +188,6 @@ export class Application {
       }
       const threeLogTarget =
         typeof window !== "undefined" ? (window as any) : debugGlobalScope;
-      console.log("✅ THREE exposed:", threeLogTarget?.THREE);
     }
     showLoadingScreen({
       initialStatus: "Preparing the experience...",
@@ -207,7 +203,6 @@ export class Application {
     updateLoadingProgress(0, totalLoadingStages);
     updateLoadingStatus("Preparing renderer and interface...");
     const quickCheckResult = await assetLoader.runAssetQuickChecks().catch((err: any) => {
-      console.warn("Asset QuickChecks failed", err);
       return null;
     });
     if (quickCheckResult?.hasMissingCritical || quickCheckResult?.hasRepeatedFailures) {
@@ -349,7 +344,6 @@ export class Application {
     if (typeof window !== 'undefined') {
       (window as any).scene = scene;
       (window as any).camera = camera;
-      console.log('✅ Scene and camera exposed to window for debugging');
     }
 
     const lightingSystem = new LightingSystem({
@@ -400,7 +394,6 @@ export class Application {
       }
       const terrainLogTarget =
         typeof window !== "undefined" ? (window as any) : terrainDebugScope;
-      console.log("✅ TerrainMesh exposed:", terrainLogTarget?.terrainMesh);
     }
     const terrainSize = terrain?.geometry?.userData?.['size'];
 
@@ -1091,7 +1084,6 @@ export class Application {
               count++;
             }
           });
-          console.log(`🌊 Toggled ${count} water objects`);
         };
         
         (window as any).hideWater = () => {
@@ -1108,7 +1100,6 @@ export class Application {
               count++;
             }
           });
-          console.log(`👻 Hidden ${count} water objects`);
         };
         
         (window as any).showWater = () => {
@@ -1124,7 +1115,6 @@ export class Application {
               count++;
             }
           });
-          console.log(`👁️ Shown ${count} water objects`);
         };
         
         (window as any).hideRoads = () => {
@@ -1141,7 +1131,6 @@ export class Application {
               count++;
             }
           });
-          console.log(`🚫 Hidden ${count} road objects (including footpaths)`);
         };
         
         (window as any).showRoads = () => {
@@ -1158,52 +1147,37 @@ export class Application {
               count++;
             }
           });
-          console.log(`✅ Shown ${count} road objects (including footpaths)`);
         };
         
         (window as any).debugOcean = () => {
           const oceanObj = scene.getObjectByName('AegeanOcean');
           if (!oceanObj) {
-            console.log('❌ Ocean not found');
             return;
           }
-          console.log('🌊 Ocean Debug Info:');
-          console.log('  Position:', oceanObj.position);
-          console.log('  Scale:', oceanObj.scale);
-          console.log('  Name:', oceanObj.name);
-          console.log('  Visible:', oceanObj.visible);
-          console.log('  Expected bounds: X=[1500, 2300], Z=[-400, 400]');
           const playerPos = playerSystem?.player?.object?.position;
-          console.log('  Player position:', playerPos ? `X=${playerPos.x.toFixed(1)}, Y=${playerPos.y.toFixed(1)}, Z=${playerPos.z.toFixed(1)}` : 'unknown');
         };
         
         (window as any).debugCivicDistrict = () => {
-          console.log('🏛️ Civic District Debug:');
           let roadCount = 0;
           let footpathCount = 0;
           let plazaCount = 0;
           scene.traverse((obj: any) => {
             if (obj.userData?.isFootpath) {
               footpathCount++;
-              console.log(`  Footpath at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}, color: ${obj.material?.color?.getHexString()}`);
             }
             if (obj.geometry?.type === 'BoxGeometry' && obj.position.y < 0.5 && obj.material?.color) {
               const hex = obj.material.color.getHexString();
               if (hex === '887766' || hex === '666666' || hex === '998877' || hex === 'aa9988') {
                 roadCount++;
-                console.log(`  Road/path at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}, color: #${hex}`);
               }
               if (hex === 'aaaaaa') {
                 plazaCount++;
-                console.log(`  Plaza at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}`);
               }
             }
           });
-          console.log(`  Total: ${roadCount} roads, ${footpathCount} footpaths, ${plazaCount} plazas`);
         };
         
         (window as any).findBrightObjects = () => {
-          console.log('💡 Finding bright/white objects in scene:');
           const brightObjects: any[] = [];
           scene.traverse((obj: any) => {
             if (obj.material?.color) {
@@ -1226,16 +1200,8 @@ export class Application {
             }
           });
           console.table(brightObjects);
-          console.log(`Found ${brightObjects.length} bright objects (brightness > 0.8)`);
           return brightObjects;
         };
-        
-        console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
-        console.log('✅ Road controls available: hideRoads(), showRoads()');
-        console.log('✅ Debug: debugOcean() to check ocean position');
-        console.log('✅ Debug: debugCivicDistrict() to inspect civic district elements');
-        console.log('✅ Debug: findBrightObjects() to locate white/bright meshes');
-
         renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
           if (event.button === 0) {
             interactor.useObject();

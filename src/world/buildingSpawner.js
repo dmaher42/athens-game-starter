@@ -1013,7 +1013,7 @@ export function poolMaterialsAndMerge(group) {
         group.add(mergedMesh);
       }
     } catch (e) {
-      console.warn("[buildingSpawner] Failed to merge geometry batch", e);
+      // Failed to merge batch
     }
   }
 }

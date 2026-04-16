@@ -161,10 +161,10 @@ export function generatePaths(grid, options = {}) {
   const pathTiles = [];
   const maxSlope = avoidSteepSlopes ? WALKABILITY_CONFIG.MAX_PATH_SLOPE : Infinity;
 
-  if (IS_DEV) console.log('[CityPlan] Generating pedestrian walkability grid...');
 
   // Mark existing roads as paths
   for (const cell of grid) {
+    let cellRot = 0;
     if (!cell.blocked && cell.type === 'road') {
       pathTiles.push({
         gridX: cell.gridX,
@@ -207,7 +207,6 @@ export function generatePaths(grid, options = {}) {
       const path = findPath(grid, centerX, centerZ, location.x, location.z, maxSlope);
       
       if (path) {
-        if (IS_DEV) console.log(`[CityPlan] Path to ${location.name}: ${path.length} tiles`);
         
         // Add path tiles
         for (const cell of path) {
@@ -223,12 +222,10 @@ export function generatePaths(grid, options = {}) {
           }
         }
       } else {
-        if (IS_DEV) console.warn(`[CityPlan] No path found to ${location.name} - terrain too steep or disconnected`);
       }
     }
   }
 
-  if (IS_DEV) console.log(`[CityPlan] Generated ${pathTiles.length} path tiles`);
   return pathTiles;
 }
 
@@ -251,7 +248,6 @@ export function verifyReachability(grid, pathTiles, options = {}) {
 
   const centerX = 0, centerZ = 0;
 
-  if (IS_DEV) console.log('[CityPlan] Verifying reachability to key buildings...');
 
   for (const location of keyLocations) {
     const path = findPath(grid, centerX, centerZ, location.x, location.z);
@@ -262,20 +258,16 @@ export function verifyReachability(grid, pathTiles, options = {}) {
 
       if (distance <= maxDistance) {
         results.reachable.push(location.name);
-        if (IS_DEV) console.log(`[CityPlan] ✅ ${location.name}: reachable in ${distance} tiles`);
       } else {
         results.unreachable.push(location.name);
-        if (IS_DEV) console.warn(`[CityPlan] ⚠️  ${location.name}: ${distance} tiles (exceeds max ${maxDistance})`);
       }
     } else {
       results.unreachable.push(location.name);
       results.distances[location.name] = Infinity;
-      if (IS_DEV) console.error(`[CityPlan] ❌ ${location.name}: unreachable`);
     }
   }
 
   const allReachable = results.unreachable.length === 0;
-  if (IS_DEV) console.log(`[CityPlan] Reachability: ${results.reachable.length}/${keyLocations.length} locations within ${maxDistance} tiles`);
 
   return {
     ...results,
@@ -799,6 +791,86 @@ function createResidentialAccent(rng) {
     );
     jar.position.set(x, 0.33, z);
     group.add(jar);
+  }
+
+  enableShadowProps(group);
+  return group;
+}
+
+function createTree(rng) {
+  const group = new THREE.Group();
+  const height = 1.8 + rng() * 1.5;
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12, 0.18, height, 8),
+    new THREE.MeshStandardMaterial({ color: 0x7a5b3d, roughness: 0.85 })
+  );
+  trunk.position.y = height * 0.5;
+  group.add(trunk);
+  
+  const crownCount = 2 + Math.floor(rng() * 3);
+  for (let i = 0; i < crownCount; i++) {
+    const size = 0.6 + rng() * 0.8;
+    const crown = new THREE.Mesh(
+      new THREE.SphereGeometry(size, 8, 8),
+      new THREE.MeshStandardMaterial({ color: 0x4a6a3a, roughness: 0.9 })
+    );
+    crown.position.set(
+      (rng() - 0.5) * 0.5,
+      height + (rng() * 0.5),
+      (rng() - 0.5) * 0.5
+    );
+    group.add(crown);
+  }
+  return group;
+}
+
+function createPocketPark(cell, rng) {
+  const group = new THREE.Group();
+  group.name = "PocketPark";
+  
+  // Low stone border or curb
+  const curb = new THREE.Mesh(
+    new THREE.BoxGeometry(BLOCK_SIZE * 0.85, 0.25, BLOCK_SIZE * 0.85),
+    new THREE.MeshStandardMaterial({ color: 0x9a8a7a, roughness: 0.9 })
+  );
+  curb.position.y = 0.12;
+  group.add(curb);
+
+  // Grass/Garden soil area
+  const lawnWidth = BLOCK_SIZE * 0.78;
+  const lawn = new THREE.Mesh(
+    new THREE.PlaneGeometry(lawnWidth, lawnWidth),
+    new THREE.MeshStandardMaterial({ color: 0x5a7a3a, roughness: 1.0, side: THREE.DoubleSide })
+  );
+  lawn.rotation.x = -Math.PI / 2;
+  lawn.position.y = 0.26;
+  group.add(lawn);
+  
+  // Central Feature: Either a big tree or a small stone monument
+  if (rng() < 0.6) {
+    const tree = createTree(rng);
+    tree.scale.multiplyScalar(1.2);
+    tree.position.y = 0.2;
+    group.add(tree);
+  } else {
+    const monument = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.8, 1.0, 1.2, 8),
+        new THREE.MeshStandardMaterial({ color: 0xcbbba1, roughness: 0.7 })
+    );
+    monument.position.y = 0.8;
+    group.add(monument);
+  }
+
+  // Scattered shrubs
+  const shrubCount = 2 + Math.floor(rng() * 4);
+  for (let i = 0; i < shrubCount; i++) {
+    const sSize = 0.3 + rng() * 0.4;
+    const shrub = new THREE.Mesh(
+        new THREE.SphereGeometry(sSize, 6, 6),
+        new THREE.MeshStandardMaterial({ color: 0x3d5a2a, roughness: 1.0 })
+    );
+    shrub.position.set((rng()-0.5)*lawnWidth*0.8, 0.4, (rng()-0.5)*lawnWidth*0.8);
+    group.add(shrub);
   }
 
   enableShadowProps(group);
@@ -1519,13 +1591,95 @@ function applyBuildingShadowProfile(buildingGroup, cell, detailLevel) {
   });
 }
 
+/**
+ * Procedural road network for the city.
+ * A collection of nodes and segments that define the city's skeleton.
+ */
+class RoadSegment {
+  constructor(start, end, width = 3, type = 'artery') {
+    this.start = start; // THREE.Vector3
+    this.end = end;     // THREE.Vector3
+    this.width = width;
+    this.type = type;
+    this.line = new THREE.Line3(start, end);
+  }
+
+  isNear(point, tolerance = 1.2) {
+    const closest = new THREE.Vector3();
+    this.line.closestPointToPoint(point, true, closest);
+    return point.distanceTo(closest) < (this.width / 2 + tolerance);
+  }
+}
+
+/**
+ * Generate a procedural network of roads connecting the city's hubs.
+ */
+function generateRoadNetwork(terrainSampler) {
+  const segments = [];
+  
+  // 1. Primary Spine: Harbor [East] -> Agora [Center-West]
+  // This road connects the main port to the civic heart.
+  const harborToAgora = new RoadSegment(
+    HARBOR_CENTER_3D.clone(), 
+    AGORA_CENTER_3D.clone(), 
+    5.5, 
+    'artery'
+  );
+  segments.push(harborToAgora);
+
+  // 2. Sacred Way: Agora [Center-West] -> Acropolis [Center]
+  // The ceremonial path up the hill.
+  segments.push(new RoadSegment(
+    AGORA_CENTER_3D.clone(), 
+    ACROPOLIS_PEAK_3D.clone(), 
+    4.5, 
+    'artery'
+  ));
+
+  // 3. Northwest Commercial Strip (extension)
+  segments.push(new RoadSegment(
+    AGORA_CENTER_3D.clone(), 
+    new THREE.Vector3(-110, AGORA_CENTER_3D.y, 45), 
+    3.5, 
+    'artery'
+  ));
+
+  // 4. Feeder Roads (Branching)
+  // We'll create a few loops and connectors to break up the city into blocks.
+  
+  // South Neighborhood Collector
+  segments.push(new RoadSegment(
+    new THREE.Vector3(0, AGORA_CENTER_3D.y, 10),
+    new THREE.Vector3(-45, AGORA_CENTER_3D.y, -60),
+    3,
+    'local'
+  ));
+
+  // North Neighborhood Collector
+  segments.push(new RoadSegment(
+    new THREE.Vector3(-15, AGORA_CENTER_3D.y, 35),
+    new THREE.Vector3(20, AGORA_CENTER_3D.y, 85),
+    3,
+    'local'
+  ));
+
+  // Harbor Perimeter Road
+  segments.push(new RoadSegment(
+    new THREE.Vector3(68, HARBOR_CENTER_3D.y, -30),
+    new THREE.Vector3(68, HARBOR_CENTER_3D.y, 50),
+    4,
+    'local'
+  ));
+
+  return segments;
+}
+
 function generateCityGrid(terrainSampler) {
   const cells = [];
+  const roadNetwork = generateRoadNetwork(terrainSampler);
   
-  if (IS_DEV) console.log('[CityPlan] Generating terrain-aware city grid...');
   let slopeRejects = 0;
   let elevationRejects = 0;
-  
   for (let gridX = MIN_X; gridX <= MAX_X; gridX++) {
     for (let gridZ = MIN_Z; gridZ <= MAX_Z; gridZ++) {
       let worldX = CITY_CENTER_ORIGIN.x + (gridX * BLOCK_SIZE);
@@ -1578,7 +1732,6 @@ function generateCityGrid(terrainSampler) {
       if (cell.district === 'civic') {
         if (!isWithinCivicClusterRange(worldX, worldZ)) {
           cell.buildable = false;
-          console.log(`[CityPlan] Civic building rejected at (${gridX}, ${gridZ}) - outside civic cluster range`);
         }
       }
 
@@ -1619,15 +1772,23 @@ function generateCityGrid(terrainSampler) {
         }
       }
 
-      // Keep the Agora core open as a readable civic plaza.
-      if (isAgoraPlazaCell(gridX, gridZ) || isAgoraArrivalPromenadeCell(gridX, gridZ)) {
+      // Primary Road Network Assignment
+      const nearestSeg = roadNetwork.find(seg => seg.isNear(cell.position));
+      const isRoad = !!nearestSeg;
+      
+      if (nearestSeg && cell.district !== 'sacred') {
+        cell.type = 'road';
+        cell.roadType = nearestSeg.type; // 'artery' or 'local'
+        cell.buildable = true;
+      } else if (isAgoraPlazaCell(gridX, gridZ) || isAgoraArrivalPromenadeCell(gridX, gridZ)) {
+        // Keep the Agora core open as a readable civic plaza.
         cell.type = 'plaza';
         cell.district = 'commercial';
         cell.buildable = true;
       } else if (
         isAgoraMarketCourtCell(gridX, gridZ) &&
         shouldReserveAgoraMarketCourt(gridX, gridZ) &&
-        !shouldUseCommercialRoad(gridX, gridZ)
+        !isRoad
       ) {
         // Break the market ring into shared courts so the Agora reads as joined
         // urban blocks with active inner yards instead of detached little pads.
@@ -1649,8 +1810,7 @@ function generateCityGrid(terrainSampler) {
         cell.district !== 'sacred' &&
         cell.district !== 'harbor' &&
         !isAcropolisSlopeBandCell(gridX, gridZ) &&
-        !shouldUseCommercialRoad(gridX, gridZ) &&
-        !shouldUseResidentialRoad(gridX, gridZ) &&
+        !isRoad &&
         shouldReserveInlandCourt(gridX, gridZ)
       ) {
         // Break the inland west-side fabric into shared courts and larger grouped
@@ -1681,8 +1841,7 @@ function generateCityGrid(terrainSampler) {
       } else if (
         isHarborUrbanFrontCell(gridX, gridZ) &&
         cell.district !== 'harbor' &&
-        !shouldUseCommercialRoad(gridX, gridZ) &&
-        !shouldUseResidentialRoad(gridX, gridZ) &&
+        !isRoad &&
         shouldReserveHarborCourt(gridX, gridZ)
       ) {
         // Keep the harbor approach as a sequence of larger shared forecourts and
@@ -1703,8 +1862,7 @@ function generateCityGrid(terrainSampler) {
         isOuterNeighborhoodCell(gridX, gridZ) &&
         cell.district !== 'sacred' &&
         cell.district !== 'harbor' &&
-        !shouldUseCommercialRoad(gridX, gridZ) &&
-        !shouldUseResidentialRoad(gridX, gridZ) &&
+        !isRoad &&
         shouldReserveNeighborhoodCourt(gridX, gridZ)
       ) {
         // Reserve shared courts and breathing pockets in the outer neighborhoods
@@ -1715,42 +1873,16 @@ function generateCityGrid(terrainSampler) {
         // Keep a continuous wall of city fabric around the Agora instead of letting roads eat the square.
         cell.type = 'building';
         cell.buildable = true;
-      } else if (isMainCivicRouteCell(gridX, gridZ) && cell.district !== 'sacred') {
-        // Enforce continuous civic spine (harbor → agora → acropolis)
-        cell.type = 'road';
-        cell.buildable = true;
-      } else if (Math.abs(gridZ) <= 1 && Math.abs(gridX) <= 7) {
-        cell.type = 'road'; // Main E-W avenue
-        cell.buildable = true;
-      } else if (Math.abs(gridX) <= 1 && gridZ >= -3 && gridZ <= 5 && cell.district !== 'sacred') {
-        cell.type = 'road'; // Central N-S boulevard
-        cell.buildable = true;
       } else if (cell.district === 'sacred') {
         cell.type = 'building';
-      } else if (cell.district === 'commercial') {
-        if (shouldUseCommercialRoad(gridX, gridZ)) {
-          cell.type = 'road';
-          cell.buildable = true;
-        }
-      } else {
-        if (shouldUseResidentialRoad(gridX, gridZ)) {
-          cell.type = 'road';
-          cell.buildable = true;
-        }
       }
 
       cells.push(cell);
     }
   }
   
-  if (terrainSampler) {
-    console.log(`[CityPlan] Terrain analysis: ${slopeRejects} slope rejects, ${elevationRejects} elevation rejects`);
-    const totalCells = cells.length;
-    const buildableCells = cells.filter(c => c.buildable && c.type !== 'road').length;
-    console.log(`[CityPlan] Buildable cells: ${buildableCells}/${totalCells} (${(buildableCells/totalCells*100).toFixed(1)}%)`);
-  }
   
-  return cells;
+  return { cells, roadNetwork };
 }
 
 export async function createCivicDistrict(scene, options = {}) {
@@ -1793,7 +1925,6 @@ export async function createCivicDistrict(scene, options = {}) {
         polygonOffsetUnits: -1
       });
     } catch (e) {
-      console.warn("Failed to load plaza textures (marble fallback)", e);
       return null;
     }
   })();
@@ -1831,8 +1962,11 @@ export async function createCivicDistrict(scene, options = {}) {
     return fallback + surfaceOffset;
   };
 
-  // Generate grid with terrain analysis
-  const grid = generateCityGrid(terrainSampler);
+  // Generate grid and road network
+  const { grid, roadNetwork } = (function() {
+    const result = generateCityGrid(terrainSampler);
+    return { grid: result.cells, roadNetwork: result.roadNetwork };
+  })();
 
   // Generate pedestrian paths
   const pathTiles = generatePaths(grid, {
@@ -1868,6 +2002,7 @@ export async function createCivicDistrict(scene, options = {}) {
   group.add(civicFabric);
 
   for (const cell of grid) {
+    let cellRot = 0;
     // Skip unbuildable cells (too steep or unsuitable terrain)
     if (!cell.buildable && cell.type !== 'road') {
       continue;
@@ -1885,13 +2020,11 @@ export async function createCivicDistrict(scene, options = {}) {
     }
 
     if (cell.type === 'road') {
-      // Avenue is now East-West (gridZ approx 0)
-      const isMainAvenue =
-        isMainCivicRouteCell(cell.gridX, cell.gridZ) ||
-        (Math.abs(cell.gridZ) <= 1 && Math.abs(cell.gridX) <= 7) ||
-        (Math.abs(cell.gridX) <= 1 && cell.gridZ >= -3 && cell.gridZ <= 5);
-      const roadWidth = isMainAvenue ? BLOCK_SIZE - 8 : BLOCK_SIZE - 12;
-      const roadMesh = createPavedStrip(roadWidth, roadWidth, isMainAvenue ? 0xb0895f : 0xa48463);
+      const isArtery = cell.roadType === 'artery';
+      // Artery roads are wide and formal, local roads are narrow and organic.
+      const roadWidth = isArtery ? BLOCK_SIZE - 6 : BLOCK_SIZE - 12;
+      const roadColor = isArtery ? 0x4a4a4a : 0xa2917d; 
+      const roadMesh = createPavedStrip(roadWidth, roadWidth, roadColor);
       roadMesh.position.set(localX, localY + 0.006, localZ);
 
       // Calculate rotation based on neighboring road cells to smooth out the warped grid overlap
@@ -2020,11 +2153,11 @@ export async function createCivicDistrict(scene, options = {}) {
 
        const detailLevel = resolveBuildingDetailLevel(cell);
        
-        const isClusterable = (cell.district === 'residential' || cell.district === 'commercial') && !isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ);
-        const numSubBuildings = isClusterable ? Math.floor(rng() * 3) + 1 : 1;
-        let cellRot = Math.floor(rng() * 4) * (Math.PI / 2);
+        if (cell.type === 'building' && cell.buildable) {
+            const numSubBuildings = (cell.district === 'commercial' || cell.district === 'harbor') ? 1 : (rng() < 0.4 ? 2 : 1);
+            let buildingPlaced = false;
 
-        for (let i = 0; i < numSubBuildings; i++) {
+            for (let i = 0; i < numSubBuildings; i++) {
            const buildingGroup = spawnBuilding({
              district: cell.district,
              rng: rng,
@@ -2056,7 +2189,7 @@ export async function createCivicDistrict(scene, options = {}) {
                }
 
                const subY = sampleLocalHeight(subX, subZ, localY);
-               const subCell = { ...cell, position: { x: subX, y: subY, z: subZ } };
+               const subCell = { ...cell, position: new THREE.Vector3(subX, subY, subZ) };
 
                applyAgoraScalePass(buildingGroup, subCell);
                applyBuildingShadowProfile(buildingGroup, subCell, detailLevel);
@@ -2064,26 +2197,29 @@ export async function createCivicDistrict(scene, options = {}) {
 
                let rot = Math.floor(rng() * 4) * (Math.PI / 2);
 
-               let nearestTarget = null;
+               let nearestSeg = null;
                let nearestDist = Infinity;
-               for (const targetCell of grid) {
-                   if (targetCell.type === 'road' || targetCell.type === 'plaza') {
-                       const dist = Math.hypot(targetCell.position.x - subX, targetCell.position.z - subZ);
-                       if (dist < nearestDist) {
-                           nearestDist = dist;
-                           nearestTarget = targetCell;
-                       }
+               let nearestPoint = new THREE.Vector3();
+
+               for (const seg of roadNetwork) {
+                   const closest = new THREE.Vector3();
+                   seg.line.closestPointToPoint(subCell.position, true, closest);
+                   const dist = subCell.position.distanceTo(closest);
+                   if (dist < nearestDist) {
+                       nearestDist = dist;
+                       nearestSeg = seg;
+                       nearestPoint.copy(closest);
                    }
                }
 
-               if (nearestTarget && nearestDist <= BLOCK_SIZE * 1.5) {
-                   const dx = nearestTarget.position.x - subX;
-                   const dz = nearestTarget.position.z - subZ;
+               if (nearestSeg && nearestDist <= BLOCK_SIZE * 1.5) {
+                   const dx = nearestPoint.x - subX;
+                   const dz = nearestPoint.z - subZ;
                    rot = Math.atan2(dx, dz);
 
                    if (cell.district === 'civic' || cell.district === 'commercial') {
                        const snapped = Math.round(rot / (Math.PI / 2)) * (Math.PI / 2);
-                       rot = rot * 0.65 + snapped * 0.35;
+                       rot = rot * 0.55 + snapped * 0.45;
                    }
                } else if (cell.slope > SLOPE_THRESHOLDS.FLAT) {
                    const north = sampleLocalHeight(subX, subZ + 5, subY);
@@ -2103,9 +2239,18 @@ export async function createCivicDistrict(scene, options = {}) {
 
                 buildingGroup.rotation.y = rot;
                 if (i === 0) cellRot = rot;
-                group.add(buildingGroup);
-           }
-       }
+                 group.add(buildingGroup);
+                 buildingPlaced = true;
+            }
+        }
+
+            if (!buildingPlaced && rng() < 0.75) {
+                // If building failed to spawn, create a pocket park instead.
+                const park = createPocketPark(cell, rng);
+                park.position.set(localX, localY, localZ);
+                group.add(park);
+            }
+        }
 
            if (
              (cell.district === 'civic' || cell.district === 'sacred') &&
@@ -2201,7 +2346,6 @@ export async function createCivicDistrict(scene, options = {}) {
     }
 
   // Render footpaths (non-road paths for pedestrian connectivity)
-  if (IS_DEV) console.log(`[CityPlan] Rendering ${pathTiles.length} path tiles...`);
   for (const pathTile of pathTiles) {
     if (pathTile.type === 'footpath' || pathTile.type === 'connector') {
       const localX = pathTile.position.x - center.x;
