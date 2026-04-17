@@ -1,28 +1,16 @@
 import * as THREE from "three";
+import { loadSafeTexture } from "../utils/TextureUtils.js";
 
-const textureLoader = new THREE.TextureLoader();
 const BASE_PATH = import.meta.env.BASE_URL || "/athens-game-starter/";
-const textureCache = new Map();
 
 function loadTexture(url, { repeat = [1, 1], color = false } = {}) {
   if (!url) return null;
-
-  const fullUrl = `${BASE_PATH}${url}`;
-  const cacheKey = `${fullUrl}|${repeat[0]}|${repeat[1]}|${color ? "srgb" : "linear"}`;
-  if (textureCache.has(cacheKey)) {
-    return textureCache.get(cacheKey);
-  }
-
-  const texture = textureLoader.load(fullUrl);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(repeat[0], repeat[1]);
-  if (color) {
-    texture.colorSpace = THREE.SRGBColorSpace;
-  }
-  texture.anisotropy = 8;
-  textureCache.set(cacheKey, texture);
-  return texture;
+  
+  return loadSafeTexture(url, {
+    repeat,
+    isColor: color,
+    fallback: color ? 0xd4bf9a : 0x888888 // Default to dirt color for albedo
+  });
 }
 
 function createGroundMaterial({

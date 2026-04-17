@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { loadSafeTexture } from '../utils/TextureUtils.js';
 
-const textureLoader = new THREE.TextureLoader();
-const marbleTex = textureLoader.load('textures/marble_clean.jpg');
-const stoneTex  = textureLoader.load('textures/stone_rough.jpg');
-const woodTex   = textureLoader.load('textures/wood_weathered.jpg');
+const marbleTex = loadSafeTexture('textures/marble_albedo.jpg', { isColor: true, fallback: 0xfafafa });
+const stoneTex  = loadSafeTexture('textures/stone_rough.jpg', { isColor: true, fallback: 0x9e9e9e });
+const woodTex   = loadSafeTexture('textures/wood_weathered.jpg', { isColor: true, fallback: 0x5d4037 });
 
 function createMaterial(type, rng, overrides = {}) {
   const base = {
