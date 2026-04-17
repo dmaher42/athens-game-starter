@@ -865,6 +865,8 @@ export class Application {
       let propCullingTimer = 0;
       let buildingCullingTimer = 0;
       const onFrame = (deltaTime: number, elapsed: number) => {
+        if (!scene) return;
+
         if (!scene.background || scene.background === null) {
           scene.background = new THREE.Color("#dbe9ff");
         }
@@ -915,7 +917,7 @@ export class Application {
           propCullingTimer = 0;
         }
 
-        if (buildingCullingTimer >= 0.8) {
+        if (buildingCullingTimer >= 0.8 && scene) {
           cullDistantBuildings(scene, camera, 100);
           buildingCullingTimer = 0;
         }
@@ -1101,7 +1103,31 @@ export class Application {
           }
         },
       });
-      if (false) {
+      // === CODex: Visual Cleanup Sweep ===
+      // Remove any known legacy/ghost meshes that shouldn't be here.
+      const toRemove: any[] = [];
+      scene.traverse((obj: any) => {
+        if (!obj || obj.parent === null && obj !== scene) return; 
+        
+        // Remove meshes at high altitudes (ghost veils)
+        if (obj.isMesh && obj.position.y > 100 && !obj.name?.toLowerCase().includes('particle')) {
+          toRemove.push(obj);
+        }
+        
+        // Remove massive rings that might be glitched
+        if (obj.name === 'HorizonFadeRing' && obj.geometry?.boundingSphere?.radius > 10000) {
+          toRemove.push(obj);
+        }
+      });
+      toRemove.forEach(obj => {
+        obj.visible = false;
+        if (obj.parent) obj.parent.remove(obj);
+      });
+      if (toRemove.length > 0) {
+        console.info(`[Cleanup] Removed ${toRemove.length} ghost/glitched meshes from scene.`);
+      }
+
+      if (false) { // Keep disabled unless debugging flooding
         (window as any).toggleWater = () => {
           let count = 0;
           scene.traverse((obj: any) => {

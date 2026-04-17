@@ -1,7 +1,7 @@
 // src/world/seaLevelState.js
 
 // Default sea level Y coordinate
-export const DEFAULT_SEA_LEVEL_Y = 0; // Default water height
+export const DEFAULT_SEA_LEVEL_Y = -1.0; // Default water height
 export const SEA_LEVEL_Y = DEFAULT_SEA_LEVEL_Y;
 
 let currentSeaLevelY = DEFAULT_SEA_LEVEL_Y;
