@@ -1,5 +1,5 @@
-// src/world/buildingSpawner.js
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const textureLoader = new THREE.TextureLoader();
 const marbleTex = textureLoader.load('textures/marble_clean.jpg');
@@ -271,6 +271,56 @@ function getPadSeed(pad, baseSeed = 0) {
 }
 
 /**
+ * Spawn a single building group.
+ * Used by cityPlan.js for fine-grained procedural layout.
+ */
+export function spawnBuilding(options = {}) {
+  const {
+    district = "residential",
+    rng = Math.random,
+    districtRules = {},
+    detailLevel = "full",
+    preferRowhouseMass = false,
+    w = 5,
+    d = 7
+  } = options;
+
+  const allowed = (Array.isArray(districtRules.allowedTypes) && districtRules.allowedTypes.length > 0)
+    ? districtRules.allowedTypes
+    : ["house"];
+
+  const typeKey = pick(allowed, rng);
+  const mapping = TYPE_MAP[typeKey] || TYPE_MAP.house;
+  let prefabKey = mapping.prefab;
+
+  // Massing overrides
+  if (preferRowhouseMass && (prefabKey === "house" || prefabKey === "shop")) {
+    prefabKey = "rowhouse";
+  }
+
+  const prefabFn = Prefabs[prefabKey] || Prefabs.house;
+
+  let h = 3.5;
+  if (Array.isArray(districtRules.heightRange) && districtRules.heightRange.length === 2) {
+    const [minH, maxH] = districtRules.heightRange;
+    h = minH + rng() * (maxH - minH);
+  } else {
+    h = prefabKey === "temple" ? 6 : (2.5 + rng() * 2.5);
+  }
+
+  const built = prefabFn({
+    w,
+    d,
+    h,
+    rng,
+    detailLevel
+  });
+
+  built.userData = { ...built.userData, district, type: typeKey, isBuilding: true };
+  return built;
+}
+
+/**
  * Replace or augment LotPads with buildings.
  */
 export function spawnBuildings(scene, pads, { seed = 1234 } = {}) {
@@ -298,11 +348,87 @@ export function spawnBuildings(scene, pads, { seed = 1234 } = {}) {
       scene.add(b);
       count++;
       
-      // Keep pad as occluder but hide visual
       pad.visible = false;
     }
   });
 
   console.timeEnd("City: Spawning Buildings");
-  console.log(`[buildingSpawner] Spawned ${count} buildings.`);
 }
+
+/**
+ * Optimize: Batch identical materials and merge geometries
+ */
+export function poolMaterialsAndMerge(group) {
+  const materialPool = new Map();
+  const geomMap = new Map();
+
+  function getPooledMaterial(mat) {
+    const colorHex = mat.color ? mat.color.getHex() : 0;
+    const r = Math.round((mat.roughness || 0) * 100) / 100;
+    const m = Math.round((mat.metalness || 0) * 100) / 100;
+    const t = mat.userData?.materialType || "none";
+    const o = Math.round((mat.opacity || 1) * 100) / 100;
+    const tp = Boolean(mat.transparent);
+
+    const key = `${t}_${colorHex}_${r}_${m}_${o}_${tp}`;
+    if (!materialPool.has(key)) {
+      materialPool.set(key, mat);
+    }
+    return materialPool.get(key);
+  }
+
+  group.updateMatrixWorld(true);
+  const toRemove = [];
+
+  group.traverse((child) => {
+    if (!child.isMesh || !child.geometry || !child.material) return;
+    if (child.userData?.isWindowPane) return; 
+
+    let clonedGeom = child.geometry.clone();
+    clonedGeom.applyMatrix4(child.matrixWorld);
+
+    // Ensure compatible attributes for merging
+    if (!clonedGeom.attributes.uv) {
+      const positionAttr = clonedGeom.attributes.position;
+      const uvAttr = new Float32Array(positionAttr.count * 2);
+      clonedGeom.setAttribute('uv', new THREE.BufferAttribute(uvAttr, 2));
+    }
+
+    // Force all to non-indexed to avoid "Compatible attributes" errors in mergeGeometries
+    if (clonedGeom.index) {
+      clonedGeom = clonedGeom.toNonIndexed();
+    }
+
+    const pooledMat = getPooledMaterial(child.material);
+    const matId = pooledMat.uuid;
+
+    if (!geomMap.has(matId)) {
+      geomMap.set(matId, { material: pooledMat, geoms: [] });
+    }
+
+    geomMap.get(matId).geoms.push(clonedGeom);
+    toRemove.push(child);
+  });
+
+  toRemove.forEach((child) => {
+    if (child.parent) child.parent.remove(child);
+  });
+
+  for (const batch of geomMap.values()) {
+    if (batch.geoms.length === 0) continue;
+    try {
+      const mergedGeom = BufferGeometryUtils.mergeGeometries(batch.geoms, false);
+      if (mergedGeom) {
+        const mergedMesh = new THREE.Mesh(mergedGeom, batch.material);
+        mergedMesh.castShadow = true;
+        mergedMesh.receiveShadow = true;
+        mergedMesh.name = `MergedBatch_${batch.material.userData?.materialType || 'Generic'}`;
+        group.add(mergedMesh);
+      }
+    } catch (e) {
+      console.warn("[buildingSpawner] Failed to merge batch", e);
+    }
+  }
+}
+
+function clamp(v, a, b) { return Math.min(Math.max(v, a), b); }
