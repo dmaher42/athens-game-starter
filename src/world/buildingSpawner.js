@@ -598,6 +598,65 @@ export const Prefabs = {
     base.position.y = 0.1; g.add(base);
     return g;
   },
+  pier({ w = 3, d = 12, rng = Math.random } = {}) {
+    const g = new THREE.Group();
+    g.name = "ProceduralPier";
+    const deck = makeBox(w, 0.4, d, createMaterial("wood", rng));
+    deck.position.y = 0.2; g.add(deck);
+    const pilingGeom = new THREE.CylinderGeometry(0.3, 0.3, 1.6, 10);
+    const pilingMat = createMaterial("wood", rng, { color: 0x6d4c41 });
+    const spacing = d / 4;
+    for (let i = -1; i <= 1; i++) {
+      for (let j = 0; j < 5; j++) {
+        const pile = new THREE.Mesh(pilingGeom, pilingMat);
+        pile.position.set(i * (w * 0.4), -0.6, -d * 0.5 + j * spacing);
+        pile.castShadow = pile.receiveShadow = true;
+        g.add(pile);
+      }
+    }
+    return g;
+  },
+  market() { return Prefabs.shop({}); },
+  monument() { return Prefabs.fountain(); },
+  temple({ w = 12, d = 18, h = 6, rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
+    const g = new THREE.Group();
+    g.name = "ProceduralTemple";
+    const stylobate = makeBox(w, 1.0, d, createMaterial("marble", rng));
+    stylobate.position.y = 0.5; g.add(stylobate);
+
+    const subBase = makeBox(w * 1.1, 0.4, d * 1.1, createMaterial("stone", rng));
+    subBase.position.y = 0.2; g.add(subBase);
+
+    const cella = makeBox(w * 0.7, h, d * 0.6, createMaterial("stone", rng));
+    cella.position.y = 1.0 + h * 0.5; g.add(cella);
+
+    const roofHeight = 1.8;
+    const roof = makeGableRoof(w * 0.9, d * 0.9, roofHeight, rng, roofColor);
+    roof.position.y = 1.0 + h + roofHeight * 0.5; g.add(roof);
+
+    const architrave = makeBox(w * 0.92, 0.4, d * 0.98, createMaterial("marble", rng));
+    architrave.position.y = 1.0 + h - 0.2; g.add(architrave);
+
+    const frieze = makeBox(w * 0.88, 0.35, d * 0.96, createMaterial("marble", rng));
+    frieze.position.y = 1.0 + h + 0.15; g.add(frieze);
+
+    const perSide = 6;
+    for (let i = 0; i < perSide; i++) {
+      const t = i / (perSide - 1);
+      const offsetX = THREE.MathUtils.lerp(-w * 0.45, w * 0.45, t);
+      const col = makeDetailedColumn(h * 0.9, 0.45, rng, detailLevel);
+      col.position.set(offsetX, 1.0 + (h * 0.45), d * 0.48);
+      g.add(col);
+
+      const colBack = col.clone();
+      colBack.position.z = -d * 0.48;
+      g.add(colBack);
+    }
+
+    return g;
+  },
+};
+
 function makeDetailedColumn(height, radius, rng, detailLevel = "full") {
   const g = new THREE.Group();
   const colMat = createMaterial("marble", rng, { metalness: 0.04 });
@@ -625,69 +684,6 @@ function makeDetailedColumn(height, radius, rng, detailLevel = "full") {
 
   return g;
 }
-
-export const Prefabs = {
-  pier({ w = 3, d = 12, rng = Math.random } = {}) {
-    const g = new THREE.Group();
-    g.name = "ProceduralPier";
-    const deck = makeBox(w, 0.4, d, createMaterial("wood", rng));
-    deck.position.y = 0.2; g.add(deck);
-    const pilingGeom = new THREE.CylinderGeometry(0.3, 0.3, 1.6, 10);
-    const pilingMat = createMaterial("wood", rng, { color: 0x6d4c41 });
-    const spacing = d / 4;
-    for (let i = -1; i <= 1; i++) {
-      for (let j = 0; j < 5; j++) {
-        const pile = new THREE.Mesh(pilingGeom, pilingMat);
-        pile.position.set(i * (w * 0.4), -0.6, -d * 0.5 + j * spacing);
-        pile.castShadow = pile.receiveShadow = true;
-        g.add(pile);
-      }
-    }
-    return g;
-  },
-  market() { return Prefabs.shop({}); },
-  monument() { return Prefabs.fountain(); },
-
-  temple({ w = 12, d = 18, h = 6, rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
-    const g = new THREE.Group();
-    g.name = "ProceduralTemple";
-    const stylobate = makeBox(w, 1.0, d, createMaterial("marble", rng));
-    stylobate.position.y = 0.5; g.add(stylobate);
-    
-    // Add sub-base
-    const subBase = makeBox(w * 1.1, 0.4, d * 1.1, createMaterial("stone", rng));
-    subBase.position.y = 0.2; g.add(subBase);
-
-    const cella = makeBox(w * 0.7, h, d * 0.6, createMaterial("stone", rng));
-    cella.position.y = 1.0 + h * 0.5; g.add(cella);
-    
-    const roofHeight = 1.8;
-    const roof = makeGableRoof(w * 0.9, d * 0.9, roofHeight, rng, roofColor);
-    roof.position.y = 1.0 + h + roofHeight * 0.5; g.add(roof);
-
-    // Add Architrave & Frieze Layer
-    const architrave = makeBox(w * 0.92, 0.4, d * 0.98, createMaterial("marble", rng));
-    architrave.position.y = 1.0 + h - 0.2; g.add(architrave);
-
-    const frieze = makeBox(w * 0.88, 0.35, d * 0.96, createMaterial("marble", rng));
-    frieze.position.y = 1.0 + h + 0.15; g.add(frieze);
-
-    const perSide = 6;
-    for (let i = 0; i < perSide; i++) {
-      const t = i / (perSide - 1);
-      const offsetX = THREE.MathUtils.lerp(-w * 0.45, w * 0.45, t);
-      const col = makeDetailedColumn(h * 0.9, 0.45, rng, detailLevel);
-      col.position.set(offsetX, 1.0 + (h * 0.45), d * 0.48);
-      g.add(col);
-
-      const colBack = col.clone();
-      colBack.position.z = -d * 0.48;
-      g.add(colBack);
-    }
-
-    return g;
-  },
-};
 
 // Map allowedTypes → prefab id (GLB fallback removed)
 const TYPE_MAP = {
