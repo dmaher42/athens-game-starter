@@ -108,9 +108,9 @@ export const LIGHTING_PRESETS = {
       elevation: -2,
     },
     ambient: {
-      color: "#3f5473",
-      groundColor: "#273448",
-      intensity: 0.5,
+      color: "#4a628a",
+      groundColor: "#2d3c54",
+      intensity: 0.65,
     },
     fog: {
       enabled: true,
@@ -140,7 +140,7 @@ export const LIGHTING_PRESETS = {
   },
   "Night": {
     renderer: {
-      toneMappingExposure: 1.0,
+      toneMappingExposure: 1.15,
     },
     starsVisible: 1.0,
     moonElevation: 20,
@@ -153,9 +153,9 @@ export const LIGHTING_PRESETS = {
       elevation: -45,
     },
     ambient: {
-      color: "#0b1d38",
-      groundColor: "#0b1d2d",
-      intensity: 0.25,
+      color: "#162b4d",
+      groundColor: "#12233b",
+      intensity: 0.42,
     },
     fog: {
       enabled: true,
@@ -170,7 +170,7 @@ export const LIGHTING_PRESETS = {
     grade: {
       contrast: 0.1,
       saturation: -0.08,
-      shadowTint: "#223344",
+      shadowTint: "#0b1629",
       midTint: "#10233d",
       highlightTint: "#c6d7ff",
     },

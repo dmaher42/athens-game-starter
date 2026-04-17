@@ -285,29 +285,10 @@ function createLabelSprite(text, accentColor, scale = { x: 9.5, y: 3 }) {
 }
 
 function createArrivalHalo(marker) {
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(1.95, 3.2, 40),
-    new THREE.MeshStandardMaterial({
-      color: marker.accent,
-      emissive: marker.glow,
-      emissiveIntensity: 0.75,
-      transparent: true,
-      opacity: 0,
-      side: THREE.DoubleSide,
-      roughness: 0.34,
-      metalness: 0.04,
-      depthWrite: false,
-    }),
-  );
-  ring.name = `DemoArrival_${marker.id}`;
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.08;
-  ring.visible = false;
-
   const light = new THREE.PointLight(marker.glow, 0, 28, 2);
   light.position.set(0, 2.8, 0);
 
-  return { ring, light };
+  return { light };
 }
 
 function createRouteGuide(route, index, terrain) {
@@ -450,20 +431,7 @@ function createBaseMarker(marker) {
   base.receiveShadow = true;
   group.add(base);
 
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(1.55, 0.08, 10, 32),
-    new THREE.MeshStandardMaterial({
-      color: marker.accent,
-      emissive: marker.glow,
-      emissiveIntensity: 0.45,
-      roughness: 0.3,
-      metalness: 0.12,
-    }),
-  );
-  ring.rotation.x = Math.PI / 2;
-  ring.position.y = 1.3;
-  ring.castShadow = true;
-  group.add(ring);
+
 
   const label = createLabelSprite(marker.label, marker.accent, marker.labelScale);
   label.position.set(0, marker.labelHeight ?? 5.8, 0);
@@ -479,14 +447,11 @@ function createBaseMarker(marker) {
   group.add(focusLight);
 
   const arrivalHalo = createArrivalHalo(marker);
-  group.add(arrivalHalo.ring);
   group.add(arrivalHalo.light);
 
   group.userData = group.userData || {};
-  group.userData.ring = ring;
   group.userData.label = label;
   group.userData.focusLight = focusLight;
-  group.userData.arrivalRing = arrivalHalo.ring;
   group.userData.arrivalLight = arrivalHalo.light;
   return group;
 }

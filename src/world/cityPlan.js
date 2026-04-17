@@ -2049,9 +2049,9 @@ export async function createCivicDistrict(scene, options = {}) {
 
   // Keep a light civic underlay near the Agora only. Broad waterfront-sized
   // rectangles were competing with the terrain and harbor shoreline.
-  const civicFabric = createCityFabricUnderlay(BLOCK_SIZE * 7.2, BLOCK_SIZE * 8.4, 0x96775a, 0.15);
-  civicFabric.position.set(-BLOCK_SIZE * 1.9, surfaceOffset * 0.08, BLOCK_SIZE * 1.2);
-  group.add(civicFabric);
+
+
+
 
   const gridMap = new Map();
   for (const c of grid) {

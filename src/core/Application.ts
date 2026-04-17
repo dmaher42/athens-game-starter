@@ -65,6 +65,7 @@ import { cullDistantBuildings } from "../utils/buildingCulling.js";
 import { scatterGroundProps } from "../world/groundProps.js";
 import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
+import { EnvironmentManager } from "./EnvironmentManager.js";
 import { PlayerSystem } from "../systems/PlayerSystem.js";
 import { mountPerformanceHud } from "../ui/performanceHud.js";
 
@@ -122,6 +123,7 @@ export class Application {
   worldFloorCap: any;
   killPlane: any;
   lightingSystem: any;
+  environmentManager: any;
   playerSystem: any;
 
   constructor({
@@ -166,6 +168,7 @@ export class Application {
     this.worldFloorCap = null;
     this.killPlane = null;
     this.lightingSystem = null;
+    this.environmentManager = null;
     this.playerSystem = null;
   }
 
@@ -339,6 +342,13 @@ export class Application {
         devHud,
     });
     this.lightingSystem = lightingSystem;
+    
+    this.environmentManager = new EnvironmentManager({
+      scene,
+      renderer,
+      lights: lightingSystem.lights,
+      skybox: lightingSystem.dynamicSky
+    });
 
     console.time("Boot: Lighting Init");
     const lightingInitPromise = lightingSystem.initialize();
@@ -1040,14 +1050,14 @@ export class Application {
           getPosition,
           getDirection,
           lightingCallbacks: {
-            onSetLightingPreset: (name: string) => lightingSystem.applyLookProfile(name, { source: "user" }),
+            onSetLightingPreset: (name: string) => this.environmentManager.applyLookProfile(name, { source: "user" }),
             lightingPresets: (lightingSystem as any).LIGHTING_PRESETS,
-            getActivePresetName: () => lightingSystem.lastAppliedLightingPreset,
-            setActivePreset: (name: string) => lightingSystem.applyLookProfile(name, { source: "user" }),
+            getActivePresetName: () => this.environmentManager.currentPresetName,
+            setActivePreset: (name: string) => this.environmentManager.applyLookProfile(name, { source: "user" }),
           },
           fogCallbacks: {
-            getFogEnabled: () => fogEnabled,
-            onToggleFog: toggleFog,
+            getFogEnabled: () => this.environmentManager.fogEnabled,
+            onToggleFog: () => this.environmentManager.toggleFog(),
           },
           sunAlignment: {
             getAzimuthDeg: () => lightingSystem.sunAlignmentState.azimuthDeg,
@@ -1232,9 +1242,9 @@ export class Application {
 
         window.addEventListener("keydown", (event) => {
           if (event.code === "KeyG" && !event.repeat) {
-            toggleFog();
+            this.environmentManager.toggleFog();
           } else if (event.code === "KeyT" && !event.repeat) {
-              (lightingSystem as any).cycleLightingPreset();
+            this.environmentManager.cyclePreset();
           } else if (event.code === "F8" && !event.repeat) {
             const position = playerSystem.player?.object?.position;
             const x = position?.x;

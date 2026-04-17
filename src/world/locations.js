@@ -82,7 +82,7 @@ export const HARBOR_WATER_BOUNDS = {
 // The ocean sheet extends west to cover the full harbor basin so the carved
 // seabed is never left exposed without a water plane above it.
 export const AEGEAN_OCEAN_BOUNDS = {
-  west: HARBOR_WATER_BOUNDS.west,
+  west: HARBOR_WATER_BOUNDS.west - 150,
   east: HARBOR_CENTER_3D.x + 2400,
   north: HARBOR_CENTER_3D.z + 920,
   south: HARBOR_CENTER_3D.z - 860,

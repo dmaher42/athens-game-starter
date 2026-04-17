@@ -189,7 +189,8 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   const withinOpenSea =
     x >= oceanWest && x <= oceanEast && z >= oceanSouth && z <= oceanNorth;
   if (withinOpenSea) {
-    return seaLevel - 7.5;
+    if (x < west - 40) return seaLevel - 15.0; // Deeper ocean further out
+    return seaLevel - 8.5;
   }
 
   // Create a flatter shelf behind the harbor, but keep it constrained so it
@@ -609,7 +610,7 @@ export function createTerrain(scene) {
 
     if (shouldUseCoastalMaterial) {
       coastalIndices.push(a, b, c);
-    } else if (!isFullyUnderwater && dSea <= SHORELINE_CITY_LIMIT) {
+    } else if (!isFullyUnderwater && dSea <= SHORELINE_CITY_LIMIT && !isWaterBodyTriangle) {
       cityIndices.push(a, b, c);
     } else {
       inlandIndices.push(a, b, c);

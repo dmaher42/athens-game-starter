@@ -8,7 +8,7 @@ import { lightingConfig } from "../config/LightingConfig.js";
 import { skyboxLightingConfig } from "../config/skyboxLightingConfig.js";
 import { loadHdriEnvironment } from "../world/env/loadHdriEnvironment.js";
 import { joinPath } from "../utils/baseUrl.js";
-import { init as initEnvStubs, applyBasicLightingProfile, setEnvironmentMapIntensity, setSunPosition, setTimeOfDay } from "../core/EnvironmentManager.stubs.js";
+// EnvironmentManager stubs removed, using EnvironmentManager.js central class.
 import { updateOcean } from "../world/ocean.js";
 import { updateHarborLighting } from "../world/harbor.js";
 import { updateMainHillRoadLighting } from "../world/roads_hillcity.js";
