@@ -51,9 +51,14 @@ export function makeMediterraneanPlasterMaterial() {
   const texture = loadTexture("textures/plaster_rough.jpg", 4, 4);
   return new THREE.MeshPhysicalMaterial({
     map: texture,
-    roughness: 0.8,
+    roughnessMap: texture,
+    roughness: 0.9,
     metalness: 0.05,
     envMapIntensity: 0.8,
+    bumpMap: texture,
+    bumpScale: 0.05,
+    sheen: 0.1,
+    sheenRoughness: 0.8,
   });
 }
 
@@ -61,9 +66,12 @@ export function makeMonumentalStoneMaterial() {
   const texture = loadTexture("textures/stone_rough.jpg", 2, 2);
   return new THREE.MeshPhysicalMaterial({
     map: texture,
+    roughnessMap: texture,
     roughness: 0.85,
     metalness: 0.0,
     envMapIntensity: 0.7,
+    bumpMap: texture,
+    bumpScale: 0.1,
   });
 }
 
@@ -71,9 +79,12 @@ export function makeAncientWoodMaterial() {
   const texture = loadTexture("textures/wood_weathered.jpg", 3, 3);
   return new THREE.MeshPhysicalMaterial({
     map: texture,
+    roughnessMap: texture,
     roughness: 0.9,
     metalness: 0.0,
     envMapIntensity: 0.6,
+    bumpMap: texture,
+    bumpScale: 0.12,
   });
 }
 
@@ -81,9 +92,12 @@ export function makeTerracottaRoofMaterial() {
   const texture = loadTexture("textures/roof_tiles_terracotta.jpg", 5, 5);
   return new THREE.MeshPhysicalMaterial({
     map: texture,
+    roughnessMap: texture,
     roughness: 0.8,
-    metalness: 0.0,
-    envMapIntensity: 0.7,
+    metalness: 0.02,
+    envMapIntensity: 1.0,
+    bumpMap: texture,
+    bumpScale: 0.15,
   });
 }
 

@@ -156,20 +156,24 @@ export async function makeMarbleMaterialSet({
 
 export function makePlasterMaterial({
   color = 0xd8d1c4,
-  roughness = 0.65,
+  roughness = 0.9,
 } = {}) {
-  return new THREE.MeshStandardMaterial({
+  return new THREE.MeshPhysicalMaterial({
     color,
     roughness,
-    metalness: 0.04,
+    metalness: 0.05,
+    envMapIntensity: 0.8,
+    sheen: 0.1,
+    sheenRoughness: 0.8,
   });
 }
 
 export function makeTerracottaMaterial({ color = 0xb96540 } = {}) {
-  return new THREE.MeshStandardMaterial({
+  return new THREE.MeshPhysicalMaterial({
     color,
-    roughness: 0.6,
-    metalness: 0.08,
+    roughness: 0.8,
+    metalness: 0.02,
+    envMapIntensity: 1.0,
   });
 }
 
@@ -187,15 +191,16 @@ export async function makeColumn({
     material ||
     new THREE.MeshPhysicalMaterial({
       color: 0xffffff,
-      roughness: 0.4,
-      metalness: 0.1,
+      roughness: 0.45,
+      metalness: 0.05,
       map: cloneTexture(marbleSet.map, { repeat: true }),
       normalMap: cloneTexture(marbleSet.normalMap, { repeat: true }),
       roughnessMap: cloneTexture(marbleSet.roughnessMap, { repeat: true }),
       aoMap: cloneTexture(marbleSet.aoMap, { repeat: true }),
-      clearcoat: 0.3,
-      clearcoatRoughness: 0.4,
-      envMapIntensity: 1.0,
+      clearcoat: 0.4,
+      clearcoatRoughness: 0.3,
+      envMapIntensity: 1.2,
+      reflectivity: 0.5,
     });
 
   const group = new THREE.Group();
@@ -396,11 +401,14 @@ export function makeRoof({
 
   const roofMaterial =
     material ||
-    new THREE.MeshStandardMaterial({
+    new THREE.MeshPhysicalMaterial({
       color: 0xcd7f5b,
       map: roofTex,
-      roughness: 0.85,
+      bumpMap: roofTex,
+      bumpScale: 0.12,
+      roughness: 0.8,
       metalness: 0.02,
+      envMapIntensity: 1.0,
     });
 
   const effectiveWidth = width + overhang * 2;

@@ -52,6 +52,48 @@ function makeGableRoof(w, d, h, rng, color = null) {
   return g;
 }
 
+function createBaseShadowTexture() {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+
+  const gradient = context.createRadialGradient(
+    size / 2, size / 2, 0,
+    size / 2, size / 2, size / 2
+  );
+  gradient.addColorStop(0, "rgba(0,0,0,0.65)");
+  gradient.addColorStop(0.6, "rgba(0,0,0,0.3)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  return texture;
+}
+
+let shadowTexture = null;
+
+function makeBaseShadow(w, d) {
+  if (!shadowTexture) shadowTexture = createBaseShadowTexture();
+  const geometry = new THREE.PlaneGeometry(w * 1.3, d * 1.3);
+  const material = new THREE.MeshBasicMaterial({
+    map: shadowTexture,
+    transparent: true,
+    opacity: 0.6,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = 0.01;
+  mesh.name = "BuildingBaseShadow";
+  return mesh;
+}
+
 /**
  * Procedural Prefabs
  * All buildings are generated at runtime to allow for infinite variety and lightweight builds.
@@ -60,6 +102,7 @@ export const Prefabs = {
   house({ w = 4, d = 4, h = 3, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralHouse";
+    g.add(makeBaseShadow(w, d));
     const body = makeBox(w, h, d, createMaterial("plaster", rng));
     body.position.y = h / 2; g.add(body);
     const roof = makeGableRoof(w + 0.4, d + 0.2, 1.2, rng);
@@ -69,6 +112,7 @@ export const Prefabs = {
   rowhouse({ w = 3.5, d = 6, h = 5, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralRowhouse";
+    g.add(makeBaseShadow(w, d));
     const body = makeBox(w, h, d, createMaterial("plaster", rng, { color: 0xd7ccc8 }));
     body.position.y = h / 2; g.add(body);
     const roof = makeGableRoof(w + 0.2, d + 0.4, 1.5, rng, 0x5d4037);
@@ -78,6 +122,7 @@ export const Prefabs = {
   shop({ w = 5, d = 5, h = 4, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralShop";
+    g.add(makeBaseShadow(w, d));
     const body = makeBox(w, h, d, createMaterial("stone", rng));
     body.position.y = h / 2; g.add(body);
     const porch = makeBox(w, 0.2, 1.5, createMaterial("wood", rng));
@@ -87,6 +132,7 @@ export const Prefabs = {
   workshop({ w = 6, d = 8, h = 3.5, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralWorkshop";
+    g.add(makeBaseShadow(w, d));
     const body = makeBox(w, h, d, createMaterial("stone", rng, { color: 0x8d6e63 }));
     body.position.y = h / 2; g.add(body);
     const chimney = makeBox(0.8, 2.5, 0.8, createMaterial("stone", rng));
@@ -96,6 +142,7 @@ export const Prefabs = {
   warehouse({ w = 10, d = 15, h = 6, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralWarehouse";
+    g.add(makeBaseShadow(w, d));
     const body = makeBox(w, h, d, createMaterial("stone", rng, { color: 0x757575 }));
     body.position.y = h / 2; g.add(body);
     return g;
@@ -103,6 +150,7 @@ export const Prefabs = {
   stoa({ w = 15, d = 4, h = 5, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralStoa";
+    g.add(makeBaseShadow(w, d));
     const body = makeBox(w, h, d, createMaterial("marble", rng));
     body.position.y = h / 2; g.add(body);
     const colCount = 8;
@@ -116,6 +164,7 @@ export const Prefabs = {
   fountain({ radius = 2, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralFountain";
+    g.add(makeBaseShadow(radius * 2, radius * 2));
     const basin = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 0.9, 0.6, 16), createMaterial("marble", rng));
     basin.position.y = 0.3; g.add(basin);
     const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.4, 1.5, 8), createMaterial("marble", rng));
@@ -125,6 +174,7 @@ export const Prefabs = {
   plaza({ w = 10, d = 10, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralPlaza";
+    g.add(makeBaseShadow(w, d));
     const floor = makeBox(w, 0.1, d, createMaterial("stone", rng, { color: 0xaaaaaa }));
     floor.position.y = 0.05; g.add(floor);
     return g;
@@ -132,6 +182,7 @@ export const Prefabs = {
   courtyard({ w = 8, d = 8, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralCourtyard";
+    g.add(makeBaseShadow(w, d));
     const wallHeight = 2.5;
     const walls = [
       makeBox(w, wallHeight, 0.4, createMaterial("plaster", rng)),
@@ -149,6 +200,7 @@ export const Prefabs = {
   pier({ w = 3, d = 12, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralPier";
+    g.add(makeBaseShadow(w, d));
     const deck = makeBox(w, 0.4, d, createMaterial("wood", rng));
     deck.position.y = 0.2; g.add(deck);
     const pilingGeom = new THREE.CylinderGeometry(0.3, 0.3, 1.6, 10);
@@ -169,6 +221,7 @@ export const Prefabs = {
   temple({ w = 12, d = 18, h = 6, rng = Math.random, roofColor = null, detailLevel = "full" } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralTemple";
+    g.add(makeBaseShadow(w * 1.2, d * 1.2));
     const stylobate = makeBox(w, 1.0, d, createMaterial("marble", rng));
     stylobate.position.y = 0.5; g.add(stylobate);
     

@@ -2,7 +2,7 @@
 export const LIGHTING_PRESETS = {
   "Bright Noon": {
     renderer: {
-      toneMappingExposure: 0.88,
+      toneMappingExposure: 1.05,
     },
     starsVisible: 0.0,
     moonElevation: -10,
@@ -10,36 +10,36 @@ export const LIGHTING_PRESETS = {
     soundscapeMode: "day",
     sun: {
       color: "#ffffff",
-      intensity: 2.8,
+      intensity: 3.2,
       azimuth: 215,
       elevation: 52,
     },
     ambient: {
-      color: "#f5faff",
+      color: "#faffff",
       groundColor: "#e5d5c0",
-      intensity: 0.32,
+      intensity: 0.35,
     },
     fog: {
       enabled: true,
-      color: "#f2f8ff",
-      near: 2200,
-      far: 14000,
+      color: "#e2ecf7",
+      near: 2000,
+      far: 12000,
       density: 0.00001,
     },
     skybox: {
-      exposureMultiplier: 0.9,
-      saturationMultiplier: 1.0,
+      exposureMultiplier: 1.0,
+      saturationMultiplier: 1.1,
       skyKey: "high_noon"
     },
     grade: {
-      contrast: 0.12,
-      saturation: 0.08,
+      contrast: 0.18,
+      saturation: 0.15,
       shadowTint: "#f0f2f5",
       midTint: "#ffffff",
       highlightTint: "#ffffff",
     },
     env: {
-      envMapIntensity: 1.4
+      envMapIntensity: 1.6
     },
     moon: {
       visible: false,

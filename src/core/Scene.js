@@ -301,9 +301,9 @@ export function createSceneContext({
     composer.addPass(renderPass);
     bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.3,
-      0.6,
-      0.85,
+      0.5, // strength
+      0.8, // radius
+      0.45, // threshold
     );
     // Bloom is visually nice, but it is one of the most expensive always-on
     // post effects in the current scene. Keep it opt-in for normal play.
