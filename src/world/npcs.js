@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Character } from '../characters/Character.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
+import { loadSafeTexture } from '../utils/TextureUtils.js';
 import { applyForegroundFogPolicy } from '../utils/materialUtils.js';
 
 function sanitizeRelativePath(value) {
@@ -32,29 +33,30 @@ const npcWarnings = new Set();
 const npcAvailability = new Map();
 const DEFAULT_ROLE_SEQUENCE = ['merchant', 'scholar', 'guard', 'artisan', 'citizen', 'dockworker', 'priest'];
 const SHARED_GEOMETRIES = {
-  body: new THREE.CapsuleGeometry(0.38, 1.12, 8, 16),
-  head: new THREE.SphereGeometry(0.31, 16, 16),
-  arm: new THREE.CapsuleGeometry(0.11, 0.6, 6, 10),
-  leg: new THREE.CapsuleGeometry(0.12, 0.6, 6, 10),
-  foot: new THREE.BoxGeometry(0.18, 0.06, 0.3),
-  belt: new THREE.TorusGeometry(0.3, 0.05, 8, 16),
-  cloak: new THREE.BoxGeometry(0.58, 0.9, 0.06),
-  apron: new THREE.BoxGeometry(0.34, 0.68, 0.04),
-  headwrap: new THREE.TorusGeometry(0.23, 0.05, 8, 18),
-  helmet: new THREE.SphereGeometry(0.28, 12, 12),
-  cap: new THREE.CylinderGeometry(0.22, 0.26, 0.12, 12),
-  basket: new THREE.CylinderGeometry(0.18, 0.24, 0.28, 12),
-  scroll: new THREE.CylinderGeometry(0.05, 0.05, 0.34, 10),
-  spearShaft: new THREE.CylinderGeometry(0.026, 0.03, 1.8, 8),
-  spearTip: new THREE.ConeGeometry(0.055, 0.18, 8),
-  staff: new THREE.CylinderGeometry(0.028, 0.03, 1.55, 8),
-  satchel: new THREE.BoxGeometry(0.24, 0.28, 0.12),
-  toolHandle: new THREE.CylinderGeometry(0.025, 0.025, 0.42, 8),
-  toolHead: new THREE.BoxGeometry(0.16, 0.06, 0.08),
-  sash: new THREE.TorusGeometry(0.44, 0.075, 8, 18, Math.PI * 1.25),
-  lowBody: new THREE.BoxGeometry(0.65, 1.25, 0.35),
-  lowHead: new THREE.SphereGeometry(0.28, 12, 12),
-  lowBase: new THREE.CylinderGeometry(0.28, 0.34, 0.18, 10),
+  body: new THREE.CapsuleGeometry(0.35, 1.0, 8, 16),
+  tunic: new THREE.CylinderGeometry(0.38, 0.42, 0.85, 12, 1, true), // Open-ended cylinder for cloth
+  head: new THREE.SphereGeometry(0.28, 16, 16),
+  arm: new THREE.CapsuleGeometry(0.1, 0.55, 6, 10),
+  leg: new THREE.CapsuleGeometry(0.11, 0.62, 6, 10),
+  foot: new THREE.BoxGeometry(0.16, 0.06, 0.28),
+  belt: new THREE.TorusGeometry(0.32, 0.04, 8, 16),
+  cloak: new THREE.BoxGeometry(0.62, 1.0, 0.05),
+  apron: new THREE.BoxGeometry(0.36, 0.72, 0.03),
+  headwrap: new THREE.TorusGeometry(0.22, 0.045, 8, 18),
+  helmet: new THREE.SphereGeometry(0.3, 12, 12),
+  cap: new THREE.CylinderGeometry(0.2, 0.24, 0.1, 12),
+  basket: new THREE.CylinderGeometry(0.16, 0.22, 0.26, 12),
+  scroll: new THREE.CylinderGeometry(0.04, 0.04, 0.3, 10),
+  spearShaft: new THREE.CylinderGeometry(0.024, 0.028, 1.9, 8),
+  spearTip: new THREE.ConeGeometry(0.05, 0.16, 8),
+  staff: new THREE.CylinderGeometry(0.026, 0.032, 1.6, 8),
+  satchel: new THREE.BoxGeometry(0.22, 0.26, 0.1),
+  toolHandle: new THREE.CylinderGeometry(0.022, 0.022, 0.4, 8),
+  toolHead: new THREE.BoxGeometry(0.14, 0.05, 0.07),
+  sash: new THREE.TorusGeometry(0.42, 0.06, 8, 18, Math.PI * 1.25),
+  lowBody: new THREE.BoxGeometry(0.6, 1.2, 0.32),
+  lowHead: new THREE.SphereGeometry(0.26, 12, 12),
+  lowBase: new THREE.CylinderGeometry(0.26, 0.32, 0.16, 10),
 };
 const ROLE_MATERIALS = new Map();
 const ROLE_PROFILES = {
@@ -384,29 +386,35 @@ function getRoleMaterials(roleProfile) {
   const cached = ROLE_MATERIALS.get(roleProfile.id);
   if (cached) return cached;
 
+  const garmentTex = loadSafeTexture('textures/plaster_rough.jpg', {
+    repeat: [8, 8],
+    isColor: true
+  });
+
   const materials = {
     garmentMaterial: new THREE.MeshStandardMaterial({
       color: roleProfile.garmentColor,
-      roughness: 0.86,
-      metalness: roleProfile.id === 'guard' ? 0.06 : 0.02,
+      map: garmentTex,
+      roughness: 0.92,
+      metalness: roleProfile.id === 'guard' ? 0.04 : 0.01,
       fog: true,
     }),
     skinMaterial: new THREE.MeshStandardMaterial({
       color: roleProfile.skinColor,
-      roughness: 0.78,
-      metalness: 0.01,
+      roughness: 0.75,
+      metalness: 0.0,
       fog: true,
     }),
     trimMaterial: new THREE.MeshStandardMaterial({
       color: roleProfile.trimColor,
-      roughness: 0.74,
+      roughness: 0.82,
       metalness: 0.02,
       fog: true,
     }),
     accentMaterial: new THREE.MeshStandardMaterial({
       color: roleProfile.accentColor,
-      roughness: 0.8,
-      metalness: roleProfile.id === 'guard' ? 0.08 : 0.02,
+      roughness: 0.88,
+      metalness: roleProfile.id === 'guard' ? 0.12 : 0.04,
       fog: true,
     }),
   };
@@ -459,22 +467,26 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
 
   let accessoryInstances = [];
 
-  const body = new THREE.Mesh(SHARED_GEOMETRIES.body, garmentMaterial);
+  const body = new THREE.Mesh(SHARED_GEOMETRIES.body, skinMaterial);
   body.position.y = 1.08;
   highGroup.add(body);
+
+  const tunic = new THREE.Mesh(SHARED_GEOMETRIES.tunic, garmentMaterial);
+  tunic.position.y = 1.0;
+  highGroup.add(tunic);
 
   const head = new THREE.Mesh(SHARED_GEOMETRIES.head, skinMaterial);
   head.position.y = 2.02;
   highGroup.add(head);
 
-  const leftArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial);
-  leftArm.position.set(-0.5, 1.18, 0);
-  leftArm.rotation.z = 0.08;
+  const leftArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, skinMaterial);
+  leftArm.position.set(-0.48, 1.35, 0);
+  leftArm.rotation.z = 0.12;
   highGroup.add(leftArm);
 
-  const rightArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, trimMaterial);
-  rightArm.position.set(0.5, 1.18, 0);
-  rightArm.rotation.z = -0.08;
+  const rightArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, skinMaterial);
+  rightArm.position.set(0.48, 1.35, 0);
+  rightArm.rotation.z = -0.12;
   highGroup.add(rightArm);
 
   const leftLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial);

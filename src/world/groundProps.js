@@ -2,14 +2,19 @@ import * as THREE from "three";
 import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, getSeaLevelY } from "./locations.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 
-const ROCK_GEOMETRY = new THREE.DodecahedronGeometry(0.25, 0);
-const GRASS_GEOMETRY = new THREE.ConeGeometry(0.15, 0.6, 6);
-const BUSH_GEOMETRY = new THREE.IcosahedronGeometry(0.35, 0);
+const ROCK_GEOMETRY = new THREE.DodecahedronGeometry(0.28, 1); // Slightly smoother rocks
+const GRASS_GEOMETRY = new THREE.ConeGeometry(0.12, 0.72, 8);
+const BUSH_GEOMETRY = new THREE.IcosahedronGeometry(0.42, 1); // Smoother bushes
+
+const POT_GEOMETRY = new THREE.CylinderGeometry(0.22, 0.16, 0.28, 12);
+const PLANT_LEAF_GEOMETRY = new THREE.IcosahedronGeometry(0.32, 0);
 
 const propMaterials = {
-  rock: new THREE.MeshStandardMaterial({ color: "#6f6b62", roughness: 0.95 }),
-  grass: new THREE.MeshStandardMaterial({ color: "#4f7a3a", roughness: 0.8 }),
-  bush: new THREE.MeshStandardMaterial({ color: "#3c5d2c", roughness: 0.82 }),
+  rock: new THREE.MeshStandardMaterial({ color: "#7a756b", roughness: 0.9, metalness: 0.05 }),
+  grass: new THREE.MeshStandardMaterial({ color: "#5a8c42", roughness: 0.85 }),
+  bush: new THREE.MeshStandardMaterial({ color: "#3d632b", roughness: 0.88 }),
+  pot: new THREE.MeshStandardMaterial({ color: "#b36241", roughness: 0.82, metalness: 0.02 }), // Terracotta
+  plant: new THREE.MeshStandardMaterial({ color: "#2d5a1e", roughness: 0.9 }),
 };
 
 const OPENING_VISTA_WEST = AGORA_CENTER_3D.x - 62;
@@ -21,7 +26,8 @@ export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush"];
 
 function pickPropType() {
   const r = Math.random();
-  if (r < 0.78) return "grass-tuft";
+  if (r < 0.12) return "potted-plant"; // Urban life
+  if (r < 0.72) return "grass-tuft";
   return "bush";
 }
 
@@ -42,6 +48,21 @@ function createPropMesh(type) {
       mesh.scale.setScalar(THREE.MathUtils.randFloat(0.7, 1.4));
       mesh.rotation.y = Math.random() * Math.PI * 2;
       return mesh;
+    }
+    case "potted-plant": {
+      const group = new THREE.Group();
+      const pot = new THREE.Mesh(POT_GEOMETRY, propMaterials.pot);
+      pot.position.y = 0.14;
+      group.add(pot);
+
+      const plant = new THREE.Mesh(PLANT_LEAF_GEOMETRY, propMaterials.plant);
+      plant.position.y = 0.48;
+      plant.scale.set(0.8, 1.2, 0.8);
+      group.add(plant);
+
+      group.scale.setScalar(THREE.MathUtils.randFloat(0.9, 1.3));
+      group.rotation.y = Math.random() * Math.PI * 2;
+      return group;
     }
     case "bush":
     default: {
@@ -151,25 +172,29 @@ export function scatterGroundProps(scene, terrain, options = {}) {
     if (!Number.isFinite(height) || height <= seaLevel) continue;
 
     if (isInsideBuilding(x, z, placements)) continue;
-    if (isInsideKeyDistrict(x, z)) continue;
+
+    const inDistrict = isInsideKeyDistrict(x, z);
+    const propType = pickPropType();
+
+    // Only allow potted plants inside key civic districts; exclude rocks/bushes there.
+    if (inDistrict && propType !== "potted-plant") continue;
+    
     if (isInsideOpeningVista(x, z)) continue;
 
     const nearMainRoad = mainRoadCurve
-      ? distanceToCurve(mainRoadCurve, x, z, 180) <= roadPadding
+      ? distanceToCurve(mainRoadCurve, x, z, 120) <= roadPadding
       : false;
     if (nearMainRoad) continue;
 
     let nearSecondaryRoad = false;
     for (const curve of roadCurves) {
-      const d = distanceToCurve(curve, x, z, 80);
+      const d = distanceToCurve(curve, x, z, 60);
       if (d <= roadPadding) {
         nearSecondaryRoad = true;
         break;
       }
     }
     if (nearSecondaryRoad) continue;
-
-    const propType = pickPropType();
     const mesh = createPropMesh(propType);
     mesh.position.set(x, height + 0.02, z);
     group.add(mesh);

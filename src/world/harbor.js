@@ -18,6 +18,7 @@ import {
   analyzeHarborZone,
   HARBOR_ZONE_CONFIG,
 } from "./coastalZones.js";
+import { makeAncientWoodMaterial } from "./materials.js";
 
 const DOCK_SECTION_LENGTH = 9.5;
 const DOCK_SECTION_WIDTH = 5.8;
@@ -44,23 +45,20 @@ function enableShadows(mesh) {
 }
 
 function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOCK_SECTION_WIDTH } = {}) {
+  const woodMaterial = makeAncientWoodMaterial();
   const deck = new THREE.Mesh(
     new THREE.BoxGeometry(length, DOCK_THICKNESS, width),
-    new THREE.MeshStandardMaterial({
-      color: 0xbfa48a, // Lighter, more sunlit wood
-      roughness: 0.65,
-      metalness: 0.04,
-    }),
+    woodMaterial,
   );
   // Local Y relative to harbor group (group Y = harborGroundY)
   deck.position.y = (seaLevel - HARBOR_GROUND_HEIGHT) + DOCK_LIFT - DOCK_THICKNESS * 0.5;
   enableShadows(deck);
 
-  const postMaterial = new THREE.MeshStandardMaterial({
-    color: 0x7a6248,
-    roughness: 0.78,
-    metalness: 0.05,
-  });
+  const postMaterial = woodMaterial.clone();
+  if (postMaterial.map) {
+    postMaterial.map = postMaterial.map.clone();
+    postMaterial.map.repeat.set(1, 2);
+  }
   const postGeometry = new THREE.CylinderGeometry(0.35, 0.42, DOCK_POST_HEIGHT + 0.6, 10);
 
   const posts = new THREE.Group();
@@ -130,9 +128,13 @@ function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f
   const boat = new THREE.Group();
   boat.name = "HarborBoat";
 
+  const woodMaterial = makeAncientWoodMaterial();
+  const hullMaterial = woodMaterial.clone();
+  hullMaterial.color.set(hull);
+
   const hullMesh = new THREE.Mesh(
     new THREE.BoxGeometry(length, 1.1, width),
-    new THREE.MeshStandardMaterial({ color: hull, roughness: 0.42, metalness: 0.15 }),
+    hullMaterial,
   );
   // Local offsets relative to boat origin (will be positioned relative to harbor group)
   hullMesh.position.y = 0.55;
@@ -171,21 +173,17 @@ function createHeroHarborShip({ seaLevel = 0, hull = 0x285779, accent = 0xd7a15a
   const ship = new THREE.Group();
   ship.name = "HarborHeroShip";
 
-  const hullMaterial = new THREE.MeshStandardMaterial({
-    color: hull,
-    roughness: 0.46,
-    metalness: 0.14,
-  });
+  const woodMaterial = makeAncientWoodMaterial();
+  const hullMaterial = woodMaterial.clone();
+  hullMaterial.color.set(hull);
+  
   const accentMaterial = new THREE.MeshStandardMaterial({
     color: accent,
     roughness: 0.52,
     metalness: 0.08,
   });
-  const mastMaterial = new THREE.MeshStandardMaterial({
-    color: 0xe8dbc8,
-    roughness: 0.54,
-    metalness: 0.04,
-  });
+  const mastMaterial = woodMaterial.clone();
+  mastMaterial.color.set(0xe8dbc8);
 
   const hullBase = new THREE.Mesh(
     new THREE.BoxGeometry(22, 1.8, 5.4),

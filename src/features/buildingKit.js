@@ -175,8 +175,8 @@ export function makeTerracottaMaterial({ color = 0xb96540 } = {}) {
 
 export async function makeColumn({
   height = 7,
-  radiusTop = 0.7,
-  radiusBottom = 0.75,
+  radiusTop = 0.65,
+  radiusBottom = 0.72,
   radialSegments = 32,
   heightSegments = 1,
   material = null,
@@ -187,18 +187,21 @@ export async function makeColumn({
     material ||
     new THREE.MeshPhysicalMaterial({
       color: 0xffffff,
-      roughness: 0.42,
-      metalness: 0.08,
+      roughness: 0.4,
+      metalness: 0.1,
       map: cloneTexture(marbleSet.map, { repeat: true }),
       normalMap: cloneTexture(marbleSet.normalMap, { repeat: true }),
       roughnessMap: cloneTexture(marbleSet.roughnessMap, { repeat: true }),
       aoMap: cloneTexture(marbleSet.aoMap, { repeat: true }),
-      clearcoat: 0.28,
-      clearcoatRoughness: 0.5,
-      envMapIntensity: 0.9,
+      clearcoat: 0.3,
+      clearcoatRoughness: 0.4,
+      envMapIntensity: 1.0,
     });
 
-  const geometry = new THREE.CylinderGeometry(
+  const group = new THREE.Group();
+  group.name = "DetailedColumn";
+
+  const shaftGeom = new THREE.CylinderGeometry(
     radiusTop,
     radiusBottom,
     height,
@@ -206,16 +209,31 @@ export async function makeColumn({
     heightSegments,
     false,
   );
-  geometry.translate(0, height / 2, 0);
-  ensureUv2Attribute(geometry);
+  shaftGeom.translate(0, height / 2 + 0.15, 0); // Offset for base
+  ensureUv2Attribute(shaftGeom);
+  const shaftMesh = new THREE.Mesh(shaftGeom, columnMaterial);
+  shaftMesh.castShadow = true;
+  shaftMesh.receiveShadow = true;
+  group.add(shaftMesh);
 
-  const mesh = new THREE.Mesh(geometry, columnMaterial);
-  mesh.name = "ProceduralColumn";
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  mesh.userData = mesh.userData || {};
-  mesh.userData.noCollision = false;
-  return mesh;
+  // Capital (Top detail)
+  const capitalGeom = new THREE.BoxGeometry(radiusTop * 2.8, 0.45, radiusTop * 2.8);
+  const capitalMesh = new THREE.Mesh(capitalGeom, columnMaterial);
+  capitalMesh.position.y = height + 0.3;
+  capitalMesh.castShadow = true;
+  capitalMesh.receiveShadow = true;
+  group.add(capitalMesh);
+
+  // Base (Bottom detail)
+  const baseGeom = new THREE.CylinderGeometry(radiusBottom * 1.4, radiusBottom * 1.6, 0.35, 12);
+  const baseMesh = new THREE.Mesh(baseGeom, columnMaterial);
+  baseMesh.position.y = 0.175;
+  baseMesh.castShadow = true;
+  baseMesh.receiveShadow = true;
+  group.add(baseMesh);
+
+  group.userData = { noCollision: false };
+  return group;
 }
 
 export async function makeStylobateSteps({
@@ -369,12 +387,20 @@ export function makeRoof({
   const group = new THREE.Group();
   group.name = "TempleRoof";
 
+  const roofTex = marbleTextureLoader.load(joinPath(resolveBaseUrl(), "textures/roof_tiles_terracotta.jpg"), (tex) => {
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(6, 6);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+  });
+
   const roofMaterial =
     material ||
     new THREE.MeshStandardMaterial({
-      color: 0xc86f42,
-      roughness: 0.62,
-      metalness: 0.05,
+      color: 0xcd7f5b,
+      map: roofTex,
+      roughness: 0.85,
+      metalness: 0.02,
     });
 
   const effectiveWidth = width + overhang * 2;

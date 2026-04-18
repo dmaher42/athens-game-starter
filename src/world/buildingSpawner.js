@@ -1,22 +1,29 @@
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { loadSafeTexture } from '../utils/TextureUtils.js';
-
-const marbleTex = loadSafeTexture('textures/marble_clean.jpg', { isColor: true, fallback: 0xfafafa });
-const stoneTex  = loadSafeTexture('textures/stone_rough.jpg', { isColor: true, fallback: 0x9e9e9e });
-const woodTex   = loadSafeTexture('textures/wood_weathered.jpg', { isColor: true, fallback: 0x5d4037 });
-const plasterTex = loadSafeTexture('textures/plaster_rough.jpg', { isColor: true, fallback: 0xe0e0e0 });
-const roofTex    = loadSafeTexture('textures/roof_tiles_terracotta.jpg', { isColor: true, fallback: 0x8d6e63, repeat: [2, 2] });
+import { 
+  makeMarbleMaterial, 
+  makeMonumentalStoneMaterial, 
+  makeAncientWoodMaterial, 
+  makeMediterraneanPlasterMaterial,
+  makeTerracottaRoofMaterial
+} from './materials.js';
 
 function createMaterial(type, rng, overrides = {}) {
-  const base = {
-    marble: { color: 0xffffff, roughness: 0.1, metalness: 0.05, map: marbleTex },
-    stone:  { color: 0x9e9e9e, roughness: 0.8, metalness: 0.0,  map: stoneTex },
-    wood:   { color: 0x5d4037, roughness: 0.9, metalness: 0.0,  map: woodTex },
-    plaster:{ color: 0xffffff, roughness: 0.95, metalness: 0.0, map: plasterTex }
-  };
-  const config = base[type] || base.stone;
-  return new THREE.MeshStandardMaterial({ ...config, ...overrides });
+  let mat;
+  switch (type) {
+    case "marble": mat = makeMarbleMaterial(); break;
+    case "stone":  mat = makeMonumentalStoneMaterial(); break;
+    case "wood":   mat = makeAncientWoodMaterial(); break;
+    case "plaster":mat = makeMediterraneanPlasterMaterial(); break;
+    case "roof":   mat = makeTerracottaRoofMaterial(); break;
+    default:       mat = makeMonumentalStoneMaterial();
+  }
+  
+  if (overrides.color) mat.color.set(overrides.color);
+  if (overrides.roughness !== undefined) mat.roughness = overrides.roughness;
+  if (overrides.metalness !== undefined) mat.metalness = overrides.metalness;
+  
+  return mat;
 }
 
 function makeBox(w, h, d, mat) {
@@ -28,11 +35,7 @@ function makeBox(w, h, d, mat) {
 function makeGableRoof(w, d, h, rng, color = null) {
   const g = new THREE.Group();
   const roofColor = color || (rng() > 0.5 ? 0xffffff : 0xeeeeee);
-  const mat = new THREE.MeshStandardMaterial({ 
-    color: roofColor, 
-    map: roofTex,
-    roughness: 0.8 
-  });
+  const mat = createMaterial("roof", rng, { color: roofColor });
   
   const shape = new THREE.Shape();
   shape.moveTo(-w / 2, 0);
