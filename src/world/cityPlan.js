@@ -1590,21 +1590,44 @@ function applyBuildingShadowProfile(buildingGroup, cell, detailLevel) {
 
 /**
  * Procedural road network for the city.
- * A collection of nodes and segments that define the city's skeleton.
+ * A collection of nodes and spline segments that define the city's organic skeleton.
  */
-class RoadSegment {
-  constructor(start, end, width = 3, type = 'artery') {
-    this.start = start; // THREE.Vector3
-    this.end = end;     // THREE.Vector3
+class SplineRoad {
+  constructor(points, width = 3, type = 'artery') {
+    this.points = points;
     this.width = width;
     this.type = type;
-    this.line = new THREE.Line3(start, end);
+    this.curve = new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.2);
+
+    // Cache samples for fast collision checks
+    this.samples = this.curve.getPoints(Math.max(12, Math.floor(this.curve.getLength() / 4)));
   }
 
-  isNear(point, tolerance = 1.2) {
-    const closest = new THREE.Vector3();
-    this.line.closestPointToPoint(point, true, closest);
-    return point.distanceTo(closest) < (this.width / 2 + tolerance);
+  closestPointToPoint(point, target = new THREE.Vector3()) {
+    if (!this.samples.length) {
+      return target.copy(this.points[0] || point);
+    }
+
+    let closestPoint = this.samples[0];
+    let closestDistanceSq = point.distanceToSquared(closestPoint);
+
+    for (let i = 1; i < this.samples.length; i++) {
+      const sample = this.samples[i];
+      const distanceSq = point.distanceToSquared(sample);
+      if (distanceSq < closestDistanceSq) {
+        closestPoint = sample;
+        closestDistanceSq = distanceSq;
+      }
+    }
+
+    return target.copy(closestPoint);
+  }
+
+  isNear(point, tolerance = 1.0) {
+    const threshold = (this.width / 2) + tolerance;
+    const thresholdSq = threshold * threshold;
+    const closest = this.closestPointToPoint(point, new THREE.Vector3());
+    return point.distanceToSquared(closest) < thresholdSq;
   }
 }
 
@@ -1614,66 +1637,118 @@ class RoadSegment {
 function generateRoadNetwork(terrainSampler) {
   const segments = [];
   
+  const getH = (v) => {
+    if (terrainSampler) {
+        const h = terrainSampler(v.x, v.z);
+        return Number.isFinite(h) ? h : v.y;
+    }
+    return v.y;
+  };
+
   // 1. Primary Spine: Harbor [East] -> Agora [Center-West]
-  // This road connects the main port to the civic heart.
-  const harborToAgora = new RoadSegment(
-    HARBOR_CENTER_3D.clone(), 
-    AGORA_CENTER_3D.clone(), 
-    5.5, 
-    'artery'
-  );
-  segments.push(harborToAgora);
+  // We add a mid-point to organicize the "Long Road" to the harbor.
+  const harborAgoraPoints = [
+    HARBOR_CENTER_3D.clone(),
+    new THREE.Vector3(25, 0, 15),
+    AGORA_CENTER_3D.clone()
+  ];
+  harborAgoraPoints.forEach(p => p.y = getH(p));
+  segments.push(new SplineRoad(harborAgoraPoints, 11, 'artery'));
 
   // 2. Sacred Way: Agora [Center-West] -> Acropolis [Center]
-  // The ceremonial path up the hill.
-  segments.push(new RoadSegment(
-    AGORA_CENTER_3D.clone(), 
-    ACROPOLIS_PEAK_3D.clone(), 
-    4.5, 
-    'artery'
-  ));
+  // Curved ascent around the hill.
+  const sacredWayPoints = [
+    AGORA_CENTER_3D.clone(),
+    new THREE.Vector3(-18, 0, 10),
+    ACROPOLIS_PEAK_3D.clone()
+  ];
+  sacredWayPoints.forEach(p => p.y = getH(p));
+  segments.push(new SplineRoad(sacredWayPoints, 9, 'artery'));
 
   // 3. Northwest Commercial Strip (extension)
-  segments.push(new RoadSegment(
-    AGORA_CENTER_3D.clone(), 
-    new THREE.Vector3(-110, AGORA_CENTER_3D.y, 45), 
-    3.5, 
-    'artery'
-  ));
+  const nwStripPoints = [
+      AGORA_CENTER_3D.clone(),
+      new THREE.Vector3(-60, 0, 30),
+      new THREE.Vector3(-120, 0, 50)
+  ];
+  nwStripPoints.forEach(p => p.y = getH(p));
+  segments.push(new SplineRoad(nwStripPoints, 8, 'artery'));
 
-  // 4. Feeder Roads (Branching)
-  // We'll create a few loops and connectors to break up the city into blocks.
+  // 4. Neighborhood Collectors (Local Streets)
   
-  // South Neighborhood Collector
-  segments.push(new RoadSegment(
-    new THREE.Vector3(0, AGORA_CENTER_3D.y, 10),
-    new THREE.Vector3(-45, AGORA_CENTER_3D.y, -60),
-    3,
-    'local'
-  ));
+  // South Neighborhood Loop
+  segments.push(new SplineRoad([
+    new THREE.Vector3(0, getH({x:0, z:15}), 15),
+    new THREE.Vector3(-15, getH({x:-15, z:-20}), -20),
+    new THREE.Vector3(-45, getH({x:-45, z:-60}), -60)
+  ], 6, 'street'));
 
   // North Neighborhood Collector
-  segments.push(new RoadSegment(
-    new THREE.Vector3(-15, AGORA_CENTER_3D.y, 35),
-    new THREE.Vector3(20, AGORA_CENTER_3D.y, 85),
-    3,
-    'local'
-  ));
+  segments.push(new SplineRoad([
+    new THREE.Vector3(-15, getH({x:-15, z:35}), 35),
+    new THREE.Vector3(5, getH({x:5, z:60}), 60),
+    new THREE.Vector3(20, getH({x:20, z:105}), 105)
+  ], 6, 'street'));
 
-  // Harbor Perimeter Road
-  segments.push(new RoadSegment(
-    new THREE.Vector3(68, HARBOR_CENTER_3D.y, -30),
-    new THREE.Vector3(68, HARBOR_CENTER_3D.y, 50),
-    4,
-    'local'
-  ));
+  // Harbor Perimeter Road (Curved)
+  segments.push(new SplineRoad([
+    new THREE.Vector3(68, getH({x:68, z:-40}), -40),
+    new THREE.Vector3(75, getH({x:75, z:10}), 10),
+    new THREE.Vector3(68, getH({x:68, z:60}), 60)
+  ], 7, 'street'));
 
   return segments;
+}
+
+/**
+ * Procedural branching to fill urban voids with local streets.
+ */
+function branchSideStreets(segments, terrainSampler) {
+  const hubAgora = AGORA_CENTER_3D;
+
+  const getH = (x, z) => {
+    if (terrainSampler) {
+      const h = terrainSampler(x, z);
+      return Number.isFinite(h) ? h : hubAgora.y;
+    }
+    return hubAgora.y;
+  };
+
+  // Branch 1: Agora-Harbor Connector (North side)
+  segments.push(new SplineRoad([
+    new THREE.Vector3(15, getH(15, 30), 30),
+    new THREE.Vector3(35, getH(35, 45), 45),
+    new THREE.Vector3(60, getH(60, 40), 40)
+  ], 5, 'street'));
+
+  // Branch 2: Southern Coastal Lane
+  segments.push(new SplineRoad([
+    new THREE.Vector3(55, getH(55, -25), -25),
+    new THREE.Vector3(30, getH(30, -35), -35),
+    new THREE.Vector3(-10, getH(-10, -45), -45)
+  ], 5, 'street'));
+
+  // Branch 3: Northwest Commercial extension Alleys
+  segments.push(new SplineRoad([
+    new THREE.Vector3(-60, getH(-60, 30), 30),
+    new THREE.Vector3(-80, getH(-80, 15), 15),
+    new THREE.Vector3(-95, getH(-95, 35), 35)
+  ], 4, 'alley'));
+
+  // Branch 4: Far North neighborhood loop
+  segments.push(new SplineRoad([
+    new THREE.Vector3(20, getH(20, 105), 105),
+    new THREE.Vector3(-5, getH(-5, 120), 120),
+    new THREE.Vector3(-30, getH(-30, 100), 100)
+  ], 4, 'alley'));
 }
 
 function generateCityGrid(terrainSampler) {
   const cells = [];
   const roadNetwork = generateRoadNetwork(terrainSampler);
+  
+  // Fill voids with side streets
+  branchSideStreets(roadNetwork, terrainSampler);
   
   let slopeRejects = 0;
   let elevationRejects = 0;
@@ -2034,12 +2109,24 @@ export async function createCivicDistrict(scene, options = {}) {
     }
 
     if (cell.type === 'road') {
-      const isArtery = cell.roadType === 'artery';
-      // Artery roads are wide and formal, local roads are narrow and organic.
-      const roadWidth = isArtery ? BLOCK_SIZE - 6 : BLOCK_SIZE - 12;
-      const roadColor = isArtery ? 0x4a4a4a : 0xa2917d; 
+      const type = cell.roadType || 'street';
+      let roadWidth;
+      let roadColor;
+      
+      if (type === 'artery') {
+        roadWidth = BLOCK_SIZE - 4; // Wide boulevards
+        roadColor = 0x4a4a4a;
+      } else if (type === 'street') {
+        roadWidth = BLOCK_SIZE - 10; // Standard neighborhood streets
+        roadColor = 0x7a6b5a;
+      } else { // alley
+        roadWidth = BLOCK_SIZE - 16; // Narrow access paths
+        roadColor = 0x8a7a6a;
+      }
+
       const roadMesh = createPavedStrip(roadWidth, roadWidth, roadColor);
       roadMesh.position.set(localX, localY + 0.006, localZ);
+      roadMesh.userData.roadType = type;
 
       // Calculate rotation based on neighboring road cells to smooth out the warped grid overlap
       let nextRoadX = localX;
@@ -2230,7 +2317,7 @@ export async function createCivicDistrict(scene, options = {}) {
                const startSearch = performance.now();
                 for (const seg of roadNetwork) {
                     const closest = new THREE.Vector3();
-                   seg.line.closestPointToPoint(subCell.position, true, closest);
+                   seg.closestPointToPoint(subCell.position, closest);
                    const dist = subCell.position.distanceTo(closest);
                    if (dist < nearestDist) {
                        nearestDist = dist;

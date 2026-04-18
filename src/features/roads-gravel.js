@@ -108,7 +108,8 @@ export async function applyGravelToRoads({ scene } = {}) {
           name.includes("main") ||
           name.includes("plaza") ||
           u.kind === "plaza" ||
-          u.category === "plaza"
+          u.category === "plaza" ||
+          u.roadType === "artery"
         );
       };
 
