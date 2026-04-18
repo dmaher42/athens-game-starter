@@ -14,6 +14,7 @@ import {
   analyzeTile,
   SLOPE_THRESHOLDS 
 } from './terrainUtils.js';
+import { createCypressTree, createOliveTree } from './foliage.js';
 
 /* PATCH: Harbor zone params */
 export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.25 };
@@ -600,10 +601,16 @@ function createAgoraPlazaAccent() {
     [-7, 7, 0.03],
     [7, 7, -0.08],
   ]) {
-    const banner = createBannerStand(0xd0a046);
-    banner.position.set(x, 0, z);
-    banner.rotation.y = rot;
     group.add(banner);
+  }
+
+  // Symmetrical Cypress framing for the central plaza
+  for (const [x, z] of [
+    [-9, -9], [9, -9], [-9, 9], [9, 9]
+  ]) {
+    const cypress = createCypressTree({ scale: 1.35 });
+    cypress.position.set(x, 0, z);
+    group.add(cypress);
   }
 
   enableShadowProps(group);
@@ -771,25 +778,9 @@ function createResidentialAccent(rng) {
     group.add(leg);
   }
 
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.16, 0.22, 2.4, 8),
-    new THREE.MeshStandardMaterial({ color: 0x7a5b3d, roughness: 0.88, metalness: 0.02 }),
-  );
-  trunk.position.set(-1.55, 1.2, -1.2);
-  group.add(trunk);
-
-  for (const [x, y, z, r] of [
-    [-1.75, 2.35, -1.1, 0.85],
-    [-1.1, 2.2, -1.05, 0.7],
-    [-1.45, 2.7, -1.45, 0.78],
-  ]) {
-    const crown = new THREE.Mesh(
-      new THREE.SphereGeometry(r, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0x5f7d42, roughness: 0.9, metalness: 0.0 }),
-    );
-    crown.position.set(x, y, z);
-    group.add(crown);
-  }
+  const oliveTree = createOliveTree({ scale: 0.85 });
+  oliveTree.position.set(-1.55, 0.1, -1.2);
+  group.add(oliveTree);
 
   for (const [x, z] of [[1.05, 1.2], [1.45, 1.45]]) {
     const jar = new THREE.Mesh(
@@ -805,51 +796,13 @@ function createResidentialAccent(rng) {
 }
 
 function createTree(rng) {
-  const group = new THREE.Group();
-  const height = 2.0 + rng() * 1.8;
+  const isCypress = rng() < 0.45;
+  const tree = isCypress 
+    ? createCypressTree({ scale: 0.8 + rng() * 0.4 })
+    : createOliveTree({ scale: 0.9 + rng() * 0.3 });
   
-  // Tapered trunk
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.08, 0.22, height, 8),
-    new THREE.MeshStandardMaterial({ 
-      color: 0x6d503b, 
-      roughness: 0.9, 
-      metalness: 0.05 
-    })
-  );
-  trunk.position.y = height * 0.5;
-  group.add(trunk);
-  
-  // More clumped, varied foliage
-  const crownCount = 4 + Math.floor(rng() * 4);
-  const leafColors = [0x4a6a3a, 0x5a7a3a, 0x3d5a2a, 0x445c2f];
-  const color = leafColors[Math.floor(rng() * leafColors.length)];
-  
-  for (let i = 0; i < crownCount; i++) {
-    const size = 0.5 + rng() * 0.9;
-    const crown = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(size, 1), // More faceted, "low-poly premium" look
-      new THREE.MeshStandardMaterial({ 
-        color: color, 
-        roughness: 0.85,
-        flatShading: true // Gives a nice faceted look that catches light well
-      })
-    );
-    
-    // Position clumps along the upper half of the trunk
-    const offsetT = (i / (crownCount - 1)) * 0.6 + 0.4;
-    crown.position.set(
-      (rng() - 0.5) * (size * 1.2),
-      height * offsetT + (rng() - 0.5) * 0.3,
-      (rng() - 0.5) * (size * 1.2)
-    );
-    
-    // Randomized scale for each clump
-    const s = 0.8 + rng() * 0.4;
-    crown.scale.set(s, s * 0.85, s);
-    group.add(crown);
-  }
-  return group;
+  // Symmetrical Cypress specifically for formal civic areas if needed
+  return tree;
 }
 
 function createPocketPark(cell, rng) {

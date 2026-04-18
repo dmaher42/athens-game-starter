@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, getSeaLevelY } from "./locations.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
+import { createCypressTree, createOliveTree } from "./foliage.js";
 
 const ROCK_GEOMETRY = new THREE.DodecahedronGeometry(0.28, 1); // Slightly smoother rocks
 const GRASS_GEOMETRY = new THREE.ConeGeometry(0.12, 0.72, 8);
@@ -22,13 +23,16 @@ const OPENING_VISTA_EAST = AGORA_CENTER_3D.x + 18;
 const OPENING_VISTA_SOUTH = AGORA_CENTER_3D.z - 24;
 const OPENING_VISTA_NORTH = AGORA_CENTER_3D.z + 34;
 
-export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush"];
+export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush", "tree-cypress", "tree-olive"];
 
 function pickPropType() {
   const r = Math.random();
-  if (r < 0.12) return "potted-plant"; // Urban life
-  if (r < 0.72) return "grass-tuft";
-  return "bush";
+  if (r < 0.08) return "potted-plant"; // Urban life
+  if (r < 0.14) return "tree-cypress"; // Tall accent
+  if (r < 0.20) return "tree-olive";    // Mediterranean vibe
+  if (r < 0.70) return "grass-tuft";
+  if (r < 0.90) return "bush";
+  return "rock";
 }
 
 function createPropMesh(type) {
@@ -63,6 +67,12 @@ function createPropMesh(type) {
       group.scale.setScalar(THREE.MathUtils.randFloat(0.9, 1.3));
       group.rotation.y = Math.random() * Math.PI * 2;
       return group;
+    }
+    case "tree-cypress": {
+      return createCypressTree({ scale: THREE.MathUtils.randFloat(0.85, 1.25) });
+    }
+    case "tree-olive": {
+      return createOliveTree({ scale: THREE.MathUtils.randFloat(0.9, 1.3) });
     }
     case "bush":
     default: {
