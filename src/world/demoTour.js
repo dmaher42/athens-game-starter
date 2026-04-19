@@ -939,6 +939,13 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
       if (currentStageIndex >= TOUR_STAGES.length) {
         completed = true;
         questManager?.completeQuest?.();
+        
+        // Start the followup quest
+        questManager?.startQuest?.(
+            "The Lost Scrolls", 
+            "Find 3 Wisdom Scrolls hidden in the city."
+        );
+
         setActiveMarker();
         return;
       }

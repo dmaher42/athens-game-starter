@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, getSeaLevelY } from "./locations.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
-import { createCypressTree, createOliveTree } from "./foliage.js";
+import { createCypressTree, createOliveTree, createStonePine, createPoplar, createLavenderBush } from "./foliage.js";
 
 const ROCK_GEOMETRY = new THREE.DodecahedronGeometry(0.28, 1); // Slightly smoother rocks
 const GRASS_GEOMETRY = new THREE.ConeGeometry(0.12, 0.72, 8);
@@ -23,15 +23,23 @@ const OPENING_VISTA_EAST = AGORA_CENTER_3D.x + 18;
 const OPENING_VISTA_SOUTH = AGORA_CENTER_3D.z - 24;
 const OPENING_VISTA_NORTH = AGORA_CENTER_3D.z + 34;
 
-export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush", "tree-cypress", "tree-olive"];
+export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush", "tree-cypress", "tree-olive", "tree-stonepine", "tree-poplar", "lavender"];
 
-function pickPropType() {
+function pickPropType(lastType = null, clumpFactor = 0.0) {
+  // 80% chance to "clump" (reuse previous type) if the probability roll hits
+  if (lastType && Math.random() < clumpFactor) {
+    return lastType;
+  }
+
   const r = Math.random();
-  if (r < 0.08) return "potted-plant"; // Urban life
-  if (r < 0.14) return "tree-cypress"; // Tall accent
-  if (r < 0.20) return "tree-olive";    // Mediterranean vibe
+  if (r < 0.06) return "potted-plant"; // Urban life
+  if (r < 0.11) return "tree-stonepine"; // Majestic focal points
+  if (r < 0.16) return "tree-cypress";   // Tall accent
+  if (r < 0.22) return "tree-olive";     // Mediterranean vibe
+  if (r < 0.26) return "tree-poplar";    // River/Harbor vibe
+  if (r < 0.32) return "lavender";       // Ground detail
   if (r < 0.70) return "grass-tuft";
-  if (r < 0.90) return "bush";
+  if (r < 0.88) return "bush";
   return "rock";
 }
 
@@ -73,6 +81,15 @@ function createPropMesh(type) {
     }
     case "tree-olive": {
       return createOliveTree({ scale: THREE.MathUtils.randFloat(0.9, 1.3) });
+    }
+    case "tree-stonepine": {
+      return createStonePine({ scale: THREE.MathUtils.randFloat(0.95, 1.4) });
+    }
+    case "tree-poplar": {
+      return createPoplar({ scale: THREE.MathUtils.randFloat(0.9, 1.3) });
+    }
+    case "lavender": {
+      return createLavenderBush({ scale: THREE.MathUtils.randFloat(0.8, 1.2) });
     }
     case "bush":
     default: {
@@ -170,8 +187,8 @@ export function scatterGroundProps(scene, terrain, options = {}) {
 
   let placed = 0;
   let attempts = 0;
-  const maxAttempts = count * 5;
-
+  const maxAttempts = count * 6;
+  let lastPropType = null;
   while (placed < count && attempts < maxAttempts) {
     attempts++;
     const x = THREE.MathUtils.randFloatSpread(terrainSize * 0.92);
@@ -184,7 +201,9 @@ export function scatterGroundProps(scene, terrain, options = {}) {
     if (isInsideBuilding(x, z, placements)) continue;
 
     const inDistrict = isInsideKeyDistrict(x, z);
-    const propType = pickPropType();
+    
+    // Higher clumping factor (0.8) makes props spawn in clusters
+    const propType = pickPropType(lastPropType, 0.82);
 
     // Only allow potted plants inside key civic districts; exclude rocks/bushes there.
     if (inDistrict && propType !== "potted-plant") continue;
@@ -208,6 +227,8 @@ export function scatterGroundProps(scene, terrain, options = {}) {
     const mesh = createPropMesh(propType);
     mesh.position.set(x, height + 0.02, z);
     group.add(mesh);
+    
+    lastPropType = propType;
     placed++;
   }
 

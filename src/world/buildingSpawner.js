@@ -78,7 +78,6 @@ let shadowTexture = null;
 
 function makeBaseShadow(w, d) {
   if (!shadowTexture) shadowTexture = createBaseShadowTexture();
-  const geometry = new THREE.PlaneGeometry(w * 1.3, d * 1.3);
   const material = new THREE.MeshBasicMaterial({
     map: shadowTexture,
     transparent: true,
@@ -87,6 +86,7 @@ function makeBaseShadow(w, d) {
     polygonOffset: true,
     polygonOffsetFactor: -1,
   });
+  const geometry = new THREE.PlaneGeometry(w, d);
   const mesh = new THREE.Mesh(geometry, material);
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = 0.01;
@@ -257,7 +257,7 @@ export const Prefabs = {
     }
 
     return g;
-  },
+  }
 };
 
 function makeDetailedColumn(height, radius, rng, detailLevel = "full") {
@@ -445,6 +445,7 @@ export function poolMaterialsAndMerge(group) {
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry || !child.material) return;
     if (child.userData?.isWindowPane) return; 
+    if (child.userData?.isFoliage) return; // Wave 3/4: Preserve foliage material fidelity
     if (
       child.userData?.type === "road" ||
       child.userData?.roadType ||
@@ -455,7 +456,12 @@ export function poolMaterialsAndMerge(group) {
     }
 
     let clonedGeom = child.geometry.clone();
-    clonedGeom.applyMatrix4(child.matrixWorld);
+    
+    // Calculate matrix relative to the target group to avoid double-offsetting
+    // if the group itself has a world-space position.
+    const groupMatrixInv = group.matrixWorld.clone().invert();
+    const relativeMatrix = child.matrixWorld.clone().premultiply(groupMatrixInv);
+    clonedGeom.applyMatrix4(relativeMatrix);
 
     // Ensure compatible attributes for merging
     if (!clonedGeom.attributes.uv) {

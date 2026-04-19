@@ -694,6 +694,7 @@ export class Application {
         mainRoadCurve: mainRoad ?? null,
         roadPadding: MAIN_ROAD_WIDTH * 0.7,
         seaLevel: resolvedSeaLevel,
+        count: 500,
       });
 
       envCollider.fromStaticScene(scene);
@@ -736,16 +737,30 @@ export class Application {
       scoreContainer.innerText = "Scrolls Found: 0 / 0";
       document.body.appendChild(scoreContainer);
 
-      const collectibles = new CollectiblesManager(worldRoot);
+      const questManager = new QuestManager();
+      const questHud = new QuestHud(questManager);
+      const collectibles = new CollectiblesManager(worldRoot, questManager);
 
       collectibles.onScoreChange = (score: number, total: number) => {
         scoreContainer.innerText = `Scrolls Found: ${score} / ${total}`;
-        if (score === total) {
+        
+        // Synchronize with Quest System if the Lost Scrolls quest is active
+        if (questManager.currentQuest?.title === "The Lost Scrolls") {
+          questManager.updateObjective(`Find 3 Wisdom Scrolls hidden in the city. (Found: ${score}/3)`);
+        }
+
+        if (score >= 3 && questManager.currentQuest?.title === "The Lost Scrolls") {
           scoreContainer.innerText = "ALL WISDOM COLLECTED!";
           scoreContainer.style.color = "#aaffaa";
           scoreContainer.style.borderColor = "#aaffaa";
+          questManager.completeQuest();
         }
       };
+
+      const demoTour = createDemoTour(worldRoot, {
+        terrain,
+        questManager,
+      });
 
       collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z);
       collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z);
@@ -754,13 +769,6 @@ export class Application {
       collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);
 
       collectibles.onScoreChange(0, collectibles.total);
-
-      const questManager = new QuestManager();
-      const questHud = new QuestHud(questManager);
-      const demoTour = createDemoTour(worldRoot, {
-        terrain,
-        questManager,
-      });
       const interactionHud = new InteractionHud();
 
       let interactor: any = createInteractor(renderer, camera, scene);

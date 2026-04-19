@@ -1,8 +1,9 @@
 import * as THREE from "three";
 
 export class CollectiblesManager {
-  constructor(scene) {
+  constructor(scene, questManager = null) {
     this.scene = scene;
+    this.questManager = questManager;
     this.items = [];
     this.score = 0;
     this.total = 0;

@@ -596,12 +596,15 @@ function createAgoraPlazaAccent() {
   group.add(pillar);
 
   for (const [x, z, rot] of [
-    [-7, -7, 0.08],
-    [7, -7, -0.05],
-    [-7, 7, 0.03],
-    [7, 7, -0.08],
+    [-11, -11, 0.08],
+    [11, -11, -0.05],
+    [-11, 11, 0.03],
+    [11, 11, -0.08],
   ]) {
-    group.add(banner);
+    const bStand = createBannerStand();
+    bStand.position.set(x, 0, z);
+    bStand.rotation.y = rot;
+    group.add(bStand);
   }
 
   // Symmetrical Cypress framing for the central plaza
@@ -1645,6 +1648,70 @@ class SplineRoad {
     const closest = this.closestPointToPoint(point, new THREE.Vector3());
     return point.distanceToSquared(closest) < thresholdSq;
   }
+
+  /**
+   * Render the spline as a continuous ribbon geometry that follows the terrain.
+   */
+  renderRibbon(center, terrainSampler) {
+    const segments = Math.max(64, Math.ceil(this.curve.getLength() * 2));
+    const points = this.curve.getSpacedPoints(segments);
+    
+    // Create ribbon geometry
+    const ribbonGeo = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    const roadWidth = this.width;
+
+    for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const pos = points[i].clone();
+        
+        // Sample height at this point
+        if (terrainSampler) {
+            const h = terrainSampler(pos.x, pos.z);
+            if (Number.isFinite(h)) pos.y = h;
+        }
+
+        // Calculate tangent for cross-section
+        const tangent = this.curve.getTangentAt(t).normalize();
+        const normal = new THREE.Vector3(0, 1, 0);
+        const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+
+        // Left and right edges
+        const left = pos.clone().add(binormal.clone().multiplyScalar(roadWidth / 2));
+        const right = pos.clone().add(binormal.clone().multiplyScalar(-roadWidth / 2));
+
+        // Offset slightly above terrain to prevent Z-fighting
+        const lift = 0.15;
+        vertices.push(
+            left.x - center.x, left.y - center.y + lift, left.z - center.z,
+            right.x - center.x, right.y - center.y + lift, right.z - center.z
+        );
+
+        if (i < segments) {
+            const base = i * 2;
+            indices.push(base, base + 1, base + 2);
+            indices.push(base + 1, base + 3, base + 2);
+        }
+    }
+
+    ribbonGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    ribbonGeo.setIndex(indices);
+    ribbonGeo.computeVertexNormals();
+
+    const roadColor = this.type === 'artery' ? 0x4a4a4a : (this.type === 'street' ? 0x7a6b5a : 0x8a7a6a);
+    const material = new THREE.MeshStandardMaterial({
+        color: roadColor,
+        roughness: 0.8,
+        side: THREE.DoubleSide
+    });
+    
+    const mesh = new THREE.Mesh(ribbonGeo, material);
+    mesh.name = `RoadSpline-${this.type}`;
+    mesh.userData.roadType = this.type;
+    mesh.receiveShadow = true;
+    return mesh;
+  }
 }
 
 /**
@@ -1805,6 +1872,18 @@ function findNearestRoadSegment(segments, point) {
   }
 
   return nearestSeg && nearestSeg.isNear(point) ? nearestSeg : null;
+}
+
+/**
+ * Render all spline roads in the network as continuous ribbons.
+ */
+function renderRoadNetworkSplines(group, roadNetwork, center, terrainSampler) {
+  console.time("City: renderRoadSplines");
+  for (const spline of roadNetwork) {
+    const roadMesh = spline.renderRibbon(center, terrainSampler);
+    group.add(roadMesh);
+  }
+  console.timeEnd("City: renderRoadSplines");
 }
 
 function generateCityGrid(terrainSampler) {
@@ -2152,6 +2231,9 @@ export async function createCivicDistrict(scene, options = {}) {
   }
 
   console.time("City: Total Grid Render");
+  const centerPos = new THREE.Vector3(center.x, baseHeight + surfaceOffset, center.z);
+  renderRoadNetworkSplines(group, roadNetwork, centerPos, terrainSampler);
+  
   let roadSearchCount = 0;
   let roadSearchTimeTotal = 0;
 
@@ -2172,77 +2254,10 @@ export async function createCivicDistrict(scene, options = {}) {
     if (isBlockedForCityLayout(worldX, worldZ)) {
       continue; // Skip placing any city element inside harbor/walkway setbacks
     }
-
+    
     if (cell.type === 'road') {
-      const type = cell.roadType || 'street';
-      let roadWidth;
-      let roadColor;
-      
-      if (type === 'artery') {
-        roadWidth = BLOCK_SIZE - 2; // Wide boulevards
-        roadColor = 0x4a4a4a;
-      } else if (type === 'street') {
-        roadWidth = BLOCK_SIZE - 6; // Standard neighborhood streets
-        roadColor = 0x7a6b5a;
-      } else { // alley
-        roadWidth = BLOCK_SIZE - 10; // Narrow access paths
-        roadColor = 0x8a7a6a;
-      }
-
-      const roadMesh = createPavedStrip(roadWidth, roadWidth, roadColor);
-      roadMesh.name = `Road-${type}`;
-      roadMesh.position.set(localX, localY + 0.006, localZ);
-      roadMesh.userData.type = 'road';
-      roadMesh.userData.roadType = type;
-
-      // Calculate rotation based on neighboring road cells to smooth out the warped grid overlap
-      let nextRoadX = localX;
-      let nextRoadZ = localZ;
-      let neighbors = 0;
-
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dz = -1; dz <= 1; dz++) {
-          if (dx === 0 && dz === 0) continue;
-          const tCell = gridMap.get(`${cell.gridX + dx},${cell.gridZ + dz}`);
-          if (tCell && tCell.type === 'road') {
-            nextRoadX += (tCell.position.x - center.x);
-            nextRoadZ += (tCell.position.z - center.z);
-            neighbors++;
-          }
-        }
-      }
-
-
-
-
-
-
-
-
-
-
-
-
-      if (neighbors > 0) {
-          nextRoadX /= (neighbors + 1);
-          nextRoadZ /= (neighbors + 1);
-          roadMesh.rotation.y = Math.atan2(nextRoadX - localX, nextRoadZ - localZ);
-      }
-
-      group.add(roadMesh);
-
-      if (cell.slope > SLOPE_THRESHOLDS.FLAT * 0.75) {
-        const streetAccent = createStreetGradeAccent({
-          localX,
-          localZ,
-          localY,
-          sampleLocalHeight,
-          span: BLOCK_SIZE * 0.28,
-          width: roadWidth * 0.52,
-          roadLike: true,
-        });
-        if (streetAccent) group.add(streetAccent);
-      }
+      // Road geometry is now handled by continuous splines for smoother visuals.
+      continue;
     } else if (cell.type === 'plaza') {
       const isPrimaryPlazaCell =
         isAgoraPlazaCell(cell.gridX, cell.gridZ) ||

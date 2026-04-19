@@ -13,8 +13,8 @@ const ENABLE_HERO_GLB = true;
 const DEMO_SPAWN_OFFSET = new THREE.Vector3(0, 0, 0);
 const DEMO_LOOK_BLEND = 0.0;
 const DEMO_LOOK_OFFSET = new THREE.Vector3(-20, 0, -15);
-const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(18);
-const DEMO_CAMERA_DISTANCE = 8;
+const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(23);
+const DEMO_CAMERA_DISTANCE = 10;
 const HERO_MAX_ENVMAP_INTENSITY = 0.06;
 const HERO_MAX_GLOSSINESS = 0.16;
 const HERO_MAX_SPECULAR = 0.18;
@@ -139,7 +139,7 @@ export class PlayerSystem {
 
     const thirdPersonTargetOffset = new THREE.Vector3(
       0,
-      this.player.height * 0.82,
+      this.player.height * 0.92,
       0,
     );
 

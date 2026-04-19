@@ -25,15 +25,14 @@ export function createCypressTree(options = {}) {
   trunk.position.y = trunkHeight * 0.5;
   trunk.castShadow = true;
   trunk.receiveShadow = true;
+  trunk.userData.isFoliage = true;
   group.add(trunk);
 
   // Foliage - Tapered tiers for depth
-  const leafMat = new THREE.MeshPhysicalMaterial({
+  const leafMat = new THREE.MeshStandardMaterial({
     color: 0x1a3311,
-    roughness: 0.7,
-    sheen: 0.5,
-    sheenColor: 0x2e4d1a,
-    flatShading: false
+    roughness: 0.8,
+    metalness: 0.05
   });
 
   const tierCount = 4;
@@ -50,6 +49,7 @@ export function createCypressTree(options = {}) {
     foliage.position.y = trunkHeight + (i * 0.8 * scale) + (tierHeight * 0.4);
     foliage.castShadow = true;
     foliage.receiveShadow = true;
+    foliage.userData.isFoliage = true;
     group.add(foliage);
   }
 
@@ -93,18 +93,17 @@ export function createOliveTree(options = {}) {
     
     segment.castShadow = true;
     segment.receiveShadow = true;
+    segment.userData.isFoliage = true;
     group.add(segment);
     
     lastPos.add(new THREE.Vector3(0, segHeight * 0.8, 0));
   }
 
   // Canopy - Scattered "clouds" of foliage
-  const leafMat = new THREE.MeshPhysicalMaterial({
+  const leafMat = new THREE.MeshStandardMaterial({
     color: 0x7c8a6d, // Silver-green
-    roughness: 0.8,
-    sheen: 1.0,
-    sheenColor: 0xa8bca0, // Bright silver sheen
-    metalness: 0.0
+    roughness: 0.85,
+    metalness: 0.02
   });
 
   const canopyPoints = [
@@ -124,8 +123,139 @@ export function createOliveTree(options = {}) {
     crown.position.set(pt.pos[0] * scale, pt.pos[1] * scale, pt.pos[2] * scale);
     crown.castShadow = true;
     crown.receiveShadow = true;
+    crown.userData.isFoliage = true;
     group.add(crown);
   }
+
+  return group;
+}
+
+/**
+ * Creates a majestic Mediterranean Stone Pine (Umbrella Pine).
+ * Iconic wide, flat-topped canopy and tall, sturdy trunk.
+ */
+export function createStonePine(options = {}) {
+  const scale = options.scale || 1.0;
+  const group = new THREE.Group();
+  group.name = "StonePine";
+
+  // Sturdy Trunk
+  const trunkHeight = 3.5 * scale;
+  const trunkGeom = new THREE.CylinderGeometry(0.25 * scale, 0.45 * scale, trunkHeight, 10);
+  const trunkMat = new THREE.MeshStandardMaterial({
+    color: 0x5d4a37,
+    roughness: 0.85,
+  });
+  const trunk = new THREE.Mesh(trunkGeom, trunkMat);
+  trunk.position.y = trunkHeight * 0.5;
+  trunk.castShadow = true;
+  trunk.receiveShadow = true;
+  group.add(trunk);
+
+  // Wide, Flat Canopy (The "Umbrella")
+  const leafMat = new THREE.MeshPhysicalMaterial({
+    color: 0x223d11,
+    roughness: 0.75,
+    sheen: 0.6,
+    sheenColor: 0x3d5c22,
+  });
+
+  const canopyWidth = 4.5 * scale;
+  const canopyHeight = 1.2 * scale;
+  const crownGeom = new THREE.SphereGeometry(canopyWidth * 0.5, 12, 8);
+  crownGeom.scale(1.0, 0.4, 1.0); // Extreme squash for umbrella look
+  
+  const crown = new THREE.Mesh(crownGeom, leafMat);
+  crown.position.y = trunkHeight + (canopyHeight * 0.2);
+  crown.castShadow = true;
+  crown.receiveShadow = true;
+  crown.userData.isFoliage = true;
+  group.add(crown);
+
+  // Add a secondary smaller "mound" on top for organic variety
+  const topMoundGeom = new THREE.SphereGeometry(canopyWidth * 0.3, 8, 6);
+  topMoundGeom.scale(1.0, 0.3, 1.0);
+  const topMound = new THREE.Mesh(topMoundGeom, leafMat);
+  topMound.position.y = trunkHeight + (canopyHeight * 0.6);
+  topMound.castShadow = true;
+  group.add(topMound);
+
+  return group;
+}
+
+/**
+ * Creates a tall, shimmering Poplar tree.
+ * Narrow but distinct from Cypress by its lighter, broader foliage clusters.
+ */
+export function createPoplar(options = {}) {
+  const scale = options.scale || 1.0;
+  const group = new THREE.Group();
+  group.name = "Poplar";
+
+  // Pale Trunk
+  const trunkHeight = 4.0 * scale;
+  const trunkGeom = new THREE.CylinderGeometry(0.12 * scale, 0.22 * scale, trunkHeight, 8);
+  const trunkMat = new THREE.MeshStandardMaterial({
+    color: 0xc2c2b0, // Pale grey/cream
+    roughness: 0.6,
+  });
+  const trunk = new THREE.Mesh(trunkGeom, trunkMat);
+  trunk.position.y = trunkHeight * 0.5;
+  group.add(trunk);
+
+  // Vertical, shimmering canopy
+  const leafMat = new THREE.MeshPhysicalMaterial({
+    color: 0x4a6332,
+    roughness: 0.4,
+    sheen: 1.0,
+    sheenColor: 0x98b070, // Silver-gold shimmer
+  });
+
+  const clusterCount = 6;
+  for (let i = 0; i < clusterCount; i++) {
+    const yOffset = (1.5 + i * 0.6) * scale;
+    const clusterScale = (0.7 + Math.sin(i) * 0.2) * scale;
+    const geom = new THREE.IcosahedronGeometry(clusterScale, 0);
+    geom.scale(0.8, 1.4, 0.8); // Vertical stretched clusters
+    
+    const cluster = new THREE.Mesh(geom, leafMat);
+    cluster.position.set(
+      (Math.random() - 0.5) * 0.2 * scale,
+      yOffset,
+      (Math.random() - 0.5) * 0.2 * scale
+    );
+    cluster.rotation.y = Math.random() * Math.PI;
+    cluster.castShadow = true;
+    cluster.receiveShadow = true;
+    group.add(cluster);
+  }
+
+  return group;
+}
+
+/**
+ * Creates a low-poly Lavender bush.
+ * Hemispherical mound with a purple floral sheen.
+ */
+export function createLavenderBush(options = {}) {
+  const scale = options.scale || 1.0;
+  const group = new THREE.Group();
+  group.name = "LavenderBush";
+
+  const leafMat = new THREE.MeshPhysicalMaterial({
+    color: 0x2d451e, // Deep green base
+    roughness: 0.8,
+    sheen: 1.0,
+    sheenColor: 0x9370db, // Purple blossom tint
+  });
+
+  const geom = new THREE.SphereGeometry(0.45 * scale, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.5);
+  geom.scale(1.2, 0.8, 1.2);
+  
+  const bush = new THREE.Mesh(geom, leafMat);
+  bush.castShadow = true;
+  bush.receiveShadow = true;
+  group.add(bush);
 
   return group;
 }
