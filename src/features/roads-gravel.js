@@ -83,7 +83,7 @@ export async function applyGravelToRoads({ scene } = {}) {
         sheen: 0.2,
       });
 
-      if (!sandMaterial || !grassMaterial || !stoneMaterial) {
+      if (!sandMaterial || !grassMaterial || !cobbleMaterial) {
         resolve();
         return;
       }
