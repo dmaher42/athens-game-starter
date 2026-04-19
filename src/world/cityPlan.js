@@ -284,7 +284,7 @@ function createPavedStrip(width, length, color = 0xb49673) {
     roughness: 1,
     metalness: 0,
     transparent: true,
-    opacity: 0.96,
+    opacity: 0.82,
     polygonOffset: true,
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -2,
@@ -1599,34 +1599,23 @@ class SplineRoad {
     this.type = type;
     this.curve = new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.2);
 
-    // Cache a denser polyline so road selection follows the spline instead of just a few anchor points.
-    this.samples = this.curve.getSpacedPoints(Math.max(48, Math.ceil(this.curve.getLength() / 1.5)));
+    // Cache samples for fast collision checks
+    this.samples = this.curve.getPoints(Math.max(12, Math.floor(this.curve.getLength() / 4)));
   }
 
   closestPointToPoint(point, target = new THREE.Vector3()) {
-    if (this.samples.length < 2) {
+    if (!this.samples.length) {
       return target.copy(this.points[0] || point);
     }
 
-    const segment = new THREE.Vector3();
-    const delta = new THREE.Vector3();
-    const closest = new THREE.Vector3();
     let closestPoint = this.samples[0];
-    let closestDistanceSq = Infinity;
+    let closestDistanceSq = point.distanceToSquared(closestPoint);
 
-    for (let i = 0; i < this.samples.length - 1; i++) {
-      const a = this.samples[i];
-      const b = this.samples[i + 1];
-      segment.subVectors(b, a);
-      const lengthSq = segment.lengthSq();
-      if (lengthSq === 0) continue;
-
-      delta.subVectors(point, a);
-      const t = THREE.MathUtils.clamp(delta.dot(segment) / lengthSq, 0, 1);
-      closest.copy(segment).multiplyScalar(t).add(a);
-      const distanceSq = point.distanceToSquared(closest);
+    for (let i = 1; i < this.samples.length; i++) {
+      const sample = this.samples[i];
+      const distanceSq = point.distanceToSquared(sample);
       if (distanceSq < closestDistanceSq) {
-        closestPoint = closest.clone();
+        closestPoint = sample;
         closestDistanceSq = distanceSq;
       }
     }
@@ -1635,12 +1624,7 @@ class SplineRoad {
   }
 
   isNear(point, tolerance = 1.0) {
-      const corridor = this.type === 'artery'
-      ? BLOCK_SIZE * 0.6
-      : this.type === 'street'
-        ? BLOCK_SIZE * 0.48
-        : BLOCK_SIZE * 0.36;
-    const threshold = Math.max((this.width / 2) + tolerance, corridor);
+    const threshold = (this.width / 2) + tolerance;
     const thresholdSq = threshold * threshold;
     const closest = this.closestPointToPoint(point, new THREE.Vector3());
     return point.distanceToSquared(closest) < thresholdSq;
@@ -1945,7 +1929,6 @@ function generateCityGrid(terrainSampler) {
         // back into the harbor district instead of many equal-priority strips.
         cell.type = 'road';
         cell.district = 'commercial';
-        cell.roadType = 'street';
         cell.buildable = true;
       } else if (
         isOuterNeighborhoodCell(gridX, gridZ) &&
@@ -2131,20 +2114,18 @@ export async function createCivicDistrict(scene, options = {}) {
       let roadColor;
       
       if (type === 'artery') {
-        roadWidth = BLOCK_SIZE - 2; // Wide boulevards
+        roadWidth = BLOCK_SIZE - 4; // Wide boulevards
         roadColor = 0x4a4a4a;
       } else if (type === 'street') {
-        roadWidth = BLOCK_SIZE - 6; // Standard neighborhood streets
+        roadWidth = BLOCK_SIZE - 10; // Standard neighborhood streets
         roadColor = 0x7a6b5a;
       } else { // alley
-        roadWidth = BLOCK_SIZE - 10; // Narrow access paths
+        roadWidth = BLOCK_SIZE - 16; // Narrow access paths
         roadColor = 0x8a7a6a;
       }
 
       const roadMesh = createPavedStrip(roadWidth, roadWidth, roadColor);
-      roadMesh.name = `Road-${type}`;
       roadMesh.position.set(localX, localY + 0.006, localZ);
-      roadMesh.userData.type = 'road';
       roadMesh.userData.roadType = type;
 
       // Calculate rotation based on neighboring road cells to smooth out the warped grid overlap
