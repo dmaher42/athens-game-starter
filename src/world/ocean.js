@@ -372,7 +372,7 @@ export async function createOcean(scene, terrain, options = {}) {
         sunDirection: new THREE.Vector3(),
         sunColor: 0xffffff,
         waterColor: options.waterColor ?? 0x2b86b8,
-        distortionScale: 2.6,
+        distortionScale: 3.2, // More dynamic waves
         fog: !!scene.fog,
       });
 

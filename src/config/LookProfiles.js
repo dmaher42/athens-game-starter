@@ -32,14 +32,14 @@ export const LIGHTING_PRESETS = {
       skyKey: "high_noon"
     },
     grade: {
-      contrast: 0.18,
-      saturation: 0.15,
-      shadowTint: "#f0f2f5",
+      contrast: 0.22, // Punchier contrast
+      saturation: 0.18, // More vibrant colors
+      shadowTint: "#f2f5f7",
       midTint: "#ffffff",
       highlightTint: "#ffffff",
     },
     env: {
-      envMapIntensity: 1.6
+      envMapIntensity: 1.8 // Clear marble highlights
     },
     moon: {
       visible: false,
@@ -78,14 +78,14 @@ export const LIGHTING_PRESETS = {
       skyKey: "golden_hour"
     },
     grade: {
-      contrast: 0.08,
-      saturation: 0.03,
-      shadowTint: "#d8d3ca",
-      midTint: "#f5e7d6",
+      contrast: 0.12,
+      saturation: 0.14, // Warmer, more saturated sunset
+      shadowTint: "#d8cdc2",
+      midTint: "#f5e2cc",
       highlightTint: "#fff1df",
     },
     env: {
-      envMapIntensity: 1.45
+      envMapIntensity: 1.55
     },
     moon: {
       visible: false,

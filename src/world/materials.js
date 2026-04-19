@@ -27,12 +27,13 @@ export function makeMarbleMaterial() {
     normalMap,
     roughnessMap,
     aoMap,
-    metalness: 0.05,
-    roughness: 0.6,
-    clearcoat: 0.3,
-    clearcoatRoughness: 0.5,
-    sheen: 0.0,
-    envMapIntensity: 0.9,
+    metalness: 0.1, // Slightly higher for subtle highlights
+    roughness: 0.45, // Smoother for polished look
+    clearcoat: 0.25,
+    clearcoatRoughness: 0.3,
+    sheen: 0.15,
+    sheenRoughness: 0.8,
+    envMapIntensity: 1.25, // Stronger environmental highlights
   });
 }
 
@@ -52,13 +53,14 @@ export function makeMediterraneanPlasterMaterial() {
   return new THREE.MeshPhysicalMaterial({
     map: texture,
     roughnessMap: texture,
-    roughness: 0.9,
-    metalness: 0.05,
-    envMapIntensity: 0.8,
+    roughness: 0.82,
+    metalness: 0.02,
+    envMapIntensity: 1.1,
     bumpMap: texture,
-    bumpScale: 0.05,
-    sheen: 0.1,
-    sheenRoughness: 0.8,
+    bumpScale: 0.08,
+    sheen: 0.4, // Stronger sheen for sun-bleaching
+    sheenRoughness: 0.9,
+    sheenColor: new THREE.Color(0xffffff),
   });
 }
 
@@ -93,26 +95,33 @@ export function makeTerracottaRoofMaterial() {
   return new THREE.MeshPhysicalMaterial({
     map: texture,
     roughnessMap: texture,
-    roughness: 0.8,
+    roughness: 0.75,
     metalness: 0.02,
-    envMapIntensity: 1.0,
+    envMapIntensity: 1.2,
     bumpMap: texture,
-    bumpScale: 0.15,
+    bumpScale: 0.18,
+    sheen: 0.2,
+    sheenRoughness: 0.85,
   });
 }
 
 export function makeTreeMaterials() {
-  const leafMaterial = new THREE.MeshStandardMaterial({
+  const leafMaterial = new THREE.MeshPhysicalMaterial({
     color: 0x4f7f3b,
-    roughness: 0.7,
-    metalness: 0.08,
+    roughness: 0.65,
+    metalness: 0.05,
+    sheen: 0.5, // Significant sheen for sunlight scattering through canopy
+    sheenRoughness: 0.8,
+    envMapIntensity: 1.1,
   });
   leafMaterial.name = "TreeLeaves";
 
-  const barkMaterial = new THREE.MeshStandardMaterial({
+  const barkMaterial = new THREE.MeshPhysicalMaterial({
     color: 0x7b5e42,
-    roughness: 0.82,
-    metalness: 0.12,
+    roughness: 0.88,
+    metalness: 0.0,
+    bumpScale: 0.15,
+    envMapIntensity: 0.8,
   });
   barkMaterial.name = "TreeBark";
 

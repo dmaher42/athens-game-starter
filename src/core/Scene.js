@@ -2,6 +2,10 @@ import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
+import { SSAOPass } from "three/examples/jsm/postprocessing/SSAOPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { VignetteShader } from "three/examples/jsm/shaders/VignetteShader.js";
 import { createColorGradePass } from "../world/colorGradingPass.js";
 import { CameraManager } from "./CameraManager.js";
 
@@ -299,18 +303,37 @@ export function createSceneContext({
     composer.setSize(window.innerWidth, window.innerHeight);
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
+
+    // 1. SSAO - Ambient Occlusion for grounding
+    const ssaoPass = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
+    ssaoPass.kernelRadius = 16;
+    ssaoPass.minDistance = 0.005;
+    ssaoPass.maxDistance = 0.1;
+    composer.addPass(ssaoPass);
+
+    // 2. Bloom - Cinematic Glow
     bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.5, // strength
-      0.8, // radius
-      0.45, // threshold
+      0.35, // strength (slightly reduced for polish)
+      0.65, // radius (tighter falloff)
+      0.82, // threshold (only highlights glow)
     );
-    // Bloom is visually nice, but it is one of the most expensive always-on
-    // post effects in the current scene. Keep it opt-in for normal play.
     bloomPass.enabled = isBloomEnabledByDefault();
     composer.addPass(bloomPass);
+
+    // 3. SMAA - Anti-aliasing
+    const smaaPass = new SMAAPass(window.innerWidth * composerPixelRatio, window.innerHeight * composerPixelRatio);
+    composer.addPass(smaaPass);
+
+    // 4. Color Grading
     colorGradePass = createColorGradePass();
     composer.addPass(colorGradePass);
+
+    // 5. Vignette - Frame Focus
+    const vignettePass = new ShaderPass(VignetteShader);
+    vignettePass.uniforms["offset"].value = 0.95;
+    vignettePass.uniforms["darkness"].value = 1.1;
+    composer.addPass(vignettePass);
   }
 
   const renderFrame = () => {
