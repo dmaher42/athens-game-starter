@@ -20,7 +20,7 @@
 
 import { deepFreeze, mergeDeep, getRuntimeEnvironment, assert } from "./utils.js";
 
-const districtRulesManifest = {
+export const districtRulesManifest = {
   "version": 2,
   "seed": 1337,
   "roadSetbackMeters": 4,
