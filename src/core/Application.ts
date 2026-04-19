@@ -723,10 +723,10 @@ export class Application {
       const questHud = new QuestHud(questManager);
       const collectibles = new CollectiblesManager(worldRoot, questManager);
 
-      collectibles.onScoreChange = (score: number, total: number, type: string, typeScore: number) => {
+      collectibles.onScoreChange = (score: number, total: number) => {
         // Synchronize with Quest System if the Lost Scrolls quest is active
-        if (questManager.currentQuest?.title === "The Lost Scrolls" && type === 'wisdom_scroll') {
-          questManager.updateProgress(typeScore);
+        if (questManager.currentQuest?.title === "The Lost Scrolls") {
+          questManager.updateProgress(score);
         }
       };
 
@@ -736,16 +736,16 @@ export class Application {
       });
 
       // Spawn specific Wisdom Scrolls for the quest
-      collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z, 'wisdom_scroll');
-      collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z, 'wisdom_scroll');
-      collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z, 'wisdom_scroll');
+      collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z);
+      collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z);
+      collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z);
 
       // Random "Treasure" scrolls (standard gold)
-      collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8, 'gold');
+      collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);
 
       // Initial HUD setup
       if (typeof collectibles.onScoreChange === 'function') {
-        collectibles.onScoreChange(0, collectibles.total, 'gold', 0);
+        collectibles.onScoreChange(0, collectibles.total);
       }
       const interactionHud = new InteractionHud();
 
