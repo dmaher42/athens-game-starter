@@ -1522,6 +1522,165 @@ function createClocktower() {
 }
 
 /**
+ * Creates a high-fidelity Greek Trireme warship.
+ * Features 3 banks of oars, a bronze ram, and a large decorative sail.
+ */
+function createTrireme({ seaLevel = 0, hull = 0x1a3a5a, accent = 0xcd853f } = {}) {
+  const ship = new THREE.Group();
+  ship.name = "HarborTrireme";
+
+  const hullMaterial = new THREE.MeshStandardMaterial({
+    color: hull,
+    roughness: 0.85,
+    metalness: 0.1,
+  });
+  
+  const ramMaterial = new THREE.MeshStandardMaterial({
+    color: 0xcd7f32, // Bronze
+    roughness: 0.35,
+    metalness: 0.82,
+  });
+
+  const woodMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b5a2b,
+    roughness: 0.7,
+  });
+
+  // Main Hull
+  const hullBase = new THREE.Mesh(
+    new THREE.BoxGeometry(28, 2.2, 5.2),
+    hullMaterial
+  );
+  hullBase.position.y = 1.1;
+  enableShadows(hullBase);
+  ship.add(hullBase);
+
+  // Bronze Ram (Prow)
+  const ram = new THREE.Mesh(
+    new THREE.ConeGeometry(1.2, 3.5, 12),
+    ramMaterial
+  );
+  ram.rotation.z = Math.PI / 2;
+  ram.position.set(15.2, 0.6, 0);
+  enableShadows(ram);
+  ship.add(ram);
+
+  // Stern (Aft curvature)
+  const stern = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.6, 2.6, 5.2, 12, 1, false, 0, Math.PI),
+    hullMaterial
+  );
+  stern.rotation.x = Math.PI / 2;
+  stern.position.set(-14, 2.6, 0);
+  enableShadows(stern);
+  ship.add(stern);
+
+  // Banks of Oars (3 levels)
+  const oarGeometry = new THREE.CylinderGeometry(0.06, 0.06, 6.5, 8);
+  const oarMaterial = woodMaterial;
+  
+  for (let level = 0; level < 3; level++) {
+    const yPos = 0.8 + level * 0.45;
+    for (let i = 0; i < 12; i++) {
+      const xPos = -8 + i * 1.8;
+      [-1, 1].forEach(side => {
+        const oar = new THREE.Mesh(oarGeometry, oarMaterial);
+        oar.rotation.z = Math.PI / 1.8; // Angle into water
+        oar.rotation.x = side * 0.15;
+        oar.position.set(xPos, yPos, side * 2.8);
+        ship.add(oar);
+      });
+    }
+  }
+
+  // Mast & Sail
+  const mast = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.22, 12, 12),
+    woodMaterial
+  );
+  mast.position.set(0, 6, 0);
+  ship.add(mast);
+
+  const horizontalSpar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12, 0.12, 10, 8),
+    woodMaterial
+  );
+  horizontalSpar.rotation.z = Math.PI / 2;
+  horizontalSpar.position.set(0, 10, 0);
+  ship.add(horizontalSpar);
+
+  const sail = new THREE.Mesh(
+    new THREE.PlaneGeometry(9.5, 7),
+    new THREE.MeshStandardMaterial({
+      color: 0xeeeedd,
+      side: THREE.DoubleSide,
+      roughness: 0.9,
+    })
+  );
+  sail.position.set(0, 6.5, 0.1);
+  ship.add(sail);
+
+  // Decorative Eyes
+  const eyeGeom = new THREE.CircleGeometry(0.6, 16);
+  const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  [-1, 1].forEach(side => {
+    const eye = new THREE.Mesh(eyeGeom, eyeMat);
+    eye.position.set(12, 1.8, side * 2.62);
+    eye.rotation.y = side * Math.PI / 2;
+    ship.add(eye);
+    
+    const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.2, 16), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+    pupil.position.set(12.01, 1.8, side * 2.63);
+    pupil.rotation.y = side * Math.PI / 2;
+    ship.add(pupil);
+  });
+
+  return ship;
+}
+
+/**
+ * Creates a Maritime Stoa (trading hall).
+ * Features a long colonnade with a terracotta roof.
+ */
+function createMaritimeStoa() {
+  const stoa = new THREE.Group();
+  stoa.name = "MaritimeStoa";
+
+  const columnGeom = new THREE.CylinderGeometry(0.35, 0.35, 5, 12);
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0xe8e4d9, roughness: 0.8 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0xc45c3d, roughness: 0.6 });
+
+  // Columns
+  for (let i = 0; i < 10; i++) {
+    const col = new THREE.Mesh(columnGeom, stoneMat);
+    col.position.set(-18 + i * 4, 2.5, 0);
+    enableShadows(col);
+    stoa.add(col);
+  }
+
+  // Back wall
+  const backWall = new THREE.Mesh(
+    new THREE.BoxGeometry(40, 5, 0.8),
+    stoneMat
+  );
+  backWall.position.set(0, 2.5, -4);
+  enableShadows(backWall);
+  stoa.add(backWall);
+
+  // Roof
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(42, 0.6, 6),
+    roofMat
+  );
+  roof.position.set(0, 5, -1.8);
+  roof.rotation.x = -0.15;
+  enableShadows(roof);
+  stoa.add(roof);
+
+  return stoa;
+}
+
+/**
  * Creates a complete harbor with all features and props.
  * 
  * Harbor Features Created:
@@ -1751,6 +1910,25 @@ export function createHarbor(scene, options = {}) {
   const cityGroundY = getCityGroundY();
   const connector = createCityHarborConnector(cityGroundY, harborGroundY);
   harbor.add(connector);
+
+  // --- NEW: MARITIME LANDMARKS ---
+  // Create a Maritime Stoa along the northern quay
+  const stoa = createMaritimeStoa();
+  stoa.position.set(-10, 0, -32);
+  stoa.rotation.y = Math.PI / 2.2;
+  harbor.add(stoa);
+
+  // Create a Military Pier specifically for the Trireme
+  const militaryPierX = -55;
+  const militaryPierZ = -10;
+  const { pier: militaryPier } = createPierLine(militaryPierX, militaryPierZ, 6, seaLevel);
+  harbor.add(militaryPier);
+
+  const trireme = createTrireme({ seaLevel });
+  trireme.position.set(militaryPierX - 10, seaLevel - HARBOR_GROUND_HEIGHT, militaryPierZ + 6);
+  trireme.rotation.y = -0.05;
+  harbor.add(trireme);
+  // --- END NEW LANDMARKS ---
 
   // Position harbor group in world space
   harbor.position.copy(HARBOR_CENTER_3D);

@@ -723,10 +723,24 @@ export class Application {
       const questHud = new QuestHud(questManager);
       const collectibles = new CollectiblesManager(worldRoot, questManager);
 
-      collectibles.onScoreChange = (score: number, total: number) => {
-        // Synchronize with Quest System if the Lost Scrolls quest is active
-        if (questManager.currentQuest?.title === "The Lost Scrolls") {
-          questManager.updateProgress(score);
+      collectibles.onScoreChange = (score: number, total: number, type: string, typeScore: number) => {
+        // Quest 1: The Lost Scrolls
+        if (questManager.currentQuest?.title === "The Lost Scrolls" && type === 'wisdom_scroll') {
+          questManager.updateProgress(typeScore);
+          
+          // Trigger transition to next quest if just completed
+          if (questManager.currentQuest.status === 'Completed') {
+            setTimeout(() => {
+              questManager.startQuest("The Forgotten Shipment", "Recover lost amphorae from the harbor", 5);
+              interactionHud.showAnnouncement("New Quest: The Forgotten Shipment", 0xffd700);
+            }, 3000);
+          }
+        }
+        
+        // Quest 2: The Forgotten Shipment
+        if (questManager.currentQuest?.title === "The Forgotten Shipment" && type === 'amphora_rare') {
+          // rare amphorae uses the collective typeScore for this type
+          questManager.updateProgress(typeScore);
         }
       };
 
@@ -739,6 +753,21 @@ export class Application {
       collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z);
       collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z);
       collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z);
+
+      // Expose for debugging/verification
+      (window as any).questManager = questManager;
+      (window as any).collectibles = collectibles;
+      (window as any).worldRoot = worldRoot;
+
+      // Spawn Rare Amphorae in the Harbor for the secondary quest
+      const hX = HARBOR_CENTER_3D.x;
+      const hY = HARBOR_CENTER_3D.y;
+      const hZ = HARBOR_CENTER_3D.z;
+      collectibles.spawnAt(hX - 15, hY, hZ - 28, 'amphora_rare');
+      collectibles.spawnAt(hX - 65, hY, hZ - 5, 'amphora_rare');
+      collectibles.spawnAt(hX + 85, hY, hZ + 0, 'amphora_rare');
+      collectibles.spawnAt(hX + 32, hY, hZ + 10, 'amphora_rare');
+      collectibles.spawnAt(hX + 55, hY, hZ + 8, 'amphora_rare');
 
       // Random "Treasure" scrolls (standard gold)
       collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);

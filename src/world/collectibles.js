@@ -31,6 +31,15 @@ export class CollectiblesManager {
       emissiveIntensity: 1.0,
     });
 
+    // Rare Amphora (Royal Gold/Purple)
+    this.rareAmphoraMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffd700, // Gold
+      roughness: 0.2,
+      metalness: 0.9,
+      emissive: 0x996600,
+      emissiveIntensity: 0.8,
+    });
+
     // Paper part of the scroll (white ends)
     this.paperMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
   }
@@ -39,14 +48,23 @@ export class CollectiblesManager {
     const group = new THREE.Group();
     group.position.set(x, y + 1.2, z); // Float 1.2m above ground
 
-    // Select material based on type
-    const mat = type === 'wisdom_scroll' ? this.wisdomMaterial : this.material;
+    // Select material and light based on type
+    let mat = this.material;
+    let lightColor = 0xffaa00;
+    
+    if (type === 'wisdom_scroll') {
+      mat = this.wisdomMaterial;
+      lightColor = 0x00ffff;
+    } else if (type === 'amphora_rare') {
+      mat = this.rareAmphoraMaterial;
+      lightColor = 0xffd700;
+    }
+
     const scroll = new THREE.Mesh(this.geometry, mat);
     scroll.castShadow = true;
     group.add(scroll);
 
     // Add a simple point light to make it glow
-    const lightColor = type === 'wisdom_scroll' ? 0x00ffff : 0xffaa00;
     const light = new THREE.PointLight(lightColor, 1.5, 4);
     light.position.y = 0.2;
     group.add(light);

@@ -136,7 +136,7 @@ export function createRenderer({ antialias = true } = {}) {
   });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.9; // Look presets assume ACES with ~1.0 as the baseline exposure
+  renderer.toneMappingExposure = 1.05; // Cinematic vibrancy boost
   renderer.useLegacyLights = false;
   renderer.localClippingEnabled = true;
   renderer.info.autoReset = false;
@@ -295,50 +295,61 @@ export function createSceneContext({
   let colorGradePass = null;
 
   if (composer) {
-    const composerPixelRatio = Math.min(
-      renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1,
-      1,
-    );
-    composer.setPixelRatio(composerPixelRatio);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    const renderPass = new RenderPass(scene, camera);
-    composer.addPass(renderPass);
+    try {
+      const composerPixelRatio = Math.min(
+        renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1,
+        1,
+      );
+      composer.setPixelRatio(composerPixelRatio);
+      composer.setSize(window.innerWidth, window.innerHeight);
 
-    // 1. SSAO - Ambient Occlusion for grounding
-    const ssaoPass = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
-    ssaoPass.kernelRadius = 16;
-    ssaoPass.minDistance = 0.005;
-    ssaoPass.maxDistance = 0.1;
-    composer.addPass(ssaoPass);
+      const renderPass = new RenderPass(scene, camera);
+      composer.addPass(renderPass);
 
-    // 2. Bloom - Cinematic Glow
-    bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.35, // strength (slightly reduced for polish)
-      0.65, // radius (tighter falloff)
-      0.82, // threshold (only highlights glow)
-    );
-    bloomPass.enabled = isBloomEnabledByDefault();
-    composer.addPass(bloomPass);
+      // 1. SSAO - Ambient Occlusion for grounding
+      const ssaoPass = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
+      ssaoPass.kernelRadius = 16;
+      ssaoPass.minDistance = 0.005;
+      ssaoPass.maxDistance = 0.1;
+      composer.addPass(ssaoPass);
 
-    // 3. SMAA - Anti-aliasing
-    const smaaPass = new SMAAPass(window.innerWidth * composerPixelRatio, window.innerHeight * composerPixelRatio);
-    composer.addPass(smaaPass);
+      // 2. Bloom - Cinematic Glow
+      bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.35, // strength (slightly reduced for polish)
+        0.65, // radius (tighter falloff)
+        0.82, // threshold (only highlights glow)
+      );
+      bloomPass.enabled = isBloomEnabledByDefault();
+      composer.addPass(bloomPass);
 
-    // 4. Color Grading
-    colorGradePass = createColorGradePass();
-    composer.addPass(colorGradePass);
+      // 3. SMAA - Anti-aliasing
+      const smaaPass = new SMAAPass(window.innerWidth * composerPixelRatio, window.innerHeight * composerPixelRatio);
+      composer.addPass(smaaPass);
 
-    // 5. Vignette - Frame Focus
-    const vignettePass = new ShaderPass(VignetteShader);
-    vignettePass.uniforms["offset"].value = 0.95;
-    vignettePass.uniforms["darkness"].value = 1.1;
-    composer.addPass(vignettePass);
+      // 4. Color Grading
+      colorGradePass = createColorGradePass();
+      composer.addPass(colorGradePass);
+
+      // 5. Vignette - Frame Focus
+      const vignettePass = new ShaderPass(VignetteShader);
+      vignettePass.uniforms["offset"].value = 0.95;
+      vignettePass.uniforms["darkness"].value = 1.1;
+      composer.addPass(vignettePass);
+    } catch (err) {
+      console.error("[Scene] Post-processing initialization error, falling back to standard render:", err);
+      // We null out the composer so renderFrame falls back to standard renderer
+      composer = null;
+    }
   }
 
   const renderFrame = () => {
     if (isAutomationCapture) {
-      ensureAutomationPreviewReadability(scene, renderer);
+      try {
+        ensureAutomationPreviewReadability(scene, renderer);
+      } catch (e) {
+        console.warn("[Scene] ensureAutomationPreviewReadability failed", e);
+      }
     }
 
     renderer.info?.reset?.();
