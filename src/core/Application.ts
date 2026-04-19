@@ -774,7 +774,7 @@ export class Application {
 
       // Initial HUD setup
       if (typeof collectibles.onScoreChange === 'function') {
-        collectibles.onScoreChange(0, collectibles.total);
+        collectibles.onScoreChange(0, collectibles.total, '', 0);
       }
       const interactionHud = new InteractionHud();
 
