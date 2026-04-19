@@ -7,11 +7,11 @@ export class CollectiblesManager {
   items: Object3D[];
   score: number;
   total: number;
-  onScoreChange: ((score: number, total: number) => void) | null;
+  onScoreChange: ((score: number, total: number, type: string, typeScore: number) => void) | null;
 
   constructor(scene: Object3D, questManager?: QuestManager | null);
 
-  spawnAt(x: number, y: number, z: number): void;
+  spawnAt(x: number, y: number, z: number, type?: string): void;
   spawnRandomly(
     terrain: Object3D | null | undefined,
     count: number,
