@@ -83,7 +83,7 @@ export async function applyGravelToRoads({ scene } = {}) {
         sheen: 0.2,
       });
 
-      if (!sandMaterial || !grassMaterial || !stoneMaterial) {
+      if (!sandMaterial || !grassMaterial || !cobbleMaterial) {
         resolve();
         return;
       }
@@ -97,7 +97,8 @@ export async function applyGravelToRoads({ scene } = {}) {
           name.includes("path") ||
           u.type === "road" ||
           u.kind === "road" ||
-          u.category === "road"
+          u.category === "road" ||
+          u.roadType
         );
       };
 

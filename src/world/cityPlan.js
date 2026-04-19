@@ -2125,7 +2125,9 @@ export async function createCivicDistrict(scene, options = {}) {
       }
 
       const roadMesh = createPavedStrip(roadWidth, roadWidth, roadColor);
+      roadMesh.name = `Road-${type}`;
       roadMesh.position.set(localX, localY + 0.006, localZ);
+      roadMesh.userData.type = 'road';
       roadMesh.userData.roadType = type;
 
       // Calculate rotation based on neighboring road cells to smooth out the warped grid overlap
