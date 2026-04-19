@@ -9,22 +9,43 @@ export class QuestManager {
     this.currentQuest = {
       title: null,
       objective: null,
-      status: QuestStatus.NOT_STARTED
+      status: QuestStatus.NOT_STARTED,
+      progress: 0,
+      target: 0,
     };
 
     this.listeners = new Set();
   }
 
-  startQuest(title, firstObjective) {
+  startQuest(title, firstObjective, target = 0) {
     this.currentQuest.title = title;
     this.currentQuest.objective = firstObjective;
     this.currentQuest.status = QuestStatus.IN_PROGRESS;
+    this.currentQuest.progress = 0;
+    this.currentQuest.target = target;
     this.notify();
   }
 
   updateObjective(newObjective) {
     if (this.currentQuest.status !== QuestStatus.IN_PROGRESS) return;
     this.currentQuest.objective = newObjective;
+    this.notify();
+  }
+
+  updateProgress(value) {
+    if (this.currentQuest.status !== QuestStatus.IN_PROGRESS) return;
+    this.currentQuest.progress = value;
+    
+    // Auto-complete if progress reaches target (if target > 0)
+    if (this.currentQuest.target > 0 && this.currentQuest.progress >= this.currentQuest.target) {
+      this.completeQuest();
+    } else {
+      this.notify();
+    }
+  }
+
+  setTarget(value) {
+    this.currentQuest.target = value;
     this.notify();
   }
 
@@ -39,7 +60,9 @@ export class QuestManager {
     this.currentQuest = {
         title: null,
         objective: null,
-        status: QuestStatus.NOT_STARTED
+        status: QuestStatus.NOT_STARTED,
+        progress: 0,
+        target: 0,
     };
     this.notify();
   }

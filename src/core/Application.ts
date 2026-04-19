@@ -68,6 +68,8 @@ import { LightingSystem } from "../systems/LightingSystem.js";
 import { EnvironmentManager } from "./EnvironmentManager.js";
 import { PlayerSystem } from "../systems/PlayerSystem.js";
 import { mountPerformanceHud } from "../ui/performanceHud.js";
+import { districtRulesManifest } from "../config/athensLayoutConfig.js";
+import { createSmokeEmitter, createRoadDustSystem } from "../world/particles.js";
 
 // Expose THREE globally for debugging in devtools.
 (window as any).THREE = THREE;
@@ -694,7 +696,8 @@ export class Application {
         mainRoadCurve: mainRoad ?? null,
         roadPadding: MAIN_ROAD_WIDTH * 0.7,
         seaLevel: resolvedSeaLevel,
-        count: 500,
+        count: 550, // Slightly increased for urban clutter
+        districtRules: districtRulesManifest,
       });
 
       envCollider.fromStaticScene(scene);
@@ -716,44 +719,14 @@ export class Application {
 
       envCollider.refresh();
 
-      const scoreContainer = document.createElement("div");
-      Object.assign(scoreContainer.style, {
-        position: "fixed",
-        top: "20px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        background: "rgba(0, 0, 0, 0.6)",
-        color: "#ffd700",
-        padding: "10px 20px",
-        borderRadius: "20px",
-        fontFamily: "serif",
-        fontSize: "24px",
-        fontWeight: "bold",
-        border: "2px solid #ffd700",
-        pointerEvents: "none",
-        textShadow: "0px 2px 4px black",
-        display: "none"
-      });
-      scoreContainer.innerText = "Scrolls Found: 0 / 0";
-      document.body.appendChild(scoreContainer);
-
       const questManager = new QuestManager();
       const questHud = new QuestHud(questManager);
       const collectibles = new CollectiblesManager(worldRoot, questManager);
 
-      collectibles.onScoreChange = (score: number, total: number) => {
-        scoreContainer.innerText = `Scrolls Found: ${score} / ${total}`;
-        
+      collectibles.onScoreChange = (score: number, total: number, type: string, typeScore: number) => {
         // Synchronize with Quest System if the Lost Scrolls quest is active
-        if (questManager.currentQuest?.title === "The Lost Scrolls") {
-          questManager.updateObjective(`Find 3 Wisdom Scrolls hidden in the city. (Found: ${score}/3)`);
-        }
-
-        if (score >= 3 && questManager.currentQuest?.title === "The Lost Scrolls") {
-          scoreContainer.innerText = "ALL WISDOM COLLECTED!";
-          scoreContainer.style.color = "#aaffaa";
-          scoreContainer.style.borderColor = "#aaffaa";
-          questManager.completeQuest();
+        if (questManager.currentQuest?.title === "The Lost Scrolls" && type === 'wisdom_scroll') {
+          questManager.updateProgress(typeScore);
         }
       };
 
@@ -762,13 +735,18 @@ export class Application {
         questManager,
       });
 
-      collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z);
-      collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z);
-      collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z);
+      // Spawn specific Wisdom Scrolls for the quest
+      collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z, 'wisdom_scroll');
+      collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z, 'wisdom_scroll');
+      collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z, 'wisdom_scroll');
 
-      collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);
+      // Random "Treasure" scrolls (standard gold)
+      collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8, 'gold');
 
-      collectibles.onScoreChange(0, collectibles.total);
+      // Initial HUD setup
+      if (typeof collectibles.onScoreChange === 'function') {
+        collectibles.onScoreChange(0, collectibles.total, 'gold', 0);
+      }
       const interactionHud = new InteractionHud();
 
       let interactor: any = createInteractor(renderer, camera, scene);
@@ -872,6 +850,32 @@ export class Application {
 
       let propCullingTimer = 0;
       let buildingCullingTimer = 0;
+
+      // --- WAVE 4: Atmospheric Systems Initialization ---
+      const activeSmokeSystems: any[] = [];
+      const smokeSystemRoot = new THREE.Group();
+      smokeSystemRoot.name = "SmokeSystems";
+      worldRoot.add(smokeSystemRoot);
+
+      // Attach smoke to buildings tagged with hasChimney
+      scene.traverse((obj: any) => {
+        if (obj.userData?.hasChimney) {
+          const smoke = createSmokeEmitter(smokeSystemRoot, {
+            position: obj.position.clone().add(new THREE.Vector3(0, 4.5, 0)),
+            color: 0x888888,
+            spawnRate: 15,
+          });
+          if (smoke) activeSmokeSystems.push(smoke);
+        }
+      });
+
+      // Initialize Road Dust
+      const roadDustSystem = createRoadDustSystem(worldRoot, [], {
+        roadCurves: roadCurves || [],
+        mainRoadCurve: mainRoad || null,
+        particleCount: 1500,
+      });
+
       const onFrame = (deltaTime: number, elapsed: number) => {
         if (!scene) return;
 
@@ -905,6 +909,10 @@ export class Application {
         if (atmosphericParticles) {
           atmosphericParticles.update(deltaTime, elapsed);
         }
+
+        // Update Atmospheric Systems
+        activeSmokeSystems.forEach(s => s.update(deltaTime));
+        if (roadDustSystem) roadDustSystem.update(deltaTime);
 
         interactor.updateHover(deltaTime);
 

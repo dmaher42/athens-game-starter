@@ -34,7 +34,8 @@ const districtRulesManifest = {
       "buildingDensity": "medium",
       "minSeparation": 20,
       "allowedTypes": ["monument", "temple", "stoa", "plaza"],
-      "road": { "width": 4.0, "color": 14540253 }
+      "road": { "width": 4.0, "color": 14540253 },
+      "propRules": { "bench": 0.6, "urn": 0.2, "stall": 0.05 }
     },
     {
       "id": "commercial",
@@ -43,7 +44,8 @@ const districtRulesManifest = {
       "buildingDensity": "high",
       "minSeparation": 12,
       "allowedTypes": ["shop", "market", "workshop"],
-      "road": { "width": 3.2, "color": 12632256 }
+      "road": { "width": 3.2, "color": 12632256 },
+      "propRules": { "stall": 0.7, "urn": 0.6, "bench": 0.1 }
     },
     {
       "id": "residential",
@@ -52,7 +54,8 @@ const districtRulesManifest = {
       "buildingDensity": "medium",
       "minSeparation": 15,
       "allowedTypes": ["house", "courtyard"],
-      "road": { "width": 2.8, "color": 10066329 }
+      "road": { "width": 2.8, "color": 10066329 },
+      "propRules": { "urn": 0.3, "bench": 0.15, "plant": 0.5 }
     }
   ]
 };

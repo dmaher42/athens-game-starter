@@ -2,6 +2,8 @@ import * as THREE from "three";
 import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, getSeaLevelY } from "./locations.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
 import { createCypressTree, createOliveTree, createStonePine, createPoplar, createLavenderBush } from "./foliage.js";
+import { Prefabs } from "./buildingSpawner.js";
+import { resolveDistrictAt } from "./districtRules.js";
 
 const ROCK_GEOMETRY = new THREE.DodecahedronGeometry(0.28, 1); // Slightly smoother rocks
 const GRASS_GEOMETRY = new THREE.ConeGeometry(0.12, 0.72, 8);
@@ -23,23 +25,33 @@ const OPENING_VISTA_EAST = AGORA_CENTER_3D.x + 18;
 const OPENING_VISTA_SOUTH = AGORA_CENTER_3D.z - 24;
 const OPENING_VISTA_NORTH = AGORA_CENTER_3D.z + 34;
 
-export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush", "tree-cypress", "tree-olive", "tree-stonepine", "tree-poplar", "lavender"];
+export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush", "tree-cypress", "tree-olive", "tree-stonepine", "tree-poplar", "lavender", "stall", "bench", "urn"];
 
-function pickPropType(lastType = null, clumpFactor = 0.0) {
+function pickPropType(district = null, lastType = null, clumpFactor = 0.0) {
   // 80% chance to "clump" (reuse previous type) if the probability roll hits
   if (lastType && Math.random() < clumpFactor) {
     return lastType;
   }
 
   const r = Math.random();
-  if (r < 0.06) return "potted-plant"; // Urban life
-  if (r < 0.11) return "tree-stonepine"; // Majestic focal points
-  if (r < 0.16) return "tree-cypress";   // Tall accent
-  if (r < 0.22) return "tree-olive";     // Mediterranean vibe
-  if (r < 0.26) return "tree-poplar";    // River/Harbor vibe
-  if (r < 0.32) return "lavender";       // Ground detail
-  if (r < 0.70) return "grass-tuft";
-  if (r < 0.88) return "bush";
+  
+  // District-specific overrides
+  if (district?.propRules) {
+    const rules = district.propRules;
+    if (rules.stall && r < rules.stall * 0.15) return "stall";
+    if (rules.bench && r < rules.bench * 0.25) return "bench";
+    if (rules.urn && r < rules.urn * 0.4) return "urn";
+    if (rules.plant && r < rules.plant * 0.3) return "potted-plant";
+  }
+
+  if (r < 0.04) return "potted-plant"; // Global rare chance
+  if (r < 0.08) return "tree-stonepine"; 
+  if (r < 0.14) return "tree-cypress";   
+  if (r < 0.20) return "tree-olive";     
+  if (r < 0.24) return "tree-poplar";    
+  if (r < 0.30) return "lavender";       
+  if (r < 0.65) return "grass-tuft";
+  if (r < 0.85) return "bush";
   return "rock";
 }
 
@@ -92,6 +104,15 @@ function createPropMesh(type) {
       return createLavenderBush({ scale: THREE.MathUtils.randFloat(0.8, 1.2) });
     }
     case "bush":
+    case "stall": {
+      return Prefabs.marketStall({ rng: Math.random });
+    }
+    case "bench": {
+      return Prefabs.stoneBench({ rng: Math.random });
+    }
+    case "urn": {
+      return Prefabs.urn({ rng: Math.random });
+    }
     default: {
       const mesh = new THREE.Mesh(BUSH_GEOMETRY, propMaterials.bush);
       mesh.scale.setScalar(THREE.MathUtils.randFloat(1.0, 1.6));
@@ -200,13 +221,20 @@ export function scatterGroundProps(scene, terrain, options = {}) {
 
     if (isInsideBuilding(x, z, placements)) continue;
 
-    const inDistrict = isInsideKeyDistrict(x, z);
-    
-    // Higher clumping factor (0.8) makes props spawn in clusters
-    const propType = pickPropType(lastPropType, 0.82);
+    const districtRules = options.districtRules || null;
+    const district = districtRules ? resolveDistrictAt(terrain, districtRules, x, z) : null;
+    const inKeyZone = isInsideKeyDistrict(x, z);
 
-    // Only allow potted plants inside key civic districts; exclude rocks/bushes there.
-    if (inDistrict && propType !== "potted-plant") continue;
+    // Pass resolved district to pickPropType
+    const propType = pickPropType(district, lastPropType, 0.82);
+
+    // Exclusion Logic:
+    // In key districts (Agora/Harbor/Residential center), we ONLY allow urban/aesthetic props.
+    const isUrbanProp = ["potted-plant", "stall", "bench", "urn"].includes(propType);
+    if (inKeyZone && !isUrbanProp) continue;
+    
+    // In wild areas (outside key zones), exclude stalls/benches/urns
+    if (!inKeyZone && isUrbanProp) continue;
     
     if (isInsideOpeningVista(x, z)) continue;
 

@@ -943,7 +943,8 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
         // Start the followup quest
         questManager?.startQuest?.(
             "The Lost Scrolls", 
-            "Find 3 Wisdom Scrolls hidden in the city."
+            "Find 3 Wisdom Scrolls hidden in the city.",
+            3
         );
 
         setActiveMarker();

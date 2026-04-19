@@ -132,6 +132,7 @@ export const Prefabs = {
   workshop({ w = 6, d = 8, h = 3.5, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralWorkshop";
+    g.userData.hasChimney = true; // Signal for smoke VFX
     g.add(makeBaseShadow(w, d));
     const body = makeBox(w, h, d, createMaterial("stone", rng, { color: 0x8d6e63 }));
     body.position.y = h / 2; g.add(body);
@@ -161,6 +162,78 @@ export const Prefabs = {
     }
     return g;
   },
+  pier({ w = 3, d = 12, rng = Math.random } = {}) {
+    const g = new THREE.Group();
+    g.name = "ProceduralPier";
+    const wood = createMaterial("wood", rng);
+    const deck = makeBox(w, 0.4, d, wood);
+    deck.position.y = 1.0; g.add(deck);
+
+    const pileCount = 4;
+    for (let i = 0; i < pileCount; i++) {
+      for (let j = 0; j < 2; j++) {
+        const side = j === 0 ? 1 : -1;
+        const pile = makeBox(0.4, 4, 0.4, wood);
+        pile.position.set(side * (w / 2 - 0.3), -1, (i / (pileCount - 1) - 0.5) * d * 0.8);
+        g.add(pile);
+      }
+    }
+    return g;
+  },
+
+  marketStall({ w = 3, d = 2.5, h = 2.8, rng = Math.random } = {}) {
+    const g = new THREE.Group();
+    g.name = "MarketStall";
+    g.add(makeBaseShadow(w, d));
+    const wood = createMaterial("wood", rng);
+    const fabric = createMaterial("plaster", rng, { color: rng() > 0.5 ? 0xcc4444 : 0x4444cc });
+
+    // 4 posts
+    const postH = h * 0.8;
+    for(let x of [-w/2 + 0.1, w/2 - 0.1]) {
+      for(let z of [-d/2 + 0.1, d/2 - 0.1]) {
+        const post = makeBox(0.15, postH, 0.15, wood);
+        post.position.set(x, postH/2, z); g.add(post);
+      }
+    }
+
+    // Counter
+    const counter = makeBox(w, 0.1, d * 0.6, wood);
+    counter.position.set(0, 1.1, 0); g.add(counter);
+
+    // Awning
+    const awning = makeBox(w + 0.4, 0.1, d + 0.4, fabric);
+    awning.position.set(0, h, 0);
+    awning.rotation.x = 0.2; g.add(awning);
+
+    return g;
+  },
+
+  stoneBench({ w = 2, h = 0.5, d = 0.6, rng = Math.random } = {}) {
+    const g = new THREE.Group();
+    g.name = "StoneBench";
+    g.add(makeBaseShadow(w, d));
+    const marble = createMaterial("marble", rng);
+    const seat = makeBox(w, 0.15, d, marble);
+    seat.position.y = h; g.add(seat);
+
+    for(let x of [-w/2 + 0.3, w/2 - 0.3]) {
+      const leg = makeBox(0.2, h, d * 0.8, marble);
+      leg.position.set(x, h/2, 0); g.add(leg);
+    }
+    return g;
+  },
+
+  urn({ radius = 0.4, h = 0.9, rng = Math.random } = {}) {
+    const g = new THREE.Group();
+    g.name = "TerracottaUrn";
+    g.add(makeBaseShadow(radius * 2, radius * 2));
+    const terra = createMaterial("roof", rng, { color: 0xcd5c5c }); // terracotta red
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 0.6, h, 12), terra);
+    body.position.y = h/2; g.add(body);
+    return g;
+  },
+
   fountain({ radius = 2, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralFountain";
