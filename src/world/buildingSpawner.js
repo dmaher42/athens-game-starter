@@ -445,6 +445,14 @@ export function poolMaterialsAndMerge(group) {
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry || !child.material) return;
     if (child.userData?.isWindowPane) return; 
+    if (
+      child.userData?.type === "road" ||
+      child.userData?.roadType ||
+      child.userData?.isFootpath ||
+      /road|street|path/i.test(child.name || "")
+    ) {
+      return;
+    }
 
     let clonedGeom = child.geometry.clone();
     clonedGeom.applyMatrix4(child.matrixWorld);

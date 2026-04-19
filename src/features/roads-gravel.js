@@ -61,7 +61,7 @@ export async function applyGravelToRoads({ scene } = {}) {
 
       const sandMaterial = new THREE.MeshStandardMaterial({
         map: sandMap || null,
-        color: sandMap ? 0xffffff : 0xcdb89c,
+        color: sandMap ? 0xc9a77f : 0xcdb89c,
         roughness: 0.85,
       });
       const grassMaterial = new THREE.MeshStandardMaterial({
@@ -71,12 +71,12 @@ export async function applyGravelToRoads({ scene } = {}) {
       });
       const dirtMaterial = new THREE.MeshStandardMaterial({
         map: dirtMap || null,
-        color: dirtMap ? 0xffffff : 0x8b6a46,
+        color: dirtMap ? 0x7f563a : 0x6f4e35,
         roughness: 0.92,
       });
       const cobbleMaterial = new THREE.MeshPhysicalMaterial({
         map: stoneMap || null,
-        color: stoneMap ? 0xdfd3bc : 0xd6d1c8,
+        color: stoneMap ? 0x635e57 : 0x5e5953,
         roughness: 0.65,
         clearcoat: 0.1,
         clearcoatRoughness: 0.4,
@@ -115,7 +115,10 @@ export async function applyGravelToRoads({ scene } = {}) {
       };
 
       const chooseMaterial = (o) => {
-        if (isMainRoad(o)) return cobbleMaterial;
+        const roadType = o.userData?.roadType;
+        if (roadType === "artery" || isMainRoad(o)) return cobbleMaterial;
+        if (roadType === "street") return dirtMaterial;
+        if (roadType === "alley") return sandMaterial;
 
         const pos = o.getWorldPosition(new THREE.Vector3());
         const elevation = Number.isFinite(pos.y) ? pos.y : 0;
