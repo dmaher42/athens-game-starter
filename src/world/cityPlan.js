@@ -1662,54 +1662,62 @@ function generateRoadNetwork(terrainSampler) {
   };
 
   // 1. Primary Spine: Harbor [East] -> Agora [Center-West]
-  // We add a mid-point to organicize the "Long Road" to the harbor.
+  // We add several control points so the road reads as a connected civic spine.
   const harborAgoraPoints = [
     HARBOR_CENTER_3D.clone(),
-    new THREE.Vector3(25, 0, 15),
+    new THREE.Vector3(56, 0, 12),
+    new THREE.Vector3(40, 0, 13),
+    new THREE.Vector3(22, 0, 16),
+    new THREE.Vector3(0, 0, 18),
     AGORA_CENTER_3D.clone()
   ];
   harborAgoraPoints.forEach(p => p.y = getH(p));
-  segments.push(new SplineRoad(harborAgoraPoints, 11, 'artery'));
+  segments.push(new SplineRoad(harborAgoraPoints, 12, 'artery'));
 
   // 2. Sacred Way: Agora [Center-West] -> Acropolis [Center]
   // Curved ascent around the hill.
   const sacredWayPoints = [
     AGORA_CENTER_3D.clone(),
-    new THREE.Vector3(-18, 0, 10),
+    new THREE.Vector3(-22, 0, 14),
+    new THREE.Vector3(-16, 0, 8),
     ACROPOLIS_PEAK_3D.clone()
   ];
   sacredWayPoints.forEach(p => p.y = getH(p));
-  segments.push(new SplineRoad(sacredWayPoints, 9, 'artery'));
+  segments.push(new SplineRoad(sacredWayPoints, 10, 'artery'));
 
   // 3. Northwest Commercial Strip (extension)
   const nwStripPoints = [
       AGORA_CENTER_3D.clone(),
-      new THREE.Vector3(-60, 0, 30),
+      new THREE.Vector3(-54, 0, 28),
+      new THREE.Vector3(-82, 0, 38),
       new THREE.Vector3(-120, 0, 50)
   ];
   nwStripPoints.forEach(p => p.y = getH(p));
   segments.push(new SplineRoad(nwStripPoints, 8, 'artery'));
 
-  // 4. Neighborhood Collectors (Local Streets)
+  // 4. Neighborhood Collectors (Street Network)
   
   // South Neighborhood Loop
   segments.push(new SplineRoad([
     new THREE.Vector3(0, getH({x:0, z:15}), 15),
-    new THREE.Vector3(-15, getH({x:-15, z:-20}), -20),
+    new THREE.Vector3(-18, getH({x:-18, z:-12}), -12),
+    new THREE.Vector3(-30, getH({x:-30, z:-34}), -34),
     new THREE.Vector3(-45, getH({x:-45, z:-60}), -60)
   ], 6, 'street'));
 
   // North Neighborhood Collector
   segments.push(new SplineRoad([
     new THREE.Vector3(-15, getH({x:-15, z:35}), 35),
-    new THREE.Vector3(5, getH({x:5, z:60}), 60),
+    new THREE.Vector3(4, getH({x:4, z:58}), 58),
+    new THREE.Vector3(12, getH({x:12, z:82}), 82),
     new THREE.Vector3(20, getH({x:20, z:105}), 105)
   ], 6, 'street'));
 
   // Harbor Perimeter Road (Curved)
   segments.push(new SplineRoad([
-    new THREE.Vector3(68, getH({x:68, z:-40}), -40),
-    new THREE.Vector3(75, getH({x:75, z:10}), 10),
+    new THREE.Vector3(64, getH({x:64, z:-40}), -40),
+    new THREE.Vector3(72, getH({x:72, z:-8}), -8),
+    new THREE.Vector3(74, getH({x:74, z:20}), 20),
     new THREE.Vector3(68, getH({x:68, z:60}), 60)
   ], 7, 'street'));
 
@@ -1732,31 +1740,71 @@ function branchSideStreets(segments, terrainSampler) {
 
   // Branch 1: Agora-Harbor Connector (North side)
   segments.push(new SplineRoad([
-    new THREE.Vector3(15, getH(15, 30), 30),
-    new THREE.Vector3(35, getH(35, 45), 45),
-    new THREE.Vector3(60, getH(60, 40), 40)
-  ], 5, 'street'));
+    new THREE.Vector3(-10, getH(-10, 24), 24),
+    new THREE.Vector3(8, getH(8, 18), 18),
+    new THREE.Vector3(30, getH(30, 12), 12),
+    new THREE.Vector3(52, getH(52, 10), 10)
+  ], 6, 'street'));
+
+  // Branch 1b: Central Agora ring to give the civic core a legible loop.
+  segments.push(new SplineRoad([
+    new THREE.Vector3(-54, getH(-54, 18), 18),
+    new THREE.Vector3(-42, getH(-42, 34), 34),
+    new THREE.Vector3(-20, getH(-20, 36), 36),
+    new THREE.Vector3(-8, getH(-8, 18), 18),
+    new THREE.Vector3(-18, getH(-18, 2), 2),
+    new THREE.Vector3(-40, getH(-40, 4), 4),
+  ], 6, 'street'));
 
   // Branch 2: Southern Coastal Lane
   segments.push(new SplineRoad([
-    new THREE.Vector3(55, getH(55, -25), -25),
-    new THREE.Vector3(30, getH(30, -35), -35),
-    new THREE.Vector3(-10, getH(-10, -45), -45)
+    new THREE.Vector3(58, getH(58, -18), -18),
+    new THREE.Vector3(38, getH(38, -22), -22),
+    new THREE.Vector3(10, getH(10, -28), -28),
+    new THREE.Vector3(-18, getH(-18, -36), -36),
+    new THREE.Vector3(-42, getH(-42, -48), -48)
   ], 5, 'street'));
 
   // Branch 3: Northwest Commercial extension Alleys
   segments.push(new SplineRoad([
     new THREE.Vector3(-60, getH(-60, 30), 30),
-    new THREE.Vector3(-80, getH(-80, 15), 15),
-    new THREE.Vector3(-95, getH(-95, 35), 35)
+    new THREE.Vector3(-78, getH(-78, 18), 18),
+    new THREE.Vector3(-96, getH(-96, 32), 32),
+    new THREE.Vector3(-112, getH(-112, 42), 42)
   ], 4, 'alley'));
 
   // Branch 4: Far North neighborhood loop
   segments.push(new SplineRoad([
     new THREE.Vector3(20, getH(20, 105), 105),
-    new THREE.Vector3(-5, getH(-5, 120), 120),
-    new THREE.Vector3(-30, getH(-30, 100), 100)
+    new THREE.Vector3(0, getH(0, 116), 116),
+    new THREE.Vector3(-22, getH(-22, 118), 118),
+    new THREE.Vector3(-36, getH(-36, 100), 100)
   ], 4, 'alley'));
+
+  // Branch 5: Harbor-to-city cross street through the player's main view.
+  segments.push(new SplineRoad([
+    new THREE.Vector3(62, getH(62, -6), -6),
+    new THREE.Vector3(36, getH(36, -8), -8),
+    new THREE.Vector3(10, getH(10, -10), -10),
+    new THREE.Vector3(-18, getH(-18, -9), -9),
+    new THREE.Vector3(-42, getH(-42, -8), -8)
+  ], 6, 'street'));
+}
+
+function findNearestRoadSegment(segments, point) {
+  let nearestSeg = null;
+  let nearestDistSq = Infinity;
+
+  for (const seg of segments) {
+    const closest = seg.closestPointToPoint(point, new THREE.Vector3());
+    const distSq = point.distanceToSquared(closest);
+    if (distSq < nearestDistSq) {
+      nearestDistSq = distSq;
+      nearestSeg = seg;
+    }
+  }
+
+  return nearestSeg && nearestSeg.isNear(point) ? nearestSeg : null;
 }
 
 function generateCityGrid(terrainSampler) {
@@ -1861,7 +1909,7 @@ function generateCityGrid(terrainSampler) {
       }
 
       // Primary Road Network Assignment
-      const nearestSeg = roadNetwork.find(seg => seg.isNear(cell.position));
+      const nearestSeg = findNearestRoadSegment(roadNetwork, cell.position);
       const isRoad = !!nearestSeg;
       
       if (nearestSeg && cell.district !== 'sacred') {

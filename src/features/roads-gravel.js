@@ -61,22 +61,22 @@ export async function applyGravelToRoads({ scene } = {}) {
 
       const sandMaterial = new THREE.MeshStandardMaterial({
         map: sandMap || null,
-        color: sandMap ? 0xffffff : 0xcdb89c,
+        color: sandMap ? 0xb6956d : 0xcdb89c,
         roughness: 0.85,
       });
       const grassMaterial = new THREE.MeshStandardMaterial({
         map: grassMap || null,
-        color: grassMap ? 0xffffff : 0x7a8b62,
+        color: grassMap ? 0x6f8057 : 0x7a8b62,
         roughness: 0.9,
       });
       const dirtMaterial = new THREE.MeshStandardMaterial({
         map: dirtMap || null,
-        color: dirtMap ? 0xffffff : 0x8b6a46,
+        color: dirtMap ? 0x8a5f41 : 0x8b6a46,
         roughness: 0.92,
       });
       const cobbleMaterial = new THREE.MeshPhysicalMaterial({
         map: stoneMap || null,
-        color: stoneMap ? 0xdfd3bc : 0xd6d1c8,
+        color: stoneMap ? 0x80776c : 0xd6d1c8,
         roughness: 0.65,
         clearcoat: 0.1,
         clearcoatRoughness: 0.4,
