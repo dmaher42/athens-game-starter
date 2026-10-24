@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import http from "node:http";
 import https from "node:https";
@@ -189,6 +190,49 @@ async function runVerification() {
       if (bodyText.includes("We couldn't finish loading Athens")) {
         throw new Error("Verification failed: loading screen reported a startup error.");
       }
+
+      await page.waitForFunction(() => typeof window.render_game_to_text === "function");
+      const harborLayout = await page.evaluate(() => {
+        const scene = window.scene;
+        const civic = scene.getObjectByName("CivicDistrict");
+        const plan = civic?.userData.plan;
+        const ocean = scene.getObjectByName("AegeanOcean");
+        if (!plan || !ocean) throw new Error("Harbor layout or ocean is missing.");
+
+        ocean.geometry.computeBoundingBox();
+        const bounds = ocean.geometry.boundingBox.clone().applyMatrix4(ocean.matrixWorld);
+        return {
+          waterWest: bounds.min.x,
+          waterEast: bounds.max.x,
+          // Dry land above/below the authored waterfront must stay available,
+          // even though the wider water plane now overlaps it in projection.
+          dryLots: plan.grid.filter((cell) =>
+            cell.position.x > 2 && cell.position.x < 116 &&
+            (cell.position.z > 116.8 || cell.position.z < -76.8)
+          ).map((cell) => ({
+            x: cell.position.x, z: cell.position.z, blocked: cell.blocked, type: cell.type,
+            hasSceneObject: civic.children.some((object) =>
+              Math.abs(object.position.x + civic.position.x - cell.position.x) < 0.1 &&
+              Math.abs(object.position.z + civic.position.z - cell.position.z) < 0.1
+            ),
+          })),
+          basinBlocked: plan.grid.find((cell) => cell.gridX === 3 && cell.gridZ === 1)?.blocked,
+          openSeaBlocked: plan.grid.find((cell) => cell.gridX === 5 && cell.gridZ === 6)?.blocked,
+        };
+      });
+      assert.ok(Math.abs(harborLayout.waterWest - 2) < 0.01, "Water must still cover the full harbor basin.");
+      assert.ok(harborLayout.waterEast >= 2467.99, "Open-ocean water coverage must be preserved.");
+      assert.ok(harborLayout.dryLots.some((cell) => cell.z > 116.8), "Check north-side city lots.");
+      assert.ok(harborLayout.dryLots.some((cell) => cell.z < -76.8), "Check south-side city lots.");
+      assert.deepEqual(harborLayout.dryLots.filter((cell) => cell.blocked), [], "Water rendering bounds must not block surrounding dry city lots.");
+      for (const side of ["north", "south"]) {
+        const lots = harborLayout.dryLots.filter((cell) => side === "north" ? cell.z > 116.8 : cell.z < -76.8);
+        for (const type of ["road", "building"]) {
+          assert.ok(lots.some((cell) => cell.type === type && cell.hasSceneObject), `Preserve ${side}-side ${type} scene objects.`);
+        }
+      }
+      assert.equal(harborLayout.basinBlocked, true, "Keep city buildings out of the harbor basin.");
+      assert.equal(harborLayout.openSeaBlocked, true, "Keep city buildings out of the deep ocean.");
     } finally {
       await browser.close();
     }

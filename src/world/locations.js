@@ -118,10 +118,10 @@ export const HARBOR_SETBACKS = [
     south: HARBOR_CENTER_3D.z + HARBOR_WALKWAY_HALF_WIDTH,
   },
   {
-    // Open sea setback for procedural city layout. The harbor basin and Aegean
-    // read as water-owned space, so city roads/buildings should not render
-    // across this larger seaward sheet.
-    west: AEGEAN_OCEAN_BOUNDS.west,
+    // Exclude the deep ocean, not the full rendered water sheet. The sheet
+    // overlaps dry land north/south of the basin; keep those city lots intact.
+    // Match the deep-ocean floor's west threshold in clampHarborBandHeight.
+    west: Math.max(AEGEAN_OCEAN_BOUNDS.west, HARBOR_WATER_BOUNDS.east - 14),
     east: AEGEAN_OCEAN_BOUNDS.east,
     north: AEGEAN_OCEAN_BOUNDS.north,
     south: AEGEAN_OCEAN_BOUNDS.south,
