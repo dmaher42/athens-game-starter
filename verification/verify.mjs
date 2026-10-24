@@ -180,7 +180,10 @@ async function runVerification() {
         );
       });
 
-      await page.goto(appUrl, { waitUntil: "networkidle" });
+      // Keep readable headless lighting, but exercise the real reflective Water
+      // shader in the production bundle instead of the simplified water mesh.
+      await page.addInitScript(() => Object.defineProperty(navigator, "webdriver", { get: () => false }));
+      await page.goto(`${appUrl}?automationPreview=1`, { waitUntil: "networkidle" });
       await page.waitForTimeout(10_000);
 
       const hasCanvas = (await page.locator("canvas").count()) > 0;
@@ -199,13 +202,18 @@ async function runVerification() {
         const civic = scene.getObjectByName("CivicDistrict");
         const plan = civic?.userData.plan;
         const ocean = scene.getObjectByName("AegeanOcean");
+        const terrain = scene.getObjectByName("Terrain");
         if (!plan || !ocean) throw new Error("Harbor layout or ocean is missing.");
 
         ocean.geometry.computeBoundingBox();
         const bounds = ocean.geometry.boundingBox.clone().applyMatrix4(ocean.matrixWorld);
         return {
+          normalWater: !ocean.userData.isAutomationFallback && ocean.material.isShaderMaterial,
           waterWest: bounds.min.x,
           waterEast: bounds.max.x,
+          seaLevel: ocean.userData.seaLevel,
+          basinHeights: [-5, 40].map((z) => terrain.userData.getHeightAt(80, z)),
+          cityHeights: [-144, 144].map((z) => terrain.userData.getHeightAt(80, z)),
           // Main now warps lots and intentionally thins outer neighborhoods.
           // Harbor-district lots avoid that thinning and isolate this regression.
           dryLots: plan.grid.filter((cell) =>
@@ -224,7 +232,10 @@ async function runVerification() {
         };
       });
       assert.ok(Math.abs(harborLayout.waterWest - 2) < 0.01, "Water must still cover the full harbor basin.");
+      assert.equal(harborLayout.normalWater, true, "Verify the production Water shader rather than simplified automation water.");
       assert.ok(harborLayout.waterEast >= 2467.99, "Open-ocean water coverage must be preserved.");
+      assert.ok(harborLayout.basinHeights.every((height) => height < harborLayout.seaLevel - 0.5), "Carve both ends of the authored harbor basin below water.");
+      assert.ok(harborLayout.cityHeights.every((height) => height >= harborLayout.seaLevel - 0.05), "Preserve dry city ground north and south of the harbor.");
       assert.ok(harborLayout.dryLots.some((cell) => cell.z > 116.8), "Check north-side city lots.");
       assert.ok(harborLayout.dryLots.some((cell) => cell.z < -76.8), "Check south-side city lots.");
       assert.deepEqual(harborLayout.dryLots.filter((cell) => cell.blocked), [], "Water rendering bounds must not block surrounding dry city lots.");

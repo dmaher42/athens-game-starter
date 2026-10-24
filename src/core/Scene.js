@@ -290,7 +290,7 @@ export function createSceneContext({
   // Create camera using CameraManager for consistency
   const camera = CameraManager.createCamera(75, window.innerWidth / window.innerHeight, 0.1, 1200);
 
-  const composer = isAutomationCapture ? null : new EffectComposer(renderer);
+  let composer = isAutomationCapture ? null : new EffectComposer(renderer);
   let bloomPass = null;
   let colorGradePass = null;
 

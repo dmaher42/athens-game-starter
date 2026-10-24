@@ -1,0 +1,86 @@
+<!doctype html>
+<html><head><title>Normal water shoreline verification</title></head><body>
+<script type="module">
+import * as THREE from 'three';
+import { createOcean, updateOcean } from '../src/world/ocean.js';
+
+const scene = new THREE.Scene();
+const renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+renderer.setSize(512, 512);
+document.body.appendChild(renderer.domElement);
+const geometry = new THREE.PlaneGeometry(64, 64, 4, 4);
+const p = geometry.attributes.position;
+for (let i = 0; i < p.count; i++) {
+  // Asymmetric banks and non-planar quads expose mirrored or bilinear sampling.
+  p.setZ(i, p.getX(i) <= -16 && p.getY(i) >= 16 ? 0 : p.getX(i) / 12 + p.getY(i) / 20 + ((i % 3) - 1) * 0.8);
+}
+geometry.computeVertexNormals();
+const terrain = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0xc6aa78 }));
+terrain.rotation.x = -Math.PI / 2;
+scene.add(terrain);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x554433, 2));
+const water = await createOcean(scene, terrain, {
+  seaLevel: 0,
+  bounds: { west: -32, east: 32, north: 32, south: -32 },
+});
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+const target = new THREE.WebGLRenderTarget(128, 128);
+const pixels = new Uint8Array(128 * 128 * 4);
+const raycaster = new THREE.Raycaster();
+const waterPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const waterPoint = new THREE.Vector3();
+const probeOrigin = new THREE.Vector3();
+const down = new THREE.Vector3(0, -1, 0);
+
+window.runShorelineCheck = () => {
+  if (water.userData.isAutomationFallback) throw new Error('Normal water shader was not selected.');
+  updateOcean(water, 0, new THREE.Vector3());
+  const results = [];
+  for (let frame = 0; frame < 3; frame++) {
+  updateOcean(water, 0.5);
+  for (const position of [[0, 60, 0.01], [0, 20, 50], [35, 12, 50]]) {
+    camera.position.set(...position);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+    scene.updateMatrixWorld(true);
+    terrain.visible = false;
+    scene.background = null;
+    renderer.setClearColor(0x000000, 0);
+    renderer.setRenderTarget(target);
+    renderer.render(scene, camera);
+    renderer.readRenderTargetPixels(target, 0, 0, 128, 128, pixels);
+    renderer.setRenderTarget(null);
+    let checked = 0, wet = 0, dry = 0, mismatches = 0, coloredWet = 0;
+    for (let y = 2; y < 126; y += 2) for (let x = 2; x < 126; x += 2) {
+      raycaster.setFromCamera(new THREE.Vector2((x + 0.5) / 64 - 1, (y + 0.5) / 64 - 1), camera);
+      if (!raycaster.ray.intersectPlane(waterPlane, waterPoint)) continue;
+      if (Math.abs(waterPoint.x) >= 31.5 || Math.abs(waterPoint.z) >= 31.5) continue;
+      probeOrigin.set(waterPoint.x, 100, waterPoint.z);
+      raycaster.set(probeOrigin, down);
+      const hit = raycaster.intersectObject(terrain)[0];
+      if (!hit || Math.abs(-hit.point.y - 0.05) < 0.01) continue;
+      const expected = -hit.point.y > 0.05;
+      const rendered = pixels[(y * 128 + x) * 4 + 3] > 0;
+      checked++;
+      if (expected) wet++; else dry++;
+      if (expected && pixels[(y * 128 + x) * 4] + pixels[(y * 128 + x) * 4 + 1] + pixels[(y * 128 + x) * 4 + 2] > 0) coloredWet++;
+      if (expected !== rendered) mismatches++;
+    }
+    results.push({ frame, position, checked, wet, dry, mismatches, coloredWet });
+  }
+  }
+  terrain.visible = true;
+  renderer.setClearColor(0xbad7ec, 1);
+  renderer.render(scene, camera);
+  const gl = renderer.getContext();
+  const compiled = renderer.info.programs.map(program => gl.getShaderSource(program.fragmentShader));
+  return {
+    normalWater: !water.userData.isAutomationFallback,
+    waterTime: water.material.uniforms.time.value,
+    sunLengthSq: water.material.uniforms.sunDirection.value.lengthSq(),
+    shorelineCompiled: compiled.some(source => source.includes('float terrainVertexHeight') && source.includes('if (waterDepth <= 0.05)')),
+    results,
+  };
+};
+window.ready = true;
+</script></body></html>

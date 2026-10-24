@@ -126,9 +126,7 @@ const DEFAULT_INLAND_CLIP = Number.isFinite(HARBOR_WATER_BOUNDS?.south)
   ? HARBOR_WATER_BOUNDS.south + DEFAULT_INLAND_PADDING
   : 160;
 const TERRAIN_CLEARANCE_EPSILON = 0.02;
-const LAND_CLIP_CLEARANCE = 0.6;
-const SHALLOW_WATER_DISCARD_EPSILON = 0.005;
-const SHORELINE_DEPTH_CLIP = 0.35;
+const SHORELINE_CLEARANCE = 0.05;
 const SHORE_PROBE_X_FRACTIONS = [0.2, 0.5, 0.8];
 const SHORE_PROBE_Z_FRACTIONS = [0.0, 0.5, 0.9];
 const DEFAULT_OCEAN_RADIUS = 4000;
@@ -369,7 +367,9 @@ export async function createOcean(scene, terrain, options = {}) {
         textureWidth: waterRenderTargetSize,
         textureHeight: waterRenderTargetSize,
         waterNormals: waterNormals,
-        sunDirection: new THREE.Vector3(),
+        // Water normalizes the reflected sun vector; a zero vector produces
+        // undefined lighting before the first lighting-system update.
+        sunDirection: new THREE.Vector3(0.707, 0.707, 0).normalize(),
         sunColor: 0xffffff,
         waterColor: options.waterColor ?? 0x2b86b8,
         distortionScale: 3.2, // More dynamic waves
@@ -378,48 +378,43 @@ export async function createOcean(scene, terrain, options = {}) {
 
   // Shader injection for shoreline interaction and distance fade
   if (!useAutomationFallback) {
+    terrain.updateWorldMatrix(true, false);
+    const positionAttribute = terrain.geometry.attributes.position;
+    const heightData = new Float32Array(positionAttribute.count);
+    const vertex = new THREE.Vector3();
+    for (let i = 0; i < positionAttribute.count; i++) {
+      vertex.fromBufferAttribute(positionAttribute, i).applyMatrix4(terrain.matrixWorld);
+      heightData[i] = vertex.y;
+    }
+    const columns = terrain.geometry.parameters.widthSegments + 1;
+    const rows = terrain.geometry.parameters.heightSegments + 1;
+    const heightMap = new THREE.DataTexture(heightData, columns, rows, THREE.RedFormat, THREE.FloatType);
+    heightMap.minFilter = heightMap.magFilter = THREE.NearestFilter;
+    heightMap.needsUpdate = true;
+    water.material.addEventListener("dispose", () => heightMap.dispose());
+    Object.assign(water.material.uniforms, {
+      uSeaLevel: { value: seaLevel },
+      uTerrainSize: { value: new THREE.Vector2(terrain.geometry.parameters.width, terrain.geometry.parameters.height) },
+      uTerrainGrid: { value: new THREE.Vector2(columns - 1, rows - 1) },
+      uTerrainInverse: { value: terrain.matrixWorld.clone().invert() },
+      uHeightMap: { value: heightMap },
+      uFadeStart: { value: 900.0 },
+      uFadeEnd: { value: 5200.0 },
+    });
     water.material.onBeforeCompile = (shader) => {
-      shader.uniforms.uSeaLevel = { value: seaLevel };
-      shader.uniforms.uTerrainSize = { value: new THREE.Vector2(terrain.geometry.parameters.width, terrain.geometry.parameters.height) };
-
-      const positionAttribute = terrain.geometry.attributes.position;
-      const heightData = new Float32Array(positionAttribute.count);
-      for (let i = 0; i < positionAttribute.count; i++) {
-          heightData[i] = positionAttribute.getZ(i);
-      }
-      const heightMap = new THREE.DataTexture(heightData, terrain.geometry.parameters.widthSegments + 1, terrain.geometry.parameters.heightSegments + 1, THREE.RedFormat, THREE.FloatType);
-      heightMap.needsUpdate = true;
-      shader.uniforms.uHeightMap = { value: heightMap };
-
-      // Let the open sea keep its readable surface detail farther into the
-      // distance so it feels like an ocean rather than a small enclosed basin.
-      shader.uniforms.uFadeStart = { value: 900.0 };
-      shader.uniforms.uFadeEnd = { value: 5200.0 };
-
-      // VERTEX SHADER FIX: Ensure main exists and vWorldPosition is assigned
-      // We try to replace the 'void main() {' string.
-      const vertexHead = "void main() {";
-      const vertexBody = `
-        varying vec3 vWorldPosition;
-        void main() {
-          vWorldPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
-        `;
-
-      if (shader.vertexShader.includes(vertexHead)) {
-        shader.vertexShader = shader.vertexShader.replace(vertexHead, vertexBody);
-      } else {
-        // Robust regex replace if formatting differs
-        shader.vertexShader = shader.vertexShader.replace(/void\s+main\s*\(\s*\)\s*\{/, vertexBody);
-      }
-
       // FRAGMENT SHADER INJECTION
       const fragmentHeader = /* glsl */ `
         uniform sampler2D uHeightMap;
         uniform float uSeaLevel;
         uniform vec2 uTerrainSize;
+        uniform vec2 uTerrainGrid;
+        uniform mat4 uTerrainInverse;
         uniform float uFadeStart;
         uniform float uFadeEnd;
-        varying vec3 vWorldPosition;
+
+        float terrainVertexHeight(vec2 cell) {
+          return texture2D(uHeightMap, (cell + 0.5) / (uTerrainGrid + 1.0)).r;
+        }
 
         // Renamed to avoid collisions
         float oceanHash(vec2 p) {
@@ -438,36 +433,41 @@ export async function createOcean(scene, terrain, options = {}) {
       // Inject header at top (works because Three.js prepends defines/version)
       shader.fragmentShader = fragmentHeader + "\n" + shader.fragmentShader;
 
-      // Apply Shoreline Logic
+      // Patch the actual Three.js Water output, and fail visibly if an upgrade
+      // changes it instead of silently losing the shoreline mask again.
+      const waterOutput = "gl_FragColor = vec4( outgoingLight, alpha );";
+      if (!shader.fragmentShader.includes(waterOutput)) {
+        throw new Error("Water shader output changed; shoreline clipping could not be applied.");
+      }
       shader.fragmentShader = shader.fragmentShader.replace(
-        "gl_FragColor = vec4( color, 1.0 );",
+        waterOutput,
         /* glsl */ `
-        // The terrain height texture is generated from PlaneGeometry before the
-        // mesh is rotated onto the XZ plane, so world Z must be flipped back to
-        // match the stored row order when sampling shoreline heights.
+        vec3 vWorldPosition = worldPosition.xyz;
+        vec3 terrainLocal = (uTerrainInverse * vec4(vWorldPosition, 1.0)).xyz;
+        // DataTexture row zero is PlaneGeometry's positive local-Y edge.
+        // Transform back to local space rather than mirroring the world Z axis.
         vec2 terrainUV = vec2(
-          vWorldPosition.x / uTerrainSize.x + 0.5,
-          0.5 - (vWorldPosition.z / uTerrainSize.y)
+          terrainLocal.x / uTerrainSize.x + 0.5,
+          0.5 - terrainLocal.y / uTerrainSize.y
         );
-        terrainUV = clamp(terrainUV, vec2(0.0), vec2(1.0));
-        float terrainHeight = texture2D(uHeightMap, terrainUV).r;
-        float terrainToSea = terrainHeight - uSeaLevel;
+        vec2 grid = clamp(terrainUV, vec2(0.0), vec2(1.0)) * uTerrainGrid;
+        vec2 cell = min(floor(grid), uTerrainGrid - 1.0);
+        vec2 f = grid - cell;
+        float h00 = terrainVertexHeight(cell);
+        float h10 = terrainVertexHeight(cell + vec2(1.0, 0.0));
+        float h01 = terrainVertexHeight(cell + vec2(0.0, 1.0));
+        float h11 = terrainVertexHeight(cell + vec2(1.0, 1.0));
+        // Match the two rendered terrain triangles, not a smoothed height field
+        // that can put water on the wrong side of a steep shoreline face.
+        float terrainHeight = f.x + f.y <= 1.0
+          ? h00 + (h10 - h00) * f.x + (h01 - h00) * f.y
+          : h11 + (h01 - h11) * (1.0 - f.x) + (h10 - h11) * (1.0 - f.y);
         float waterDepth = vWorldPosition.y - terrainHeight;
-
-        // If terrain is meaningfully above the waterline, stop rendering
-        // the water there so shoreline ground does not shimmer/fight through it.
-        if (terrainToSea > ${LAND_CLIP_CLEARANCE.toFixed(2)} && waterDepth < ${SHORELINE_DEPTH_CLIP.toFixed(2)}) {
+        if (waterDepth <= ${SHORELINE_CLEARANCE.toFixed(2)}) {
           discard;
         }
 
-        // Also discard in ultra-shallow overlap where terrain sits almost
-        // exactly on the water plane. This removes patchy coplanar fighting
-        // without widening the shoreline cut in a visible way.
-        if (terrainToSea > -${SHALLOW_WATER_DISCARD_EPSILON.toFixed(3)} && waterDepth < ${SHALLOW_WATER_DISCARD_EPSILON.toFixed(3)}) {
-          discard;
-        }
-
-        vec3 finalColor = color;
+        vec3 finalColor = outgoingLight;
 
         // Shoreline foam
         float foamFactor = smoothstep(0.0, 3.0, waterDepth) - smoothstep(3.0, 6.0, waterDepth);
@@ -497,7 +497,7 @@ export async function createOcean(scene, terrain, options = {}) {
       shader.fragmentShader = shader.fragmentShader.replace(
         "#include <fog_fragment>",
         /* glsl */ `
-        float dist = length(vWorldPosition - cameraPosition);
+        float dist = length(worldPosition.xyz - cameraPosition);
         float fadeFactor = smoothstep(uFadeStart, uFadeEnd, dist);
 
         #ifdef USE_FOG
@@ -553,7 +553,7 @@ export async function createOcean(scene, terrain, options = {}) {
 
 export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor, haze = {}) {
   if (!ocean) return;
-  const uniforms = ocean.uniforms ?? ocean.mesh?.material?.uniforms;
+  const uniforms = ocean.uniforms ?? ocean.material?.uniforms ?? ocean.mesh?.material?.uniforms;
   if (!uniforms) return;
 
   if (haze) {
@@ -568,8 +568,9 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor,
   if (Number.isFinite(deltaSeconds)) {
     uniforms.time.value += deltaSeconds;
   }
-  if (sunDir && uniforms.sunDirection) {
-    uniforms.sunDirection.value.copy(sunDir);
+  const sunLengthSq = sunDir?.lengthSq?.();
+  if (uniforms.sunDirection && Number.isFinite(sunLengthSq) && sunLengthSq > 1e-8) {
+    uniforms.sunDirection.value.copy(sunDir).normalize();
   }
 
   if (sunColor && uniforms.sunColor) {

@@ -386,7 +386,9 @@ function getElevation(
 
   // Apply harbor/ocean band clamping AFTER the coast fade so that the carved
   // seabed depth is never overridden by the shoreline fade near the east coast.
-  h = clampHarborBandHeight(x, z, seaLevel, h);
+  // PlaneGeometry's local Y becomes negative world Z after rotation. Harbor
+  // bounds are authored in world space; using local Y mirrors the basin.
+  h = clampHarborBandHeight(x, -z, seaLevel, h);
 
   return h;
 }
