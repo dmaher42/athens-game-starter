@@ -12,7 +12,7 @@ try {
   const page = await browser.newPage();
   page.on('pageerror', error => errors.push(String(error)));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-  await page.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
+  // Keep WebDriver enabled: automated previews must use the same real Water.
   await page.goto(`${origin}/athens-game-starter/verification/water-shoreline.html`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.ready, null, { timeout: 60000 });
   const report = await page.evaluate(() => window.runShorelineCheck());

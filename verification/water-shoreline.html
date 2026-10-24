@@ -75,7 +75,7 @@ window.runShorelineCheck = () => {
   const gl = renderer.getContext();
   const compiled = renderer.info.programs.map(program => gl.getShaderSource(program.fragmentShader));
   return {
-    normalWater: !water.userData.isAutomationFallback,
+    normalWater: water.isWater && water.material.isShaderMaterial && !water.userData.isAutomationFallback,
     waterTime: water.material.uniforms.time.value,
     sunLengthSq: water.material.uniforms.sunDirection.value.lengthSq(),
     shorelineCompiled: compiled.some(source => source.includes('float terrainVertexHeight') && source.includes('if (waterDepth <= 0.05)')),

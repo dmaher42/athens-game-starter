@@ -135,10 +135,6 @@ const OCEAN_SEGMENTS = 64;
 let cachedWaterNormalsTexture = null;
 let cachedWaterNormalsKey = null;
 
-function isAutomationCaptureSession() {
-  return typeof navigator !== "undefined" && navigator.webdriver === true;
-}
-
 async function resolveWaterNormalsTexture(options) {
   const candidates = [];
 
@@ -348,22 +344,8 @@ export async function createOcean(scene, terrain, options = {}) {
   });
 
   // 3. CONFIGURE WATER SHADER
-  const useAutomationFallback = isAutomationCaptureSession();
-  const water = useAutomationFallback
-    ? new THREE.Mesh(
-        geometry,
-        new THREE.MeshPhongMaterial({
-          color: options.waterColor ?? 0x2b86b8,
-          emissive: 0x0d3954,
-          emissiveIntensity: 0.22,
-          shininess: 32,
-          specular: new THREE.Color(0x8cc8e8),
-          transparent: true,
-          opacity: 0.94,
-          fog: !!scene.fog,
-        }),
-      )
-    : new Water(geometry, {
+  // Use the same reflective, terrain-clipped water in previews and gameplay.
+  const water = new Water(geometry, {
         textureWidth: waterRenderTargetSize,
         textureHeight: waterRenderTargetSize,
         waterNormals: waterNormals,
@@ -377,7 +359,7 @@ export async function createOcean(scene, terrain, options = {}) {
       });
 
   // Shader injection for shoreline interaction and distance fade
-  if (!useAutomationFallback) {
+  {
     terrain.updateWorldMatrix(true, false);
     const positionAttribute = terrain.geometry.attributes.position;
     const heightData = new Float32Array(positionAttribute.count);
@@ -521,7 +503,7 @@ export async function createOcean(scene, terrain, options = {}) {
 
   water.name = "AegeanOcean";
   water.userData.isWater = true;
-  water.userData.isAutomationFallback = useAutomationFallback;
+  water.userData.isAutomationFallback = false;
   water.userData.seaLevel = seaLevel;
   water.userData.oceanSize = { width: oceanWidth, depth: oceanDepth };
   water.userData.horizonY = horizonY;
