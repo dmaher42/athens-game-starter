@@ -57,6 +57,7 @@ const MARBLE_TEXTURE_DEFAULTS = {
 };
 
 const marbleTextureLoader = new THREE.TextureLoader();
+const marbleTextureRequests = new Map();
 
 function resolveTextureUrl(baseUrl, candidate) {
   if (typeof candidate !== "string") return null;
@@ -70,21 +71,32 @@ function resolveTextureUrl(baseUrl, candidate) {
   return joinPath(root, trimmed.replace(/^\/+/, ""));
 }
 
-async function loadTextureCandidate({ baseUrl, candidate, colorSpace }) {
+function loadTextureCandidate({ baseUrl, candidate, colorSpace }) {
   const url = resolveTextureUrl(baseUrl, candidate);
-  if (!url) return null;
-  try {
-    const texture = await marbleTextureLoader.loadAsync(url);
-    applyNormalMapConvention(texture, url);
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.anisotropy = 8;
-    texture.colorSpace = colorSpace;
-    texture.needsUpdate = true;
-    return texture;
-  } catch (error) {
-    console.warn("[buildingKit] Marble texture load failed", url, error);
-    return null;
-  }
+  if (!url) return Promise.resolve(null);
+  const key = JSON.stringify([url, colorSpace]);
+  if (marbleTextureRequests.has(key)) return marbleTextureRequests.get(key);
+
+  // Columns, steps and pediments request the same maps concurrently. Share the
+  // in-flight load and normal-map conversion; each material still clones its
+  // texture before changing tiling, so individual buildings stay independent.
+  const request = (async () => {
+    try {
+      const texture = await marbleTextureLoader.loadAsync(url);
+      applyNormalMapConvention(texture, url);
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.anisotropy = 8;
+      texture.colorSpace = colorSpace;
+      texture.needsUpdate = true;
+      return texture;
+    } catch (error) {
+      marbleTextureRequests.delete(key);
+      console.warn("[buildingKit] Marble texture load failed", url, error);
+      return null;
+    }
+  })();
+  marbleTextureRequests.set(key, request);
+  return request;
 }
 
 /**
