@@ -26,6 +26,7 @@ export class QuestHud {
     const panel = createHudPanel({
       title: "Active Quest",
       className: "quest-hud",
+      initialCollapsed: true,
       toggleLabels: { expanded: "Hide", collapsed: "Show" },
     });
 

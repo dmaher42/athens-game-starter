@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { joinPath, resolveBaseUrl } from "../utils/baseUrl.js";
 import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { createProceduralMarbleTextures } from "../core/AssetLoader.js";
@@ -249,8 +250,20 @@ export async function makeColumn({
   baseMesh.receiveShadow = true;
   group.add(baseMesh);
 
-  group.userData = { noCollision: false };
-  return group;
+  // Temple instancing consumes a Mesh's geometry/material, not a Group. Merge
+  // the three column parts so every instance includes shaft, capital and base.
+  group.updateMatrixWorld(true);
+  const parts = group.children.map((part) => {
+    const geometry = ensureUv2Attribute(part.geometry.clone());
+    return geometry.applyMatrix4(part.matrixWorld);
+  });
+  const geometry = mergeGeometries(parts, false);
+  parts.forEach((part) => part.dispose());
+  const column = new THREE.Mesh(geometry, columnMaterial);
+  column.name = "DetailedColumn";
+  column.castShadow = column.receiveShadow = true;
+  column.userData = { noCollision: false };
+  return column;
 }
 
 export async function makeStylobateSteps({

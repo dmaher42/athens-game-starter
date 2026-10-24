@@ -8,6 +8,7 @@ import {
   HARBOR_GROUND_HEIGHT,
   getCityGroundY,
   HARBOR_CENTER_3D,
+  HARBOR_LAND_APPROACH_X,
 } from "./locations.js";
 import {
   findDockSlots,
@@ -1209,22 +1210,25 @@ function createShed(size, groundY, position) {
 
 /**
  * Create a boardwalk/ramp connector from city level to harbor level
- * Bridges the elevation gap from getCityGroundY() to harborGroundY
+ * Bridges the city street and the harbour deck, in harbour-local coordinates.
  * @param {number} cityGroundY - The city ground elevation
- * @param {number} harborGroundY - The harbor ground elevation
+ * @param {function(number, number): number} heightSampler - Shore terrain height
  * @returns {THREE.Group} Connector structure
  */
-function createCityHarborConnector(cityGroundY, harborGroundY) {
+function createCityHarborConnector(cityGroundY, heightSampler) {
   const connector = new THREE.Group();
   connector.name = "CityHarborConnector";
 
-  // Calculate elevation difference
-  const elevationDiff = cityGroundY - harborGroundY;
+  // Sea-level changes update the harbour anchor. Use its actual group origin,
+  // rather than treating the nominal harbour ground height as the group Y.
+  const groupY = HARBOR_CENTER_3D.y;
+  const elevationDiff = cityGroundY - groupY;
+  const endElevation = getSeaLevelY() + 0.6 - groupY;
   
   // Keep the connector on the harbor side so it reads as a destination ramp
   // instead of a silhouette slicing across the spawn view.
-  const boardwalkStartX = -34;
-  const boardwalkLength = 34;
+  const boardwalkStartX = HARBOR_LAND_APPROACH_X + 10 - HARBOR_CENTER_3D.x;
+  const boardwalkLength = -boardwalkStartX;
   const boardwalkWidth = 6.4;
   const boardwalkThickness = 0.35;
   
@@ -1240,10 +1244,10 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
   const segmentLength = boardwalkLength / segmentCount;
   
   for (let i = 0; i < segmentCount; i++) {
-    const t = i / (segmentCount - 1); // 0 to 1 from harbor to city
-    const segmentElevation = THREE.MathUtils.lerp(0, elevationDiff, t);
-    const nextT = (i + 1) / (segmentCount - 1);
-    const nextElevation = THREE.MathUtils.lerp(0, elevationDiff, nextT);
+    const t = i / segmentCount; // 0 to 1 from city to harbor
+    const segmentElevation = THREE.MathUtils.lerp(elevationDiff, endElevation, t) - boardwalkThickness / 2;
+    const nextT = (i + 1) / segmentCount;
+    const nextElevation = THREE.MathUtils.lerp(elevationDiff, endElevation, nextT) - boardwalkThickness / 2;
     const avgElevation = (segmentElevation + nextElevation) / 2;
     
     // Calculate tilt angle for this segment
@@ -1276,7 +1280,7 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
   for (let i = 0; i < postCount; i++) {
     const t = i / (postCount - 1);
     const xPos = boardwalkStartX + (t * boardwalkLength);
-    const topElevation = THREE.MathUtils.lerp(0, elevationDiff, t);
+    const topElevation = THREE.MathUtils.lerp(elevationDiff, endElevation, t);
     const postHeight = topElevation + 2.5; // Extend down below surface
     
     // Create two posts on each side of the boardwalk
@@ -1306,7 +1310,7 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
     for (let i = 0; i <= 16; i++) {
       const t = i / 16;
       const xPos = boardwalkStartX + (t * boardwalkLength);
-      const yPos = THREE.MathUtils.lerp(0, elevationDiff, t) + railingHeight;
+      const yPos = THREE.MathUtils.lerp(elevationDiff, endElevation, t) + railingHeight;
       railingPoints.push(new THREE.Vector3(xPos, yPos, side));
     }
     
@@ -1317,6 +1321,19 @@ function createCityHarborConnector(cityGroundY, harborGroundY) {
     railing.castShadow = true;
     connector.add(railing);
   });
+
+  // The dry street meets shallow stone steps, then the existing boardwalk.
+  const footY = heightSampler?.(HARBOR_LAND_APPROACH_X, HARBOR_CENTER_3D.z) ?? getSeaLevelY();
+  const steps = 12;
+  for (let i = 0; i < steps; i++) {
+    const topY = THREE.MathUtils.lerp(footY, cityGroundY, (i + 1) / steps);
+    const height = topY - footY + 0.15;
+    const tread = new THREE.Mesh(new THREE.BoxGeometry(10 / steps, height, boardwalkWidth), new THREE.MeshStandardMaterial({ color: 0xbda987, roughness: 0.9 }));
+    tread.name = 'HarborApproachStep';
+    tread.position.set(HARBOR_LAND_APPROACH_X - HARBOR_CENTER_3D.x + (i + 0.5) * 10 / steps, footY - groupY + height / 2, 0);
+    connector.add(tread);
+  }
+  connector.userData.landApproachX = HARBOR_LAND_APPROACH_X;
 
   const threshold = new THREE.Group();
   threshold.name = "HarborCityThreshold";
@@ -1908,7 +1925,7 @@ export function createHarbor(scene, options = {}) {
 
   // Add city-harbor connector boardwalk
   const cityGroundY = getCityGroundY();
-  const connector = createCityHarborConnector(cityGroundY, harborGroundY);
+  const connector = createCityHarborConnector(cityGroundY, terrainSampler);
   harbor.add(connector);
 
   // --- NEW: MARITIME LANDMARKS ---

@@ -35,6 +35,12 @@ export const HARBOR_CENTER_3D = new THREE.Vector3(
 // All districts now sit on the same flat plane
 export const AGORA_CENTER_3D = new THREE.Vector3(-30, getCityGroundY(), 20);
 export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-4, getCityGroundY(), 0);
+// Shared walking-space bounds: city placement and the visible square agree.
+export const AGORA_COURT_BOUNDS = {
+  west: AGORA_CENTER_3D.x - 22, east: AGORA_CENTER_3D.x + 22,
+  south: AGORA_CENTER_3D.z - 14, north: AGORA_CENTER_3D.z + 14,
+};
+export const HARBOR_LAND_APPROACH_X = 0;
 export const ISLAND_RADIUS = 205; // Kept for legacy ref, but world is mainland now
 
 // Shrink exclusion zones to fit the tighter map

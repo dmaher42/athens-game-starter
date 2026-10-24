@@ -50,15 +50,15 @@ const TOUR_STAGES = [
     markerId: "harbor",
     radius: 18,
     objective:
-      "You begin in the Agora. Follow the blue harbor marker downhill to the docks.",
+      "Discover the waterfront beyond the Agora.",
     completion:
-      "The harbor opens to the sea. Now climb toward the ivory Acropolis beacon above the city.",
+      "The harbor opens to the sea. Temple roofs rise inland.",
   },
   {
     markerId: "acropolis",
     radius: 16,
     objective:
-      "Climb from the harbor to the Acropolis and reach the ivory beacon above the city.",
+      "Explore the temple precinct inland.",
     completion:
       "You crossed Athens from market to sea to summit. The short walking tour is complete.",
   },
@@ -711,7 +711,8 @@ function createDistrictMarker(marker, terrain) {
   return group;
 }
 
-export function createDemoTour(scene, { terrain, questManager } = {}) {
+/** @param {THREE.Object3D} scene @param {{terrain?: any, questManager?: any, showGuides?: boolean}} [options] */
+export function createDemoTour(scene, { terrain, questManager, showGuides = false } = {}) {
   const group = new THREE.Group();
   group.name = "DemoTour";
 
@@ -723,7 +724,7 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
   }
 
   const guidePosts = [];
-  for (const route of ROUTE_GUIDES) {
+  for (const route of showGuides ? ROUTE_GUIDES : []) {
     route.positions.forEach((_, index) => {
       const guide = createRouteGuide(route, index, terrain);
       guide.visible = false;
@@ -733,7 +734,7 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
   }
 
   const approachFrames = [];
-  for (const frame of APPROACH_FRAMES) {
+  for (const frame of showGuides ? APPROACH_FRAMES : []) {
     const frameObject = createApproachFrame(frame, terrain);
     frameObject.visible = false;
     group.add(frameObject);
@@ -774,6 +775,7 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
       const focusLight = object.userData?.focusLight;
 
       object.userData.active = isActive;
+      object.visible = showGuides;
       object.scale.setScalar(isActive ? 1.06 : 0.96);
 
       if (ring?.material) {
@@ -926,8 +928,8 @@ export function createDemoTour(scene, { terrain, questManager } = {}) {
       }
 
       const horizontalDistance = Math.hypot(
-        playerPosition.x - target.position.x,
-        playerPosition.z - target.position.z,
+        playerPosition.x - (showGuides ? target.position.x : marker.id === 'harbor' ? HARBOR_CENTER_3D.x : ACROPOLIS_PEAK_3D.x),
+        playerPosition.z - (showGuides ? target.position.z : marker.id === 'harbor' ? HARBOR_CENTER_3D.z : ACROPOLIS_PEAK_3D.z),
       );
 
       if (horizontalDistance > stage.radius) {

@@ -22,6 +22,14 @@ Any AI assistant working on this project must:
 - Catch asset loading issues before they appear in the final render (especially `.glb` files).
 
 ## 4. Game Design Priorities
+### City exploration pass (2026-10-25)
+- The Agora is the starting gathering space, framed by five low shopfronts. Reserve full building footprints around it; roads meet the edges of one continuous court.
+- An open eastern view and a broad street lead to shore steps and the harbour boardwalk. A narrower inland route reveals the taller temple landmark; western lanes retain smaller courts and ordinary buildings.
+- Begin on foot, facing the waterfront. Movement follows the visible camera. Flight remains available with F.
+- Environmental views carry navigation. The optional quest panel starts collapsed and coloured tour guides are hidden by default; discovery triggers still work.
+- Extend the existing city plan, building prefabs and harbour connector. Preserve the normal Water shader, shoreline ownership and shared texture loading.
+- This pass is being tested locally on a separate design branch. It is not a public release or a merge of PR #978. Historical deployment instructions below do not authorize publishing an unapproved design.
+
 - The world is a **mainland coastal city**, not an island.
 - Harbour is on the open sea; terrain rises inland toward hills or mountains.
 - Walkability is prioritized — buildings and landmarks should always be reachable on foot.

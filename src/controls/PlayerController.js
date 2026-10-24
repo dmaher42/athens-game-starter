@@ -76,7 +76,7 @@ export class PlayerController {
     this.grounded = false;
     this.jumpLocked = false;
 
-    this.flying = true;
+    this.flying = false;
     this.flySpeed = 8.0;
     this.flyIdleDecay = 0.9;
 
@@ -112,6 +112,13 @@ export class PlayerController {
    */
   update(dt) {
     if (!Number.isFinite(dt) || dt <= 0) return;
+    // Model loading or a background tab must not advance the capsule through
+    // the ground in one oversized physics step.
+    if (dt > 1 / 30) {
+      const steps = Math.ceil(Math.min(dt, 0.25) * 60);
+      for (let i = 0; i < steps; i++) this.update(Math.min(dt, 0.25) / steps);
+      return;
+    }
 
     const toggledFly =
       typeof this.input.consumeFlyToggle === 'function'
@@ -253,10 +260,9 @@ export class PlayerController {
       this.tmpVec2.set(dirX, 0, dirZ).normalize();
 
       if (this.camera) {
-        this.tmpQuat.setFromEuler(
-          this.cameraEuler.set(this.cameraPitch, this.cameraYaw, 0, 'YXZ')
-        );
-        const forward = this.tmpVec3.set(0, 0, -1).applyQuaternion(this.tmpQuat);
+        // Follow the view itself: orbit cameras use a different yaw convention
+        // from the controller's fallback camera.
+        const forward = this.camera.getWorldDirection(this.tmpVec3);
         forward.y = 0;
         if (forward.lengthSq() < 1e-6) {
           forward.set(0, 0, -1);
@@ -292,7 +298,7 @@ export class PlayerController {
   }
 
   updateCamera(dt) {
-    if (!this.camera) return;
+    if (!this.camera || this.cameraControlledExternally) return;
 
     this.cameraTarget.copy(this.object.position);
     this.cameraTarget.y += this.cameraTargetHeight;

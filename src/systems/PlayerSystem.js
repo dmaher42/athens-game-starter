@@ -4,15 +4,13 @@ import { PlayerController } from "../controls/PlayerController.js";
 import { ThirdPersonCamera } from "../controls/ThirdPersonCamera.js";
 import { Character } from "../characters/Character.js";
 import { findSafePlayerSpawn } from "../world/spawn.js";
-import { AGORA_CENTER_3D, HARBOR_CENTER_3D, getSeaLevelY } from "../world/locations.js";
+import { AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_LAND_APPROACH_X, getSeaLevelY } from "../world/locations.js";
 import { createGLTFLoader, loadGLBWithFallbacks } from "../utils/glbSafeLoader.js";
 import { joinPath } from "../utils/baseUrl.js";
 
 const USE_THIRD_PERSON = true;
 const ENABLE_HERO_GLB = true;
 const DEMO_SPAWN_OFFSET = new THREE.Vector3(0, 0, 0);
-const DEMO_LOOK_BLEND = 0.0;
-const DEMO_LOOK_OFFSET = new THREE.Vector3(-20, 0, -15);
 const DEMO_CAMERA_PITCH = THREE.MathUtils.degToRad(23);
 const DEMO_CAMERA_DISTANCE = 10;
 const HERO_MAX_ENVMAP_INTENSITY = 0.06;
@@ -162,10 +160,7 @@ export class PlayerSystem {
         },
       });
 
-      const openingLookTarget = AGORA_CENTER_3D
-        .clone()
-        .lerp(HARBOR_CENTER_3D.clone(), DEMO_LOOK_BLEND)
-        .add(DEMO_LOOK_OFFSET);
+      const openingLookTarget = new THREE.Vector3(HARBOR_LAND_APPROACH_X, AGORA_CENTER_3D.y, HARBOR_CENTER_3D.z);
       const openingYaw = getOpeningCameraYaw(spawnPosition, openingLookTarget);
       this.thirdPersonCamera.distance = DEMO_CAMERA_DISTANCE;
       this.thirdPersonCamera.setAngles(openingYaw, DEMO_CAMERA_PITCH, { snap: true });
@@ -365,6 +360,7 @@ export class PlayerSystem {
 
   setThirdPersonEnabled(enabled) {
     if (!this.thirdPersonCamera) return;
+    this.player.cameraControlledExternally = enabled;
     this.thirdPersonCamera.setEnabled(enabled);
   }
 

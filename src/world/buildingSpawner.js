@@ -148,12 +148,23 @@ export const Prefabs = {
     body.position.y = h / 2; g.add(body);
     return g;
   },
-  stoa({ w = 15, d = 4, h = 5, rng = Math.random } = {}) {
+  stoa({ w = 15, d = 4, h = 5, rng = Math.random, openFront = false } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralStoa";
     g.add(makeBaseShadow(w, d));
-    const body = makeBox(w, h, d, createMaterial("marble", rng));
+    const body = makeBox(w, h, openFront ? d * 0.45 : d, createMaterial("marble", rng));
     body.position.y = h / 2; g.add(body);
+    if (openFront) {
+      body.position.z = -d * 0.25;
+      const canopy = makeBox(w + 0.6, 0.28, d + 1.2, createMaterial("roof", rng, { color: 0xb76f47 }));
+      canopy.position.y = h + 0.14;
+      g.add(canopy);
+      for (let x = -w / 2 + 2; x < w / 2 - 1; x += 4) {
+        const counter = makeBox(2.4, 0.85, 0.7, createMaterial("wood", rng));
+        counter.position.set(x, 0.425, d * 0.12);
+        g.add(counter);
+      }
+    }
     const colCount = 8;
     for (let i = 0; i < colCount; i++) {
       const x = (i / (colCount - 1) - 0.5) * w * 0.9;

@@ -85,7 +85,7 @@ export function makeTerracottaMaterial(options?: { color?: number }): MeshStanda
 
 export function makeColumn(
   options?: ColumnOptions
-): Promise<TypedMesh<CylinderGeometry, MeshPhysicalMaterial>>;
+): Promise<TypedMesh<BufferGeometry, MeshPhysicalMaterial>>;
 
 export function makeStylobateSteps(
   options?: StylobateStepOptions

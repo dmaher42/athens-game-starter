@@ -25,7 +25,10 @@ test('shared building maps load once, keep independent tiling, and recover after
   }
 
   const [a, b] = await Promise.all([makeColumn({ materialOptions: options }), makeColumn({ materialOptions: options })]);
-  const mapA = a.children[0].material.map, mapB = b.children[0].material.map;
+  const mapA = a.material.map, mapB = b.material.map;
+  assert.ok(a.isMesh && a.geometry.attributes.position.count > 100, 'Columns provide real instanced geometry.');
+  a.geometry.computeBoundingBox();
+  assert.ok(a.geometry.boundingBox.max.y > 7, 'The capital must sit above the full-height shaft.');
   assert.notEqual(mapA, mapB, 'Building materials retain separate texture transforms.');
   mapA.repeat.set(9, 7);
   assert.equal(mapB.repeat.x, 1);

@@ -565,7 +565,7 @@ export class Application {
         const temple = await buildTemple({ materialPreset: "marble", ...rest });
         const height = terrainRef?.userData?.getHeightAt?.(position.x, position.z);
         const authoredY = Number.isFinite(position?.y) ? position.y : 0;
-        const y = Number.isFinite(height) ? Math.max(height, authoredY) : authoredY;
+        const y = Number.isFinite(height) ? height : authoredY;
         temple.position.set(position.x, y + 0.05, position.z);
         if (rotationRad) temple.rotation.y = rotationRad;
         sceneRef.add(temple);
@@ -623,8 +623,9 @@ export class Application {
             terrain,
             HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-18, 0, -56)),
             {
-              width: 14,
-              depth: 28,
+              width: 10,
+              depth: 18,
+              columnHeight: 5.5,
               colX: 6,
               colZ: 2,
               materialPreset: "plaster",
@@ -648,26 +649,29 @@ export class Application {
           placeLandmark(
             worldRoot,
             terrain,
-            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-20, 0, 14)),
+            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-34, 0, 29)),
             {
-              width: 18,
-              depth: 30,
+              width: 14,
+              depth: 22,
+              columnHeight: 6,
               colX: 6,
               colZ: 2,
               materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(82),
+              rotationRad: THREE.MathUtils.degToRad(0),
             },
           ),
           placeLandmark(
             worldRoot,
             terrain,
-            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(8, 0, -14)),
+            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(-8, 0, -20)),
             {
-              width: 26,
-              depth: 48,
+              width: 16,
+              depth: 26,
+              columnHeight: 9,
+              roofHeight: 2.7,
               colX: 6,
               colZ: 11,
-              rotationRad: THREE.MathUtils.degToRad(-18),
+              rotationRad: 0,
             },
           ),
         ]);

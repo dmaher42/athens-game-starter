@@ -209,6 +209,23 @@ async function runVerification() {
         const bounds = ocean.geometry.boundingBox.clone().applyMatrix4(ocean.matrixWorld);
         return {
           normalWater: !ocean.userData.isAutomationFallback && ocean.material.isShaderMaterial,
+          court: plan.agoraCourt,
+          frontages: plan.frontages?.length ?? 0,
+          onFoot: !JSON.parse(window.render_game_to_text()).player.flying,
+          upwardRoads: civic.children.filter((object) => object.userData.roadType).every((object) => {
+            const normal = object.geometry.attributes.normal;
+            for (let i = 0; i < normal.count; i++) if (normal.getY(i) < -0.001) return false;
+            return true;
+          }),
+          templeColumns: (() => {
+            const columns = [];
+            scene.traverse((object) => {
+              if (object.name !== 'TempleColonnade') return;
+              object.geometry.computeBoundingBox();
+              columns.push(object.geometry.boundingBox.max.y);
+            });
+            return columns;
+          })(),
           waterWest: bounds.min.x,
           waterEast: bounds.max.x,
           seaLevel: ocean.userData.seaLevel,
@@ -233,6 +250,11 @@ async function runVerification() {
       });
       assert.ok(Math.abs(harborLayout.waterWest - 2) < 0.01, "Water must still cover the full harbor basin.");
       assert.equal(harborLayout.normalWater, true, "Verify the production Water shader rather than simplified automation water.");
+      assert.equal(harborLayout.onFoot, true, "Begin the exploration walk on foot.");
+      assert.equal(harborLayout.frontages, 5, "Frame the Agora with the authored shopfronts.");
+        assert.equal(harborLayout.upwardRoads, true, "Road surfaces must remain visible with the normal gravel material.");
+      assert.deepEqual(harborLayout.court, { west: -52, east: -8, south: 6, north: 34 });
+      assert.ok(harborLayout.templeColumns.length >= 4 && harborLayout.templeColumns.every((height) => height > 5), "Landmark roofs must have full-height columns.");
       assert.ok(harborLayout.waterEast >= 2467.99, "Open-ocean water coverage must be preserved.");
       assert.ok(harborLayout.basinHeights.every((height) => height < harborLayout.seaLevel - 0.5), "Carve both ends of the authored harbor basin below water.");
       assert.ok(harborLayout.cityHeights.every((height) => height >= harborLayout.seaLevel - 0.05), "Preserve dry city ground north and south of the harbor.");

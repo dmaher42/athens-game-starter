@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, HARBOR_WATER_BOUNDS, CITY_CENTER_ORIGIN, getCityGroundY, getSeaLevelY } from './locations.js';
+import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, AGORA_COURT_BOUNDS, HARBOR_LAND_APPROACH_X, HARBOR_CENTER_3D, HARBOR_SETBACKS, HARBOR_WATER_BOUNDS, CITY_CENTER_ORIGIN, getCityGroundY, getSeaLevelY } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { IS_DEV } from '../utils/env.js';
@@ -28,6 +28,26 @@ const AGORA_PLAZA_RADIUS = 1;
 const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.5;
 const AGORA_MARKET_RADIUS = BLOCK_SIZE * 4.4;
 const ACROPOLIS_SACRED_RADIUS = BLOCK_SIZE * 1.4;
+const AGORA_FRONTAGES = [
+  { x: -43, z: 40, w: 18, d: 6, rotation: Math.PI },
+  { x: -20, z: 40, w: 18, d: 6, rotation: Math.PI },
+  { x: -58, z: 10, w: 10, d: 6, rotation: Math.PI / 2 },
+  { x: -58, z: 31, w: 10, d: 6, rotation: Math.PI / 2 },
+  { x: -44, z: 0, w: 18, d: 6, rotation: 0 },
+];
+
+function inAgoraCourt(x, z) {
+  const b = AGORA_COURT_BOUNDS;
+  return x >= b.west && x <= b.east && z >= b.south && z <= b.north;
+}
+
+function inAgoraFrontage(x, z) {
+  return AGORA_FRONTAGES.some((f) => {
+    const turned = Math.abs(f.rotation - Math.PI / 2) < 0.01;
+    return Math.abs(x - f.x) < (turned ? f.d : f.w) / 2 + 5 &&
+      Math.abs(z - f.z) < (turned ? f.w : f.d) / 2 + 5;
+  });
+}
 
 // District Spacing Rules
 export const SPACING_RULES = {
@@ -1048,7 +1068,8 @@ function isBlockedForCityLayout(worldX, worldZ) {
   const isInSetback = HARBOR_SETBACKS?.some?.((rect) =>
     isWithinSetbackRect(worldX, worldZ, rect),
   );
-  return isInSetback || isInAuthoredHarborFront(worldX, worldZ);
+  const inTemplePrecinct = worldX >= -27 && worldX <= 3 && worldZ >= -40 && worldZ <= -5;
+  return isInSetback || isInAuthoredHarborFront(worldX, worldZ) || inTemplePrecinct;
 }
 
 function resolveDistrictForCell(worldX, worldZ) {
@@ -1086,6 +1107,10 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   const civicDistance = cell
     ? Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z)
     : Infinity;
+
+  if (civicDistance < 80) {
+    return { ...match, allowedTypes: ['shop', 'workshop', 'stoa'], heightRange: [3.2, 4.8], courtyardChance: 0 };
+  }
 
   if (district === 'civic') {
     if (cell && isAgoraUrbanFrontCell(cell.gridX, cell.gridZ)) {
@@ -1276,7 +1301,7 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
 }
 
 function isAgoraPlazaCell(gridX, gridZ) {
-  return Math.abs(gridX) <= AGORA_PLAZA_RADIUS && Math.abs(gridZ) <= AGORA_PLAZA_RADIUS;
+  return inAgoraCourt(CITY_CENTER_ORIGIN.x + gridX * BLOCK_SIZE, CITY_CENTER_ORIGIN.z + gridZ * BLOCK_SIZE);
 }
 
 function isAgoraPlazaPerimeterCell(gridX, gridZ) {
@@ -1638,11 +1663,7 @@ class SplineRoad {
   }
 
   isNear(point, tolerance = 1.0) {
-      const corridor = this.type === 'artery'
-      ? BLOCK_SIZE * 0.6
-      : this.type === 'street'
-        ? BLOCK_SIZE * 0.48
-        : BLOCK_SIZE * 0.36;
+    const corridor = this.width / 2 + 2;
     const threshold = Math.max((this.width / 2) + tolerance, corridor);
     const thresholdSq = threshold * threshold;
     const closest = this.closestPointToPoint(point, new THREE.Vector3());
@@ -1688,18 +1709,33 @@ class SplineRoad {
             right.x - center.x, right.y - center.y + lift, right.z - center.z
         );
 
-        if (i < segments) {
+        // The shared square has its own paving. Roads meet its edges instead
+        // of drawing overlapping strips across the gathering space.
+        const middle = i < segments ? points[i].clone().lerp(points[i + 1], 0.5) : pos;
+        if (i < segments && !inAgoraCourt(middle.x, middle.z)) {
             const base = i * 2;
-            indices.push(base, base + 1, base + 2);
-            indices.push(base + 1, base + 3, base + 2);
+            // Face upward even after the gravel pass replaces the temporary
+            // double-sided material with the normal single-sided one.
+            indices.push(base, base + 2, base + 1);
+            indices.push(base + 1, base + 2, base + 3);
         }
     }
 
+    // Tight bends may fold an edge across its neighbour. Orient every face
+    // after all vertices exist, including the following cross-section.
+    for (let i = 0; i < indices.length; i += 3) {
+      const [a, b, c] = indices.slice(i, i + 3);
+      const ax = vertices[b * 3] - vertices[a * 3];
+      const az = vertices[b * 3 + 2] - vertices[a * 3 + 2];
+      const bx = vertices[c * 3] - vertices[a * 3];
+      const bz = vertices[c * 3 + 2] - vertices[a * 3 + 2];
+      if (az * bx - ax * bz < 0) { indices[i + 1] = c; indices[i + 2] = b; }
+    }
     ribbonGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
     ribbonGeo.setIndex(indices);
     ribbonGeo.computeVertexNormals();
 
-    const roadColor = this.type === 'artery' ? 0x4a4a4a : (this.type === 'street' ? 0x7a6b5a : 0x8a7a6a);
+    const roadColor = this.type === 'artery' ? 0xc9b58e : (this.type === 'street' ? 0xa18b6b : 0x8a7a6a);
     const material = new THREE.MeshStandardMaterial({
         color: roadColor,
         roughness: 0.8,
@@ -1731,44 +1767,43 @@ function generateRoadNetwork(terrainSampler) {
   // 1. Primary Spine: Harbor [East] -> Agora [Center-West]
   // We add several control points so the road reads as a connected civic spine.
   const harborAgoraPoints = [
-    HARBOR_CENTER_3D.clone(),
-    new THREE.Vector3(56, 0, 12),
-    new THREE.Vector3(40, 0, 13),
-    new THREE.Vector3(22, 0, 16),
-    new THREE.Vector3(0, 0, 18),
-    AGORA_CENTER_3D.clone()
+    AGORA_CENTER_3D.clone(),
+    new THREE.Vector3(-14, 0, 19),
+    new THREE.Vector3(0, 0, 14),
+    new THREE.Vector3(HARBOR_LAND_APPROACH_X, 0, HARBOR_CENTER_3D.z),
   ];
   harborAgoraPoints.forEach(p => p.y = getH(p));
-  segments.push(new SplineRoad(harborAgoraPoints, 12, 'artery'));
+  segments.push(new SplineRoad(harborAgoraPoints, 7, 'artery'));
 
   // 2. Sacred Way: Agora [Center-West] -> Acropolis [Center]
   // Curved ascent around the hill.
   const sacredWayPoints = [
     AGORA_CENTER_3D.clone(),
-    new THREE.Vector3(-22, 0, 14),
-    new THREE.Vector3(-16, 0, 8),
-    ACROPOLIS_PEAK_3D.clone()
+    new THREE.Vector3(-26, 0, 9),
+    new THREE.Vector3(-20, 0, 0),
+    new THREE.Vector3(-8, 0, -3),
   ];
   sacredWayPoints.forEach(p => p.y = getH(p));
-  segments.push(new SplineRoad(sacredWayPoints, 10, 'artery'));
+  segments.push(new SplineRoad(sacredWayPoints, 5, 'artery'));
 
   // 3. Northwest Commercial Strip (extension)
   const nwStripPoints = [
       AGORA_CENTER_3D.clone(),
-      new THREE.Vector3(-54, 0, 28),
+      new THREE.Vector3(-55, 0, 20),
+      new THREE.Vector3(-70, 0, 28),
       new THREE.Vector3(-82, 0, 38),
       new THREE.Vector3(-120, 0, 50)
   ];
   nwStripPoints.forEach(p => p.y = getH(p));
-  segments.push(new SplineRoad(nwStripPoints, 8, 'artery'));
+  segments.push(new SplineRoad(nwStripPoints, 4.5, 'street'));
 
   // 4. Neighborhood Collectors (Street Network)
   
   // South Neighborhood Loop
   segments.push(new SplineRoad([
-    new THREE.Vector3(0, getH({x:0, z:15}), 15),
-    new THREE.Vector3(-18, getH({x:-18, z:-12}), -12),
-    new THREE.Vector3(-30, getH({x:-30, z:-34}), -34),
+    new THREE.Vector3(-30, getH({x:-30, z:20}), 20),
+    new THREE.Vector3(-34, getH({x:-34, z:2}), 2),
+    new THREE.Vector3(-35, getH({x:-35, z:-34}), -34),
     new THREE.Vector3(-45, getH({x:-45, z:-60}), -60)
   ], 6, 'street'));
 
@@ -1782,11 +1817,11 @@ function generateRoadNetwork(terrainSampler) {
 
   // Harbor Perimeter Road (Curved)
   segments.push(new SplineRoad([
-    new THREE.Vector3(64, getH({x:64, z:-40}), -40),
-    new THREE.Vector3(72, getH({x:72, z:-8}), -8),
-    new THREE.Vector3(74, getH({x:74, z:20}), 20),
-    new THREE.Vector3(68, getH({x:68, z:60}), 60)
-  ], 7, 'street'));
+    new THREE.Vector3(10, getH({x:10, z:-40}), -40),
+    new THREE.Vector3(10, getH({x:10, z:-8}), -8),
+    new THREE.Vector3(10, getH({x:10, z:20}), 20),
+    new THREE.Vector3(10, getH({x:10, z:70}), 70)
+  ], 3.5, 'street'));
 
   return segments;
 }
@@ -1809,9 +1844,8 @@ function branchSideStreets(segments, terrainSampler) {
   segments.push(new SplineRoad([
     new THREE.Vector3(-10, getH(-10, 24), 24),
     new THREE.Vector3(8, getH(8, 18), 18),
-    new THREE.Vector3(30, getH(30, 12), 12),
-    new THREE.Vector3(52, getH(52, 10), 10)
-  ], 6, 'street'));
+    new THREE.Vector3(10, getH(10, 12), 12)
+  ], 3, 'street'));
 
   // Branch 1b: Central Agora ring to give the civic core a legible loop.
   segments.push(new SplineRoad([
@@ -1825,10 +1859,10 @@ function branchSideStreets(segments, terrainSampler) {
 
   // Branch 2: Southern Coastal Lane
   segments.push(new SplineRoad([
-    new THREE.Vector3(58, getH(58, -18), -18),
-    new THREE.Vector3(38, getH(38, -22), -22),
-    new THREE.Vector3(10, getH(10, -28), -28),
-    new THREE.Vector3(-18, getH(-18, -36), -36),
+    new THREE.Vector3(10, getH(10, -18), -18),
+    new THREE.Vector3(10, getH(10, -42), -42),
+    new THREE.Vector3(-8, getH(-8, -46), -46),
+    new THREE.Vector3(-35, getH(-35, -48), -48),
     new THREE.Vector3(-42, getH(-42, -48), -48)
   ], 5, 'street'));
 
@@ -1850,12 +1884,11 @@ function branchSideStreets(segments, terrainSampler) {
 
   // Branch 5: Harbor-to-city cross street through the player's main view.
   segments.push(new SplineRoad([
-    new THREE.Vector3(62, getH(62, -6), -6),
-    new THREE.Vector3(36, getH(36, -8), -8),
-    new THREE.Vector3(10, getH(10, -10), -10),
-    new THREE.Vector3(-18, getH(-18, -9), -9),
-    new THREE.Vector3(-42, getH(-42, -8), -8)
-  ], 6, 'street'));
+    new THREE.Vector3(10, getH(10, 2), 2),
+    new THREE.Vector3(0, getH(0, 2), 2),
+    new THREE.Vector3(-18, getH(-18, 2), 2),
+    new THREE.Vector3(-34, getH(-34, 2), 2)
+  ], 3, 'street'));
 }
 
 function findNearestRoadSegment(segments, point) {
@@ -1939,6 +1972,30 @@ function generateCityGrid(terrainSampler) {
         cell.type = 'blocked';
         cell.buildable = false;
         cell.blocked = true;
+        cells.push(cell);
+        continue;
+      }
+
+      if (inAgoraCourt(worldX, worldZ)) {
+        cell.type = 'plaza'; cell.district = 'commercial'; cell.buildable = true;
+        cells.push(cell);
+        continue;
+      }
+
+      // Reserve authored shopfronts before placing random lots. Their gaps
+      // carry the western lane and the two destination views out of the square.
+      if (inAgoraFrontage(worldX, worldZ)) {
+        cell.type = 'blocked'; cell.blocked = true; cell.buildable = false;
+        cells.push(cell);
+        continue;
+      }
+
+      // Reserve space for complete footprints outside the square, not only
+      // their centres. Keep its exits and destination views unobstructed.
+      const court = AGORA_COURT_BOUNDS;
+      if (worldX >= court.west - 8 && worldX <= court.east + 8 &&
+          worldZ >= court.south - 8 && worldZ <= court.north + 8) {
+        cell.type = 'blocked'; cell.blocked = true; cell.buildable = false;
         cells.push(cell);
         continue;
       }
@@ -2233,6 +2290,32 @@ export async function createCivicDistrict(scene, options = {}) {
   console.time("City: Total Grid Render");
   const centerPos = new THREE.Vector3(center.x, baseHeight + surfaceOffset, center.z);
   renderRoadNetworkSplines(group, roadNetwork, centerPos, terrainSampler);
+
+  const court = createPavedStrip(44, 28, 0xcbbb9e);
+  court.material.opacity = 1;
+  court.material.transparent = false;
+  court.name = 'AgoraCourt';
+  court.position.set(AGORA_CENTER_3D.x - center.x, sampleLocalHeight(0, 0) + 0.025, AGORA_CENTER_3D.z - center.z);
+  group.add(court);
+  for (const f of AGORA_FRONTAGES) {
+      const frontage = Prefabs.stoa({ w: f.w, d: f.d, h: 4.3, rng: () => 0.45, openFront: true });
+    frontage.name = 'AgoraFrontage';
+    frontage.position.set(f.x - center.x, sampleLocalHeight(f.x - center.x, f.z - center.z), f.z - center.z);
+    frontage.rotation.y = f.rotation;
+    group.add(frontage);
+  }
+  const fountain = createAgoraPlazaAccent();
+  fountain.scale.setScalar(0.45);
+  fountain.position.set(-12, sampleLocalHeight(-12, 4), 4);
+  group.add(fountain);
+  const sideCourt = createUrbanCourtAccent(() => 0.4);
+  sideCourt.position.set(-44, sampleLocalHeight(-44, 8), 8);
+  group.add(sideCourt);
+  const olive = createOliveTree({ scale: 1.3 });
+  olive.position.copy(sideCourt.position).add(new THREE.Vector3(0, 0, 3));
+  group.add(olive);
+  group.userData.plan.agoraCourt = { ...AGORA_COURT_BOUNDS };
+  group.userData.plan.frontages = AGORA_FRONTAGES.map((f) => ({ ...f }));
   
   let roadSearchCount = 0;
   let roadSearchTimeTotal = 0;
@@ -2251,6 +2334,7 @@ export async function createCivicDistrict(scene, options = {}) {
     // Compute world-space position to respect harbor exclusions
     const worldX = cell.position.x;
     const worldZ = cell.position.z;
+    if (inAgoraCourt(worldX, worldZ)) continue; // One continuous square, not separate lot-sized pads.
     if (isBlockedForCityLayout(worldX, worldZ)) {
       continue; // Skip placing any city element inside harbor/walkway setbacks
     }
@@ -2349,7 +2433,8 @@ export async function createCivicDistrict(scene, options = {}) {
        const detailLevel = resolveBuildingDetailLevel(cell);
        
         if (cell.type === 'building' && cell.buildable) {
-            const numSubBuildings = (cell.district === 'commercial' || cell.district === 'harbor') ? 1 : (rng() < 0.4 ? 2 : 1);
+            const nearAgora = cell.position.distanceTo(AGORA_CENTER_3D) < 80;
+            const numSubBuildings = (nearAgora || cell.district === 'commercial' || cell.district === 'harbor') ? 1 : (rng() < 0.4 ? 2 : 1);
             let buildingPlaced = false;
 
             for (let i = 0; i < numSubBuildings; i++) {
@@ -2358,6 +2443,8 @@ export async function createCivicDistrict(scene, options = {}) {
              rng: rng,
              districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
              detailLevel,
+             w: nearAgora ? 11 : 5,
+             d: nearAgora ? 10 : 7,
              preferRowhouseMass:
                isHarborLaneFrontageCell(cell.gridX, cell.gridZ) ||
                isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ) ||
@@ -2384,7 +2471,7 @@ export async function createCivicDistrict(scene, options = {}) {
                }
 
                const subY = sampleLocalHeight(subX, subZ, localY);
-               const subCell = { ...cell, position: new THREE.Vector3(subX, subY, subZ) };
+               const subCell = { ...cell, position: new THREE.Vector3(subX + center.x, subY + baseHeight, subZ + center.z) };
 
                applyAgoraScalePass(buildingGroup, subCell);
                applyBuildingShadowProfile(buildingGroup, subCell, detailLevel);
@@ -2411,8 +2498,8 @@ export async function createCivicDistrict(scene, options = {}) {
                 roadSearchCount++;
 
                if (nearestSeg && nearestDist <= BLOCK_SIZE * 1.5) {
-                   const dx = nearestPoint.x - subX;
-                   const dz = nearestPoint.z - subZ;
+                   const dx = nearestPoint.x - subCell.position.x;
+                   const dz = nearestPoint.z - subCell.position.z;
                    rot = Math.atan2(dx, dz);
 
                    if (cell.district === 'civic' || cell.district === 'commercial') {
@@ -2551,6 +2638,7 @@ export async function createCivicDistrict(scene, options = {}) {
       const localY = sampleLocalHeight(localX, localZ, 0);
 
       // Check harbor exclusion
+      if (Math.hypot(pathTile.position.x - AGORA_CENTER_3D.x, pathTile.position.z - AGORA_CENTER_3D.z) < 75) continue;
       const worldX = pathTile.position.x;
       const worldZ = pathTile.position.z;
       if (isBlockedForCityLayout(worldX, worldZ)) continue;
