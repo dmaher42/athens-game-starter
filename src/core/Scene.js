@@ -2,13 +2,39 @@ import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
+import { SSAOPass } from "three/examples/jsm/postprocessing/SSAOPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { VignetteShader } from "three/examples/jsm/shaders/VignetteShader.js";
 import { createColorGradePass } from "../world/colorGradingPass.js";
 import { CameraManager } from "./CameraManager.js";
 
 export const WORLD_ROOT_NAME = "WorldRoot";
 
 function isAutomationCaptureSession() {
-  return typeof navigator !== "undefined" && navigator.webdriver === true;
+  if (typeof window !== "undefined") {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const forced = params.get("automationPreview");
+      if (forced === "1" || forced === "true") return true;
+    } catch {}
+  }
+
+  if (typeof navigator === "undefined") return false;
+
+  const userAgent = navigator.userAgent || "";
+  const isHeadlessBrowser = /HeadlessChrome|Playwright/i.test(userAgent);
+  return navigator.webdriver === true && isHeadlessBrowser;
+}
+
+function isBloomEnabledByDefault() {
+  if (typeof window === "undefined") return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const forced = params.get("bloom");
+    return forced === "1" || forced === "true";
+  } catch {}
+  return true;
 }
 
 function createAutomationPreviewMaterial(material) {
@@ -110,9 +136,10 @@ export function createRenderer({ antialias = true } = {}) {
   });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.9; // Look presets assume ACES with ~1.0 as the baseline exposure
+  renderer.toneMappingExposure = 1.05; // Cinematic vibrancy boost
   renderer.useLegacyLights = false;
   renderer.localClippingEnabled = true;
+  renderer.info.autoReset = false;
   configureRendererShadows(renderer);
   return renderer;
 }
@@ -261,40 +288,78 @@ export function createSceneContext({
   };
 
   // Create camera using CameraManager for consistency
-  const camera = CameraManager.createCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+  const camera = CameraManager.createCamera(75, window.innerWidth / window.innerHeight, 0.1, 1200);
 
   const composer = isAutomationCapture ? null : new EffectComposer(renderer);
   let bloomPass = null;
   let colorGradePass = null;
 
   if (composer) {
-    const composerPixelRatio = Math.min(
-      renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1,
-      1,
-    );
-    composer.setPixelRatio(composerPixelRatio);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    const renderPass = new RenderPass(scene, camera);
-    composer.addPass(renderPass);
-    bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.3,
-      0.6,
-      0.85,
-    );
-    bloomPass.enabled = true;
-    composer.addPass(bloomPass);
-    colorGradePass = createColorGradePass();
-    composer.addPass(colorGradePass);
+    try {
+      const composerPixelRatio = Math.min(
+        renderer?.getPixelRatio?.() ?? window.devicePixelRatio ?? 1,
+        1,
+      );
+      composer.setPixelRatio(composerPixelRatio);
+      composer.setSize(window.innerWidth, window.innerHeight);
+
+      const renderPass = new RenderPass(scene, camera);
+      composer.addPass(renderPass);
+
+      // 1. SSAO - Ambient Occlusion for grounding
+      const ssaoPass = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
+      ssaoPass.kernelRadius = 16;
+      ssaoPass.minDistance = 0.005;
+      ssaoPass.maxDistance = 0.1;
+      composer.addPass(ssaoPass);
+
+      // 2. Bloom - Cinematic Glow
+      bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.35, // strength (slightly reduced for polish)
+        0.65, // radius (tighter falloff)
+        0.82, // threshold (only highlights glow)
+      );
+      bloomPass.enabled = isBloomEnabledByDefault();
+      composer.addPass(bloomPass);
+
+      // 3. SMAA - Anti-aliasing
+      const smaaPass = new SMAAPass(window.innerWidth * composerPixelRatio, window.innerHeight * composerPixelRatio);
+      composer.addPass(smaaPass);
+
+      // 4. Color Grading
+      colorGradePass = createColorGradePass();
+      composer.addPass(colorGradePass);
+
+      // 5. Vignette - Frame Focus
+      const vignettePass = new ShaderPass(VignetteShader);
+      vignettePass.uniforms["offset"].value = 0.95;
+      vignettePass.uniforms["darkness"].value = 1.1;
+      composer.addPass(vignettePass);
+    } catch (err) {
+      console.error("[Scene] Post-processing initialization error, falling back to standard render:", err);
+      // We null out the composer so renderFrame falls back to standard renderer
+      composer = null;
+    }
   }
 
   const renderFrame = () => {
     if (isAutomationCapture) {
-      ensureAutomationPreviewReadability(scene, renderer);
+      try {
+        ensureAutomationPreviewReadability(scene, renderer);
+      } catch (e) {
+        console.warn("[Scene] ensureAutomationPreviewReadability failed", e);
+      }
     }
 
+    renderer.info?.reset?.();
+
     // DEV: detect textures that are flagged for update but have no image data
+    // Throttled to avoid per-frame traversal of 1700+ meshes
     if (import.meta.env?.DEV) {
+      if (!renderFrame._debugFrameCount) renderFrame._debugFrameCount = 0;
+      renderFrame._debugFrameCount++;
+      if (renderFrame._debugFrameCount % 120 === 0) {
       try {
         scene.traverse((obj) => {
           if (!obj || !obj.material) return;
@@ -319,6 +384,7 @@ export function createSceneContext({
         // eslint-disable-next-line no-console
         console.warn('[debug] texture scan failed', e);
       }
+      }
     }
 
     if (composer) {
@@ -329,7 +395,7 @@ export function createSceneContext({
   };
 
   camera.near = 0.1;
-  camera.far = 5000;
+  camera.far = 1200;
   camera.updateProjectionMatrix();
   camera.position.set(0, 5, 10);
 

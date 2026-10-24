@@ -2,7 +2,9 @@ import * as THREE from "three";
 import {
   getSeaLevelY,
   AGORA_CENTER_3D,
+  ACROPOLIS_PEAK_3D,
   AEGEAN_OCEAN_BOUNDS,
+  AEGEAN_OPEN_SEA_WEST,
   HARBOR_CENTER_3D,
   HARBOR_GROUND_HEIGHT,
   HARBOR_WATER_BOUNDS,
@@ -63,11 +65,11 @@ function gradientNoise(x, z) {
 }
 
 const NOISE_SCALE = 0.05;
-const NOISE_AMPLITUDE = 0.45;
+const NOISE_AMPLITUDE = 0.55;
 const OCEAN_DEPTH = -12.0;
-const CITY_HEIGHT = 2.5; // Base city height (above sea level)
+const CITY_HEIGHT = 3.0; // Base city height (above sea level)
 const MAINLAND_EDGE_BUFFER = 0.8;
-const SHORELINE_CITY_LIMIT = 0.46;
+const SHORELINE_CITY_LIMIT = 0.65;
 const SHORELINE_SAND_BAND = 0.3;
 const SHALLOW_WATER_BAND = 1.2;
 const HARBOR_BASIN_EDGE_BAND = 12;
@@ -78,6 +80,12 @@ const HARBOR_SHORE_COVE_INSET = 16;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
+const ACROPOLIS_TO_AGORA_X = AGORA_CENTER_3D.x - ACROPOLIS_PEAK_3D.x;
+const ACROPOLIS_TO_AGORA_Z = AGORA_CENTER_3D.z - ACROPOLIS_PEAK_3D.z;
+const ACROPOLIS_TO_AGORA_LENGTH =
+  Math.hypot(ACROPOLIS_TO_AGORA_X, ACROPOLIS_TO_AGORA_Z) || 1;
+const ACROPOLIS_APPROACH_DIR_X = ACROPOLIS_TO_AGORA_X / ACROPOLIS_TO_AGORA_LENGTH;
+const ACROPOLIS_APPROACH_DIR_Z = ACROPOLIS_TO_AGORA_Z / ACROPOLIS_TO_AGORA_LENGTH;
 
 // Harbor configuration (East Facing)
 // HARBOR_GROUND_HEIGHT imported from locations.js at line 6
@@ -152,7 +160,6 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
   const east = HARBOR_WATER_BOUNDS.east;
   const north = Math.max(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
   const south = Math.min(HARBOR_WATER_BOUNDS.north, HARBOR_WATER_BOUNDS.south);
-  const oceanWest = Math.min(AEGEAN_OCEAN_BOUNDS.west, AEGEAN_OCEAN_BOUNDS.east);
   const oceanEast = Math.max(AEGEAN_OCEAN_BOUNDS.west, AEGEAN_OCEAN_BOUNDS.east);
   const oceanNorth = Math.max(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
   const oceanSouth = Math.min(AEGEAN_OCEAN_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.south);
@@ -179,15 +186,13 @@ function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
     return THREE.MathUtils.lerp(shallowEdgeY, basinFloorY, basinBlend);
   }
 
-  // Anchor the deep-ocean terrain floor to east of the harbor water east
-  // boundary regardless of AEGEAN_OCEAN_BOUNDS.west.  This lets us widen the
-  // ocean water plane westward to cover the harbor basin without accidentally
-  // carving land terrain (outside the harbor z-range) down to -7.5.
-  const deepOceanStartX = Math.max(oceanWest, east - 14);
+  // Preserve main's deep-ocean floor while widening only the visible water.
+  // City exclusions use the same boundary, keeping surrounding land intact.
   const withinOpenSea =
-    x >= deepOceanStartX && x <= oceanEast && z >= oceanSouth && z <= oceanNorth;
+    x >= AEGEAN_OPEN_SEA_WEST && x <= oceanEast && z >= oceanSouth && z <= oceanNorth;
   if (withinOpenSea) {
-    return seaLevel - 7.5;
+    if (x < west - 40) return seaLevel - 15.0; // Deeper ocean further out
+    return seaLevel - 8.5;
   }
 
   // Create a flatter shelf behind the harbor, but keep it constrained so it
@@ -289,7 +294,8 @@ function getElevation(
     (z + noiseOffset.z) * NOISE_SCALE,
   );
   // Keep noise below the inland bias so geography reads clearly and stay calmer to the east
-  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + dSea * 0.65);
+  const midDistanceBoost = THREE.MathUtils.smoothstep(0.18, 0.55, dSea);
+  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + dSea * 0.65) * (0.9 + midDistanceBoost * 0.2);
 
   // Attenuate noise near coast
   const coastalNoiseAttenuation = 1 - coast.coastMask;
@@ -316,9 +322,31 @@ function getElevation(
     h = Math.max(h, seaLevel + MAINLAND_EDGE_BUFFER * nonSeaBorderMask);
   }
 
-  // Carves
+  // Harbour circular carve (applied before coast fade so it shapes the basin)
   h = applyHarbourCarve(x, z, seaLevel, h);
-  h = clampHarborBandHeight(x, z, seaLevel, h);
+
+  const acropolisDx = x - ACROPOLIS_PEAK_3D.x;
+  const acropolisDz = z - ACROPOLIS_PEAK_3D.z;
+  const acropolisDist = Math.hypot(acropolisDx, acropolisDz);
+  if (acropolisDist < 90) {
+    const summitMask = 1 - THREE.MathUtils.smoothstep(12, 36, acropolisDist);
+    const shoulderMask = 1 - THREE.MathUtils.smoothstep(18, 78, acropolisDist);
+    const approachDistance =
+      acropolisDx * ACROPOLIS_APPROACH_DIR_X +
+      acropolisDz * ACROPOLIS_APPROACH_DIR_Z;
+    const lateralDistance = Math.abs(
+      -acropolisDx * ACROPOLIS_APPROACH_DIR_Z +
+        acropolisDz * ACROPOLIS_APPROACH_DIR_X,
+    );
+    const cityApproachMask =
+      shoulderMask *
+      THREE.MathUtils.smoothstep(4, 46, approachDistance) *
+      (1 - THREE.MathUtils.smoothstep(10, 40, lateralDistance));
+
+    // Give the Acropolis a clearer summit and a broader city-facing shoulder
+    // so the surrounding urban fabric can read as climbing toward it.
+    h += summitMask * 8.5 + cityApproachMask * 4.5;
+  }
 
   // Agora Flattening
   const agoraDist = Math.hypot(x - AGORA_CENTER_3D.x, z - AGORA_CENTER_3D.z);
@@ -355,6 +383,10 @@ function getElevation(
 
       h = THREE.MathUtils.lerp(seaLevel, h, finalMask);
   }
+
+  // Apply harbor/ocean band clamping AFTER the coast fade so that the carved
+  // seabed depth is never overridden by the shoreline fade near the east coast.
+  h = clampHarborBandHeight(x, z, seaLevel, h);
 
   return h;
 }
@@ -423,7 +455,7 @@ export function createTerrain(scene) {
   const size = TERRAIN_SIZE;
   // Keep the terrain dense enough for the city silhouette while trimming a
   // large chunk of render + collision geometry from the default build.
-  const segments = 384;
+  const segments = 256;
   const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
 
   if (geometry.attributes.uv && !geometry.attributes.uv2) {
@@ -558,6 +590,7 @@ export function createTerrain(scene) {
     // those textures to bleed through the transparent water surface as brown
     // patches.  Route them straight to InlandGroundMaterial instead.
     const isFullyUnderwater = avgHeight < seaLevel;
+    const isShallowUnderwater = avgHeight >= seaLevel - 1.2;
     const isShallowWater = avgHeight <= seaLevel + SHALLOW_WATER_BAND;
     const isUnderwaterTriangle = avgHeight <= seaLevel + 0.05;
     const touchesWaterline = minHeight <= seaLevel + 0.12;
@@ -569,7 +602,7 @@ export function createTerrain(scene) {
       harborDistance <= HARBOR_COASTAL_BAND &&
       (isShallowWater || touchesWaterline);
     const shouldUseCoastalMaterial =
-      !isFullyUnderwater && (
+      (isShallowUnderwater || !isFullyUnderwater) && (
         dSea < 0.15 ||
         (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline)) ||
         (isWaterBodyTriangle &&
@@ -579,7 +612,7 @@ export function createTerrain(scene) {
 
     if (shouldUseCoastalMaterial) {
       coastalIndices.push(a, b, c);
-    } else if (!isFullyUnderwater && !isWaterBodyTriangle && dSea <= SHORELINE_CITY_LIMIT) {
+    } else if (!isFullyUnderwater && dSea <= SHORELINE_CITY_LIMIT && !isWaterBodyTriangle) {
       cityIndices.push(a, b, c);
     } else {
       inlandIndices.push(a, b, c);

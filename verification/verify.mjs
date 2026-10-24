@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { HARBOR_SETBACKS, HARBOR_WATER_BOUNDS } from "../src/world/locations.js";
 import { spawn } from "node:child_process";
 import http from "node:http";
 import https from "node:https";
@@ -149,6 +150,7 @@ function isIgnorableRequestFailure(request) {
 }
 
 async function runVerification() {
+  assert.equal(HARBOR_SETBACKS[2].west, HARBOR_WATER_BOUNDS.east, "Preserve main's city exclusion boundary independently of water rendering.");
   const previewPort = await getPreviewPort();
   const appUrl = new URL(APP_BASE_PATH, `http://127.0.0.1:${previewPort}`).toString();
   const previewServer = createPreviewServer(previewPort);
@@ -204,20 +206,21 @@ async function runVerification() {
         return {
           waterWest: bounds.min.x,
           waterEast: bounds.max.x,
-          // Dry land above/below the authored waterfront must stay available,
-          // even though the wider water plane now overlaps it in projection.
+          // Main now warps lots and intentionally thins outer neighborhoods.
+          // Harbor-district lots avoid that thinning and isolate this regression.
           dryLots: plan.grid.filter((cell) =>
-            cell.position.x > 2 && cell.position.x < 116 &&
+            cell.district === "harbor" &&
+            cell.position.x > 2 && cell.position.x < 130 &&
             (cell.position.z > 116.8 || cell.position.z < -76.8)
           ).map((cell) => ({
             x: cell.position.x, z: cell.position.z, blocked: cell.blocked, type: cell.type,
-            hasSceneObject: civic.children.some((object) =>
-              Math.abs(object.position.x + civic.position.x - cell.position.x) < 0.1 &&
-              Math.abs(object.position.z + civic.position.z - cell.position.z) < 0.1
-            ),
           })),
+          // Main renders continuous roads and batches building meshes, rather
+          // than keeping one scene object at every old grid-cell position.
+          roadMeshes: civic.children.filter((object) => object.userData.roadType && object.geometry?.attributes.position.count > 0).length,
+          cityBatches: civic.children.filter((object) => object.name.startsWith("MergedBatch_") && object.geometry?.attributes.position.count > 0).length,
           basinBlocked: plan.grid.find((cell) => cell.gridX === 3 && cell.gridZ === 1)?.blocked,
-          openSeaBlocked: plan.grid.find((cell) => cell.gridX === 5 && cell.gridZ === 6)?.blocked,
+          openSeaBlocked: plan.grid.find((cell) => cell.gridX === 6 && cell.gridZ === 6)?.blocked,
         };
       });
       assert.ok(Math.abs(harborLayout.waterWest - 2) < 0.01, "Water must still cover the full harbor basin.");
@@ -225,12 +228,8 @@ async function runVerification() {
       assert.ok(harborLayout.dryLots.some((cell) => cell.z > 116.8), "Check north-side city lots.");
       assert.ok(harborLayout.dryLots.some((cell) => cell.z < -76.8), "Check south-side city lots.");
       assert.deepEqual(harborLayout.dryLots.filter((cell) => cell.blocked), [], "Water rendering bounds must not block surrounding dry city lots.");
-      for (const side of ["north", "south"]) {
-        const lots = harborLayout.dryLots.filter((cell) => side === "north" ? cell.z > 116.8 : cell.z < -76.8);
-        for (const type of ["road", "building"]) {
-          assert.ok(lots.some((cell) => cell.type === type && cell.hasSceneObject), `Preserve ${side}-side ${type} scene objects.`);
-        }
-      }
+      assert.ok(harborLayout.roadMeshes > 0, "Preserve main's continuous streets.");
+      assert.ok(harborLayout.cityBatches > 0, "Preserve main's batched city geometry.");
       assert.equal(harborLayout.basinBlocked, true, "Keep city buildings out of the harbor basin.");
       assert.equal(harborLayout.openSeaBlocked, true, "Keep city buildings out of the deep ocean.");
     } finally {

@@ -113,7 +113,7 @@ function createProceduralWaterNormals(size = 256) {
   return texture;
 }
 
-const _dayWaterColor = new THREE.Color(0x2c7fb2);
+const _dayWaterColor = new THREE.Color(0x2f8cc8);
 const _nightWaterColor = new THREE.Color(0x00131b);
 const _moodWaterColor = new THREE.Color();
 
@@ -126,12 +126,13 @@ const DEFAULT_INLAND_CLIP = Number.isFinite(HARBOR_WATER_BOUNDS?.south)
   ? HARBOR_WATER_BOUNDS.south + DEFAULT_INLAND_PADDING
   : 160;
 const TERRAIN_CLEARANCE_EPSILON = 0.02;
-const LAND_CLIP_CLEARANCE = 0.05;
-const SHALLOW_WATER_DISCARD_EPSILON = 0.015;
+const LAND_CLIP_CLEARANCE = 0.6;
+const SHALLOW_WATER_DISCARD_EPSILON = 0.005;
+const SHORELINE_DEPTH_CLIP = 0.35;
 const SHORE_PROBE_X_FRACTIONS = [0.2, 0.5, 0.8];
 const SHORE_PROBE_Z_FRACTIONS = [0.0, 0.5, 0.9];
 const DEFAULT_OCEAN_RADIUS = 4000;
-const OCEAN_SEGMENTS = 96;
+const OCEAN_SEGMENTS = 64;
 
 let cachedWaterNormalsTexture = null;
 let cachedWaterNormalsKey = null;
@@ -345,7 +346,7 @@ export async function createOcean(scene, terrain, options = {}) {
   const geometry = new THREE.PlaneGeometry(oceanWidth, oceanDepth, OCEAN_SEGMENTS, OCEAN_SEGMENTS);
   const waterRenderTargetSize = computeRenderTargetSize({
     ...options,
-    baseTextureSize: options.baseTextureSize ?? 256,
+    baseTextureSize: options.baseTextureSize ?? 128,
   });
 
   // 3. CONFIGURE WATER SHADER
@@ -371,7 +372,7 @@ export async function createOcean(scene, terrain, options = {}) {
         sunDirection: new THREE.Vector3(),
         sunColor: 0xffffff,
         waterColor: options.waterColor ?? 0x2b86b8,
-        distortionScale: 1.8,
+        distortionScale: 3.2, // More dynamic waves
         fog: !!scene.fog,
       });
 
@@ -455,7 +456,7 @@ export async function createOcean(scene, terrain, options = {}) {
 
         // If terrain is meaningfully above the waterline, stop rendering
         // the water there so shoreline ground does not shimmer/fight through it.
-        if (terrainToSea > ${LAND_CLIP_CLEARANCE.toFixed(2)}) {
+        if (terrainToSea > ${LAND_CLIP_CLEARANCE.toFixed(2)} && waterDepth < ${SHORELINE_DEPTH_CLIP.toFixed(2)}) {
           discard;
         }
 
@@ -469,12 +470,12 @@ export async function createOcean(scene, terrain, options = {}) {
         vec3 finalColor = color;
 
         // Shoreline foam
-        float foamFactor = smoothstep(0.0, 2.0, waterDepth) - smoothstep(2.0, 4.0, waterDepth);
+        float foamFactor = smoothstep(0.0, 3.0, waterDepth) - smoothstep(3.0, 6.0, waterDepth);
         foamFactor = clamp(foamFactor, 0.0, 1.0);
 
         // Shallow water color
-        float shallowFactor = smoothstep(0.0, 10.0, waterDepth);
-        finalColor = mix(vec3(0.5, 0.8, 0.9), finalColor, shallowFactor);
+        float shallowFactor = smoothstep(0.0, 18.0, waterDepth);
+        finalColor = mix(vec3(0.58, 0.84, 0.92), finalColor, shallowFactor);
 
         // Add a deeper offshore tint so the far sea reads more open and less like
         // a uniformly lit inland lake.
@@ -484,7 +485,7 @@ export async function createOcean(scene, terrain, options = {}) {
 
         float n = oceanNoise(vWorldPosition.xz * 0.5);
         if (foamFactor > 0.0 && n > 0.7) {
-          finalColor = mix(finalColor, vec3(1.0), foamFactor * 0.5);
+          finalColor = mix(finalColor, vec3(1.0), foamFactor * 0.6);
         }
 
 
@@ -593,7 +594,7 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor,
   const calmFactor = THREE.MathUtils.clamp(typeof mood === "number" ? mood : 0, 0, 1);
   if (uniforms.distortionScale) {
     // Ensure water does not become too flat (1.1 min) even in calm/night conditions
-    const scale = THREE.MathUtils.lerp(2.6, 1.35, calmFactor);
+    const scale = THREE.MathUtils.lerp(3.2, 1.6, calmFactor);
     uniforms.distortionScale.value = THREE.MathUtils.clamp(scale, 0.1, 10.0);
   }
   if (uniforms.waterColor) {

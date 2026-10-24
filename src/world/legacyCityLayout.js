@@ -144,10 +144,34 @@ export function createCityLayoutMetadata(terrain, options = {}) {
     return { bestDist, bestCurve, bestT };
   };
 
+  const gridSize = 20;
+  const spatialGrid = {};
+  const getGridKey = (x, z) => `${Math.floor(x / gridSize)},${Math.floor(z / gridSize)}`;
+  const addToSpatialGrid = (point) => {
+    const key = getGridKey(point.x, point.z);
+    if (!spatialGrid[key]) spatialGrid[key] = [];
+    spatialGrid[key].push(point);
+  };
+
   const canPlace = (x, z, radius) => {
-    for (const point of placedPoints) {
-      const dist = Math.hypot(x - point.x, z - point.z);
-      if (dist < radius + point.radius) return false;
+    const gx = Math.floor(x / gridSize);
+    const gz = Math.floor(z / gridSize);
+    
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        const key = `${gx + dx},${gz + dz}`;
+        const points = spatialGrid[key];
+        if (points) {
+          for (let i = 0; i < points.length; i++) {
+            const p = points[i];
+            const dx_ = x - p.x;
+            const dz_ = z - p.z;
+            if (dx_ * dx_ + dz_ * dz_ < (radius + p.radius) * (radius + p.radius)) {
+              return false;
+            }
+          }
+        }
+      }
     }
     return true;
   };
@@ -182,7 +206,10 @@ export function createCityLayoutMetadata(terrain, options = {}) {
       }
       angle += THREE.MathUtils.degToRad((random() - 0.5) * config.angleJitterDeg);
 
-      placedPoints.push({ x, z, radius: neighborRadius });
+      const newPoint = { x, z, radius: neighborRadius };
+      placedPoints.push(newPoint);
+      addToSpatialGrid(newPoint);
+      
       buildingPlacements.push({
         x,
         z,

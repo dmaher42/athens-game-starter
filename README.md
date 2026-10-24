@@ -119,6 +119,10 @@ E - Interact
 
 Arrow Keys - Look around
 
+PageUp / PageDown - Zoom camera
+
+End - Reset camera behind player
+
 H - Show / hide controls
 
 Development & Deployment
@@ -134,6 +138,7 @@ Development & Deployment
    npm install
    npm run dev
    ```
+   *Note: I cannot run local dev servers or terminal commands. Any code I test is via GitHub pages or an automated preview link. Keep deployment strictly web-focused.*
 
 3. **Open the Preview**
    - Click the "Open in Browser" notification, or
@@ -143,7 +148,7 @@ Development & Deployment
 
 ```bash
 npm install
-npm start
+npm run dev
 ```
 
 Run checks before pushing changes:

@@ -79,6 +79,10 @@ export const HARBOR_WATER_BOUNDS = {
   south: HARBOR_CENTER_3D.z - COMPACT_HARBOR_WATER_HALF_DEPTH_SOUTH,
 };
 
+// Main's deep-ocean terrain and city exclusion start at the basin's east edge.
+// Keep this independent of the wider water sheet that covers the harbor.
+export const AEGEAN_OPEN_SEA_WEST = HARBOR_WATER_BOUNDS.east;
+
 // The harbor basin is only the sheltered waterfront. The visible Aegean needs
 // a much larger seaward sheet so the city reads as coastal rather than having
 // a rectangular dock pool.  The west bound extends to cover the full harbor
@@ -121,7 +125,7 @@ export const HARBOR_SETBACKS = [
     // Exclude the deep ocean, not the full rendered water sheet. The sheet
     // overlaps dry land north/south of the basin; keep those city lots intact.
     // Match the deep-ocean floor's west threshold in clampHarborBandHeight.
-    west: Math.max(AEGEAN_OCEAN_BOUNDS.west, HARBOR_WATER_BOUNDS.east - 14),
+    west: AEGEAN_OPEN_SEA_WEST,
     east: AEGEAN_OCEAN_BOUNDS.east,
     north: AEGEAN_OCEAN_BOUNDS.north,
     south: AEGEAN_OCEAN_BOUNDS.south,

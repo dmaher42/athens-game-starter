@@ -50,4 +50,18 @@ export class InteractionHud {
   hide() {
     this.root.style.opacity = "0";
   }
+
+  showAnnouncement(message: string, color: number = 0xffffff) {
+    const hex = color.toString(16).padStart(6, "0");
+    this.labelEl.textContent = message;
+    this.labelEl.style.color = `#${hex}`;
+    this.root.style.opacity = "1";
+    window.setTimeout(() => {
+      if (this.labelEl.textContent === message) {
+        this.labelEl.textContent = "";
+        this.labelEl.style.color = "";
+        this.root.style.opacity = "0";
+      }
+    }, 4000);
+  }
 }

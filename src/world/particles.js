@@ -121,3 +121,116 @@ export function createAtmosphericParticles(scene, options = {}) {
     update,
   };
 }
+
+export function createSmokeEmitter(scene, options = {}) {
+  if (!scene) return null;
+
+  const count = options.count || 40;
+  const size = options.size || 0.8;
+  const color = options.color || 0x444444;
+  const drift = options.drift || new THREE.Vector3(0.05, 0.4, 0.05);
+
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  const lifetimes = new Float32Array(count); // 0..1 life span
+  
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.attributes.position.usage = THREE.DynamicDrawUsage;
+
+  const material = new THREE.PointsMaterial({
+    size,
+    map: createParticleTexture(),
+    transparent: true,
+    depthWrite: false,
+    opacity: 0.4,
+    color,
+    blending: THREE.NormalBlending, // Normal blending for smoke looks better
+    sizeAttenuation: true,
+  });
+
+  const points = new THREE.Points(geometry, material);
+  points.frustumCulled = false;
+  scene.add(points);
+
+  const origin = options.position ? options.position.clone() : new THREE.Vector3();
+  const spawnRadius = 0.2;
+
+  function resetParticle(i) {
+    const i3 = i * 3;
+    positions[i3] = origin.x + THREE.MathUtils.randFloatSpread(spawnRadius);
+    positions[i3 + 1] = origin.y + THREE.MathUtils.randFloatSpread(spawnRadius);
+    positions[i3 + 2] = origin.z + THREE.MathUtils.randFloatSpread(spawnRadius);
+    lifetimes[i] = Math.random();
+  }
+
+  for (let i = 0; i < count; i++) {
+    resetParticle(i);
+  }
+
+  function update(deltaTime) {
+    for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
+      lifetimes[i] += deltaTime * (0.3 + Math.random() * 0.2);
+      
+      if (lifetimes[i] > 1) {
+        resetParticle(i);
+        lifetimes[i] = 0;
+      }
+
+      // Rise and slight horizontal drift
+      positions[i3] += drift.x * deltaTime;
+      positions[i3 + 1] += drift.y * deltaTime;
+      positions[i3 + 2] += drift.z * deltaTime;
+    }
+    geometry.attributes.position.needsUpdate = true;
+    material.opacity = 0.4; // constant for now, could animate with lifetime
+  }
+
+  return {
+    object: points,
+    update,
+    setOrigin: (pos) => origin.copy(pos),
+  };
+}
+
+export function createRoadDustSystem(scene, roadPoints, options = {}) {
+  if (!scene || !roadPoints || roadPoints.length === 0) return null;
+
+  const count = options.count || 200;
+  const size = options.size || 0.4;
+  const color = 0xd2b48c; // Sand/Dust color
+
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
+  const material = new THREE.PointsMaterial({
+    size,
+    map: createParticleTexture(),
+    transparent: true,
+    opacity: 0.25,
+    color,
+    depthWrite: false,
+    blending: THREE.NormalBlending,
+  });
+
+  for (let i = 0; i < count; i++) {
+    const anchor = roadPoints[Math.floor(Math.random() * roadPoints.length)];
+    positions[i * 3] = anchor.x + THREE.MathUtils.randFloatSpread(4);
+    positions[i * 3 + 1] = anchor.y + 0.1 + Math.random() * 0.5;
+    positions[i * 3 + 2] = anchor.z + THREE.MathUtils.randFloatSpread(4);
+  }
+
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+
+  function update(deltaTime, time) {
+    for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
+      positions[i3 + 1] += Math.sin(time * 0.5 + i) * 0.001; // subtle hover
+    }
+    geometry.attributes.position.needsUpdate = true;
+  }
+
+  return { object: points, update };
+}

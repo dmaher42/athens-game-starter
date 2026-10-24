@@ -27,7 +27,7 @@ export const defaultCameraSettings: CameraSettings = {
   minPitch: -1.4, // radians
   maxPitch: 1.0, // radians
   minDist: 2.5, // meters
-  maxDist: 7.5, // meters
+  maxDist: 16, // meters
   invertPitch: false,
 };
 
@@ -49,7 +49,7 @@ const CAMERA_RANGES: Record<NumericSettingKey, NumericSettingRange> = {
   minPitch: { min: -1.0, max: 0.0 },
   maxPitch: { min: 0.0, max: 1.0 },
   minDist: { min: 1.5, max: 6.0 },
-  maxDist: { min: 4.0, max: 12.0 },
+  maxDist: { min: 4.0, max: 20.0 },
 };
 
 const listeners: Set<CameraSettingsListener> = new Set();

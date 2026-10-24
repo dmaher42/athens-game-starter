@@ -1,4 +1,10 @@
 import * as THREE from "three";
+import {
+  ACROPOLIS_PEAK_3D,
+  AGORA_CENTER_3D,
+  CITY_AREA_RADIUS,
+  HARBOR_CENTER_3D,
+} from "./locations.js";
 
 // Lightweight instanced grass that keeps a 3×3 ring of tiles centered on the
 // player. Each tile holds thousands of blades driven entirely on the GPU so we
@@ -14,6 +20,8 @@ const WIND_DIR = new THREE.Vector2(0.6, 0.4).normalize();
 const BASE_COLOR = new THREE.Color(0x4c8f3a);
 const NIGHT_DESAT = 0.55;
 const NIGHT_DARKEN = 0.45;
+const CITY_GRASS_EXCLUSION_RADIUS = CITY_AREA_RADIUS + 18;
+const HARBOR_GRASS_EXCLUSION_RADIUS = 42;
 const WORLD_BOUNDS = new THREE.Box3(
   new THREE.Vector3(-TILE_SIZE, -10, -TILE_SIZE),
   new THREE.Vector3(TILE_SIZE, 30, TILE_SIZE)
@@ -194,6 +202,23 @@ function resolveHeightSampler(scene) {
   return typeof sampler === "function" ? sampler : null;
 }
 
+function isInsideUrbanGrassExclusion(worldX, worldZ) {
+  const isNearAgora =
+    Math.hypot(worldX - AGORA_CENTER_3D.x, worldZ - AGORA_CENTER_3D.z) <
+    CITY_GRASS_EXCLUSION_RADIUS;
+  if (isNearAgora) return true;
+
+  const isNearAcropolis =
+    Math.hypot(worldX - ACROPOLIS_PEAK_3D.x, worldZ - ACROPOLIS_PEAK_3D.z) <
+    CITY_GRASS_EXCLUSION_RADIUS * 0.85;
+  if (isNearAcropolis) return true;
+
+  return (
+    Math.hypot(worldX - HARBOR_CENTER_3D.x, worldZ - HARBOR_CENTER_3D.z) <
+    HARBOR_GRASS_EXCLUSION_RADIUS
+  );
+}
+
 function populateTile(tile, coordX, coordZ, state) {
   const { geometry, offsets, scales, phases } = tile;
   const sampler = state.heightSampler;
@@ -205,12 +230,17 @@ function populateTile(tile, coordX, coordZ, state) {
 
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  let instanceCount = 0;
 
   for (let i = 0; i < BLADES_PER_TILE; i += 1) {
     const dx = (rng() - 0.5) * TILE_SIZE;
     const dz = (rng() - 0.5) * TILE_SIZE;
     const worldX = originX + dx;
     const worldZ = originZ + dz;
+
+    if (isInsideUrbanGrassExclusion(worldX, worldZ)) {
+      continue;
+    }
 
     let worldY = 0;
     if (sampler) {
@@ -220,7 +250,7 @@ function populateTile(tile, coordX, coordZ, state) {
       }
     }
 
-    const offsetIndex = i * 3;
+    const offsetIndex = instanceCount * 3;
     offsets[offsetIndex + 0] = worldX;
     offsets[offsetIndex + 1] = worldY;
     offsets[offsetIndex + 2] = worldZ;
@@ -230,8 +260,9 @@ function populateTile(tile, coordX, coordZ, state) {
       BLADE_HEIGHT_MAX,
       rng()
     );
-    scales[i] = bladeScale;
-    phases[i] = rng();
+    scales[instanceCount] = bladeScale;
+    phases[instanceCount] = rng();
+    instanceCount += 1;
 
     // Track bounds for frustum culling
     if (worldX < minX) minX = worldX;
@@ -244,15 +275,20 @@ function populateTile(tile, coordX, coordZ, state) {
 
   // Update bounding volume to match the new instance positions
   const padding = 0.5; // Account for blade width and wind sway
-  geometry.boundingBox.min.set(minX - padding, minY, minZ - padding);
-  geometry.boundingBox.max.set(maxX + padding, maxY, maxZ + padding);
+  if (instanceCount > 0) {
+    geometry.boundingBox.min.set(minX - padding, minY, minZ - padding);
+    geometry.boundingBox.max.set(maxX + padding, maxY, maxZ + padding);
+  } else {
+    geometry.boundingBox.min.set(0, 0, 0);
+    geometry.boundingBox.max.set(0, 0, 0);
+  }
 
   if (!geometry.boundingSphere) {
     geometry.boundingSphere = new THREE.Sphere();
   }
   geometry.boundingBox.getBoundingSphere(geometry.boundingSphere);
 
-  geometry.instanceCount = BLADES_PER_TILE;
+  geometry.instanceCount = instanceCount;
   geometry.attributes.instanceOffset.needsUpdate = true;
   geometry.attributes.instanceScale.needsUpdate = true;
   geometry.attributes.instancePhase.needsUpdate = true;

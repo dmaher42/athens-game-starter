@@ -18,13 +18,14 @@ import {
   analyzeHarborZone,
   HARBOR_ZONE_CONFIG,
 } from "./coastalZones.js";
+import { makeAncientWoodMaterial } from "./materials.js";
 
 const DOCK_SECTION_LENGTH = 9.5;
 const DOCK_SECTION_WIDTH = 5.8;
 const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
-const DOCK_LIFT = 1.2; // Raise docks above water for better visibility
+const DOCK_LIFT = 1.22; // Raised slightly more to clear water z-fighting
 const QUAY_EDGE_X = 68;
 const QUAY_SPAN_NORTH = -30;
 const QUAY_SPAN_SOUTH = 34;
@@ -44,23 +45,20 @@ function enableShadows(mesh) {
 }
 
 function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOCK_SECTION_WIDTH } = {}) {
+  const woodMaterial = makeAncientWoodMaterial();
   const deck = new THREE.Mesh(
     new THREE.BoxGeometry(length, DOCK_THICKNESS, width),
-    new THREE.MeshStandardMaterial({
-      color: 0xbfa48a, // Lighter, more sunlit wood
-      roughness: 0.65,
-      metalness: 0.04,
-    }),
+    woodMaterial,
   );
   // Local Y relative to harbor group (group Y = harborGroundY)
   deck.position.y = (seaLevel - HARBOR_GROUND_HEIGHT) + DOCK_LIFT - DOCK_THICKNESS * 0.5;
   enableShadows(deck);
 
-  const postMaterial = new THREE.MeshStandardMaterial({
-    color: 0x7a6248,
-    roughness: 0.78,
-    metalness: 0.05,
-  });
+  const postMaterial = woodMaterial.clone();
+  if (postMaterial.map) {
+    postMaterial.map = postMaterial.map.clone();
+    postMaterial.map.repeat.set(1, 2);
+  }
   const postGeometry = new THREE.CylinderGeometry(0.35, 0.42, DOCK_POST_HEIGHT + 0.6, 10);
 
   const posts = new THREE.Group();
@@ -130,9 +128,13 @@ function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f
   const boat = new THREE.Group();
   boat.name = "HarborBoat";
 
+  const woodMaterial = makeAncientWoodMaterial();
+  const hullMaterial = woodMaterial.clone();
+  hullMaterial.color.set(hull);
+
   const hullMesh = new THREE.Mesh(
     new THREE.BoxGeometry(length, 1.1, width),
-    new THREE.MeshStandardMaterial({ color: hull, roughness: 0.42, metalness: 0.15 }),
+    hullMaterial,
   );
   // Local offsets relative to boat origin (will be positioned relative to harbor group)
   hullMesh.position.y = 0.55;
@@ -171,21 +173,17 @@ function createHeroHarborShip({ seaLevel = 0, hull = 0x285779, accent = 0xd7a15a
   const ship = new THREE.Group();
   ship.name = "HarborHeroShip";
 
-  const hullMaterial = new THREE.MeshStandardMaterial({
-    color: hull,
-    roughness: 0.46,
-    metalness: 0.14,
-  });
+  const woodMaterial = makeAncientWoodMaterial();
+  const hullMaterial = woodMaterial.clone();
+  hullMaterial.color.set(hull);
+  
   const accentMaterial = new THREE.MeshStandardMaterial({
     color: accent,
     roughness: 0.52,
     metalness: 0.08,
   });
-  const mastMaterial = new THREE.MeshStandardMaterial({
-    color: 0xe8dbc8,
-    roughness: 0.54,
-    metalness: 0.04,
-  });
+  const mastMaterial = woodMaterial.clone();
+  mastMaterial.color.set(0xe8dbc8);
 
   const hullBase = new THREE.Mesh(
     new THREE.BoxGeometry(22, 1.8, 5.4),
@@ -821,11 +819,6 @@ function createQuayEndTransition(endZ, direction = 1) {
   const group = new THREE.Group();
   group.name = `HarborQuayTransition_${direction > 0 ? "south" : "north"}`;
 
-  const shoreMaterial = new THREE.MeshStandardMaterial({
-    color: 0xc5baa0,
-    roughness: 0.94,
-    metalness: 0.02,
-  });
   const rubbleMaterial = new THREE.MeshStandardMaterial({
     color: 0x8d8479,
     roughness: 0.92,
@@ -837,35 +830,25 @@ function createQuayEndTransition(endZ, direction = 1) {
     metalness: 0.02,
   });
 
-  const shoreApron = new THREE.Mesh(
-    new THREE.CylinderGeometry(7.4, 10.2, 0.2, 22),
-    shoreMaterial,
-  );
-  shoreApron.scale.set(1.15, 1, 0.88);
-  shoreApron.position.set(QUAY_EDGE_X - 7.2, 0.08, endZ + direction * 4.8);
-  shoreApron.rotation.y = THREE.MathUtils.degToRad(direction * 8);
-  shoreApron.receiveShadow = true;
-  group.add(shoreApron);
-
   const embankment = new THREE.Mesh(
-    new THREE.BoxGeometry(7.8, 0.92, 11.4),
+    new THREE.BoxGeometry(4.8, 0.42, 5.8),
     new THREE.MeshStandardMaterial({
       color: 0xb2a58f,
       roughness: 0.88,
       metalness: 0.03,
     }),
   );
-  embankment.position.set(QUAY_EDGE_X - 3.9, -0.28, endZ + direction * 2.3);
-  embankment.rotation.z = THREE.MathUtils.degToRad(-11);
+  embankment.position.set(QUAY_EDGE_X - 2.9, -0.08, endZ + direction * 1.9);
+  embankment.rotation.z = THREE.MathUtils.degToRad(-6);
   embankment.rotation.y = THREE.MathUtils.degToRad(direction * 6);
   enableShadows(embankment);
   group.add(embankment);
 
   const retainingStone = new THREE.Mesh(
-    new THREE.BoxGeometry(2.6, 1.7, 7.2),
+    new THREE.BoxGeometry(1.8, 1.2, 4.8),
     rubbleMaterial,
   );
-  retainingStone.position.set(QUAY_EDGE_X + 0.2, -0.58, endZ + direction * 1.1);
+  retainingStone.position.set(QUAY_EDGE_X + 0.5, -0.34, endZ + direction * 0.9);
   retainingStone.rotation.y = THREE.MathUtils.degToRad(direction * 5);
   enableShadows(retainingStone);
   group.add(retainingStone);
@@ -1023,46 +1006,55 @@ function createQuayForecourt() {
   });
 
   const terrace = new THREE.Mesh(
-    new THREE.BoxGeometry(22, 0.38, 18),
+    new THREE.BoxGeometry(10.5, 0.16, 6.2),
     stoneMaterial,
   );
-  terrace.position.set(44, 0.12, 4);
+  terrace.position.set(44.2, 0.04, 3.1);
   enableShadows(terrace);
   group.add(terrace);
 
-  const lowerApron = new THREE.Mesh(
-    new THREE.BoxGeometry(18, 0.24, 11.5),
+  const eastLanding = new THREE.Mesh(
+    new THREE.BoxGeometry(4.6, 0.1, 2.8),
     stoneMaterial,
   );
-  lowerApron.position.set(52, -0.04, 4);
-  enableShadows(lowerApron);
-  group.add(lowerApron);
+  eastLanding.position.set(49.2, -0.01, 1.8);
+  enableShadows(eastLanding);
+  group.add(eastLanding);
+
+  const southLanding = new THREE.Mesh(
+    new THREE.BoxGeometry(4.2, 0.1, 2.6),
+    stoneMaterial,
+  );
+  southLanding.position.set(48.7, -0.01, 5.8);
+  southLanding.rotation.y = THREE.MathUtils.degToRad(-8);
+  enableShadows(southLanding);
+  group.add(southLanding);
 
   const trim = new THREE.Mesh(
-    new THREE.BoxGeometry(24, 0.16, 1.1),
+    new THREE.BoxGeometry(9.8, 0.08, 0.55),
     trimMaterial,
   );
-  trim.position.set(43, 0.34, -4.6);
+  trim.position.set(43.8, 0.12, 0.1);
   enableShadows(trim);
   group.add(trim);
 
   const cargoRows = [
-    { x: 39, z: -1.5, item: () => createCrateCluster(), scale: 1.1 },
-    { x: 46, z: 7.5, item: () => createAmphoraStack(6), scale: 1.0 },
-    { x: 51, z: -0.8, item: () => createBarrelCluster(), scale: 0.95 },
-    { x: 56, z: 7.2, item: () => createNetBundle({ width: 2.1, depth: 1.4 }), scale: 1.0 },
+    { x: 39.5, z: 0.2, item: () => createCrateCluster(), scale: 1.0 },
+    { x: 45.8, z: 6.3, item: () => createAmphoraStack(6), scale: 0.95 },
+    { x: 50.4, z: 0.7, item: () => createBarrelCluster(), scale: 0.9 },
+    { x: 53.8, z: 5.9, item: () => createNetBundle({ width: 2.1, depth: 1.4 }), scale: 0.94 },
   ];
   cargoRows.forEach(({ x, z, item, scale }) => {
     const cargo = item();
-    cargo.position.set(x, 0.18, z);
+    cargo.position.set(x - 1.2, 0.14, z - 0.8);
     cargo.scale.setScalar(scale);
     group.add(cargo);
   });
 
   for (const [x, z, rot] of [
-    [37.5, -6.2, 4],
-    [48.5, -6.2, -3],
-    [59.5, -6.2, 6],
+    [38.2, -2.9, 4],
+    [46.8, -2.8, -3],
+    [54.4, -1.6, 6],
   ]) {
     const capstan = new THREE.Mesh(
       new THREE.CylinderGeometry(0.5, 0.58, 0.9, 10),
@@ -1391,7 +1383,7 @@ function optimizeHarborShadowCost(harbor) {
     if (!child?.isMesh) return;
     if (shouldReceiveOnly(child)) {
       child.castShadow = false;
-      child.receiveShadow = true;
+      child.receiveShadow = false;
     }
   });
 }
@@ -1527,6 +1519,165 @@ function createClocktower() {
   clocktower.add(roof);
 
   return clocktower;
+}
+
+/**
+ * Creates a high-fidelity Greek Trireme warship.
+ * Features 3 banks of oars, a bronze ram, and a large decorative sail.
+ */
+function createTrireme({ seaLevel = 0, hull = 0x1a3a5a, accent = 0xcd853f } = {}) {
+  const ship = new THREE.Group();
+  ship.name = "HarborTrireme";
+
+  const hullMaterial = new THREE.MeshStandardMaterial({
+    color: hull,
+    roughness: 0.85,
+    metalness: 0.1,
+  });
+  
+  const ramMaterial = new THREE.MeshStandardMaterial({
+    color: 0xcd7f32, // Bronze
+    roughness: 0.35,
+    metalness: 0.82,
+  });
+
+  const woodMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b5a2b,
+    roughness: 0.7,
+  });
+
+  // Main Hull
+  const hullBase = new THREE.Mesh(
+    new THREE.BoxGeometry(28, 2.2, 5.2),
+    hullMaterial
+  );
+  hullBase.position.y = 1.1;
+  enableShadows(hullBase);
+  ship.add(hullBase);
+
+  // Bronze Ram (Prow)
+  const ram = new THREE.Mesh(
+    new THREE.ConeGeometry(1.2, 3.5, 12),
+    ramMaterial
+  );
+  ram.rotation.z = Math.PI / 2;
+  ram.position.set(15.2, 0.6, 0);
+  enableShadows(ram);
+  ship.add(ram);
+
+  // Stern (Aft curvature)
+  const stern = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.6, 2.6, 5.2, 12, 1, false, 0, Math.PI),
+    hullMaterial
+  );
+  stern.rotation.x = Math.PI / 2;
+  stern.position.set(-14, 2.6, 0);
+  enableShadows(stern);
+  ship.add(stern);
+
+  // Banks of Oars (3 levels)
+  const oarGeometry = new THREE.CylinderGeometry(0.06, 0.06, 6.5, 8);
+  const oarMaterial = woodMaterial;
+  
+  for (let level = 0; level < 3; level++) {
+    const yPos = 0.8 + level * 0.45;
+    for (let i = 0; i < 12; i++) {
+      const xPos = -8 + i * 1.8;
+      [-1, 1].forEach(side => {
+        const oar = new THREE.Mesh(oarGeometry, oarMaterial);
+        oar.rotation.z = Math.PI / 1.8; // Angle into water
+        oar.rotation.x = side * 0.15;
+        oar.position.set(xPos, yPos, side * 2.8);
+        ship.add(oar);
+      });
+    }
+  }
+
+  // Mast & Sail
+  const mast = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.22, 12, 12),
+    woodMaterial
+  );
+  mast.position.set(0, 6, 0);
+  ship.add(mast);
+
+  const horizontalSpar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12, 0.12, 10, 8),
+    woodMaterial
+  );
+  horizontalSpar.rotation.z = Math.PI / 2;
+  horizontalSpar.position.set(0, 10, 0);
+  ship.add(horizontalSpar);
+
+  const sail = new THREE.Mesh(
+    new THREE.PlaneGeometry(9.5, 7),
+    new THREE.MeshStandardMaterial({
+      color: 0xeeeedd,
+      side: THREE.DoubleSide,
+      roughness: 0.9,
+    })
+  );
+  sail.position.set(0, 6.5, 0.1);
+  ship.add(sail);
+
+  // Decorative Eyes
+  const eyeGeom = new THREE.CircleGeometry(0.6, 16);
+  const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  [-1, 1].forEach(side => {
+    const eye = new THREE.Mesh(eyeGeom, eyeMat);
+    eye.position.set(12, 1.8, side * 2.62);
+    eye.rotation.y = side * Math.PI / 2;
+    ship.add(eye);
+    
+    const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.2, 16), new THREE.MeshStandardMaterial({ color: 0x000000 }));
+    pupil.position.set(12.01, 1.8, side * 2.63);
+    pupil.rotation.y = side * Math.PI / 2;
+    ship.add(pupil);
+  });
+
+  return ship;
+}
+
+/**
+ * Creates a Maritime Stoa (trading hall).
+ * Features a long colonnade with a terracotta roof.
+ */
+function createMaritimeStoa() {
+  const stoa = new THREE.Group();
+  stoa.name = "MaritimeStoa";
+
+  const columnGeom = new THREE.CylinderGeometry(0.35, 0.35, 5, 12);
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0xe8e4d9, roughness: 0.8 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0xc45c3d, roughness: 0.6 });
+
+  // Columns
+  for (let i = 0; i < 10; i++) {
+    const col = new THREE.Mesh(columnGeom, stoneMat);
+    col.position.set(-18 + i * 4, 2.5, 0);
+    enableShadows(col);
+    stoa.add(col);
+  }
+
+  // Back wall
+  const backWall = new THREE.Mesh(
+    new THREE.BoxGeometry(40, 5, 0.8),
+    stoneMat
+  );
+  backWall.position.set(0, 2.5, -4);
+  enableShadows(backWall);
+  stoa.add(backWall);
+
+  // Roof
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(42, 0.6, 6),
+    roofMat
+  );
+  roof.position.set(0, 5, -1.8);
+  roof.rotation.x = -0.15;
+  enableShadows(roof);
+  stoa.add(roof);
+
+  return stoa;
 }
 
 /**
@@ -1759,6 +1910,25 @@ export function createHarbor(scene, options = {}) {
   const cityGroundY = getCityGroundY();
   const connector = createCityHarborConnector(cityGroundY, harborGroundY);
   harbor.add(connector);
+
+  // --- NEW: MARITIME LANDMARKS ---
+  // Create a Maritime Stoa along the northern quay
+  const stoa = createMaritimeStoa();
+  stoa.position.set(-10, 0, -32);
+  stoa.rotation.y = Math.PI / 2.2;
+  harbor.add(stoa);
+
+  // Create a Military Pier specifically for the Trireme
+  const militaryPierX = -55;
+  const militaryPierZ = -10;
+  const { pier: militaryPier } = createPierLine(militaryPierX, militaryPierZ, 6, seaLevel);
+  harbor.add(militaryPier);
+
+  const trireme = createTrireme({ seaLevel });
+  trireme.position.set(militaryPierX - 10, seaLevel - HARBOR_GROUND_HEIGHT, militaryPierZ + 6);
+  trireme.rotation.y = -0.05;
+  harbor.add(trireme);
+  // --- END NEW LANDMARKS ---
 
   // Position harbor group in world space
   harbor.position.copy(HARBOR_CENTER_3D);

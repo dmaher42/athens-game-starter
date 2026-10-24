@@ -65,13 +65,14 @@ import { cullDistantBuildings } from "../utils/buildingCulling.js";
 import { scatterGroundProps } from "../world/groundProps.js";
 import { disposeSkybox } from "../world/skybox/SkyboxManager.js";
 import { LightingSystem } from "../systems/LightingSystem.js";
+import { EnvironmentManager } from "./EnvironmentManager.js";
 import { PlayerSystem } from "../systems/PlayerSystem.js";
 import { mountPerformanceHud } from "../ui/performanceHud.js";
+import { districtRulesManifest } from "../config/athensLayoutConfig.js";
+import { createSmokeEmitter, createRoadDustSystem } from "../world/particles.js";
 
 // Expose THREE globally for debugging in devtools.
 (window as any).THREE = THREE;
-console.log("✅ THREE exposed globally for debugging");
-
 const DEFAULT_BASE_URL = engineConfig.baseUrl ?? resolveBaseUrl();
 const DEFAULT_DISTRICT_RULE_URL_CANDIDATES =
   engineConfig.districtRuleCandidates || [];
@@ -81,7 +82,6 @@ const WORLD_ROOT_NAME_LEGACY = WORLD_ROOT_NAME;
 const ENABLE_GLB_MODE = true;
 
 if (!ENABLE_GLB_MODE) {
-  console.log("[glb] GLB mode disabled");
 }
 
 const DEFAULT_FORCE_GLB =
@@ -125,6 +125,7 @@ export class Application {
   worldFloorCap: any;
   killPlane: any;
   lightingSystem: any;
+  environmentManager: any;
   playerSystem: any;
 
   constructor({
@@ -169,6 +170,7 @@ export class Application {
     this.worldFloorCap = null;
     this.killPlane = null;
     this.lightingSystem = null;
+    this.environmentManager = null;
     this.playerSystem = null;
   }
 
@@ -191,7 +193,6 @@ export class Application {
       }
       const threeLogTarget =
         typeof window !== "undefined" ? (window as any) : debugGlobalScope;
-      console.log("✅ THREE exposed:", threeLogTarget?.THREE);
     }
     showLoadingScreen({
       initialStatus: "Preparing the experience...",
@@ -206,30 +207,13 @@ export class Application {
 
     updateLoadingProgress(0, totalLoadingStages);
     updateLoadingStatus("Preparing renderer and interface...");
-    const quickCheckResult = await assetLoader.runAssetQuickChecks().catch((err: any) => {
-      console.warn("Asset QuickChecks failed", err);
+    
+    // Start asset checks in background while we initialize systems
+    const assetCheckPromise = assetLoader.runAssetQuickChecks().catch((err: any) => {
+      console.warn("Asset check failed in background:", err);
       return null;
     });
-    if (quickCheckResult?.hasMissingCritical || quickCheckResult?.hasRepeatedFailures) {
-      const missingCriticalLabels = quickCheckResult.missingCriticalChecks.map(
-        (entry: any) => entry.label,
-      );
-      const uniqueMissing = Array.from(new Set(missingCriticalLabels));
-      const criticalSummary =
-        uniqueMissing.length > 0
-          ? `Missing critical asset${uniqueMissing.length > 1 ? "s" : ""}: ${uniqueMissing.join(", ")}.`
-          : "Multiple critical assets failed to load.";
-      const repeatedSummary =
-        quickCheckResult.hasRepeatedFailures && !quickCheckResult.hasMissingCritical
-          ? "Multiple asset checks failed to load."
-          : "";
-      showLoadingError(
-        [criticalSummary, repeatedSummary, "Please verify the asset bundle and refresh."]
-          .filter(Boolean)
-          .join(" "),
-      );
-      return;
-    }
+
     this.renderer = createRenderer();
     const renderer = this.renderer;
 
@@ -349,7 +333,6 @@ export class Application {
     if (typeof window !== 'undefined') {
       (window as any).scene = scene;
       (window as any).camera = camera;
-      console.log('✅ Scene and camera exposed to window for debugging');
     }
 
     const lightingSystem = new LightingSystem({
@@ -361,8 +344,22 @@ export class Application {
         devHud,
     });
     this.lightingSystem = lightingSystem;
+    
+    this.environmentManager = new EnvironmentManager({
+      scene,
+      renderer,
+      lights: lightingSystem.lights,
+      skybox: lightingSystem.dynamicSky
+    });
 
-    await lightingSystem.initialize();
+    console.time("Boot: Lighting Init");
+    const lightingInitPromise = lightingSystem.initialize();
+    
+    // We will await this just before creating the Soundscape, allowing it
+    // to run in parallel with Terrain creation.
+
+    await lightingInitPromise;
+    console.timeEnd("Boot: Lighting Init");
 
     const soundscape = new Soundscape(
       scene,
@@ -390,7 +387,9 @@ export class Application {
       });
     updateLoadingStatus("Sculpting the Attic landscape...");
 
+    console.time("Boot: Terrain Create");
     const terrain = createTerrain(scene);
+    console.timeEnd("Boot: Terrain Create");
     this.terrain = terrain;
     const terrainDebugScope = debugGlobalScope ?? (typeof window !== "undefined" ? window : null);
     if (terrainDebugScope && terrain) {
@@ -400,7 +399,6 @@ export class Application {
       }
       const terrainLogTarget =
         typeof window !== "undefined" ? (window as any) : terrainDebugScope;
-      console.log("✅ TerrainMesh exposed:", terrainLogTarget?.terrainMesh);
     }
     const terrainSize = terrain?.geometry?.userData?.['size'];
 
@@ -426,15 +424,27 @@ export class Application {
         westRadiusScale: 2.02,
       });
     }
+    const combinedOceanBounds = {
+      west: Math.min(HARBOR_WATER_BOUNDS.west, AEGEAN_OCEAN_BOUNDS.west),
+      east: Math.max(HARBOR_WATER_BOUNDS.east, AEGEAN_OCEAN_BOUNDS.east),
+      north: Math.max(HARBOR_WATER_BOUNDS.north, AEGEAN_OCEAN_BOUNDS.north),
+      south: Math.min(HARBOR_WATER_BOUNDS.south, AEGEAN_OCEAN_BOUNDS.south),
+    };
+    let oceanPromise = null;
     if (!this.ocean) {
-      this.ocean = await (createOcean as any)(this.scene, terrain, {
-        bounds: AEGEAN_OCEAN_BOUNDS,
+      console.time("Boot: Ocean Create");
+      oceanPromise = (createOcean as any)(this.scene, terrain, {
+        bounds: combinedOceanBounds,
         waterNormalsCandidates: HARBOR_WATER_NORMAL_CANDIDATES,
         seaLevel,
         shoreBlendWidth: 4,
         waterColor: 0x0a5566,
+      }).then((oceanObj: any) => {
+        console.timeEnd("Boot: Ocean Create");
+        this.ocean = oceanObj;
+        if (this.ocean) this.ocean.scale.set(1, 1, 1);
+        return oceanObj;
       });
-      if (this.ocean) this.ocean.scale.set(1, 1, 1);
     }
     // Far-ocean plane removed - was causing blue reflective shimmer on inland areas
     // The ocean.js Water shader positioned far east is sufficient for the Aegean Sea
@@ -508,7 +518,7 @@ export class Application {
       onFogChange(fogEnabled);
       pendingOceanStatus = {
         seaLevel: resolvedSeaLevel,
-        bounds: AEGEAN_OCEAN_BOUNDS,
+        bounds: combinedOceanBounds,
       };
       this.pendingOceanStatus = pendingOceanStatus;
       updateOceanHudStatus();
@@ -528,8 +538,14 @@ export class Application {
         worldRoot,
         baseUrl: BASE_URL,
       });
-      await playerSystem.initialize();
       this.playerSystem = playerSystem;
+
+      console.time("Boot: Final Parallel Systems");
+      await Promise.all([
+        oceanPromise,
+        playerSystem.initialize()
+      ]);
+      console.timeEnd("Boot: Final Parallel Systems");
 
       let grassRoot: any = null;
       let atmosphericParticles: any = null;
@@ -567,7 +583,23 @@ export class Application {
       if (grassEnabled) {
         grassRoot = mountGrass(scene);
       }
+      
+      updateLoadingStatus("Calculating urban fabric...");
 
+      // Await asset checks before we start placing buildings and landmarks
+      console.time("Boot: Asset Quick Check Reveal");
+      const quickCheckResult = await assetCheckPromise;
+      console.timeEnd("Boot: Asset Quick Check Reveal");
+
+      if (quickCheckResult?.hasMissingCritical || quickCheckResult?.hasRepeatedFailures) {
+        const missingCriticalLabels = quickCheckResult.missingCriticalChecks.map(
+          (entry: any) => entry.label,
+        );
+        showLoadingError(`Failed to load essential Athens assets: ${missingCriticalLabels.join(", ")}`);
+        return;
+      }
+
+      console.time("Boot: City Layout Meta");
       const {
         roadCurves,
         buildingPlacements,
@@ -580,59 +612,62 @@ export class Application {
           seaLevel: resolvedSeaLevel,
         },
       );
+      console.timeEnd("Boot: City Layout Meta");
 
       updateLoadingStatus("Raising temples, homes, and harbors...");
 
       if (landmarksEnabled) {
         await Promise.all([
-          placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-40, 0, -80)), {
-            width: 22,
-            depth: 40,
-            rotationRad: THREE.MathUtils.degToRad(25),
-          }),
-          placeLandmark(worldRoot, terrain, HARBOR_CENTER_3D.clone().add(new THREE.Vector3(40, 0, -80)), {
-            width: 30,
-            depth: 54,
-            columnCountX: 8,
-            columnCountZ: 17,
-            rotationRad: THREE.MathUtils.degToRad(-10),
-          }),
           placeLandmark(
             worldRoot,
             terrain,
-            HARBOR_CENTER_3D.clone().add(new THREE.Vector3(0, 0, -140)),
+            HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-18, 0, -56)),
             {
-              width: 12,
-              depth: 34,
-              columnCountX: 6,
-              columnCountZ: 2,
+              width: 14,
+              depth: 28,
+              colX: 6,
+              colZ: 2,
               materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(0),
+              rotationRad: THREE.MathUtils.degToRad(22),
+            },
+          ),
+          // Keep one smaller district temple away from the harbor/Agora skyline.
+          placeLandmark(
+            worldRoot,
+            terrain,
+            AGORA_CENTER_3D.clone().add(new THREE.Vector3(58, 0, 44)),
+            {
+              width: 8,
+              depth: 18,
+              colX: 5,
+              colZ: 2,
+              materialPreset: "plaster",
+              rotationRad: THREE.MathUtils.degToRad(-18),
             },
           ),
           placeLandmark(
             worldRoot,
             terrain,
-            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-42, 0, 38)),
+            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-20, 0, 14)),
             {
               width: 18,
               depth: 30,
               colX: 6,
               colZ: 2,
               materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(112),
+              rotationRad: THREE.MathUtils.degToRad(82),
             },
           ),
           placeLandmark(
             worldRoot,
             terrain,
-            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(18, 0, -22)),
+            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(8, 0, -14)),
             {
-              width: 22,
-              depth: 42,
+              width: 26,
+              depth: 48,
               colX: 6,
               colZ: 11,
-              rotationRad: THREE.MathUtils.degToRad(-22),
+              rotationRad: THREE.MathUtils.degToRad(-18),
             },
           ),
         ]);
@@ -661,6 +696,8 @@ export class Application {
         mainRoadCurve: mainRoad ?? null,
         roadPadding: MAIN_ROAD_WIDTH * 0.7,
         seaLevel: resolvedSeaLevel,
+        count: 550, // Slightly increased for urban clutter
+        districtRules: districtRulesManifest,
       });
 
       envCollider.fromStaticScene(scene);
@@ -682,52 +719,63 @@ export class Application {
 
       envCollider.refresh();
 
-      const scoreContainer = document.createElement("div");
-      Object.assign(scoreContainer.style, {
-        position: "fixed",
-        top: "20px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        background: "rgba(0, 0, 0, 0.6)",
-        color: "#ffd700",
-        padding: "10px 20px",
-        borderRadius: "20px",
-        fontFamily: "serif",
-        fontSize: "24px",
-        fontWeight: "bold",
-        border: "2px solid #ffd700",
-        pointerEvents: "none",
-        textShadow: "0px 2px 4px black",
-        display: "none"
-      });
-      scoreContainer.innerText = "Scrolls Found: 0 / 0";
-      document.body.appendChild(scoreContainer);
+      const questManager = new QuestManager();
+      const questHud = new QuestHud(questManager);
+      const collectibles = new CollectiblesManager(worldRoot, questManager);
 
-      const collectibles = new CollectiblesManager(worldRoot);
-
-      collectibles.onScoreChange = (score: number, total: number) => {
-        scoreContainer.innerText = `Scrolls Found: ${score} / ${total}`;
-        if (score === total) {
-          scoreContainer.innerText = "ALL WISDOM COLLECTED!";
-          scoreContainer.style.color = "#aaffaa";
-          scoreContainer.style.borderColor = "#aaffaa";
+      collectibles.onScoreChange = (score: number, total: number, type: string, typeScore: number) => {
+        // Quest 1: The Lost Scrolls
+        if (questManager.currentQuest?.title === "The Lost Scrolls" && type === 'wisdom_scroll') {
+          questManager.updateProgress(typeScore);
+          
+          // Trigger transition to next quest if just completed
+          if (questManager.currentQuest.status === 'Completed') {
+            setTimeout(() => {
+              questManager.startQuest("The Forgotten Shipment", "Recover lost amphorae from the harbor", 5);
+              interactionHud.showAnnouncement("New Quest: The Forgotten Shipment", 0xffd700);
+            }, 3000);
+          }
+        }
+        
+        // Quest 2: The Forgotten Shipment
+        if (questManager.currentQuest?.title === "The Forgotten Shipment" && type === 'amphora_rare') {
+          // rare amphorae uses the collective typeScore for this type
+          questManager.updateProgress(typeScore);
         }
       };
 
-      collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z);
-      collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z);
-      collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z);
-
-      collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);
-
-      collectibles.onScoreChange(0, collectibles.total);
-
-      const questManager = new QuestManager();
-      const questHud = new QuestHud(questManager);
       const demoTour = createDemoTour(worldRoot, {
         terrain,
         questManager,
       });
+
+      // Spawn specific Wisdom Scrolls for the quest
+      collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z);
+      collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z);
+      collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z);
+
+      // Expose for debugging/verification
+      (window as any).questManager = questManager;
+      (window as any).collectibles = collectibles;
+      (window as any).worldRoot = worldRoot;
+
+      // Spawn Rare Amphorae in the Harbor for the secondary quest
+      const hX = HARBOR_CENTER_3D.x;
+      const hY = HARBOR_CENTER_3D.y;
+      const hZ = HARBOR_CENTER_3D.z;
+      collectibles.spawnAt(hX - 15, hY, hZ - 28, 'amphora_rare');
+      collectibles.spawnAt(hX - 65, hY, hZ - 5, 'amphora_rare');
+      collectibles.spawnAt(hX + 85, hY, hZ + 0, 'amphora_rare');
+      collectibles.spawnAt(hX + 32, hY, hZ + 10, 'amphora_rare');
+      collectibles.spawnAt(hX + 55, hY, hZ + 8, 'amphora_rare');
+
+      // Random "Treasure" scrolls (standard gold)
+      collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);
+
+      // Initial HUD setup
+      if (typeof collectibles.onScoreChange === 'function') {
+        collectibles.onScoreChange(0, collectibles.total, '', 0);
+      }
       const interactionHud = new InteractionHud();
 
       let interactor: any = createInteractor(renderer, camera, scene);
@@ -784,17 +832,34 @@ export class Application {
       const spawnProceduralCrowdFallback = () => {
         if (proceduralCrowdSpawned || !civicDistrict.walkingLoop) return;
         proceduralCrowdSpawned = true;
-        const crowd = spawnCitizenCrowd(worldRoot, civicDistrict.walkingLoop, {
-          count: 8,
-          minSpeed: 0.7,
-          maxSpeed: 1.4,
-          terrain,
+        const loops = Array.isArray(civicDistrict.walkingLoops) && civicDistrict.walkingLoops.length > 0
+          ? civicDistrict.walkingLoops
+          : [civicDistrict.walkingLoop];
+        const loopCounts = [2, 1, 1];
+        const loopRoles = [
+          ["merchant", "scholar", "guard", "citizen"],
+          ["artisan", "citizen", "merchant"],
+          ["priest", "citizen", "dockworker"],
+        ];
+
+        loops.forEach((loop, index) => {
+          const crowd = spawnCitizenCrowd(worldRoot, loop, {
+            count: loopCounts[index] ?? 3,
+            minSpeed: 0.65 + index * 0.05,
+            maxSpeed: 1.25 + index * 0.05,
+            roles: loopRoles[index] ?? loopRoles[0],
+            terrain,
+            camera,
+          });
+          this.npcUpdaters.push(...crowd.updaters);
         });
-        this.npcUpdaters.push(...crowd.updaters);
       };
 
       if (ENABLE_GLB_MODE) {
-        spawnGLBNPCs(worldRoot, mainRoad, { terrain })
+        spawnGLBNPCs(worldRoot, mainRoad, {
+          terrain,
+          roles: ["dockworker", "merchant", "guard", "citizen", "artisan", "dockworker"],
+        })
           .then((glbNpcs: any) => {
             const glbUpdaters = Array.isArray(glbNpcs?.updaters)
               ? glbNpcs.updaters
@@ -814,7 +879,35 @@ export class Application {
 
       let propCullingTimer = 0;
       let buildingCullingTimer = 0;
+
+      // --- WAVE 4: Atmospheric Systems Initialization ---
+      const activeSmokeSystems: any[] = [];
+      const smokeSystemRoot = new THREE.Group();
+      smokeSystemRoot.name = "SmokeSystems";
+      worldRoot.add(smokeSystemRoot);
+
+      // Attach smoke to buildings tagged with hasChimney
+      scene.traverse((obj: any) => {
+        if (obj.userData?.hasChimney) {
+          const smoke = createSmokeEmitter(smokeSystemRoot, {
+            position: obj.position.clone().add(new THREE.Vector3(0, 4.5, 0)),
+            color: 0x888888,
+            spawnRate: 15,
+          });
+          if (smoke) activeSmokeSystems.push(smoke);
+        }
+      });
+
+      // Initialize Road Dust
+      const roadDustSystem = createRoadDustSystem(worldRoot, [], {
+        roadCurves: roadCurves || [],
+        mainRoadCurve: mainRoad || null,
+        particleCount: 1500,
+      });
+
       const onFrame = (deltaTime: number, elapsed: number) => {
+        if (!scene) return;
+
         if (!scene.background || scene.background === null) {
           scene.background = new THREE.Color("#dbe9ff");
         }
@@ -846,6 +939,10 @@ export class Application {
           atmosphericParticles.update(deltaTime, elapsed);
         }
 
+        // Update Atmospheric Systems
+        activeSmokeSystems.forEach(s => s.update(deltaTime));
+        if (roadDustSystem) roadDustSystem.update(deltaTime);
+
         interactor.updateHover(deltaTime);
 
         const formattedTime = formatPhaseAsTime(lightingSystem.timeOfDayState.timeOfDayPhase);
@@ -857,16 +954,16 @@ export class Application {
         propCullingTimer += deltaTime;
         buildingCullingTimer += deltaTime;
 
-        if (propCullingTimer >= 0.6) {
+        if (propCullingTimer >= 0.4) {
           updateDistanceCulling(scene, camera, {
-            nearDistance: 100,
-            farDistance: 200
+            nearDistance: 35,
+            farDistance: 65
           });
           propCullingTimer = 0;
         }
 
-        if (buildingCullingTimer >= 1.2) {
-          cullDistantBuildings(scene, camera, 400);
+        if (buildingCullingTimer >= 0.8 && scene) {
+          cullDistantBuildings(scene, camera, 100);
           buildingCullingTimer = 0;
         }
 
@@ -1000,14 +1097,14 @@ export class Application {
           getPosition,
           getDirection,
           lightingCallbacks: {
-            onSetLightingPreset: (name: string) => lightingSystem.applyLookProfile(name, { source: "user" }),
+            onSetLightingPreset: (name: string) => this.environmentManager.applyLookProfile(name, { source: "user" }),
             lightingPresets: (lightingSystem as any).LIGHTING_PRESETS,
-            getActivePresetName: () => lightingSystem.lastAppliedLightingPreset,
-            setActivePreset: (name: string) => lightingSystem.applyLookProfile(name, { source: "user" }),
+            getActivePresetName: () => this.environmentManager.currentPresetName,
+            setActivePreset: (name: string) => this.environmentManager.applyLookProfile(name, { source: "user" }),
           },
           fogCallbacks: {
-            getFogEnabled: () => fogEnabled,
-            onToggleFog: toggleFog,
+            getFogEnabled: () => this.environmentManager.fogEnabled,
+            onToggleFog: () => this.environmentManager.toggleFog(),
           },
           sunAlignment: {
             getAzimuthDeg: () => lightingSystem.sunAlignmentState.azimuthDeg,
@@ -1051,7 +1148,31 @@ export class Application {
           }
         },
       });
-      if (false) {
+      // === CODex: Visual Cleanup Sweep ===
+      // Remove any known legacy/ghost meshes that shouldn't be here.
+      const toRemove: any[] = [];
+      scene.traverse((obj: any) => {
+        if (!obj || obj.parent === null && obj !== scene) return; 
+        
+        // Remove meshes at high altitudes (ghost veils)
+        if (obj.isMesh && obj.position.y > 100 && !obj.name?.toLowerCase().includes('particle')) {
+          toRemove.push(obj);
+        }
+        
+        // Remove massive rings that might be glitched
+        if (obj.name === 'HorizonFadeRing' && obj.geometry?.boundingSphere?.radius > 10000) {
+          toRemove.push(obj);
+        }
+      });
+      toRemove.forEach(obj => {
+        obj.visible = false;
+        if (obj.parent) obj.parent.remove(obj);
+      });
+      if (toRemove.length > 0) {
+        console.info(`[Cleanup] Removed ${toRemove.length} ghost/glitched meshes from scene.`);
+      }
+
+      if (false) { // Keep disabled unless debugging flooding
         (window as any).toggleWater = () => {
           let count = 0;
           scene.traverse((obj: any) => {
@@ -1066,7 +1187,6 @@ export class Application {
               count++;
             }
           });
-          console.log(`🌊 Toggled ${count} water objects`);
         };
         
         (window as any).hideWater = () => {
@@ -1083,7 +1203,6 @@ export class Application {
               count++;
             }
           });
-          console.log(`👻 Hidden ${count} water objects`);
         };
         
         (window as any).showWater = () => {
@@ -1099,7 +1218,6 @@ export class Application {
               count++;
             }
           });
-          console.log(`👁️ Shown ${count} water objects`);
         };
         
         (window as any).hideRoads = () => {
@@ -1116,7 +1234,6 @@ export class Application {
               count++;
             }
           });
-          console.log(`🚫 Hidden ${count} road objects (including footpaths)`);
         };
         
         (window as any).showRoads = () => {
@@ -1133,52 +1250,37 @@ export class Application {
               count++;
             }
           });
-          console.log(`✅ Shown ${count} road objects (including footpaths)`);
         };
         
         (window as any).debugOcean = () => {
           const oceanObj = scene.getObjectByName('AegeanOcean');
           if (!oceanObj) {
-            console.log('❌ Ocean not found');
             return;
           }
-          console.log('🌊 Ocean Debug Info:');
-          console.log('  Position:', oceanObj.position);
-          console.log('  Scale:', oceanObj.scale);
-          console.log('  Name:', oceanObj.name);
-          console.log('  Visible:', oceanObj.visible);
-          console.log('  Expected bounds: X=[1500, 2300], Z=[-400, 400]');
           const playerPos = playerSystem?.player?.object?.position;
-          console.log('  Player position:', playerPos ? `X=${playerPos.x.toFixed(1)}, Y=${playerPos.y.toFixed(1)}, Z=${playerPos.z.toFixed(1)}` : 'unknown');
         };
         
         (window as any).debugCivicDistrict = () => {
-          console.log('🏛️ Civic District Debug:');
           let roadCount = 0;
           let footpathCount = 0;
           let plazaCount = 0;
           scene.traverse((obj: any) => {
             if (obj.userData?.isFootpath) {
               footpathCount++;
-              console.log(`  Footpath at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}, color: ${obj.material?.color?.getHexString()}`);
             }
             if (obj.geometry?.type === 'BoxGeometry' && obj.position.y < 0.5 && obj.material?.color) {
               const hex = obj.material.color.getHexString();
               if (hex === '887766' || hex === '666666' || hex === '998877' || hex === 'aa9988') {
                 roadCount++;
-                console.log(`  Road/path at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}, color: #${hex}`);
               }
               if (hex === 'aaaaaa') {
                 plazaCount++;
-                console.log(`  Plaza at (${obj.position.x.toFixed(1)}, ${obj.position.z.toFixed(1)}), visible: ${obj.visible}`);
               }
             }
           });
-          console.log(`  Total: ${roadCount} roads, ${footpathCount} footpaths, ${plazaCount} plazas`);
         };
         
         (window as any).findBrightObjects = () => {
-          console.log('💡 Finding bright/white objects in scene:');
           const brightObjects: any[] = [];
           scene.traverse((obj: any) => {
             if (obj.material?.color) {
@@ -1201,16 +1303,8 @@ export class Application {
             }
           });
           console.table(brightObjects);
-          console.log(`Found ${brightObjects.length} bright objects (brightness > 0.8)`);
           return brightObjects;
         };
-        
-        console.log('✅ Water controls available: hideWater(), showWater(), toggleWater()');
-        console.log('✅ Road controls available: hideRoads(), showRoads()');
-        console.log('✅ Debug: debugOcean() to check ocean position');
-        console.log('✅ Debug: debugCivicDistrict() to inspect civic district elements');
-        console.log('✅ Debug: findBrightObjects() to locate white/bright meshes');
-
         renderer.domElement.addEventListener("pointerdown", (event: PointerEvent) => {
           if (event.button === 0) {
             interactor.useObject();
@@ -1219,9 +1313,9 @@ export class Application {
 
         window.addEventListener("keydown", (event) => {
           if (event.code === "KeyG" && !event.repeat) {
-            toggleFog();
+            this.environmentManager.toggleFog();
           } else if (event.code === "KeyT" && !event.repeat) {
-              (lightingSystem as any).cycleLightingPreset();
+            this.environmentManager.cyclePreset();
           } else if (event.code === "F8" && !event.repeat) {
             const position = playerSystem.player?.object?.position;
             const x = position?.x;

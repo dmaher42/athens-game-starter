@@ -1,28 +1,16 @@
 import * as THREE from "three";
+import { loadSafeTexture } from "../utils/TextureUtils.js";
 
-const textureLoader = new THREE.TextureLoader();
 const BASE_PATH = import.meta.env.BASE_URL || "/athens-game-starter/";
-const textureCache = new Map();
 
 function loadTexture(url, { repeat = [1, 1], color = false } = {}) {
   if (!url) return null;
-
-  const fullUrl = `${BASE_PATH}${url}`;
-  const cacheKey = `${fullUrl}|${repeat[0]}|${repeat[1]}|${color ? "srgb" : "linear"}`;
-  if (textureCache.has(cacheKey)) {
-    return textureCache.get(cacheKey);
-  }
-
-  const texture = textureLoader.load(fullUrl);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(repeat[0], repeat[1]);
-  if (color) {
-    texture.colorSpace = THREE.SRGBColorSpace;
-  }
-  texture.anisotropy = 8;
-  textureCache.set(cacheKey, texture);
-  return texture;
+  
+  return loadSafeTexture(url, {
+    repeat,
+    isColor: color,
+    fallback: color ? 0xd4bf9a : 0x888888 // Default to dirt color for albedo
+  });
 }
 
 function createGroundMaterial({
@@ -60,49 +48,49 @@ function createGroundMaterial({
 
 export const CoastalGroundMaterial = createGroundMaterial({
   name: "CoastalGroundMaterial",
-  color: new THREE.Color(0xc7bea8),
-  repeat: [36, 36],
+  color: new THREE.Color(0xd2c9b1),
+  repeat: [64, 64],
   map: "textures/sand/albedo.jpg",
   normalMap: "textures/sand/normal_gl.jpg",
   roughnessMap: "textures/sand/arm.jpg",
   metalnessMap: "textures/sand/arm.jpg",
   aoMap: "textures/sand/arm.jpg",
-  roughness: 0.97,
-  metalness: 0.04,
-  normalScale: 0.32,
-  aoIntensity: 0.6,
+  roughness: 0.94,
+  metalness: 0.02,
+  normalScale: 0.45,
+  aoIntensity: 0.75,
 });
 
 export const CityGroundMaterial = createGroundMaterial({
   name: "CityGroundMaterial",
-  color: new THREE.Color(0xbd9b73),
-  repeat: [42, 42],
+  color: new THREE.Color(0xdfccac),
+  repeat: [84, 84],
   map: "textures/ground/dirt-albedo.jpg",
   normalMap: "textures/sand/normal_gl.jpg",
   roughnessMap: "textures/sand/arm.jpg",
   metalnessMap: "textures/sand/arm.jpg",
   aoMap: "textures/sand/arm.jpg",
-  roughness: 1,
-  metalness: 0,
-  normalScale: 0.18,
-  aoIntensity: 0.35,
+  roughness: 0.98,
+  metalness: 0.0,
+  normalScale: 0.28,
+  aoIntensity: 0.5,
 });
 
 export const InlandGroundMaterial = createGroundMaterial({
   name: "InlandGroundMaterial",
-  color: new THREE.Color(0x8ea071),
-  repeat: [72, 72],
+  color: new THREE.Color(0x9cb075),
+  repeat: [120, 120],
   map: "textures/grass/albedo.jpg",
   normalMap: "textures/grass/normal_dx.jpg",
   roughnessMap: "textures/grass/roughness.jpg",
   metalnessMap: "textures/grass/metallic.jpg",
   aoMap: "textures/grass/ao.jpg",
   bumpMap: "textures/grass/height.jpg",
-  roughness: 1,
-  metalness: 0.01,
-  normalScale: 0.25,
-  bumpScale: 0.015,
-  aoIntensity: 0.4,
+  roughness: 0.92,
+  metalness: 0.0,
+  normalScale: 0.5,
+  bumpScale: 0.02,
+  aoIntensity: 0.65,
 });
 
 let terrainMeshForUpdates = null;

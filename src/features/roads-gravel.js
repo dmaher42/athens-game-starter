@@ -32,6 +32,7 @@ export async function applyGravelToRoads({ scene } = {}) {
       let sandMap = null;
       let grassMap = null;
       let stoneMap = null;
+      let dirtMap = null;
       try {
         sandMap = await tl.loadAsync(MATERIALS.sand.albedo);
         sandMap.wrapS = sandMap.wrapT = THREE.RepeatWrapping;
@@ -47,27 +48,42 @@ export async function applyGravelToRoads({ scene } = {}) {
         stoneMap.wrapS = stoneMap.wrapT = THREE.RepeatWrapping;
         stoneMap.repeat.set(8, 8);
         stoneMap.colorSpace = THREE.SRGBColorSpace;
+
+        if (MATERIALS.dirt && MATERIALS.dirt.albedo) {
+          dirtMap = await tl.loadAsync(MATERIALS.dirt.albedo);
+          dirtMap.wrapS = dirtMap.wrapT = THREE.RepeatWrapping;
+          dirtMap.repeat.set(5, 5);
+          dirtMap.colorSpace = THREE.SRGBColorSpace;
+        }
       } catch (err) {
         console.warn("Texture loading failed in applyGravelToRoads", err);
       }
 
       const sandMaterial = new THREE.MeshStandardMaterial({
         map: sandMap || null,
-        color: sandMap ? 0xffffff : 0xcdb89c,
+        color: sandMap ? 0xb6956d : 0xcdb89c,
         roughness: 0.85,
       });
       const grassMaterial = new THREE.MeshStandardMaterial({
         map: grassMap || null,
-        color: grassMap ? 0xffffff : 0x7a8b62,
+        color: grassMap ? 0x6f8057 : 0x7a8b62,
         roughness: 0.9,
       });
-      const stoneMaterial = new THREE.MeshStandardMaterial({
+      const dirtMaterial = new THREE.MeshStandardMaterial({
+        map: dirtMap || null,
+        color: dirtMap ? 0x8a5f41 : 0x8b6a46,
+        roughness: 0.92,
+      });
+      const cobbleMaterial = new THREE.MeshPhysicalMaterial({
         map: stoneMap || null,
-        color: stoneMap ? 0xffffff : 0xd6d1c8,
-        roughness: 0.75,
+        color: stoneMap ? 0x80776c : 0xd6d1c8,
+        roughness: 0.65,
+        clearcoat: 0.1,
+        clearcoatRoughness: 0.4,
+        sheen: 0.2,
       });
 
-      if (!sandMaterial || !grassMaterial || !stoneMaterial) {
+      if (!sandMaterial || !grassMaterial || !cobbleMaterial) {
         resolve();
         return;
       }
@@ -92,30 +108,39 @@ export async function applyGravelToRoads({ scene } = {}) {
           name.includes("main") ||
           name.includes("plaza") ||
           u.kind === "plaza" ||
-          u.category === "plaza"
+          u.category === "plaza" ||
+          u.roadType === "artery"
         );
       };
 
       const chooseMaterial = (o) => {
-        if (isMainRoad(o)) return stoneMaterial;
+        if (isMainRoad(o)) return cobbleMaterial;
 
         const pos = o.getWorldPosition(new THREE.Vector3());
         const elevation = Number.isFinite(pos.y) ? pos.y : 0;
         const slope = terrainSampler ? getSlope(terrainSampler, pos.x, pos.z) : 0;
 
+        // Steep paths are always stone/cobble for traction
         if (slope >= SLOPE_ROCK_MIN) {
-          return stoneMaterial;
+          return cobbleMaterial;
         }
 
+        // Coastal paths use sand
         if (elevation <= seaLevel + SAND_MAX_ELEV) {
           return sandMaterial;
         }
 
-        if (elevation >= seaLevel + GRASS_MIN_ELEV) {
-          return grassMaterial;
+        // Rural or high-elevation paths use dirt
+        if (elevation >= seaLevel + GRASS_MIN_ELEV + 10) {
+          return dirtMaterial;
         }
 
-        return stoneMaterial;
+        // Neighborhood paths use dirt/grass mix
+        if (elevation >= seaLevel + GRASS_MIN_ELEV) {
+          return (Math.random() < 0.7) ? dirtMaterial : grassMaterial;
+        }
+
+        return cobbleMaterial;
       };
 
       let count = 0;

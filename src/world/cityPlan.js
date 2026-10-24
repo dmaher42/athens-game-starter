@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, HARBOR_WATER_BOUNDS, CITY_CENTER_ORIGIN, getCityGroundY } from './locations.js';
+import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, HARBOR_SETBACKS, HARBOR_WATER_BOUNDS, CITY_CENTER_ORIGIN, getCityGroundY, getSeaLevelY } from './locations.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { applyNormalMapConvention } from "../materials/normalMapUtils.js";
 import { IS_DEV } from '../utils/env.js';
-import { Prefabs, spawnBuilding } from './buildingSpawner.js';
+import { Prefabs, spawnBuilding, poolMaterialsAndMerge } from './buildingSpawner.js';
 import { loadDistrictRules } from './districtRules.js';
+import { roadNoise } from '../utils/noise.js';
 import { 
   getSlope, 
   getAverageSlope, 
@@ -13,6 +14,7 @@ import {
   analyzeTile,
   SLOPE_THRESHOLDS 
 } from './terrainUtils.js';
+import { createCypressTree, createOliveTree } from './foliage.js';
 
 /* PATCH: Harbor zone params */
 export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.25 };
@@ -21,6 +23,7 @@ export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.2
 const MIN_X = -8, MAX_X = 8;
 const MIN_Z = -8, MAX_Z = 14;
 const BLOCK_SIZE = 24; // Smaller blocks make the city feel tighter and more urban.
+const GRID_WARP_STRENGTH = 7.2; // Increased to deeply blur the rigid grid structure
 const AGORA_PLAZA_RADIUS = 1;
 const AGORA_CIVIC_RADIUS = BLOCK_SIZE * 2.5;
 const AGORA_MARKET_RADIUS = BLOCK_SIZE * 4.4;
@@ -159,10 +162,10 @@ export function generatePaths(grid, options = {}) {
   const pathTiles = [];
   const maxSlope = avoidSteepSlopes ? WALKABILITY_CONFIG.MAX_PATH_SLOPE : Infinity;
 
-  if (IS_DEV) console.log('[CityPlan] Generating pedestrian walkability grid...');
 
   // Mark existing roads as paths
   for (const cell of grid) {
+    let cellRot = 0;
     if (!cell.blocked && cell.type === 'road') {
       pathTiles.push({
         gridX: cell.gridX,
@@ -205,7 +208,6 @@ export function generatePaths(grid, options = {}) {
       const path = findPath(grid, centerX, centerZ, location.x, location.z, maxSlope);
       
       if (path) {
-        if (IS_DEV) console.log(`[CityPlan] Path to ${location.name}: ${path.length} tiles`);
         
         // Add path tiles
         for (const cell of path) {
@@ -221,12 +223,10 @@ export function generatePaths(grid, options = {}) {
           }
         }
       } else {
-        if (IS_DEV) console.warn(`[CityPlan] No path found to ${location.name} - terrain too steep or disconnected`);
       }
     }
   }
 
-  if (IS_DEV) console.log(`[CityPlan] Generated ${pathTiles.length} path tiles`);
   return pathTiles;
 }
 
@@ -249,7 +249,6 @@ export function verifyReachability(grid, pathTiles, options = {}) {
 
   const centerX = 0, centerZ = 0;
 
-  if (IS_DEV) console.log('[CityPlan] Verifying reachability to key buildings...');
 
   for (const location of keyLocations) {
     const path = findPath(grid, centerX, centerZ, location.x, location.z);
@@ -260,20 +259,16 @@ export function verifyReachability(grid, pathTiles, options = {}) {
 
       if (distance <= maxDistance) {
         results.reachable.push(location.name);
-        if (IS_DEV) console.log(`[CityPlan] ✅ ${location.name}: reachable in ${distance} tiles`);
       } else {
         results.unreachable.push(location.name);
-        if (IS_DEV) console.warn(`[CityPlan] ⚠️  ${location.name}: ${distance} tiles (exceeds max ${maxDistance})`);
       }
     } else {
       results.unreachable.push(location.name);
       results.distances[location.name] = Infinity;
-      if (IS_DEV) console.error(`[CityPlan] ❌ ${location.name}: unreachable`);
     }
   }
 
   const allReachable = results.unreachable.length === 0;
-  if (IS_DEV) console.log(`[CityPlan] Reachability: ${results.reachable.length}/${keyLocations.length} locations within ${maxDistance} tiles`);
 
   return {
     ...results,
@@ -282,14 +277,14 @@ export function verifyReachability(grid, pathTiles, options = {}) {
   };
 }
 
-function createPavedStrip(width, length, color = 0xb09370) {
+function createPavedStrip(width, length, color = 0xb49673) {
   const geometry = new THREE.PlaneGeometry(width, length);
   const material = new THREE.MeshStandardMaterial({
     color: color,
-    roughness: 0.98,
+    roughness: 1,
     metalness: 0,
     transparent: true,
-    opacity: 0.94,
+    opacity: 0.96,
     polygonOffset: true,
     polygonOffsetFactor: -2,
     polygonOffsetUnits: -2,
@@ -299,6 +294,83 @@ function createPavedStrip(width, length, color = 0xb09370) {
   mesh.receiveShadow = true;
   mesh.castShadow = false;
   return mesh;
+}
+
+function createCityFabricUnderlay(width, length, color = 0x97785a, opacity = 0.16) {
+  const geometry = new THREE.PlaneGeometry(width, length);
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 1,
+    metalness: 0,
+    transparent: true,
+    opacity,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.receiveShadow = true;
+  mesh.castShadow = false;
+  return mesh;
+}
+
+function createReservedCourtSurface(cell) {
+  if (!cell) return null;
+
+  const seed = Math.abs(cell.gridX * 92821 ^ cell.gridZ * 68917);
+  const random01 = (offset = 0) => {
+    const value = seed + offset * 17.17;
+    const t = value + Math.sin(value * 12.9898) * 43758.5453;
+    return t - Math.floor(t);
+  };
+
+  let widthScale = 0.42 + random01(1) * 0.07;
+  let lengthScale = 0.42 + random01(2) * 0.07;
+  let color = 0xa88461;
+
+  if (isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
+    widthScale = 0.5 + random01(3) * 0.08;
+    lengthScale = 0.48 + random01(4) * 0.07;
+    color = 0xb19271;
+  } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    widthScale = 0.48 + random01(5) * 0.08;
+    lengthScale = 0.4 + random01(6) * 0.08;
+    color = 0xa68560;
+  } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    widthScale = 0.4 + random01(7) * 0.07;
+    lengthScale = 0.38 + random01(8) * 0.08;
+    color = 0xa1805d;
+  } else if (isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
+    widthScale = 0.36 + random01(9) * 0.06;
+    lengthScale = 0.36 + random01(10) * 0.06;
+    color = 0x9e7d59;
+  }
+
+  const group = new THREE.Group();
+  const main = createPavedStrip(BLOCK_SIZE * widthScale, BLOCK_SIZE * lengthScale, color);
+  main.rotation.y = (random01(11) - 0.5) * 0.24;
+  main.position.y = 0.004;
+  if (main.material) {
+    main.material.opacity = 0.52;
+  }
+  group.add(main);
+
+  if (random01(12) < 0.18) {
+    const side = createPavedStrip(BLOCK_SIZE * 0.16, BLOCK_SIZE * 0.14, color + 0x060606);
+    side.rotation.y = (random01(13) - 0.5) * 0.25;
+    side.position.set(
+      (random01(14) - 0.5) * BLOCK_SIZE * 0.24,
+      0.005,
+      (random01(15) - 0.5) * BLOCK_SIZE * 0.22,
+    );
+    if (side.material) {
+      side.material.opacity = 0.36;
+    }
+    group.add(side);
+  }
+
+  return group;
 }
 
 function createStepFlight(width, stepDepth, stepHeight, stepCount, material) {
@@ -524,15 +596,24 @@ function createAgoraPlazaAccent() {
   group.add(pillar);
 
   for (const [x, z, rot] of [
-    [-7, -7, 0.08],
-    [7, -7, -0.05],
-    [-7, 7, 0.03],
-    [7, 7, -0.08],
+    [-11, -11, 0.08],
+    [11, -11, -0.05],
+    [-11, 11, 0.03],
+    [11, 11, -0.08],
   ]) {
-    const banner = createBannerStand(0xd0a046);
-    banner.position.set(x, 0, z);
-    banner.rotation.y = rot;
-    group.add(banner);
+    const bStand = createBannerStand();
+    bStand.position.set(x, 0, z);
+    bStand.rotation.y = rot;
+    group.add(bStand);
+  }
+
+  // Symmetrical Cypress framing for the central plaza
+  for (const [x, z] of [
+    [-9, -9], [9, -9], [-9, 9], [9, 9]
+  ]) {
+    const cypress = createCypressTree({ scale: 1.35 });
+    cypress.position.set(x, 0, z);
+    group.add(cypress);
   }
 
   enableShadowProps(group);
@@ -605,51 +686,76 @@ function createCommercialAccent(rng) {
   const group = new THREE.Group();
   group.name = "CommercialAccent";
 
+  // More detailed awning
+  const awningColor = rng() < 0.3 ? 0xc06b3c : (rng() < 0.6 ? 0xd4b064 : 0x4b93aa);
   const awning = new THREE.Mesh(
-    new THREE.BoxGeometry(3.4, 0.18, 1.8),
-    new THREE.MeshStandardMaterial({ color: rng() < 0.5 ? 0xc06b3c : 0xd4b064, roughness: 0.74, metalness: 0.02 }),
+    new THREE.BoxGeometry(3.6, 0.12, 2.0),
+    new THREE.MeshStandardMaterial({ color: awningColor, roughness: 0.8, metalness: 0.05 }),
   );
-  awning.position.set(0, 2.2, 1.6);
+  awning.rotation.x = 0.25; // Slight tilt
+  awning.position.set(0, 2.3, 1.4);
   group.add(awning);
 
-  for (const side of [-1.35, 1.35]) {
-    const post = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.08, 2.1, 8),
-      new THREE.MeshStandardMaterial({ color: 0x7c6447, roughness: 0.82, metalness: 0.03 }),
-    );
-    post.position.set(side, 1.05, 1.45);
-    group.add(post);
+  // Stacked crates
+  const crateMat = new THREE.MeshStandardMaterial({ color: 0x8b6a46, roughness: 0.9, metalness: 0.02 });
+  for (let i = 0; i < 2; i++) {
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.55, 0.8), crateMat);
+    crate.position.set(-0.8, 0.275 + (i * 0.56), 2.1);
+    crate.rotation.y = (rng() - 0.5) * 0.2;
+    group.add(crate);
   }
 
-  const crate = new THREE.Mesh(
-    new THREE.BoxGeometry(0.9, 0.6, 0.9),
-    new THREE.MeshStandardMaterial({ color: 0x8b6a46, roughness: 0.84, metalness: 0.02 }),
+  // Clump of jars
+  const jarMat = new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.6, metalness: 0.04 });
+  for (let i = 0; i < 3; i++) {
+    const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.65, 10), jarMat);
+    const angle = (i / 3) * Math.PI * 2;
+    jar.position.set(0.9 + Math.cos(angle) * 0.3, 0.325, 2.0 + Math.sin(angle) * 0.3);
+    group.add(jar);
+  }
+
+  enableShadowProps(group);
+  return group;
+}
+
+function createMarketCourtAccent(rng) {
+  const group = new THREE.Group();
+  group.name = "MarketCourtAccent";
+
+  const stallA = createCommercialAccent(rng);
+  stallA.position.set(0, 0, 0);
+  stallA.rotation.y = Math.PI / 2;
+  stallA.scale.setScalar(0.92);
+  group.add(stallA);
+
+  const bench = new THREE.Mesh(
+    new THREE.BoxGeometry(2.6, 0.18, 0.62),
+    new THREE.MeshStandardMaterial({ color: 0x8a6944, roughness: 0.84, metalness: 0.02 }),
   );
-  crate.position.set(-0.8, 0.3, 2.2);
-  group.add(crate);
+  bench.position.set(0, 0.72, 1.65);
+  group.add(bench);
+
+  enableShadowProps(group);
+  return group;
+}
+
+function createUrbanCourtAccent(rng) {
+  const group = new THREE.Group();
+  group.name = "UrbanCourtAccent";
+
+  const benchA = new THREE.Mesh(
+    new THREE.BoxGeometry(1.9, 0.16, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0x8a6944, roughness: 0.84, metalness: 0.02 }),
+  );
+  benchA.position.set(-1.15, 0.64, 0.55);
+  group.add(benchA);
 
   const jar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.22, 0.16, 0.72, 10),
-    new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.64, metalness: 0.05 }),
+    new THREE.CylinderGeometry(0.18, 0.12, 0.68, 10),
+    new THREE.MeshStandardMaterial({ color: 0xc08a66, roughness: 0.68, metalness: 0.03 }),
   );
-  jar.position.set(0.9, 0.36, 2.1);
+  jar.position.set(0.75, 0.34, -0.85);
   group.add(jar);
-
-  const table = new THREE.Mesh(
-    new THREE.BoxGeometry(1.4, 0.12, 0.7),
-    new THREE.MeshStandardMaterial({ color: 0x8a6944, roughness: 0.82, metalness: 0.02 }),
-  );
-  table.position.set(0, 0.86, 2.25);
-  group.add(table);
-
-  for (const x of [-0.35, 0.15, 0.55]) {
-    const bowl = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.09, 0.16, 10),
-      new THREE.MeshStandardMaterial({ color: 0xc8b28d, roughness: 0.78, metalness: 0.02 }),
-    );
-    bowl.position.set(x, 1.01, 2.2 + (rng() - 0.5) * 0.18);
-    group.add(bowl);
-  }
 
   enableShadowProps(group);
   return group;
@@ -675,25 +781,9 @@ function createResidentialAccent(rng) {
     group.add(leg);
   }
 
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.16, 0.22, 2.4, 8),
-    new THREE.MeshStandardMaterial({ color: 0x7a5b3d, roughness: 0.88, metalness: 0.02 }),
-  );
-  trunk.position.set(-1.55, 1.2, -1.2);
-  group.add(trunk);
-
-  for (const [x, y, z, r] of [
-    [-1.75, 2.35, -1.1, 0.85],
-    [-1.1, 2.2, -1.05, 0.7],
-    [-1.45, 2.7, -1.45, 0.78],
-  ]) {
-    const crown = new THREE.Mesh(
-      new THREE.SphereGeometry(r, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0x5f7d42, roughness: 0.9, metalness: 0.0 }),
-    );
-    crown.position.set(x, y, z);
-    group.add(crown);
-  }
+  const oliveTree = createOliveTree({ scale: 0.85 });
+  oliveTree.position.set(-1.55, 0.1, -1.2);
+  group.add(oliveTree);
 
   for (const [x, z] of [[1.05, 1.2], [1.45, 1.45]]) {
     const jar = new THREE.Mesh(
@@ -707,6 +797,85 @@ function createResidentialAccent(rng) {
   enableShadowProps(group);
   return group;
 }
+
+function createTree(rng) {
+  const isCypress = rng() < 0.45;
+  const tree = isCypress 
+    ? createCypressTree({ scale: 0.8 + rng() * 0.4 })
+    : createOliveTree({ scale: 0.9 + rng() * 0.3 });
+  
+  // Symmetrical Cypress specifically for formal civic areas if needed
+  return tree;
+}
+
+function createPocketPark(cell, rng) {
+  const group = new THREE.Group();
+  group.name = "PocketPark";
+  
+  // Tiered stone base
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0x9a8a7a, roughness: 0.8, metalness: 0.05 });
+  const curb = new THREE.Mesh(
+    new THREE.BoxGeometry(BLOCK_SIZE * 0.9, 0.4, BLOCK_SIZE * 0.9),
+    baseMat
+  );
+  curb.position.y = 0.2;
+  group.add(curb);
+
+  const upperPlat = new THREE.Mesh(
+    new THREE.BoxGeometry(BLOCK_SIZE * 0.7, 0.2, BLOCK_SIZE * 0.7),
+    baseMat
+  );
+  upperPlat.position.y = 0.5;
+  group.add(upperPlat);
+
+  // Grass/Garden soil area (elevated)
+  const lawnWidth = BLOCK_SIZE * 0.65;
+  const lawn = new THREE.Mesh(
+    new THREE.PlaneGeometry(lawnWidth, lawnWidth),
+    new THREE.MeshStandardMaterial({ color: 0x4a6a3a, roughness: 1.0, side: THREE.DoubleSide })
+  );
+  lawn.rotation.x = -Math.PI / 2;
+  lawn.position.y = 0.61;
+  group.add(lawn);
+  
+  // Central Feature: Improved Tree or Monument
+  if (rng() < 0.7) {
+    const tree = createTree(rng);
+    tree.scale.multiplyScalar(1.1);
+    tree.position.y = 0.55;
+    group.add(tree);
+  } else {
+    const monumentBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.8, 1.0, 0.4, 8),
+        new THREE.MeshStandardMaterial({ color: 0xcbbba1, roughness: 0.6 })
+    );
+    monumentBase.position.y = 0.8;
+    group.add(monumentBase);
+    
+    const obelisk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.4, 3.5, 4),
+        new THREE.MeshStandardMaterial({ color: 0xdfd3bc, roughness: 0.5 })
+    );
+    obelisk.position.y = 2.75;
+    group.add(obelisk);
+  }
+
+  // Clumped shrubs
+  const shrubCount = 4 + Math.floor(rng() * 4);
+  const shrubMat = new THREE.MeshStandardMaterial({ color: 0x3d5a2a, roughness: 0.9, flatShading: true });
+  for (let i = 0; i < shrubCount; i++) {
+    const sSize = 0.3 + rng() * 0.4;
+    const shrub = new THREE.Mesh(new THREE.IcosahedronGeometry(sSize, 0), shrubMat);
+    const angle = rng() * Math.PI * 2;
+    const dist = rng() * lawnWidth * 0.4;
+    shrub.position.set(Math.cos(angle) * dist, 0.7, Math.sin(angle) * dist);
+    group.add(shrub);
+  }
+
+  enableShadowProps(group);
+  return group;
+}
+
 
 function createHarborFrontAccent(rng) {
   const group = new THREE.Group();
@@ -726,28 +895,12 @@ function createHarborFrontAccent(rng) {
   jar.position.set(0.8, 0.42, 1.9);
   group.add(jar);
 
-  const netFrame = new THREE.Mesh(
-    new THREE.BoxGeometry(2.5, 0.08, 1.6),
-    new THREE.MeshStandardMaterial({ color: 0x6a5740, roughness: 0.88, metalness: 0.03 }),
-  );
-  netFrame.position.set(0, 0.08, -1.6);
-  group.add(netFrame);
-
   const canopy = new THREE.Mesh(
     new THREE.BoxGeometry(2.8, 0.16, 1.5),
     new THREE.MeshStandardMaterial({ color: rng() < 0.5 ? 0x2e7c9a : 0x4b93aa, roughness: 0.72, metalness: 0.02 }),
   );
   canopy.position.set(0, 2.1, 1.45);
   group.add(canopy);
-
-  for (const side of [-1.05, 1.05]) {
-    const post = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.08, 2.0, 8),
-      new THREE.MeshStandardMaterial({ color: 0x725b44, roughness: 0.82, metalness: 0.03 }),
-    );
-    post.position.set(side, 1.0, 1.3);
-    group.add(post);
-  }
 
   enableShadowProps(group);
   return group;
@@ -956,11 +1109,29 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'commercial' && civicDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.4) {
+    if (cell && isAgoraHousingBandCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'shop', 'workshop', 'courtyard'],
+        heightRange: [4.1, 5.6],
+        courtyardChance: 0.05,
+      };
+    }
+
+    if (cell && isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'market', 'courtyard', 'shop', 'workshop'],
+        heightRange: [3.4, 4.8],
+        courtyardChance: 0.25,
+      };
+    }
+
     if (cell && isAgoraUrbanFrontCell(cell.gridX, cell.gridZ)) {
       return {
         ...match,
-        allowedTypes: ['stoa', 'shop', 'market', 'workshop'],
-        heightRange: [3.2, 4.4],
+        allowedTypes: ['stoa', 'shop', 'workshop'],
+        heightRange: [3.6, 4.8],
         courtyardChance: 0,
       };
     }
@@ -974,15 +1145,44 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   }
 
   if (district === 'commercial' && cell && isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    if (isHarborLaneFrontageCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['warehouse', 'stoa', 'workshop'],
+        heightRange: [4.4, 6.2],
+        courtyardChance: 0.18,
+      };
+    }
+
     return {
       ...match,
-      allowedTypes: ['stoa', 'workshop', 'warehouse', 'shop'],
-      heightRange: [3.6, 5.2],
-      courtyardChance: 0.1,
+      // Bias the waterfront toward bigger working compounds and stoas so it
+      // reads like a harbor district, not a row of repeated small plots.
+      allowedTypes: ['warehouse', 'stoa', 'workshop', 'courtyard'],
+      heightRange: [4.1, 5.8],
+      courtyardChance: 0.16,
     };
   }
 
   if (district === 'commercial' && cell && isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    if (isAcropolisSlopeBandCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'workshop', 'courtyard'],
+        heightRange: [4.0, 5.5],
+        courtyardChance: 0.18,
+      };
+    }
+
+    if (isInlandStoaEdgeCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'courtyard', 'workshop'],
+        heightRange: [3.8, 5.2],
+        courtyardChance: 0.45,
+      };
+    }
+
     return {
       ...match,
       allowedTypes: ['stoa', 'courtyard', 'workshop', 'shop'],
@@ -994,45 +1194,81 @@ function resolveDistrictRuleForCell(district, rulesManifest, cell = null) {
   if (district === 'commercial' && cell && isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
-      allowedTypes: ['workshop', 'courtyard', 'shop'],
-      heightRange: [3.2, 4.6],
-      courtyardChance: 0.35,
+      allowedTypes: ['courtyard', 'workshop', 'shop'],
+      heightRange: [3.4, 4.8],
+      courtyardChance: 0.45,
     };
   }
 
   if (district === 'residential' && cell && civicDistance <= AGORA_MARKET_RADIUS + BLOCK_SIZE) {
+    if (cell && isAgoraHousingBandCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'courtyard', 'workshop', 'shop'],
+        heightRange: [4.0, 5.3],
+        courtyardChance: 0.1,
+      };
+    }
+
     return {
       ...match,
-      allowedTypes: ['shop', 'workshop', 'courtyard', 'house'],
-      heightRange: [3.0, 4.2],
-      courtyardChance: 0.2,
+      allowedTypes: ['shop', 'workshop', 'courtyard'],
+      heightRange: [3.2, 4.4],
+      courtyardChance: 0.32,
     };
   }
 
   if (district === 'residential' && cell && isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    if (isHarborLaneFrontageCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['courtyard', 'stoa', 'workshop'],
+        heightRange: [4.0, 5.4],
+        courtyardChance: 0.34,
+      };
+    }
+
     return {
       ...match,
-      allowedTypes: ['courtyard', 'workshop', 'shop'],
-      heightRange: [3.4, 4.8],
-      courtyardChance: 0.35,
+      allowedTypes: ['courtyard', 'workshop', 'stoa'],
+      heightRange: [3.9, 5.3],
+      courtyardChance: 0.28,
     };
   }
 
   if (district === 'residential' && cell && isInlandUrbanBlockCell(cell.gridX, cell.gridZ)) {
+    if (isAcropolisSlopeBandCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['courtyard', 'stoa', 'workshop'],
+        heightRange: [3.9, 5.3],
+        courtyardChance: 0.22,
+      };
+    }
+
+    if (isInlandStoaEdgeCell(cell.gridX, cell.gridZ)) {
+      return {
+        ...match,
+        allowedTypes: ['stoa', 'courtyard', 'workshop'],
+        heightRange: [3.8, 5.1],
+        courtyardChance: 0.62,
+      };
+    }
+
     return {
       ...match,
-      allowedTypes: ['courtyard', 'workshop', 'shop', 'house'],
-      heightRange: [3.4, 4.8],
-      courtyardChance: 0.5,
+      allowedTypes: ['courtyard', 'workshop', 'shop', 'stoa'],
+      heightRange: [3.5, 4.9],
+      courtyardChance: 0.58,
     };
   }
 
   if (district === 'residential' && cell && isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
     return {
       ...match,
-      allowedTypes: ['courtyard', 'workshop', 'house'],
-      heightRange: [3.2, 4.8],
-      courtyardChance: 0.45,
+      allowedTypes: ['courtyard', 'workshop', 'shop'],
+      heightRange: [3.4, 4.9],
+      courtyardChance: 0.55,
     };
   }
 
@@ -1060,7 +1296,7 @@ function isAgoraFramingCell(gridX, gridZ) {
 }
 
 function isAgoraEdgeBuildingCell(gridX, gridZ) {
-  const framingRing = AGORA_PLAZA_RADIUS + 2;
+  const framingRing = AGORA_PLAZA_RADIUS + 3;
   return (
     !isAgoraPlazaCell(gridX, gridZ) &&
     !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
@@ -1070,19 +1306,92 @@ function isAgoraEdgeBuildingCell(gridX, gridZ) {
   );
 }
 
+function isCivicMonumentFrontageCell(gridX, gridZ) {
+  return (
+    Math.abs(gridX) <= AGORA_PLAZA_RADIUS + 2 &&
+    Math.abs(gridZ) <= AGORA_PLAZA_RADIUS + 2 &&
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
+    (Math.abs(gridX) >= AGORA_PLAZA_RADIUS + 1 || Math.abs(gridZ) >= AGORA_PLAZA_RADIUS + 1)
+  );
+}
+
 function isAgoraUrbanFrontCell(gridX, gridZ) {
   return isAgoraFramingCell(gridX, gridZ) || isAgoraEdgeBuildingCell(gridX, gridZ);
 }
 
+function isAgoraMarketCourtCell(gridX, gridZ) {
+  return (
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
+    !isAgoraUrbanFrontCell(gridX, gridZ) &&
+    Math.abs(gridX) <= 3 &&
+    Math.abs(gridZ) <= 3 &&
+    (Math.abs(gridX) + Math.abs(gridZ)) >= 4
+  );
+}
+
+function isAgoraHousingBandCell(gridX, gridZ) {
+  return (
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
+    !isAgoraUrbanFrontCell(gridX, gridZ) &&
+    !isAgoraMarketCourtCell(gridX, gridZ) &&
+    gridX >= -7 &&
+    gridX <= 5 &&
+    gridZ >= -5 &&
+    gridZ <= 7
+  );
+}
+
+function shouldReserveAgoraMarketCourt(gridX, gridZ) {
+  // Keep only a few deliberate market yards around the Agora so the center
+  // reads as one large civic void wrapped by dense frontage, not a ring of
+  // repeated court cells.
+  return Math.abs(gridZ) === 3 && Math.abs(gridX) <= 1;
+}
+
+function isCentralCityBlanketCell(gridX, gridZ) {
+  return (
+    gridX >= -8 &&
+    gridX <= 8 &&
+    gridZ >= -4 &&
+    gridZ <= 9 &&
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ) &&
+    !isHarborWaterfrontLaneCell(gridX, gridZ) &&
+    !isHarborCrossLaneCell(gridX, gridZ)
+  );
+}
+
 function shouldUseCommercialRoad(gridX, gridZ) {
-  const verticalLane = gridX % 6 === 0 && Math.abs(gridZ % 4) <= 1;
-  const horizontalLane = gridZ % 7 === 0 && Math.abs(gridX % 3) <= 1;
+  if (isAgoraUrbanFrontCell(gridX, gridZ) || isAgoraMarketCourtCell(gridX, gridZ) || isHarborUrbanFrontCell(gridX, gridZ)) {
+    return false;
+  }
+
+  if (isCentralCityBlanketCell(gridX, gridZ)) {
+    const westSpine = gridX === -6 && (gridZ <= -1 || gridZ >= 3);
+    const marketConnector = gridZ === 6 && gridX >= -7 && gridX <= -2;
+    const harborConnector = gridZ === 7 && gridX >= 2 && gridX <= 6;
+    return westSpine || marketConnector || harborConnector;
+  }
+
+  const verticalLane = gridX % 7 === 0 && Math.abs(gridZ % 5) <= 1;
+  const horizontalLane = gridZ % 8 === 0 && Math.abs(gridX % 4) <= 1;
   return verticalLane || horizontalLane;
 }
 
 function shouldUseResidentialRoad(gridX, gridZ) {
-  const verticalLane = gridX % 7 === 0 && Math.abs(gridZ % 5) <= 1;
-  const horizontalLane = gridZ % 8 === 0 && Math.abs(gridX % 4) <= 1;
+  if (isInlandUrbanBlockCell(gridX, gridZ) || isHarborUrbanFrontCell(gridX, gridZ)) {
+    return false;
+  }
+
+  if (isCentralCityBlanketCell(gridX, gridZ)) {
+    return false;
+  }
+
+  const verticalLane = gridX % 8 === 0 && Math.abs(gridZ % 5) <= 1;
+  const horizontalLane = gridZ % 9 === 0 && Math.abs(gridX % 4) <= 1;
   return verticalLane || horizontalLane;
 }
 
@@ -1090,26 +1399,106 @@ function isOuterNeighborhoodCell(gridX, gridZ) {
   return Math.abs(gridX) >= 5 || gridZ >= 8 || gridZ <= -6;
 }
 
+function shouldThinFarEdgeCityCell(gridX, gridZ) {
+  // Thin the opposite side of the hill more aggressively so the city mass
+  // reads as gathering around the Agora/Acropolis rather than blanketing the
+  // far east and north edges with the same density.
+  const farEastBand =
+    gridX >= 5 &&
+    gridZ >= -2 &&
+    (((gridX + gridZ) % 2 === 0) || gridX >= 8);
+  const farNorthBand =
+    gridZ >= 9 &&
+    gridX >= -2 &&
+    ((Math.abs(gridX + gridZ) % 2 === 1) || gridZ >= 11);
+  const farNorthEastPocket = gridX >= 4 && gridZ >= 7 && ((gridX * 2 + gridZ) % 3 === 0);
+  return farEastBand || farNorthBand || farNorthEastPocket;
+}
+
+function isInlandStoaEdgeCell(gridX, gridZ) {
+  return gridX <= -3 && gridX >= -7 && gridZ >= -2 && gridZ <= 7;
+}
+
 function shouldReserveNeighborhoodCourt(gridX, gridZ) {
-  const staggeredBand = (Math.abs(gridX) + Math.abs(gridZ)) % 4 === 0;
-  const offsetPocket = Math.abs(gridX % 3) === 1 && Math.abs(gridZ % 5) === 2;
-  return staggeredBand || offsetPocket;
+  // Reserve fewer outer-neighborhood courts so the edge of the city reads as
+  // larger grouped blocks instead of a near-checkerboard of repeated pads.
+  const majorPocket = Math.abs(gridX) % 10 === 4 && Math.abs(gridZ) % 9 === 3;
+  const shoreEdgePocket = gridZ <= -6 && Math.abs(gridX) % 11 === 5 && Math.abs(gridZ) % 7 === 4;
+  return majorPocket || shoreEdgePocket;
 }
 
 function isInlandUrbanBlockCell(gridX, gridZ) {
   return gridX <= -2 && gridX >= -7 && gridZ >= -4 && gridZ <= 9 && !isAgoraUrbanFrontCell(gridX, gridZ);
 }
 
+function isAcropolisSlopeBandCell(gridX, gridZ) {
+  return (
+    gridX >= -3 &&
+    gridX <= 2 &&
+    gridZ >= -5 &&
+    gridZ <= 0 &&
+    !isAgoraPlazaCell(gridX, gridZ) &&
+    !isAgoraArrivalPromenadeCell(gridX, gridZ)
+  );
+}
+
 function shouldReserveInlandCourt(gridX, gridZ) {
-  return ((gridX * 3 + gridZ) % 5 === 0) || (Math.abs(gridX) % 2 === 0 && Math.abs(gridZ) % 3 === 1);
+  // Keep a few shared west-side courts, but let more inland cells merge back
+  // into continuous urban blocks around them.
+  const sharedYard = Math.abs(gridX + gridZ) % 8 === 0 && Math.abs(gridZ) % 4 === 1;
+  const deepBlockPocket = Math.abs(gridX) % 7 === 3 && Math.abs(gridZ) % 7 === 2;
+  return sharedYard || deepBlockPocket;
 }
 
 function isHarborUrbanFrontCell(gridX, gridZ) {
-  return gridX >= 3 && gridX <= 6 && gridZ >= -1 && gridZ <= 6;
+  return gridX >= 2 && gridX <= 8 && gridZ >= -2 && gridZ <= 8;
+}
+
+// --- Civic Route Spine (minimal, non-invasive) ---
+function isMainCivicRouteCell(gridX, gridZ) {
+  // Harbor → Agora (east-west)
+  const harborApproach = Math.abs(gridZ) <= 1 && gridX >= 0 && gridX <= 6;
+
+  // Agora → Acropolis (north-south)
+  const acropolisClimb = Math.abs(gridX) <= 1 && gridZ >= -5 && gridZ <= 1;
+
+  return harborApproach || acropolisClimb;
+}
+
+function isHarborCompoundCourtCell(gridX, gridZ) {
+  if (!isHarborUrbanFrontCell(gridX, gridZ)) return false;
+
+  const bandX = Math.floor((gridX - 2) / 3);
+  const bandZ = Math.floor((gridZ + 1) / 4);
+  return gridX >= 3 && gridZ >= 0 && gridZ <= 5 && (bandX + bandZ) % 2 === 0;
+}
+
+function isHarborWaterfrontLaneCell(gridX, gridZ) {
+  return gridX === 4 && gridZ >= -1 && gridZ <= 7;
+}
+
+function isHarborCrossLaneCell(gridX, gridZ) {
+  return gridZ === 3 && gridX >= 2 && gridX <= 5;
+}
+
+function isHarborLaneFrontageCell(gridX, gridZ) {
+  if (!isHarborUrbanFrontCell(gridX, gridZ)) return false;
+
+  const alongMainLane = (gridX === 3 || gridX === 5 || gridX === 2 || gridX === 6) && gridZ >= 0 && gridZ <= 7;
+  const alongCrossLane = (gridZ === 2 || gridZ === 4 || gridZ === 1 || gridZ === 5) && gridX >= 2 && gridX <= 6;
+  return alongMainLane || alongCrossLane;
 }
 
 function shouldReserveHarborCourt(gridX, gridZ) {
-  return (gridX + gridZ) % 3 === 0 || (gridX % 2 === 0 && gridZ % 2 === 1);
+  if (
+    isHarborWaterfrontLaneCell(gridX, gridZ) ||
+    isHarborCrossLaneCell(gridX, gridZ) ||
+    isHarborLaneFrontageCell(gridX, gridZ)
+  ) {
+    return false;
+  }
+  if (isHarborCompoundCourtCell(gridX, gridZ)) return true;
+  return false;
 }
 
 function getAgoraPlazaAccentRotation(gridX, gridZ) {
@@ -1129,8 +1518,24 @@ function applyAgoraScalePass(buildingGroup, cell) {
   }
 
   const agoraDistance = Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z);
-  if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+  if (isHarborLaneFrontageCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(1.22);
+    return;
+  }
+  if (isAgoraHousingBandCell(cell.gridX, cell.gridZ)) {
     buildingGroup.scale.multiplyScalar(1.08);
+    return;
+  }
+  if (isAcropolisSlopeBandCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(1.1);
+    return;
+  }
+  if (cell.district === 'civic' && isCivicMonumentFrontageCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(0.88);
+    return;
+  }
+  if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ)) {
+    buildingGroup.scale.multiplyScalar(1.14);
     return;
   }
   if (cell.district === 'civic' && agoraDistance <= AGORA_CIVIC_RADIUS + BLOCK_SIZE * 0.5) {
@@ -1171,17 +1576,337 @@ function resolveBuildingDetailLevel(cell) {
   return 'low';
 }
 
+function applyBuildingShadowProfile(buildingGroup, cell, detailLevel) {
+  if (!buildingGroup) return;
+
+  const preserveLandmarkShadows =
+    cell?.district === 'sacred' || cell?.district === 'civic';
+  const castsShadows = preserveLandmarkShadows && detailLevel !== 'low';
+  const receivesShadows = detailLevel !== 'low';
+
+  buildingGroup.traverse((child) => {
+    if (!child?.isMesh) return;
+    child.castShadow = castsShadows;
+    child.receiveShadow = receivesShadows;
+  });
+}
+
+/**
+ * Procedural road network for the city.
+ * A collection of nodes and spline segments that define the city's organic skeleton.
+ */
+class SplineRoad {
+  constructor(points, width = 3, type = 'artery') {
+    this.points = points;
+    this.width = width;
+    this.type = type;
+    this.curve = new THREE.CatmullRomCurve3(points, false, "catmullrom", 0.2);
+
+    // Cache a denser polyline so road selection follows the spline instead of just a few anchor points.
+    this.samples = this.curve.getSpacedPoints(Math.max(48, Math.ceil(this.curve.getLength() / 1.5)));
+  }
+
+  closestPointToPoint(point, target = new THREE.Vector3()) {
+    if (this.samples.length < 2) {
+      return target.copy(this.points[0] || point);
+    }
+
+    const segment = new THREE.Vector3();
+    const delta = new THREE.Vector3();
+    const closest = new THREE.Vector3();
+    let closestPoint = this.samples[0];
+    let closestDistanceSq = Infinity;
+
+    for (let i = 0; i < this.samples.length - 1; i++) {
+      const a = this.samples[i];
+      const b = this.samples[i + 1];
+      segment.subVectors(b, a);
+      const lengthSq = segment.lengthSq();
+      if (lengthSq === 0) continue;
+
+      delta.subVectors(point, a);
+      const t = THREE.MathUtils.clamp(delta.dot(segment) / lengthSq, 0, 1);
+      closest.copy(segment).multiplyScalar(t).add(a);
+      const distanceSq = point.distanceToSquared(closest);
+      if (distanceSq < closestDistanceSq) {
+        closestPoint = closest.clone();
+        closestDistanceSq = distanceSq;
+      }
+    }
+
+    return target.copy(closestPoint);
+  }
+
+  isNear(point, tolerance = 1.0) {
+      const corridor = this.type === 'artery'
+      ? BLOCK_SIZE * 0.6
+      : this.type === 'street'
+        ? BLOCK_SIZE * 0.48
+        : BLOCK_SIZE * 0.36;
+    const threshold = Math.max((this.width / 2) + tolerance, corridor);
+    const thresholdSq = threshold * threshold;
+    const closest = this.closestPointToPoint(point, new THREE.Vector3());
+    return point.distanceToSquared(closest) < thresholdSq;
+  }
+
+  /**
+   * Render the spline as a continuous ribbon geometry that follows the terrain.
+   */
+  renderRibbon(center, terrainSampler) {
+    const segments = Math.max(64, Math.ceil(this.curve.getLength() * 2));
+    const points = this.curve.getSpacedPoints(segments);
+    
+    // Create ribbon geometry
+    const ribbonGeo = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    const roadWidth = this.width;
+
+    for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const pos = points[i].clone();
+        
+        // Sample height at this point
+        if (terrainSampler) {
+            const h = terrainSampler(pos.x, pos.z);
+            if (Number.isFinite(h)) pos.y = h;
+        }
+
+        // Calculate tangent for cross-section
+        const tangent = this.curve.getTangentAt(t).normalize();
+        const normal = new THREE.Vector3(0, 1, 0);
+        const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
+
+        // Left and right edges
+        const left = pos.clone().add(binormal.clone().multiplyScalar(roadWidth / 2));
+        const right = pos.clone().add(binormal.clone().multiplyScalar(-roadWidth / 2));
+
+        // Offset slightly above terrain to prevent Z-fighting
+        const lift = 0.15;
+        vertices.push(
+            left.x - center.x, left.y - center.y + lift, left.z - center.z,
+            right.x - center.x, right.y - center.y + lift, right.z - center.z
+        );
+
+        if (i < segments) {
+            const base = i * 2;
+            indices.push(base, base + 1, base + 2);
+            indices.push(base + 1, base + 3, base + 2);
+        }
+    }
+
+    ribbonGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    ribbonGeo.setIndex(indices);
+    ribbonGeo.computeVertexNormals();
+
+    const roadColor = this.type === 'artery' ? 0x4a4a4a : (this.type === 'street' ? 0x7a6b5a : 0x8a7a6a);
+    const material = new THREE.MeshStandardMaterial({
+        color: roadColor,
+        roughness: 0.8,
+        side: THREE.DoubleSide
+    });
+    
+    const mesh = new THREE.Mesh(ribbonGeo, material);
+    mesh.name = `RoadSpline-${this.type}`;
+    mesh.userData.roadType = this.type;
+    mesh.receiveShadow = true;
+    return mesh;
+  }
+}
+
+/**
+ * Generate a procedural network of roads connecting the city's hubs.
+ */
+function generateRoadNetwork(terrainSampler) {
+  const segments = [];
+  
+  const getH = (v) => {
+    if (terrainSampler) {
+        const h = terrainSampler(v.x, v.z);
+        return Number.isFinite(h) ? h : v.y;
+    }
+    return v.y;
+  };
+
+  // 1. Primary Spine: Harbor [East] -> Agora [Center-West]
+  // We add several control points so the road reads as a connected civic spine.
+  const harborAgoraPoints = [
+    HARBOR_CENTER_3D.clone(),
+    new THREE.Vector3(56, 0, 12),
+    new THREE.Vector3(40, 0, 13),
+    new THREE.Vector3(22, 0, 16),
+    new THREE.Vector3(0, 0, 18),
+    AGORA_CENTER_3D.clone()
+  ];
+  harborAgoraPoints.forEach(p => p.y = getH(p));
+  segments.push(new SplineRoad(harborAgoraPoints, 12, 'artery'));
+
+  // 2. Sacred Way: Agora [Center-West] -> Acropolis [Center]
+  // Curved ascent around the hill.
+  const sacredWayPoints = [
+    AGORA_CENTER_3D.clone(),
+    new THREE.Vector3(-22, 0, 14),
+    new THREE.Vector3(-16, 0, 8),
+    ACROPOLIS_PEAK_3D.clone()
+  ];
+  sacredWayPoints.forEach(p => p.y = getH(p));
+  segments.push(new SplineRoad(sacredWayPoints, 10, 'artery'));
+
+  // 3. Northwest Commercial Strip (extension)
+  const nwStripPoints = [
+      AGORA_CENTER_3D.clone(),
+      new THREE.Vector3(-54, 0, 28),
+      new THREE.Vector3(-82, 0, 38),
+      new THREE.Vector3(-120, 0, 50)
+  ];
+  nwStripPoints.forEach(p => p.y = getH(p));
+  segments.push(new SplineRoad(nwStripPoints, 8, 'artery'));
+
+  // 4. Neighborhood Collectors (Street Network)
+  
+  // South Neighborhood Loop
+  segments.push(new SplineRoad([
+    new THREE.Vector3(0, getH({x:0, z:15}), 15),
+    new THREE.Vector3(-18, getH({x:-18, z:-12}), -12),
+    new THREE.Vector3(-30, getH({x:-30, z:-34}), -34),
+    new THREE.Vector3(-45, getH({x:-45, z:-60}), -60)
+  ], 6, 'street'));
+
+  // North Neighborhood Collector
+  segments.push(new SplineRoad([
+    new THREE.Vector3(-15, getH({x:-15, z:35}), 35),
+    new THREE.Vector3(4, getH({x:4, z:58}), 58),
+    new THREE.Vector3(12, getH({x:12, z:82}), 82),
+    new THREE.Vector3(20, getH({x:20, z:105}), 105)
+  ], 6, 'street'));
+
+  // Harbor Perimeter Road (Curved)
+  segments.push(new SplineRoad([
+    new THREE.Vector3(64, getH({x:64, z:-40}), -40),
+    new THREE.Vector3(72, getH({x:72, z:-8}), -8),
+    new THREE.Vector3(74, getH({x:74, z:20}), 20),
+    new THREE.Vector3(68, getH({x:68, z:60}), 60)
+  ], 7, 'street'));
+
+  return segments;
+}
+
+/**
+ * Procedural branching to fill urban voids with local streets.
+ */
+function branchSideStreets(segments, terrainSampler) {
+  const hubAgora = AGORA_CENTER_3D;
+
+  const getH = (x, z) => {
+    if (terrainSampler) {
+      const h = terrainSampler(x, z);
+      return Number.isFinite(h) ? h : hubAgora.y;
+    }
+    return hubAgora.y;
+  };
+
+  // Branch 1: Agora-Harbor Connector (North side)
+  segments.push(new SplineRoad([
+    new THREE.Vector3(-10, getH(-10, 24), 24),
+    new THREE.Vector3(8, getH(8, 18), 18),
+    new THREE.Vector3(30, getH(30, 12), 12),
+    new THREE.Vector3(52, getH(52, 10), 10)
+  ], 6, 'street'));
+
+  // Branch 1b: Central Agora ring to give the civic core a legible loop.
+  segments.push(new SplineRoad([
+    new THREE.Vector3(-54, getH(-54, 18), 18),
+    new THREE.Vector3(-42, getH(-42, 34), 34),
+    new THREE.Vector3(-20, getH(-20, 36), 36),
+    new THREE.Vector3(-8, getH(-8, 18), 18),
+    new THREE.Vector3(-18, getH(-18, 2), 2),
+    new THREE.Vector3(-40, getH(-40, 4), 4),
+  ], 6, 'street'));
+
+  // Branch 2: Southern Coastal Lane
+  segments.push(new SplineRoad([
+    new THREE.Vector3(58, getH(58, -18), -18),
+    new THREE.Vector3(38, getH(38, -22), -22),
+    new THREE.Vector3(10, getH(10, -28), -28),
+    new THREE.Vector3(-18, getH(-18, -36), -36),
+    new THREE.Vector3(-42, getH(-42, -48), -48)
+  ], 5, 'street'));
+
+  // Branch 3: Northwest Commercial extension Alleys
+  segments.push(new SplineRoad([
+    new THREE.Vector3(-60, getH(-60, 30), 30),
+    new THREE.Vector3(-78, getH(-78, 18), 18),
+    new THREE.Vector3(-96, getH(-96, 32), 32),
+    new THREE.Vector3(-112, getH(-112, 42), 42)
+  ], 4, 'alley'));
+
+  // Branch 4: Far North neighborhood loop
+  segments.push(new SplineRoad([
+    new THREE.Vector3(20, getH(20, 105), 105),
+    new THREE.Vector3(0, getH(0, 116), 116),
+    new THREE.Vector3(-22, getH(-22, 118), 118),
+    new THREE.Vector3(-36, getH(-36, 100), 100)
+  ], 4, 'alley'));
+
+  // Branch 5: Harbor-to-city cross street through the player's main view.
+  segments.push(new SplineRoad([
+    new THREE.Vector3(62, getH(62, -6), -6),
+    new THREE.Vector3(36, getH(36, -8), -8),
+    new THREE.Vector3(10, getH(10, -10), -10),
+    new THREE.Vector3(-18, getH(-18, -9), -9),
+    new THREE.Vector3(-42, getH(-42, -8), -8)
+  ], 6, 'street'));
+}
+
+function findNearestRoadSegment(segments, point) {
+  let nearestSeg = null;
+  let nearestDistSq = Infinity;
+
+  for (const seg of segments) {
+    const closest = seg.closestPointToPoint(point, new THREE.Vector3());
+    const distSq = point.distanceToSquared(closest);
+    if (distSq < nearestDistSq) {
+      nearestDistSq = distSq;
+      nearestSeg = seg;
+    }
+  }
+
+  return nearestSeg && nearestSeg.isNear(point) ? nearestSeg : null;
+}
+
+/**
+ * Render all spline roads in the network as continuous ribbons.
+ */
+function renderRoadNetworkSplines(group, roadNetwork, center, terrainSampler) {
+  console.time("City: renderRoadSplines");
+  for (const spline of roadNetwork) {
+    const roadMesh = spline.renderRibbon(center, terrainSampler);
+    group.add(roadMesh);
+  }
+  console.timeEnd("City: renderRoadSplines");
+}
+
 function generateCityGrid(terrainSampler) {
   const cells = [];
+  const roadNetwork = generateRoadNetwork(terrainSampler);
   
-  if (IS_DEV) console.log('[CityPlan] Generating terrain-aware city grid...');
+  // Fill voids with side streets
+  branchSideStreets(roadNetwork, terrainSampler);
+  
   let slopeRejects = 0;
   let elevationRejects = 0;
-  
   for (let gridX = MIN_X; gridX <= MAX_X; gridX++) {
     for (let gridZ = MIN_Z; gridZ <= MAX_Z; gridZ++) {
-      const worldX = CITY_CENTER_ORIGIN.x + (gridX * BLOCK_SIZE);
-      const worldZ = CITY_CENTER_ORIGIN.z + (gridZ * BLOCK_SIZE);
+      let worldX = CITY_CENTER_ORIGIN.x + (gridX * BLOCK_SIZE);
+      let worldZ = CITY_CENTER_ORIGIN.z + (gridZ * BLOCK_SIZE);
+
+      // Apply deterministic organic warp to break the grid, EXCEPT for the core Agora which stays flat and formal.
+      if (!isAgoraPlazaCell(gridX, gridZ) && !isAgoraArrivalPromenadeCell(gridX, gridZ)) {
+          const warpSeedX = gridX * 0.123 + gridZ * 0.456;
+          const warpSeedZ = gridX * 0.789 + gridZ * 0.321;
+          worldX += roadNoise(warpSeedX, 100) * GRID_WARP_STRENGTH;
+          worldZ += roadNoise(warpSeedZ, 200) * GRID_WARP_STRENGTH;
+      }
       
       const cell = {
         gridX,
@@ -1197,6 +1922,19 @@ function generateCityGrid(terrainSampler) {
 
       cell.district = resolveDistrictForCell(worldX, worldZ);
 
+      if (
+        cell.district !== 'sacred' &&
+        cell.district !== 'harbor' &&
+        isOuterNeighborhoodCell(gridX, gridZ) &&
+        shouldThinFarEdgeCityCell(gridX, gridZ)
+      ) {
+        cell.type = 'blocked';
+        cell.buildable = false;
+        cell.blocked = true;
+        cells.push(cell);
+        continue;
+      }
+
       if (isBlockedForCityLayout(worldX, worldZ)) {
         cell.type = 'blocked';
         cell.buildable = false;
@@ -1209,7 +1947,6 @@ function generateCityGrid(terrainSampler) {
       if (cell.district === 'civic') {
         if (!isWithinCivicClusterRange(worldX, worldZ)) {
           cell.buildable = false;
-          console.log(`[CityPlan] Civic building rejected at (${gridX}, ${gridZ}) - outside civic cluster range`);
         }
       }
 
@@ -1236,6 +1973,13 @@ function generateCityGrid(terrainSampler) {
           slopeRejects++;
         }
 
+        // Strict Water Cutoff
+        if (elevation <= getSeaLevelY() + 0.35) {
+          cell.type = 'blocked';
+          cell.buildable = false;
+          elevationRejects++;
+        }
+
         // Extra strict validation for civic/sacred buildings (need flat land)
         if ((cell.district === 'sacred' || cell.district === 'civic') && slope > SLOPE_THRESHOLDS.FLAT) {
           cell.buildable = false;
@@ -1243,17 +1987,45 @@ function generateCityGrid(terrainSampler) {
         }
       }
 
-      // Keep the Agora core open as a readable civic plaza.
-      if (isAgoraPlazaCell(gridX, gridZ) || isAgoraArrivalPromenadeCell(gridX, gridZ)) {
+      // Primary Road Network Assignment
+      const nearestSeg = findNearestRoadSegment(roadNetwork, cell.position);
+      const isRoad = !!nearestSeg;
+      
+      if (nearestSeg && cell.district !== 'sacred') {
+        cell.type = 'road';
+        cell.roadType = nearestSeg.type; // 'artery' or 'local'
+        cell.buildable = true;
+      } else if (isAgoraPlazaCell(gridX, gridZ) || isAgoraArrivalPromenadeCell(gridX, gridZ)) {
+        // Keep the Agora core open as a readable civic plaza.
         cell.type = 'plaza';
         cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isAgoraMarketCourtCell(gridX, gridZ) &&
+        shouldReserveAgoraMarketCourt(gridX, gridZ) &&
+        !isRoad
+      ) {
+        // Break the market ring into shared courts so the Agora reads as joined
+        // urban blocks with active inner yards instead of detached little pads.
+        cell.type = 'plaza';
+        cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isAgoraHousingBandCell(gridX, gridZ) &&
+        cell.district !== 'sacred' &&
+        cell.district !== 'harbor'
+      ) {
+        // Keep the blocks just outside the Agora consistently filled so the
+        // center reads as one civic opening wrapped by dense urban fabric.
+        cell.type = 'building';
+        cell.district = cell.district === 'commercial' ? 'commercial' : 'residential';
         cell.buildable = true;
       } else if (
         isInlandUrbanBlockCell(gridX, gridZ) &&
         cell.district !== 'sacred' &&
         cell.district !== 'harbor' &&
-        !shouldUseCommercialRoad(gridX, gridZ) &&
-        !shouldUseResidentialRoad(gridX, gridZ) &&
+        !isAcropolisSlopeBandCell(gridX, gridZ) &&
+        !isRoad &&
         shouldReserveInlandCourt(gridX, gridZ)
       ) {
         // Break the inland west-side fabric into shared courts and larger grouped
@@ -1262,10 +2034,29 @@ function generateCityGrid(terrainSampler) {
         cell.district = 'commercial';
         cell.buildable = true;
       } else if (
+        isAcropolisSlopeBandCell(gridX, gridZ) &&
+        cell.district !== 'sacred' &&
+        cell.district !== 'harbor'
+      ) {
+        // Keep the city thicker on the Acropolis-facing side so the urban
+        // fabric steps up toward the sacred hill instead of staying evenly spread.
+        cell.type = 'building';
+        cell.district = cell.district === 'commercial' ? 'commercial' : 'residential';
+        cell.buildable = true;
+      } else if (
         isHarborUrbanFrontCell(gridX, gridZ) &&
         cell.district !== 'harbor' &&
-        !shouldUseCommercialRoad(gridX, gridZ) &&
-        !shouldUseResidentialRoad(gridX, gridZ) &&
+        isHarborLaneFrontageCell(gridX, gridZ)
+      ) {
+        // Keep the main harbor lane lined with larger frontage buildings so the
+        // route feels built up instead of cutting through empty pads.
+        cell.type = 'building';
+        cell.district = 'commercial';
+        cell.buildable = true;
+      } else if (
+        isHarborUrbanFrontCell(gridX, gridZ) &&
+        cell.district !== 'harbor' &&
+        !isRoad &&
         shouldReserveHarborCourt(gridX, gridZ)
       ) {
         // Keep the harbor approach as a sequence of larger shared forecourts and
@@ -1274,11 +2065,20 @@ function generateCityGrid(terrainSampler) {
         cell.district = 'commercial';
         cell.buildable = true;
       } else if (
+        isHarborUrbanFrontCell(gridX, gridZ) &&
+        (isHarborWaterfrontLaneCell(gridX, gridZ) || isHarborCrossLaneCell(gridX, gridZ))
+      ) {
+        // Give the waterfront one readable main lane and a single cross-connection
+        // back into the harbor district instead of many equal-priority strips.
+        cell.type = 'road';
+        cell.district = 'commercial';
+        cell.roadType = 'street';
+        cell.buildable = true;
+      } else if (
         isOuterNeighborhoodCell(gridX, gridZ) &&
         cell.district !== 'sacred' &&
         cell.district !== 'harbor' &&
-        !shouldUseCommercialRoad(gridX, gridZ) &&
-        !shouldUseResidentialRoad(gridX, gridZ) &&
+        !isRoad &&
         shouldReserveNeighborhoodCourt(gridX, gridZ)
       ) {
         // Reserve shared courts and breathing pockets in the outer neighborhoods
@@ -1289,47 +2089,63 @@ function generateCityGrid(terrainSampler) {
         // Keep a continuous wall of city fabric around the Agora instead of letting roads eat the square.
         cell.type = 'building';
         cell.buildable = true;
-      } else if (gridZ === 0 && Math.abs(gridX) <= 7) {
-        cell.type = 'road'; // Main E-W avenue
-        cell.buildable = true;
-      } else if (gridX === 0 && gridZ >= -3 && gridZ <= 5 && cell.district !== 'sacred') {
-        cell.type = 'road'; // Central N-S boulevard
-        cell.buildable = true;
       } else if (cell.district === 'sacred') {
         cell.type = 'building';
-      } else if (cell.district === 'commercial') {
-        if (shouldUseCommercialRoad(gridX, gridZ)) {
-          cell.type = 'road';
-          cell.buildable = true;
-        }
-      } else {
-        if (shouldUseResidentialRoad(gridX, gridZ)) {
-          cell.type = 'road';
-          cell.buildable = true;
-        }
       }
 
       cells.push(cell);
     }
   }
   
-  if (terrainSampler) {
-    console.log(`[CityPlan] Terrain analysis: ${slopeRejects} slope rejects, ${elevationRejects} elevation rejects`);
-    const totalCells = cells.length;
-    const buildableCells = cells.filter(c => c.buildable && c.type !== 'road').length;
-    console.log(`[CityPlan] Buildable cells: ${buildableCells}/${totalCells} (${(buildableCells/totalCells*100).toFixed(1)}%)`);
-  }
   
-  return cells;
+  return { cells, roadNetwork };
 }
 
 export async function createCivicDistrict(scene, options = {}) {
+  console.time("City: Total Generation");
+
   const group = new THREE.Group();
   group.name = 'CivicDistrict';
   scene.add(group);
 
-  // Load district rules
-  const districtRules = await loadDistrictRules();
+  // Start rule and texture fetches early so they can progress while we build
+  // the grid and pathing data for the district.
+  const districtRulesPromise = loadDistrictRules();
+  const tl = new THREE.TextureLoader();
+  const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
+  const resolvedBase = baseUrl || resolveBaseUrl();
+  const plazaMaterialPromise = (async () => {
+    try {
+      const normalUrl = joinPath(resolvedBase, "textures/marble_normal-dx.jpg");
+      const [baseMap, normalMap] = await Promise.all([
+        tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg")),
+        tl.loadAsync(normalUrl),
+      ]);
+
+      baseMap.wrapS = baseMap.wrapT = THREE.RepeatWrapping;
+      baseMap.repeat.set(4, 4);
+      baseMap.colorSpace = THREE.SRGBColorSpace;
+
+      applyNormalMapConvention(normalMap, normalUrl);
+      normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+      normalMap.repeat.set(4, 4);
+
+      return new THREE.MeshStandardMaterial({
+        color: 0xbca98a,
+        map: baseMap,
+        normalMap: normalMap,
+        normalScale: new THREE.Vector2(0.35, 0.35),
+        roughness: 1,
+        metalness: 0,
+        envMapIntensity: 0.08,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
+      });
+    } catch (e) {
+      return null;
+    }
+  })();
 
   const centerOption = options.center ?? AGORA_CENTER_3D;
   const terrainSampler =
@@ -1364,20 +2180,32 @@ export async function createCivicDistrict(scene, options = {}) {
     return fallback + surfaceOffset;
   };
 
-  // Generate grid with terrain analysis
-  const grid = generateCityGrid(terrainSampler);
+  // Generate grid and road network
+  console.time("City: Grid & Road Init");
+  const { grid, roadNetwork } = (function() {
+    const result = generateCityGrid(terrainSampler);
+    return { grid: result.cells, roadNetwork: result.roadNetwork };
+  })();
+  console.timeEnd("City: Grid & Road Init");
 
   // Generate pedestrian paths
+  console.time("City: Pathfinding");
   const pathTiles = generatePaths(grid, {
     spacing: 4,
     avoidSteepSlopes: true,
     connectAllDistricts: true,
   });
+  console.timeEnd("City: Pathfinding");
 
   // Verify reachability to key buildings
+  console.time("City: Reachability Verify");
   const reachability = verifyReachability(grid, pathTiles, {
     maxDistance: 60, // Max 60 tiles to key buildings
   });
+  console.timeEnd("City: Reachability Verify");
+
+  const districtRules = await districtRulesPromise;
+  const plazaMat = await plazaMaterialPromise;
 
   group.userData.plan = {
     grid,
@@ -1391,40 +2219,26 @@ export async function createCivicDistrict(scene, options = {}) {
     center: center.clone()
   };
 
-  // Pre-load textures for roads/plazas
-  const tl = new THREE.TextureLoader();
-  const baseUrl = typeof scene?.userData?.baseUrl === "string" ? scene.userData.baseUrl : "";
-  const resolvedBase = baseUrl || resolveBaseUrl();
-  let plazaMat;
-  try {
-      const baseMap = await tl.loadAsync(joinPath(resolvedBase, "textures/marble_base.jpg"));
-      baseMap.wrapS = baseMap.wrapT = THREE.RepeatWrapping;
-      baseMap.repeat.set(4, 4);
-      baseMap.colorSpace = THREE.SRGBColorSpace;
+  // Keep a light civic underlay near the Agora only. Broad waterfront-sized
+  // rectangles were competing with the terrain and harbor shoreline.
 
-      const normalUrl = joinPath(resolvedBase, "textures/marble_normal-dx.jpg");
-      const normalMap = await tl.loadAsync(normalUrl);
-      applyNormalMapConvention(normalMap, normalUrl);
-      normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
-      normalMap.repeat.set(4, 4);
 
-      plazaMat = new THREE.MeshStandardMaterial({
-          color: 0xbca98a,
-          map: baseMap,
-          normalMap: normalMap,
-          normalScale: new THREE.Vector2(0.35, 0.35),
-          roughness: 1,
-          metalness: 0,
-          envMapIntensity: 0.08,
-          polygonOffset: true,
-          polygonOffsetFactor: -1,
-          polygonOffsetUnits: -1
-      });
-  } catch (e) {
-      console.warn("Failed to load plaza textures (marble fallback)", e);
+
+
+  const gridMap = new Map();
+  for (const c of grid) {
+    gridMap.set(`${c.gridX},${c.gridZ}`, c);
   }
 
+  console.time("City: Total Grid Render");
+  const centerPos = new THREE.Vector3(center.x, baseHeight + surfaceOffset, center.z);
+  renderRoadNetworkSplines(group, roadNetwork, centerPos, terrainSampler);
+  
+  let roadSearchCount = 0;
+  let roadSearchTimeTotal = 0;
+
   for (const cell of grid) {
+    let cellRot = 0;
     // Skip unbuildable cells (too steep or unsuitable terrain)
     if (!cell.buildable && cell.type !== 'road') {
       continue;
@@ -1440,50 +2254,76 @@ export async function createCivicDistrict(scene, options = {}) {
     if (isBlockedForCityLayout(worldX, worldZ)) {
       continue; // Skip placing any city element inside harbor/walkway setbacks
     }
-
+    
     if (cell.type === 'road') {
-      // Avenue is now East-West (gridZ approx 0)
-      const isMainAvenue = cell.gridZ === 0 || cell.gridX === 0;
-      const roadWidth = isMainAvenue ? BLOCK_SIZE - 8 : BLOCK_SIZE - 12;
-      const roadMesh = createPavedStrip(roadWidth, roadWidth, isMainAvenue ? 0xb0895f : 0xa48463);
-      roadMesh.position.set(localX, localY + 0.006, localZ);
-      group.add(roadMesh);
-
-      if (cell.slope > SLOPE_THRESHOLDS.FLAT * 0.75) {
-        const streetAccent = createStreetGradeAccent({
-          localX,
-          localZ,
-          localY,
-          sampleLocalHeight,
-          span: BLOCK_SIZE * 0.28,
-          width: roadWidth * 0.52,
-          roadLike: true,
-        });
-        if (streetAccent) group.add(streetAccent);
-      }
+      // Road geometry is now handled by continuous splines for smoother visuals.
+      continue;
     } else if (cell.type === 'plaza') {
-      const plazaMesh = createPavedStrip(BLOCK_SIZE - 6, BLOCK_SIZE - 6, 0xb29e7e);
-      plazaMesh.position.set(localX, localY + 0.004, localZ);
-      if (plazaMat) plazaMesh.material = plazaMat;
-      group.add(plazaMesh);
+      const isPrimaryPlazaCell =
+        isAgoraPlazaCell(cell.gridX, cell.gridZ) ||
+        isAgoraArrivalPromenadeCell(cell.gridX, cell.gridZ);
 
-      if (cell.gridX === 0 && cell.gridZ === 0) {
-        const civicPlatform = createDistrictPlatformAccent({
-          localX,
-          localZ,
-          localY,
+      if (isPrimaryPlazaCell) {
+        const plazaMesh = createPavedStrip(BLOCK_SIZE - 6, BLOCK_SIZE - 6, 0xb29e7e);
+        plazaMesh.position.set(localX, localY + 0.004, localZ);
+        if (plazaMat) plazaMesh.material = plazaMat;
+        group.add(plazaMesh);
+      } else {
+        const shouldRenderCourtSurface =
+          shouldReserveAgoraMarketCourt(cell.gridX, cell.gridZ) ||
+          isHarborCompoundCourtCell(cell.gridX, cell.gridZ) ||
+          (isInlandUrbanBlockCell(cell.gridX, cell.gridZ) &&
+            (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 13 === 0);
+        const courtSurface = shouldRenderCourtSurface ? createReservedCourtSurface(cell) : null;
+        if (courtSurface) {
+          courtSurface.position.set(localX, localY, localZ);
+          group.add(courtSurface);
+        }
+      }
+
+        if (cell.gridX === 0 && cell.gridZ === 0) {
+          const civicPlatform = createDistrictPlatformAccent({
+            localX,
+            localZ,
+            localY,
           sampleLocalHeight,
           radius: BLOCK_SIZE * 0.46,
           district: 'civic',
-        });
-        if (civicPlatform) group.add(civicPlatform);
-      }
+          });
+          if (civicPlatform) group.add(civicPlatform);
+        }
 
-      if (cell.gridX === 0 && cell.gridZ === 0) {
-        const plazaAccent = createAgoraPlazaAccent();
+        if (cell.gridX === 0 && cell.gridZ === 0) {
+          const plazaAccent = createAgoraPlazaAccent();
         plazaAccent.position.set(localX, localY, localZ);
         group.add(plazaAccent);
-      } else if (isHarborUrbanFrontCell(cell.gridX, cell.gridZ) && Math.abs(cell.gridX + cell.gridZ) % 2 === 0) {
+      } else if (isAgoraMarketCourtCell(cell.gridX, cell.gridZ)) {
+        if (shouldReserveAgoraMarketCourt(cell.gridX, cell.gridZ)) {
+          const marketCourt = createMarketCourtAccent(() => {
+            const seed = Math.abs(cell.gridX * 91841 ^ cell.gridZ * 43117);
+            const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
+            return t - Math.floor(t);
+          });
+          marketCourt.position.set(localX, localY, localZ);
+          marketCourt.rotation.y = ((Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
+          group.add(marketCourt);
+        }
+      } else if (isInlandUrbanBlockCell(cell.gridX, cell.gridZ) || isOuterNeighborhoodCell(cell.gridX, cell.gridZ)) {
+        if (
+          isInlandUrbanBlockCell(cell.gridX, cell.gridZ)
+            ? (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 11 === 0
+            : (Math.abs(cell.gridX) + Math.abs(cell.gridZ)) % 17 === 0
+        ) {
+          const urbanCourt = createUrbanCourtAccent(() => {
+            const seed = Math.abs(cell.gridX * 73129 ^ cell.gridZ * 54121);
+            const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
+            return t - Math.floor(t);
+          });
+          urbanCourt.position.set(localX, localY, localZ);
+          urbanCourt.rotation.y = ((Math.abs(cell.gridX * 2) + Math.abs(cell.gridZ)) % 4) * (Math.PI / 2);
+          group.add(urbanCourt);
+        }
+      } else if (isHarborCompoundCourtCell(cell.gridX, cell.gridZ)) {
         const harborCompound = createHarborCompoundAccent(() => {
           const seed = Math.abs(cell.gridX * 92821 ^ cell.gridZ * 68917);
           const t = seed + Math.sin(seed * 12.9898) * 43758.5453;
@@ -1506,36 +2346,113 @@ export async function createCivicDistrict(scene, options = {}) {
           return t - Math.floor(t);
        };
 
-       const buildingGroup = spawnBuilding({
-         district: cell.district,
-         rng: rng,
-         districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
-         detailLevel: resolveBuildingDetailLevel(cell),
-       });
+       const detailLevel = resolveBuildingDetailLevel(cell);
+       
+        if (cell.type === 'building' && cell.buildable) {
+            const numSubBuildings = (cell.district === 'commercial' || cell.district === 'harbor') ? 1 : (rng() < 0.4 ? 2 : 1);
+            let buildingPlaced = false;
 
-       if (buildingGroup) {
-           if (cell.district === 'harbor') {
-             // Keep the generic city kit out of the waterfront so the authored
-             // harbor owns that destination space more clearly.
-             if (rng() < 0.6) {
-               const lowAccent = createHarborFrontAccent(rng);
-               lowAccent.position.set(localX, localY, localZ);
-               lowAccent.rotation.y = Math.floor(rng() * 4) * (Math.PI / 2);
-               group.add(lowAccent);
-             }
-             continue;
-           }
+            for (let i = 0; i < numSubBuildings; i++) {
+           const buildingGroup = spawnBuilding({
+             district: cell.district,
+             rng: rng,
+             districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
+             detailLevel,
+             preferRowhouseMass:
+               isHarborLaneFrontageCell(cell.gridX, cell.gridZ) ||
+               isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ) ||
+               (numSubBuildings > 1),
+           });
 
-           applyAgoraScalePass(buildingGroup, cell);
-           buildingGroup.position.set(localX, localY, localZ);
-           // Random 90 degree rotation
-           const rot = Math.floor(rng() * 4) * (Math.PI / 2);
-           buildingGroup.rotation.y = rot;
-           group.add(buildingGroup);
+           if (buildingGroup) {
+               if (cell.district === 'harbor') {
+                 if (i === 0 && rng() < 0.12) {
+                   const lowAccent = createHarborFrontAccent(rng);
+                   lowAccent.position.set(localX, localY, localZ);
+                   lowAccent.rotation.y = Math.floor(rng() * 4) * (Math.PI / 2);
+                   group.add(lowAccent);
+                 }
+                 continue;
+               }
+
+               let subX = localX;
+               let subZ = localZ;
+
+               if (numSubBuildings > 1) {
+                   subX += (rng() - 0.5) * 14.5;
+                   subZ += (rng() - 0.5) * 14.5;
+               }
+
+               const subY = sampleLocalHeight(subX, subZ, localY);
+               const subCell = { ...cell, position: new THREE.Vector3(subX, subY, subZ) };
+
+               applyAgoraScalePass(buildingGroup, subCell);
+               applyBuildingShadowProfile(buildingGroup, subCell, detailLevel);
+               buildingGroup.position.set(subX, subY, subZ);
+
+               let rot = Math.floor(rng() * 4) * (Math.PI / 2);
+
+               let nearestSeg = null;
+               let nearestDist = Infinity;
+               let nearestPoint = new THREE.Vector3();
+
+               const startSearch = performance.now();
+                for (const seg of roadNetwork) {
+                    const closest = new THREE.Vector3();
+                   seg.closestPointToPoint(subCell.position, closest);
+                   const dist = subCell.position.distanceTo(closest);
+                   if (dist < nearestDist) {
+                       nearestDist = dist;
+                       nearestSeg = seg;
+                       nearestPoint.copy(closest);
+                    }
+                }
+                roadSearchTimeTotal += (performance.now() - startSearch);
+                roadSearchCount++;
+
+               if (nearestSeg && nearestDist <= BLOCK_SIZE * 1.5) {
+                   const dx = nearestPoint.x - subX;
+                   const dz = nearestPoint.z - subZ;
+                   rot = Math.atan2(dx, dz);
+
+                   if (cell.district === 'civic' || cell.district === 'commercial') {
+                       const snapped = Math.round(rot / (Math.PI / 2)) * (Math.PI / 2);
+                       rot = rot * 0.55 + snapped * 0.45;
+                   }
+               } else if (cell.slope > SLOPE_THRESHOLDS.FLAT) {
+                   const north = sampleLocalHeight(subX, subZ + 5, subY);
+                   const south = sampleLocalHeight(subX, subZ - 5, subY);
+                   const east = sampleLocalHeight(subX + 5, subZ, subY);
+                   const west = sampleLocalHeight(subX - 5, subZ, subY);
+
+                   const dz = south - north;
+                   const dx = west - east;
+
+                   rot = Math.atan2(dx, dz);
+               }
+
+               if (cell.district !== 'civic' && cell.district !== 'sacred') {
+                   rot += (rng() - 0.5) * (Math.PI / 5.0);
+               }
+
+                buildingGroup.rotation.y = rot;
+                if (i === 0) cellRot = rot;
+                 group.add(buildingGroup);
+                 buildingPlaced = true;
+            }
+        }
+
+            if (!buildingPlaced && rng() < 0.75) {
+                // If building failed to spawn, create a pocket park instead.
+                const park = createPocketPark(cell, rng);
+                park.position.set(localX, localY, localZ);
+                group.add(park);
+            }
+        }
 
            if (
              (cell.district === 'civic' || cell.district === 'sacred') &&
-             (cell.slope > SLOPE_THRESHOLDS.FLAT * 0.65 || (cell.district === 'sacred' && rng() < 0.45))
+             (cell.slope > SLOPE_THRESHOLDS.FLAT * 0.9 || (cell.district === 'sacred' && rng() < 0.24))
            ) {
              const platformAccent = createDistrictPlatformAccent({
                localX,
@@ -1546,9 +2463,44 @@ export async function createCivicDistrict(scene, options = {}) {
                district: cell.district,
              });
              if (platformAccent) group.add(platformAccent);
+           } else if (
+             cell.district === 'civic' &&
+             isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) &&
+             rng() < 0.08
+           ) {
+             const civicFrontPlatform = createDistrictPlatformAccent({
+               localX,
+               localZ,
+               localY,
+               sampleLocalHeight,
+               radius: BLOCK_SIZE * 0.2,
+               district: 'civic',
+             });
+             if (civicFrontPlatform) group.add(civicFrontPlatform);
+           } else if (
+             isHarborLaneFrontageCell(cell.gridX, cell.gridZ) &&
+             rng() < 0.12
+           ) {
+             const harborFrontPlatform = createDistrictPlatformAccent({
+               localX,
+               localZ,
+               localY,
+               sampleLocalHeight,
+               radius: BLOCK_SIZE * 0.28,
+               district: 'civic',
+             });
+             if (harborFrontPlatform) group.add(harborFrontPlatform);
            }
 
-           if (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.55) {
+           const allowRetainingAccent = detailLevel !== 'low';
+           if (
+             allowRetainingAccent &&
+             (
+               (cell.slope > SLOPE_THRESHOLDS.FLAT && rng() < 0.34) ||
+               (isHarborLaneFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.28) ||
+               (cell.district === 'civic' && isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) && rng() < 0.08)
+             )
+           ) {
              const retainingAccent = createStreetGradeAccent({
                localX,
                localZ,
@@ -1564,31 +2516,34 @@ export async function createCivicDistrict(scene, options = {}) {
            let districtAccent = null;
            if (isAgoraFramingCell(cell.gridX, cell.gridZ)) {
              districtAccent = null;
-           } else if (cell.district === 'commercial' && rng() < 0.52) {
+           } else if (
+             cell.district === 'commercial' &&
+             !isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) &&
+             rng() < 0.1
+           ) {
              districtAccent = createCommercialAccent(rng);
            } else if (
              cell.district === 'residential' &&
+             !isCivicMonumentFrontageCell(cell.gridX, cell.gridZ) &&
              Math.hypot(cell.position.x - AGORA_CENTER_3D.x, cell.position.z - AGORA_CENTER_3D.z) <= AGORA_MARKET_RADIUS + BLOCK_SIZE * 1.8 &&
-             rng() < 0.34
+             rng() < 0.06
            ) {
              districtAccent = createResidentialAccent(rng);
-           } else if (cell.district === 'harbor' && rng() < 0.44) {
+           } else if (cell.district === 'harbor' && rng() < 0.16) {
              districtAccent = createHarborFrontAccent(rng);
-           } else if (cell.district === 'sacred' && rng() < 0.34) {
+           } else if (cell.district === 'sacred' && rng() < 0.12) {
              districtAccent = createSacredAccent();
            }
 
            if (districtAccent) {
              districtAccent.position.set(localX, localY, localZ);
-             districtAccent.rotation.y = rot;
+             districtAccent.rotation.y = cellRot;
              group.add(districtAccent);
            }
        }
     }
-  }
 
   // Render footpaths (non-road paths for pedestrian connectivity)
-  if (IS_DEV) console.log(`[CityPlan] Rendering ${pathTiles.length} path tiles...`);
   for (const pathTile of pathTiles) {
     if (pathTile.type === 'footpath' || pathTile.type === 'connector') {
       const localX = pathTile.position.x - center.x;
@@ -1605,6 +2560,29 @@ export async function createCivicDistrict(scene, options = {}) {
       const pathColor = pathTile.type === 'connector' ? 0xc0a07b : 0xcfb18e;
       const pathMesh = createPavedStrip(pathWidth, pathWidth, pathColor);
       pathMesh.position.set(localX, localY + 0.007, localZ); // Keep paths close to the terrain so they read as paving, not slabs.
+
+      // Calculate rotation based on neighboring path cells to smooth out the warped grid overlap
+      let nextPathX = localX;
+      let nextPathZ = localZ;
+      let pathNeighbors = 0;
+
+      for (const tTile of pathTiles) {
+        if ((tTile.type === 'footpath' || tTile.type === 'connector') && tTile !== pathTile) {
+            const dist = Math.hypot(tTile.position.x - pathTile.position.x, tTile.position.z - pathTile.position.z);
+            if (dist > 0 && dist < BLOCK_SIZE * 1.5) {
+                nextPathX += (tTile.position.x - center.x);
+                nextPathZ += (tTile.position.z - center.z);
+                pathNeighbors++;
+            }
+        }
+      }
+
+      if (pathNeighbors > 0) {
+          nextPathX /= (pathNeighbors + 1);
+          nextPathZ /= (pathNeighbors + 1);
+          pathMesh.rotation.y = Math.atan2(nextPathX - localX, nextPathZ - localZ);
+      }
+
       pathMesh.userData.isFootpath = true;
       group.add(pathMesh);
 
@@ -1624,15 +2602,44 @@ export async function createCivicDistrict(scene, options = {}) {
   }
 
   const walkingLoop = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(center.x + 10, baseHeight, center.z + 10),
-      new THREE.Vector3(center.x - 10, baseHeight, center.z + 10),
-      new THREE.Vector3(center.x - 10, baseHeight, center.z - 10),
-      new THREE.Vector3(center.x + 10, baseHeight, center.z - 10)
+    new THREE.Vector3(center.x + 10, baseHeight, center.z + 10),
+    new THREE.Vector3(center.x - 10, baseHeight, center.z + 10),
+    new THREE.Vector3(center.x - 10, baseHeight, center.z - 10),
+    new THREE.Vector3(center.x + 10, baseHeight, center.z - 10)
   ], true);
+
+  const walkingLoopInner = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(center.x + 6, baseHeight, center.z + 4),
+    new THREE.Vector3(center.x - 8, baseHeight, center.z + 6),
+    new THREE.Vector3(center.x - 6, baseHeight, center.z - 6),
+    new THREE.Vector3(center.x + 8, baseHeight, center.z - 4)
+  ], true);
+
+  const walkingLoopOuter = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(center.x + 16, baseHeight, center.z + 12),
+    new THREE.Vector3(center.x - 18, baseHeight, center.z + 14),
+    new THREE.Vector3(center.x - 14, baseHeight, center.z - 16),
+    new THREE.Vector3(center.x + 18, baseHeight, center.z - 12)
+  ], true);
+  console.timeEnd("City: Total Grid Render");
+  console.log(`City: Road proximity search executed ${roadSearchCount} times, total time: ${roadSearchTimeTotal.toFixed(2)}ms`);
+
+  const walkingLoops = [walkingLoop, walkingLoopInner, walkingLoopOuter];
+
+  // Optimize: Batch all generated buildings, props, and paths into merged geometries
+  setTimeout(() => {
+    console.time("City: poolMaterialsAndMerge (Deferred)");
+    poolMaterialsAndMerge(group);
+    console.timeEnd("City: poolMaterialsAndMerge (Deferred)");
+  }, 100);
+
+
+  console.timeEnd("City: Total Generation");
 
   return {
     group,
     walkingLoop,
+    walkingLoops,
     plazaLength: 80, // Legacy support
     promenadeWidth: 14 // Legacy support
   };

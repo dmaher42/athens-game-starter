@@ -128,7 +128,7 @@ export class AssetLoader {
       probes.push(...candidatesToUse);
     }
 
-    for (const relativePath of probes) {
+    const probeTasks = probes.map(async (relativePath) => {
       let url;
       if (
         relativePath.startsWith(base) ||
@@ -153,7 +153,9 @@ export class AssetLoader {
       } catch (error) {
         if (IS_DEV) console.warn("[probe-failed]", relativePath, url, error);
       }
-    }
+    });
+
+    await Promise.all(probeTasks);
 
     if (IS_DEV) console.log("[base]", base);
   }
@@ -284,75 +286,80 @@ export class AssetLoader {
       const path = entry?.path?.toLowerCase?.() ?? "";
       return label.includes("district") || path.includes("config/districts.json");
     };
-    for (const entry of quickChecks) {
-      const label = entry.label || "Unnamed Check";
-      const targets = [];
-      const critical = isCriticalCheck(entry);
+    await Promise.all(
+      quickChecks.map(async (entry) => {
+        const label = entry.label || "Unnamed Check";
+        const targets = [];
+        const critical = isCriticalCheck(entry);
 
-      if (typeof entry.path === "string" && entry.path.trim()) {
-        const pathValue = entry.path.trim();
-        if (/config\/districts\.json$/i.test(pathValue)) {
-          if (resolvedDistrictPath) {
-            targets.push(normalizeAbsoluteRepoUrl(resolvedDistrictPath));
+        if (typeof entry.path === "string" && entry.path.trim()) {
+          const pathValue = entry.path.trim();
+          if (/config\/districts\.json$/i.test(pathValue)) {
+            if (resolvedDistrictPath) {
+              targets.push(normalizeAbsoluteRepoUrl(resolvedDistrictPath));
+            }
+            for (const candidate of districtCandidates) {
+              targets.push(normalizeAbsoluteRepoUrl(candidate));
+            }
+          } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
+            targets.push(normalizeAbsoluteRepoUrl(pathValue));
+          } else {
+            const normalizedPath = /athens-game-starter\//i.test(pathValue)
+              ? normalizeRepoRelativeCandidate(pathValue)
+              : pathValue;
+            targets.push(joinPath(baseUrl, normalizedPath));
           }
-          for (const candidate of districtCandidates) {
-            targets.push(normalizeAbsoluteRepoUrl(candidate));
+        }
+
+        if (
+          typeof entry.candidateKey === "string" &&
+          entry.candidateKey.trim()
+        ) {
+          const candidateList = getAssetCandidates(entry.candidateKey.trim());
+          for (const rel of candidateList) {
+            targets.push(joinPath(baseUrl, rel));
           }
-        } else if (/^(?:[a-z]+:)?\/\//i.test(pathValue)) {
-          targets.push(normalizeAbsoluteRepoUrl(pathValue));
-        } else {
-          const normalizedPath = /athens-game-starter\//i.test(pathValue)
-            ? normalizeRepoRelativeCandidate(pathValue)
-            : pathValue;
-          targets.push(joinPath(baseUrl, normalizedPath));
         }
-      }
 
-      if (typeof entry.candidateKey === "string" && entry.candidateKey.trim()) {
-        const candidateList = getAssetCandidates(entry.candidateKey.trim());
-        for (const rel of candidateList) {
-          targets.push(joinPath(baseUrl, rel));
+        const uniqueTargets = Array.from(new Set(targets.filter(Boolean)));
+        if (uniqueTargets.length === 0) {
+          results.push({ label, path: "", status: "missing" });
+          missingChecks.push({ label, path: "", status: "missing", critical });
+          if (critical) {
+            missingCriticalChecks.push({ label, path: "", status: "missing" });
+          }
+          return;
         }
-      }
 
-      const uniqueTargets = Array.from(new Set(targets.filter(Boolean)));
-      if (uniqueTargets.length === 0) {
-        results.push({ label, path: "", status: "missing" });
-        missingChecks.push({ label, path: "", status: "missing", critical });
-        if (critical) {
-          missingCriticalChecks.push({ label, path: "", status: "missing" });
+        let status = "missing";
+        let usedPath = uniqueTargets[0];
+        for (const candidate of uniqueTargets) {
+          usedPath = candidate;
+          const enableGlbMode = this.enableGlbMode;
+          if (!enableGlbMode && GLB_MODELS_PATH.test(candidate)) {
+            status = "skipped";
+            break;
+          }
+          if (this.forceProcedural && GLB_EXTENSION.test(candidate)) {
+            status = "skipped";
+            break;
+          }
+          const exists = await this.headOk(candidate);
+          if (exists) {
+            status = "ok";
+            break;
+          }
         }
-        continue;
-      }
 
-      let status = "missing";
-      let usedPath = uniqueTargets[0];
-      for (const candidate of uniqueTargets) {
-        usedPath = candidate;
-        const enableGlbMode = this.enableGlbMode;
-        if (!enableGlbMode && GLB_MODELS_PATH.test(candidate)) {
-          status = "skipped";
-          break;
+        results.push({ label, path: usedPath, status });
+        if (status === "missing") {
+          missingChecks.push({ label, path: usedPath, status, critical });
+          if (critical) {
+            missingCriticalChecks.push({ label, path: usedPath, status });
+          }
         }
-        if (this.forceProcedural && GLB_EXTENSION.test(candidate)) {
-          status = "skipped";
-          break;
-        }
-        const exists = await this.headOk(candidate);
-        if (exists) {
-          status = "ok";
-          break;
-        }
-      }
-
-      results.push({ label, path: usedPath, status });
-      if (status === "missing") {
-        missingChecks.push({ label, path: usedPath, status, critical });
-        if (critical) {
-          missingCriticalChecks.push({ label, path: usedPath, status });
-        }
-      }
-    }
+      }),
+    );
 
     if (IS_DEV) {
       if (typeof console?.table === "function") {

@@ -1,15 +1,23 @@
 import * as THREE from "three";
 import { ACROPOLIS_PEAK_3D, AGORA_CENTER_3D, HARBOR_CENTER_3D, getSeaLevelY } from "./locations.js";
 import { applyForegroundFogPolicy } from "../utils/materialUtils.js";
+import { createCypressTree, createOliveTree, createStonePine, createPoplar, createLavenderBush } from "./foliage.js";
+import { Prefabs } from "./buildingSpawner.js";
+import { resolveDistrictAt } from "./districtRules.js";
 
-const ROCK_GEOMETRY = new THREE.DodecahedronGeometry(0.25, 0);
-const GRASS_GEOMETRY = new THREE.ConeGeometry(0.15, 0.6, 6);
-const BUSH_GEOMETRY = new THREE.IcosahedronGeometry(0.35, 0);
+const ROCK_GEOMETRY = new THREE.DodecahedronGeometry(0.28, 1); // Slightly smoother rocks
+const GRASS_GEOMETRY = new THREE.ConeGeometry(0.12, 0.72, 8);
+const BUSH_GEOMETRY = new THREE.IcosahedronGeometry(0.42, 1); // Smoother bushes
+
+const POT_GEOMETRY = new THREE.CylinderGeometry(0.22, 0.16, 0.28, 12);
+const PLANT_LEAF_GEOMETRY = new THREE.IcosahedronGeometry(0.32, 0);
 
 const propMaterials = {
-  rock: new THREE.MeshStandardMaterial({ color: "#6f6b62", roughness: 0.95 }),
-  grass: new THREE.MeshStandardMaterial({ color: "#4f7a3a", roughness: 0.8 }),
-  bush: new THREE.MeshStandardMaterial({ color: "#3c5d2c", roughness: 0.82 }),
+  rock: new THREE.MeshStandardMaterial({ color: "#7a756b", roughness: 0.9, metalness: 0.05 }),
+  grass: new THREE.MeshStandardMaterial({ color: "#5a8c42", roughness: 0.85 }),
+  bush: new THREE.MeshStandardMaterial({ color: "#3d632b", roughness: 0.88 }),
+  pot: new THREE.MeshStandardMaterial({ color: "#b36241", roughness: 0.82, metalness: 0.02 }), // Terracotta
+  plant: new THREE.MeshStandardMaterial({ color: "#2d5a1e", roughness: 0.9 }),
 };
 
 const OPENING_VISTA_WEST = AGORA_CENTER_3D.x - 62;
@@ -17,12 +25,34 @@ const OPENING_VISTA_EAST = AGORA_CENTER_3D.x + 18;
 const OPENING_VISTA_SOUTH = AGORA_CENTER_3D.z - 24;
 const OPENING_VISTA_NORTH = AGORA_CENTER_3D.z + 34;
 
-export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush"];
+export const GROUND_PROP_TYPES = ["rock", "grass-tuft", "bush", "tree-cypress", "tree-olive", "tree-stonepine", "tree-poplar", "lavender", "stall", "bench", "urn"];
 
-function pickPropType() {
+function pickPropType(district = null, lastType = null, clumpFactor = 0.0) {
+  // 80% chance to "clump" (reuse previous type) if the probability roll hits
+  if (lastType && Math.random() < clumpFactor) {
+    return lastType;
+  }
+
   const r = Math.random();
-  if (r < 0.78) return "grass-tuft";
-  return "bush";
+  
+  // District-specific overrides
+  if (district?.propRules) {
+    const rules = district.propRules;
+    if (rules.stall && r < rules.stall * 0.15) return "stall";
+    if (rules.bench && r < rules.bench * 0.25) return "bench";
+    if (rules.urn && r < rules.urn * 0.4) return "urn";
+    if (rules.plant && r < rules.plant * 0.3) return "potted-plant";
+  }
+
+  if (r < 0.04) return "potted-plant"; // Global rare chance
+  if (r < 0.08) return "tree-stonepine"; 
+  if (r < 0.14) return "tree-cypress";   
+  if (r < 0.20) return "tree-olive";     
+  if (r < 0.24) return "tree-poplar";    
+  if (r < 0.30) return "lavender";       
+  if (r < 0.65) return "grass-tuft";
+  if (r < 0.85) return "bush";
+  return "rock";
 }
 
 function createPropMesh(type) {
@@ -43,7 +73,46 @@ function createPropMesh(type) {
       mesh.rotation.y = Math.random() * Math.PI * 2;
       return mesh;
     }
+    case "potted-plant": {
+      const group = new THREE.Group();
+      const pot = new THREE.Mesh(POT_GEOMETRY, propMaterials.pot);
+      pot.position.y = 0.14;
+      group.add(pot);
+
+      const plant = new THREE.Mesh(PLANT_LEAF_GEOMETRY, propMaterials.plant);
+      plant.position.y = 0.48;
+      plant.scale.set(0.8, 1.2, 0.8);
+      group.add(plant);
+
+      group.scale.setScalar(THREE.MathUtils.randFloat(0.9, 1.3));
+      group.rotation.y = Math.random() * Math.PI * 2;
+      return group;
+    }
+    case "tree-cypress": {
+      return createCypressTree({ scale: THREE.MathUtils.randFloat(0.85, 1.25) });
+    }
+    case "tree-olive": {
+      return createOliveTree({ scale: THREE.MathUtils.randFloat(0.9, 1.3) });
+    }
+    case "tree-stonepine": {
+      return createStonePine({ scale: THREE.MathUtils.randFloat(0.95, 1.4) });
+    }
+    case "tree-poplar": {
+      return createPoplar({ scale: THREE.MathUtils.randFloat(0.9, 1.3) });
+    }
+    case "lavender": {
+      return createLavenderBush({ scale: THREE.MathUtils.randFloat(0.8, 1.2) });
+    }
     case "bush":
+    case "stall": {
+      return Prefabs.marketStall({ rng: Math.random });
+    }
+    case "bench": {
+      return Prefabs.stoneBench({ rng: Math.random });
+    }
+    case "urn": {
+      return Prefabs.urn({ rng: Math.random });
+    }
     default: {
       const mesh = new THREE.Mesh(BUSH_GEOMETRY, propMaterials.bush);
       mesh.scale.setScalar(THREE.MathUtils.randFloat(1.0, 1.6));
@@ -139,8 +208,8 @@ export function scatterGroundProps(scene, terrain, options = {}) {
 
   let placed = 0;
   let attempts = 0;
-  const maxAttempts = count * 5;
-
+  const maxAttempts = count * 6;
+  let lastPropType = null;
   while (placed < count && attempts < maxAttempts) {
     attempts++;
     const x = THREE.MathUtils.randFloatSpread(terrainSize * 0.92);
@@ -151,28 +220,43 @@ export function scatterGroundProps(scene, terrain, options = {}) {
     if (!Number.isFinite(height) || height <= seaLevel) continue;
 
     if (isInsideBuilding(x, z, placements)) continue;
-    if (isInsideKeyDistrict(x, z)) continue;
+
+    const districtRules = options.districtRules || null;
+    const district = districtRules ? resolveDistrictAt(terrain, districtRules, x, z) : null;
+    const inKeyZone = isInsideKeyDistrict(x, z);
+
+    // Pass resolved district to pickPropType
+    const propType = pickPropType(district, lastPropType, 0.82);
+
+    // Exclusion Logic:
+    // In key districts (Agora/Harbor/Residential center), we ONLY allow urban/aesthetic props.
+    const isUrbanProp = ["potted-plant", "stall", "bench", "urn"].includes(propType);
+    if (inKeyZone && !isUrbanProp) continue;
+    
+    // In wild areas (outside key zones), exclude stalls/benches/urns
+    if (!inKeyZone && isUrbanProp) continue;
+    
     if (isInsideOpeningVista(x, z)) continue;
 
     const nearMainRoad = mainRoadCurve
-      ? distanceToCurve(mainRoadCurve, x, z, 180) <= roadPadding
+      ? distanceToCurve(mainRoadCurve, x, z, 120) <= roadPadding
       : false;
     if (nearMainRoad) continue;
 
     let nearSecondaryRoad = false;
     for (const curve of roadCurves) {
-      const d = distanceToCurve(curve, x, z, 80);
+      const d = distanceToCurve(curve, x, z, 60);
       if (d <= roadPadding) {
         nearSecondaryRoad = true;
         break;
       }
     }
     if (nearSecondaryRoad) continue;
-
-    const propType = pickPropType();
     const mesh = createPropMesh(propType);
     mesh.position.set(x, height + 0.02, z);
     group.add(mesh);
+    
+    lastPropType = propType;
     placed++;
   }
 

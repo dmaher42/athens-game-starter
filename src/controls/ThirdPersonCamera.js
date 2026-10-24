@@ -56,6 +56,24 @@ function isObject3D(value) {
   return value && typeof value === "object" && value.isObject3D === true;
 }
 
+function getTargetFacingYaw(targetObject) {
+  if (!isObject3D(targetObject)) {
+    return null;
+  }
+
+  let facingSource = null;
+  for (const child of targetObject.children ?? []) {
+    if (isObject3D(child) && child.visible !== false) {
+      facingSource = child;
+      break;
+    }
+  }
+
+  const source = facingSource ?? targetObject;
+  const yaw = source.rotation?.y;
+  return Number.isFinite(yaw) ? yaw : null;
+}
+
 /**
  * Third-person orbital camera with obstacle avoidance.
  */
@@ -161,6 +179,12 @@ export class ThirdPersonCamera {
           break;
         case "PageDown":
           this.keyOrbitState.keys.pageDown = true;
+          handled = true;
+          break;
+        case "End":
+          if (!event.repeat) {
+            this.resetBehindTarget();
+          }
           handled = true;
           break;
         default:
@@ -663,6 +687,17 @@ export class ThirdPersonCamera {
       const maxDist = Math.max(minDist, this.keyOrbit.maxDist);
       this.distance = THREE.MathUtils.clamp(this.distance, minDist, maxDist);
     }
+  }
+
+  resetBehindTarget() {
+    if (!this.enabled || this.disposed) return;
+
+    const facingYaw = getTargetFacingYaw(this.targetObject);
+    if (!Number.isFinite(facingYaw)) return;
+
+    this.targetYaw = wrapAngle(facingYaw - Math.PI);
+    this.currentYaw = this.targetYaw;
+    this.needsImmediateSnap = true;
   }
 }
 

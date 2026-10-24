@@ -8,7 +8,7 @@ import { lightingConfig } from "../config/LightingConfig.js";
 import { skyboxLightingConfig } from "../config/skyboxLightingConfig.js";
 import { loadHdriEnvironment } from "../world/env/loadHdriEnvironment.js";
 import { joinPath } from "../utils/baseUrl.js";
-import { init as initEnvStubs, applyBasicLightingProfile, setEnvironmentMapIntensity, setSunPosition, setTimeOfDay } from "../core/EnvironmentManager.stubs.js";
+// EnvironmentManager stubs removed, using EnvironmentManager.js central class.
 import { updateOcean } from "../world/ocean.js";
 import { updateHarborLighting } from "../world/harbor.js";
 import { updateMainHillRoadLighting } from "../world/roads_hillcity.js";
@@ -151,7 +151,7 @@ export class LightingSystem {
 
         this.dayCycle = startTimeOfDayCycle(lightingConfig.cycle || {});
         this.timeOfDayState = { timeOfDayPhase: 0 };
-        setTimeOfDayPhase(this.timeOfDayState, 0.18);
+        setTimeOfDayPhase(this.timeOfDayState, 0.4);
 
         this.LIGHTING_PHASE_WINDOWS = [
             { name: "Blue Hour", start: 0.0, end: 0.12 },
@@ -201,7 +201,17 @@ export class LightingSystem {
         this.lights = createLighting(scene, this.dynamicSky.sunLight);
         this.lights.moonLight = this.moonLight;
 
-        await this._loadEnvironmentWithFallback();
+        // Don't block startup on the HDR environment map. The fallback sky and
+        // base lighting are good enough for the first interactive frame.
+        createDefaultSky(scene, this.dynamicSky);
+        this.environmentLoadPromise = this._loadEnvironmentWithFallback()
+            .catch(() => null)
+            .then((env) => {
+                if (this.lastAppliedLightingPreset) {
+                    this._applyEnvironmentFallbackForProfile(this.lastAppliedLightingPreset);
+                }
+                return env;
+            });
 
         try {
             initEnvStubs({
@@ -246,7 +256,7 @@ export class LightingSystem {
             };
         }
 
-        const initialPreset = "Golden Hour";
+        const initialPreset = "Bright Noon";
         this.applyLookProfile(initialPreset, {
             immediate: true,
             forceReapply: true,

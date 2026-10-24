@@ -44,6 +44,8 @@ const DEFAULT_HOTKEYS: readonly HotkeyDescriptor[] = [
   { keys: ["F"], description: "Toggle flight mode" },
   { keys: ["E"], description: "Interact with highlighted objects" },
   { keys: ["Arrow Keys"], description: "Look around" },
+  { keys: ["PageUp", "PageDown"], description: "Zoom camera" },
+  { keys: ["End"], description: "Reset camera behind player" },
   { keys: ["H"], description: "Show or hide this controls panel" },
 ];
 

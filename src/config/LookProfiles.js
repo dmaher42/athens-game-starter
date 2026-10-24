@@ -2,44 +2,44 @@
 export const LIGHTING_PRESETS = {
   "Bright Noon": {
     renderer: {
-      toneMappingExposure: 0.62,
+      toneMappingExposure: 1.05,
     },
     starsVisible: 0.0,
     moonElevation: -10,
     moonLightIntensity: 0.0,
     soundscapeMode: "day",
     sun: {
-      color: "#ffe7cf",
-      intensity: 2.0,
-      azimuth: 205,
-      elevation: 44,
+      color: "#ffffff",
+      intensity: 3.2,
+      azimuth: 215,
+      elevation: 52,
     },
     ambient: {
-      color: "#edf3f8",
-      groundColor: "#d7c5ac",
-      intensity: 0.18,
+      color: "#faffff",
+      groundColor: "#e5d5c0",
+      intensity: 0.35,
     },
     fog: {
       enabled: true,
-      color: "#ead2ad",
-      near: 1400,
-      far: 6200,
-      density: 0.000026,
+      color: "#e2ecf7",
+      near: 2000,
+      far: 12000,
+      density: 0.00001,
     },
     skybox: {
-      exposureMultiplier: 0.72,
-      saturationMultiplier: 0.94,
+      exposureMultiplier: 1.0,
+      saturationMultiplier: 1.1,
       skyKey: "high_noon"
     },
     grade: {
-      contrast: 0.06,
-      saturation: 0.02,
-      shadowTint: "#e3e7ed",
-      midTint: "#f4f1eb",
-      highlightTint: "#fff8ef",
+      contrast: 0.22, // Punchier contrast
+      saturation: 0.18, // More vibrant colors
+      shadowTint: "#f2f5f7",
+      midTint: "#ffffff",
+      highlightTint: "#ffffff",
     },
     env: {
-      envMapIntensity: 0.22
+      envMapIntensity: 1.8 // Clear marble highlights
     },
     moon: {
       visible: false,
@@ -78,14 +78,14 @@ export const LIGHTING_PRESETS = {
       skyKey: "golden_hour"
     },
     grade: {
-      contrast: 0.08,
-      saturation: 0.03,
-      shadowTint: "#d8d3ca",
-      midTint: "#f5e7d6",
+      contrast: 0.12,
+      saturation: 0.14, // Warmer, more saturated sunset
+      shadowTint: "#d8cdc2",
+      midTint: "#f5e2cc",
       highlightTint: "#fff1df",
     },
     env: {
-      envMapIntensity: 0.38
+      envMapIntensity: 1.55
     },
     moon: {
       visible: false,
@@ -108,9 +108,9 @@ export const LIGHTING_PRESETS = {
       elevation: -2,
     },
     ambient: {
-      color: "#3f5473",
-      groundColor: "#273448",
-      intensity: 0.5,
+      color: "#4a628a",
+      groundColor: "#2d3c54",
+      intensity: 0.65,
     },
     fog: {
       enabled: true,
@@ -130,7 +130,7 @@ export const LIGHTING_PRESETS = {
       highlightTint: "#9bb5e1",
     },
     env: {
-      envMapIntensity: 0.45 // Gentle reflections to match twilight sky
+      envMapIntensity: 1.1 // Boosted reflections for twilight
     },
     moon: {
       visible: true,
@@ -140,7 +140,7 @@ export const LIGHTING_PRESETS = {
   },
   "Night": {
     renderer: {
-      toneMappingExposure: 1.0,
+      toneMappingExposure: 1.15,
     },
     starsVisible: 1.0,
     moonElevation: 20,
@@ -153,9 +153,9 @@ export const LIGHTING_PRESETS = {
       elevation: -45,
     },
     ambient: {
-      color: "#0b1d38",
-      groundColor: "#0b1d2d",
-      intensity: 0.25,
+      color: "#162b4d",
+      groundColor: "#12233b",
+      intensity: 0.42,
     },
     fog: {
       enabled: true,
@@ -170,12 +170,12 @@ export const LIGHTING_PRESETS = {
     grade: {
       contrast: 0.1,
       saturation: -0.08,
-      shadowTint: "#223344",
+      shadowTint: "#0b1629",
       midTint: "#10233d",
       highlightTint: "#c6d7ff",
     },
     env: {
-      envMapIntensity: 0.2
+      envMapIntensity: 0.65
     },
     moon: {
       visible: true,
