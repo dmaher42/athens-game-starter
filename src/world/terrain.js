@@ -1,13 +1,12 @@
 import * as THREE from "three";
 import {
   getSeaLevelY,
-  AGORA_CENTER_3D,
-  ACROPOLIS_PEAK_3D,
   AEGEAN_OCEAN_BOUNDS,
   AEGEAN_OPEN_SEA_WEST,
-  HARBOR_CENTER_3D,
   HARBOR_GROUND_HEIGHT,
   HARBOR_WATER_BOUNDS,
+  AGORA_COURT_BOUNDS,
+  INLAND_LANDMARK_TERRACES,
 } from "./locations.js";
 import { getDistanceToCoast, isInHarborZone } from './coastalZones.js';
 import {
@@ -65,11 +64,6 @@ function gradientNoise(x, z) {
   return lerp(nx0, nx1, v);
 }
 
-const NOISE_SCALE = 0.05;
-const NOISE_AMPLITUDE = 0.55;
-const OCEAN_DEPTH = -12.0;
-const CITY_HEIGHT = 3.0; // Base city height (above sea level)
-const MAINLAND_EDGE_BUFFER = 0.8;
 const SHORELINE_CITY_LIMIT = 0.65;
 const SHORELINE_SAND_BAND = 0.3;
 const SHALLOW_WATER_BAND = 1.2;
@@ -81,19 +75,6 @@ const HARBOR_SHORE_COVE_INSET = 16;
 const SAND_COLOR = new THREE.Color(0.68, 0.64, 0.55);
 const GRASS_COLOR = new THREE.Color(0.34, 0.46, 0.32);
 const SHALLOW_WATER_COLOR = new THREE.Color(0x1f4f59);
-const ACROPOLIS_TO_AGORA_X = AGORA_CENTER_3D.x - ACROPOLIS_PEAK_3D.x;
-const ACROPOLIS_TO_AGORA_Z = AGORA_CENTER_3D.z - ACROPOLIS_PEAK_3D.z;
-const ACROPOLIS_TO_AGORA_LENGTH =
-  Math.hypot(ACROPOLIS_TO_AGORA_X, ACROPOLIS_TO_AGORA_Z) || 1;
-const ACROPOLIS_APPROACH_DIR_X = ACROPOLIS_TO_AGORA_X / ACROPOLIS_TO_AGORA_LENGTH;
-const ACROPOLIS_APPROACH_DIR_Z = ACROPOLIS_TO_AGORA_Z / ACROPOLIS_TO_AGORA_LENGTH;
-
-// Harbor configuration (East Facing)
-// HARBOR_GROUND_HEIGHT imported from locations.js at line 6
-const HARBOUR_RADIUS = 70;
-const HARBOUR_TARGET_DEPTH = 2;
-const EAST_HARBOR_CENTER = new THREE.Vector2(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.z);
-
 // New Mainland/Coastal Constants
 const TERRAIN_SIZE = 2400; // Large terrain for mainland
 const HALF_TERRAIN_SIZE = TERRAIN_SIZE * 0.5;
@@ -135,24 +116,9 @@ function getDistanceToSeaNormalized(x, z) {
 function computeCoastData(x, z) {
   const dSea = getDistanceToSeaNormalized(x, z);
   const coastBand = THREE.MathUtils.clamp(COAST_WIDTH / TERRAIN_SIZE, 0, 1);
-  const coastMask = THREE.MathUtils.smoothstep(0, coastBand, dSea);
+  const coastMask = THREE.MathUtils.smoothstep(dSea, 0, coastBand);
 
   return { dSea, coastMask };
-}
-
-function applyHarbourCarve(x, z, seaLevel, height) {
-  // Carve around the East Harbor
-  const dx = x - EAST_HARBOR_CENTER.x;
-  const dz = z - EAST_HARBOR_CENTER.y; // Vector2 y is z world
-  const distance = Math.hypot(dx, dz);
-
-  if (distance >= HARBOUR_RADIUS) return height;
-
-  const t = THREE.MathUtils.clamp(1 - distance / HARBOUR_RADIUS, 0, 1);
-  const blend = t * t;
-  const targetHeight = seaLevel - HARBOUR_TARGET_DEPTH;
-
-  return THREE.MathUtils.lerp(height, targetHeight, blend);
 }
 
 function clampHarborBandHeight(x, z, seaLevel, baseHeight) {
@@ -268,130 +234,37 @@ function getElevation(
   coastData = null,
   noiseOffset = ZERO_NOISE_OFFSET,
 ) {
-  // Base Height calculation
-  let h = seaLevel + CITY_HEIGHT;
-
+  // PlaneGeometry local Y becomes negative world Z. Shape land consistently
+  // in world coordinates; keep the established coastal profile as a hard lock.
+  const worldZ = -z;
   const coast = coastData ?? computeCoastData(x, z);
-  const dSea = coast.dSea;
+  const preservedCoast = clampHarborBandHeight(x, worldZ, seaLevel, seaLevel);
+  const outsideHarborBand = Math.max(-80 - worldZ, worldZ - 105, 0);
+  const harborLock = THREE.MathUtils.smoothstep(x, -12, 0) *
+    (1 - THREE.MathUtils.smoothstep(outsideHarborBand, 0, 50));
+  const seaEdgeLock = THREE.MathUtils.smoothstep(x, 85, 112);
+  const coastLock = Math.max(harborLock, seaEdgeLock);
+  if (preservedCoast < seaLevel || coastLock >= 1) return preservedCoast;
 
-  // Macro-shape note: noise + lack of non-sea border min elevation can dip edges below sea level, causing island silhouettes.
+  const distanceInland = Math.max(0, AEGEAN_OPEN_SEA_WEST - x);
+  let h = seaLevel + 2 + INLAND_RISE * THREE.MathUtils.smoothstep(distanceInland, 0, 460);
+  const ridgeNoise = gradientNoise((x + noiseOffset.x) * 0.01, (worldZ + noiseOffset.z) * 0.01) * 0.5 + 0.5;
+  h += RIDGE_HEIGHT * ridgeNoise * THREE.MathUtils.smoothstep(coast.dSea, RIDGE_START, 1);
+  h += gradientNoise((x + noiseOffset.x) * 0.015, (worldZ + noiseOffset.z) * 0.015) * 0.12;
+  h = THREE.MathUtils.lerp(seaLevel, h, coast.coastMask);
+  h = clampHarborBandHeight(x, worldZ, seaLevel, h);
 
-  // Directional inland elevation that gently increases away from the sea edge
-  h += INLAND_RISE * (dSea + dSea * dSea);
-
-  const ridgeNoise =
-    gradientNoise(
-      (x + noiseOffset.x) * NOISE_SCALE * 0.2,
-      (z + noiseOffset.z) * NOISE_SCALE * 0.2,
-    ) *
-      0.5 +
-    0.5;
-  const ridgeMask = THREE.MathUtils.smoothstep(RIDGE_START, 1.0, dSea);
-  h += ridgeMask * ridgeNoise * RIDGE_HEIGHT;
-
-  // Apply Noise
-  const rawNoise = gradientNoise(
-    (x + noiseOffset.x) * NOISE_SCALE,
-    (z + noiseOffset.z) * NOISE_SCALE,
-  );
-  // Keep noise below the inland bias so geography reads clearly and stay calmer to the east
-  const midDistanceBoost = THREE.MathUtils.smoothstep(0.18, 0.55, dSea);
-  const noise = rawNoise * NOISE_AMPLITUDE * (0.35 + dSea * 0.65) * (0.9 + midDistanceBoost * 0.2);
-
-  // Attenuate noise near coast
-  const coastalNoiseAttenuation = 1 - coast.coastMask;
-  const shapedNoise = noise * (0.4 + coastalNoiseAttenuation * 0.6);
-
-  h += shapedNoise;
-
-  const borderBand = THREE.MathUtils.clamp(COAST_WIDTH / TERRAIN_SIZE, 0, 1);
-  const borderDistances = {
-    east: THREE.MathUtils.clamp((HALF_TERRAIN_SIZE - x) / TERRAIN_SIZE, 0, 1),
-    west: THREE.MathUtils.clamp((x + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1),
-    north: THREE.MathUtils.clamp((z + HALF_TERRAIN_SIZE) / TERRAIN_SIZE, 0, 1),
-    south: THREE.MathUtils.clamp((HALF_TERRAIN_SIZE - z) / TERRAIN_SIZE, 0, 1),
-  };
-  const nonSeaBorders = Object.entries(borderDistances)
-    .filter(([side]) => side !== SEA_SIDE)
-    .map(([, distance]) => 1 - THREE.MathUtils.smoothstep(0, borderBand, distance));
-  const nonSeaBorderMask =
-    nonSeaBorders.length > 0 ? Math.max(...nonSeaBorders) : 0;
-  if (nonSeaBorderMask > 0) {
-    // Islands can happen when a slope threshold is used as a height buffer on borders.
-    // IMPORTANT: This must be a HEIGHT buffer (in elevation units), not a slope threshold.
-    // Using a slope constant here can accidentally allow water at non-sea borders -> island ring.
-    h = Math.max(h, seaLevel + MAINLAND_EDGE_BUFFER * nonSeaBorderMask);
+  for (const terrace of INLAND_LANDMARK_TERRACES) {
+    // A grid-cell apron keeps the complete temple footprint supported.
+    const dx = Math.max(0, Math.abs(x - terrace.x) - terrace.halfWidth - 8);
+    const dz = Math.max(0, Math.abs(worldZ - terrace.z) - terrace.halfDepth - 8);
+    const influence = 1 - THREE.MathUtils.smoothstep(Math.hypot(dx, dz), 0, 40);
+    h = THREE.MathUtils.lerp(h, seaLevel + terrace.heightAboveSea, influence);
   }
-
-  // Harbour circular carve (applied before coast fade so it shapes the basin)
-  h = applyHarbourCarve(x, z, seaLevel, h);
-
-  const acropolisDx = x - ACROPOLIS_PEAK_3D.x;
-  const acropolisDz = z - ACROPOLIS_PEAK_3D.z;
-  const acropolisDist = Math.hypot(acropolisDx, acropolisDz);
-  if (acropolisDist < 90) {
-    const summitMask = 1 - THREE.MathUtils.smoothstep(12, 36, acropolisDist);
-    const shoulderMask = 1 - THREE.MathUtils.smoothstep(18, 78, acropolisDist);
-    const approachDistance =
-      acropolisDx * ACROPOLIS_APPROACH_DIR_X +
-      acropolisDz * ACROPOLIS_APPROACH_DIR_Z;
-    const lateralDistance = Math.abs(
-      -acropolisDx * ACROPOLIS_APPROACH_DIR_Z +
-        acropolisDz * ACROPOLIS_APPROACH_DIR_X,
-    );
-    const cityApproachMask =
-      shoulderMask *
-      THREE.MathUtils.smoothstep(4, 46, approachDistance) *
-      (1 - THREE.MathUtils.smoothstep(10, 40, lateralDistance));
-
-    // Give the Acropolis a clearer summit and a broader city-facing shoulder
-    // so the surrounding urban fabric can read as climbing toward it.
-    h += summitMask * 8.5 + cityApproachMask * 4.5;
-  }
-
-  // Agora Flattening
-  const agoraDist = Math.hypot(x - AGORA_CENTER_3D.x, z - AGORA_CENTER_3D.z);
-  if (agoraDist < 60) {
-      // Gentle flattening
-      h = h * 0.7 + (seaLevel + CITY_HEIGHT) * 0.3;
-  }
-
-  // --- Coastal Feature Generation ---
-  const featureNoise = gradientNoise(x * 0.004, z * 0.004) * 0.5 + 0.5; // range 0-1
-  const cliffFactor = THREE.MathUtils.smoothstep(0.5, 0.6, featureNoise);
-
-  // Add extra height for cliffs before the coastal fade is applied
-  if (cliffFactor > 0) {
-      const cliffDetailNoise = gradientNoise(x * 0.1, z * 0.1);
-      const coastalZoneFactor = 1.0 - THREE.MathUtils.smoothstep(0.0, (COAST_WIDTH / TERRAIN_SIZE) * 2.0, coast.dSea);
-      h += cliffDetailNoise * 2.0 * cliffFactor * coastalZoneFactor; // Add some ruggedness
-      h += 10.0 * cliffFactor * coastalZoneFactor; // Add general height to the cliffs
-  }
-
-
-  // Coast Fade
-  if (coast.coastMask < 1) {
-      // For cliffs, we want a steeper drop-off. We can achieve this by raising the coastMask to a power.
-      const beachMask = coast.coastMask;
-      const cliffMask = Math.pow(coast.coastMask, 8.0); // Creates a much sharper curve
-
-      const finalMask = THREE.MathUtils.lerp(beachMask, cliffMask, cliffFactor);
-
-      // In beach areas, clamp the max height to prevent large hills right next to the water
-      if (cliffFactor < 0.1) {
-          h = Math.min(h, seaLevel + CITY_HEIGHT);
-      }
-
-      h = THREE.MathUtils.lerp(seaLevel, h, finalMask);
-  }
-
-  // Apply harbor/ocean band clamping AFTER the coast fade so that the carved
-  // seabed depth is never overridden by the shoreline fade near the east coast.
-  // PlaneGeometry's local Y becomes negative world Z after rotation. Harbor
-  // bounds are authored in world space; using local Y mirrors the basin.
-  h = clampHarborBandHeight(x, -z, seaLevel, h);
-
-  return h;
+  const court = AGORA_COURT_BOUNDS;
+  const courtDistance = Math.hypot(Math.max(court.west - x, x - court.east, 0), Math.max(court.south - worldZ, worldZ - court.north, 0));
+  h = THREE.MathUtils.lerp(h, seaLevel + 2.5, 1 - THREE.MathUtils.smoothstep(courtDistance, 0, 18));
+  return THREE.MathUtils.lerp(h, preservedCoast, coastLock);
 }
 
 function createSkirtGeometry(sourceGeometry, seaLevel) {

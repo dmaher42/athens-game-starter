@@ -700,7 +700,9 @@ export class Application {
         mainRoadCurve: mainRoad ?? null,
         roadPadding: MAIN_ROAD_WIDTH * 0.7,
         seaLevel: resolvedSeaLevel,
-        count: 550, // Slightly increased for urban clutter
+        // Keep authored planting during the landform pass. This legacy scatter
+        // still follows old road metadata, so it must not populate new lanes.
+        count: 0,
         districtRules: districtRulesManifest,
       });
 
@@ -755,7 +757,7 @@ export class Application {
 
       // Spawn specific Wisdom Scrolls for the quest
       collectibles.spawnAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.y, AGORA_CENTER_3D.z);
-      collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.y, ACROPOLIS_PEAK_3D.z);
+      collectibles.spawnAt(ACROPOLIS_PEAK_3D.x, terrain.userData['getHeightAt'](ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.z), ACROPOLIS_PEAK_3D.z);
       collectibles.spawnAt(HARBOR_CENTER_3D.x, HARBOR_CENTER_3D.y, HARBOR_CENTER_3D.z);
 
       // Expose for debugging/verification
@@ -773,8 +775,8 @@ export class Application {
       collectibles.spawnAt(hX + 32, hY, hZ + 10, 'amphora_rare');
       collectibles.spawnAt(hX + 55, hY, hZ + 8, 'amphora_rare');
 
-      // Random "Treasure" scrolls (standard gold)
-      collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);
+      // Keep rewards authored until random placement respects building footprints.
+      // Raised inland ground must not activate unreachable legacy scatter.
 
       // Reward side-court exploration through the existing collection system.
       // Keep quest items and harbour placements unchanged.

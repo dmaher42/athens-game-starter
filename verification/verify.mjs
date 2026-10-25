@@ -7,6 +7,7 @@ import https from "node:https";
 import { fileURLToPath } from "node:url";
 import net from "node:net";
 import path from "node:path";
+import { readFile } from 'node:fs/promises';
 import { setTimeout as sleep } from "node:timers/promises";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -197,7 +198,7 @@ async function runVerification() {
       }
 
       await page.waitForFunction(() => typeof window.render_game_to_text === "function");
-      const harborLayout = await page.evaluate(() => {
+      const harborLayout = await page.evaluate(async () => {
         const scene = window.scene;
         const civic = scene.getObjectByName("CivicDistrict");
         const plan = civic?.userData.plan;
@@ -207,11 +208,21 @@ async function runVerification() {
 
         ocean.geometry.computeBoundingBox();
         const bounds = ocean.geometry.boundingBox.clone().applyMatrix4(ocean.matrixWorld);
+        const vertices = terrain.geometry.attributes.position;
+        const protectedValues = [];
+        for (let i = 0; i < vertices.count; i++) {
+          const x = vertices.getX(i), z = -vertices.getY(i);
+          if (x >= 112 || (x >= 0 && z >= -80 && z <= 105)) protectedValues.push(x, z, vertices.getZ(i));
+        }
+        const digest = await crypto.subtle.digest('SHA-256', new Float32Array(protectedValues));
         return {
           normalWater: !ocean.userData.isAutomationFallback && ocean.material.isShaderMaterial,
           terrainValidation: terrain.userData.validation,
           waterStillSolid: ocean.userData.noCollision !== true,
-          stableWaterline: [[-108, 42], [-80, 126], [-102, -78]].every(([x, z]) => terrain.userData.getHeightAt(x, z) === ocean.userData.seaLevel),
+          protectedCoast: Array.from(new Uint8Array(digest), (v) => v.toString(16).padStart(2, '0')).join(''),
+          protectedVertices: protectedValues.length / 3,
+          landHeights: [[-30, 20], [-80, 126], [-108, 42], [-32, -28], [60, 146]].map(([x, z]) => terrain.userData.getHeightAt(x, z) - ocean.userData.seaLevel),
+          templeFootprint: [[-42,-43],[-22,-43],[-42,-13],[-22,-13],[-32,-28]].map(([x,z]) => terrain.userData.getHeightAt(x,z)),
           visualLayersExcluded: ['WorldFloorCap', 'HorizonSystem', 'ShoreTermination'].every((name) => scene.getObjectByName(name)?.userData.noCollision === true),
           visualBatchesExcluded: civic.children.some((object) => object.name.startsWith('MergedBatch') && object.userData.noCollision === true),
           heightErrors: [[5, 15], [15, 60], [25, 50], [-31.5, 34]].map(([x, z]) => {
@@ -266,10 +277,16 @@ async function runVerification() {
       assert.equal(harborLayout.normalWater, true, "Verify the production Water shader rather than simplified automation water.");
       assert.ok(harborLayout.heightErrors.every((error) => error !== null && error < 1e-6), "Ground placement must match the visible terrain triangles.");
       assert.equal(harborLayout.waterStillSolid, true, "Preserve existing water traversal pending a separate gameplay decision.");
-      assert.equal(harborLayout.stableWaterline, true, "Keep the current flat-land classifications stable while the landform fix is deferred.");
+      const coastalBaseline = JSON.parse(await readFile(new URL('./coast-profile.json', import.meta.url), 'utf8'));
+      assert.equal(harborLayout.protectedCoast, coastalBaseline.sha256, "Preserve every protected coastal/harbour terrain vertex.");
+      assert.equal(harborLayout.protectedVertices, coastalBaseline.vertices);
+      assert.ok(harborLayout.landHeights[0] >= 1.8 && harborLayout.landHeights[0] <= 2.8, 'Keep the Agora low and walkable.');
+      assert.ok(harborLayout.landHeights[1] >= 3 && harborLayout.landHeights[2] >= 3, 'Neighbourhoods must rise inland.');
+      assert.ok(harborLayout.landHeights[3] > harborLayout.landHeights[0] + 3 && harborLayout.landHeights[3] < 10, 'Give the temple a modest supported hill.');
       assert.equal(harborLayout.visualLayersExcluded && harborLayout.visualBatchesExcluded, true, "Visual-only layers must remain outside collision ownership after batching.");
-      assert.equal(harborLayout.terrainValidation.valid, false, "Report the known flat-land issue honestly until the separate landform pass.");
-      assert.ok(harborLayout.terrainValidation.failures.includes('inland-at-waterline'));
+      assert.ok(Math.max(...harborLayout.templeFootprint) - Math.min(...harborLayout.templeFootprint) < 0.25, 'Support the complete temple footprint on its terrace.');
+      assert.equal(harborLayout.terrainValidation.valid, true, 'The mainland profile must pass the real terrain checks.');
+      assert.deepEqual(harborLayout.terrainValidation.failures, []);
       assert.equal(harborLayout.onFoot, true, "Begin the exploration walk on foot.");
       assert.equal(harborLayout.frontages, 5, "Frame the Agora with the authored shopfronts.");
       assert.equal(harborLayout.neighbourhoods.length, 5, "Render all five exploration destinations.");

@@ -67,11 +67,17 @@ try {
     const nw = paths.find((p) => p.routePoints[0][0] === -30 && p.routePoints.at(-1)[0] === -108);
     const south = paths.find((p) => p.routePoints[0][0] === -30 && p.routePoints.at(-1)[0] === -45);
     const north = paths.find((p) => p.routePoints[0][0] === -31.5 && p.routePoints.at(-1)[0] === 20);
+    const sacred = paths.find((p) => p.routePoints.at(-1)[0] === -32 && p.routePoints.at(-1)[1] === -10);
+    if (!sacred) throw new Error('Missing temple approach');
+    follow(sacred); walkTo(-24, -8);
+    const templeReward = window.collectibles.items.find(item => Math.abs(item.position.x + 24) < 0.01 && Math.abs(item.position.z + 8) < 0.01);
+    if (!templeReward?.userData.collected) throw new Error('Temple reward is unreachable on foot.');
+    follow(sacred, true); walkTo(-30, 20);
     follow(nw); follow(byId('potters-olive')); follow(byId('olive-garden')); follow(byId('garden-traders'));
     follow(byId('traders-city')); follow(north, true); walkTo(-30, 20);
     follow(south); follow(byId('weavers-city')); follow(byId('weavers-potters'));
     follow(byId('potters-olive')); follow(byId('olive-traders'));
-    return { visited: [...visited], walks, frames, onFoot: !player.flying, finalPosition: player.position.toArray() };
+    return { templeReached: true, visited: [...visited], walks, frames, onFoot: !player.flying, finalPosition: player.position.toArray() };
   });
   assert.equal(report.visited.length, 5); assert.equal(report.onFoot, true); assert.deepEqual(errors, []);
   console.log(JSON.stringify({ neighbourhoodWalking: report }));

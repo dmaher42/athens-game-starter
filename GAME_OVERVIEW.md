@@ -25,8 +25,12 @@ Any AI assistant working on this project must:
 ### Ground reliability pass (2026-10-25)
 - Terrain placement reads the current PlaneGeometry triangles, matching the reflective water's terrain-height convention. The sampler preserves exact sea-level classification by rounding sub-nanometre transform noise.
 - Hidden ancestors, backdrop/horizon geometry, world-floor cap and decorative building-shadow planes do not contribute to solid collision. City batching preserves visibility and `noCollision` ownership.
-- The canonical TypeScript terrain validator is active; the always-valid JavaScript placeholder is removed. Invalid grids, submerged worlds, isolated land and flat inland terrain are checked. The present `inland-at-waterline` diagnostic remains unresolved pending the separate landform pass; it is stored on `terrain.userData.validation` and does not block this playable preview.
-- This pass preserves the current terrain vertices, water renderer, harbour layout and water traversal behaviour. It does not yet correct the terrain's smoothing arguments or activate the old 220-metre inland-rise setting.
+- The canonical TypeScript terrain validator is active. Invalid grids, submerged worlds, isolated land and flat inland terrain are checked; the new mainland profile passes and is stored on `terrain.userData.validation`.
+- Inland landforms use the existing terrain generator: corrected land smoothing, a gentle 10-metre inland rise and 28-metre distant ridge contribution. The old 220-metre rise is retired. Broad terraces support both inland temples; the Agora stays low, with smooth walking approaches.
+- The main temple anchor moves slightly inland to (-24, -8); the building remains offset to (-32, -28). Its approach, reserved precinct and quest collectible share the anchor and actual terrain height. The southern loop skirts the market frontages and temple instead of crossing them.
+- Protected waterfront vertices retain the preceding harbour profile byte for byte, checked against `verification/coast-profile.json`. Normal reflective Water, harbour layout and water traversal remain unchanged. The terrain grid is unchanged for performance.
+- Collectible rewards are pass-through objects, excluded from static collision so collection leaves no invisible obstacle.
+- Authored neighbourhood plants and rewards remain. Legacy random vegetation/treasure scatter stays off until it can respect current street and building footprints; inland elevation must not activate obsolete scatter. Road texture coordinates and ground-edge blending remain a later materials pass.
 
 ### City exploration pass (2026-10-25)
 - The surrounding city now has five connected destinations: Potters' Court west of the Agora, Olive Court to the north, Weavers' Yard to the southwest, North Garden beyond the residential streets, and Trading Court on the northern coastal side.

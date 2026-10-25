@@ -11,7 +11,7 @@ export { getSeaLevelY, setSeaLevelY, SEA_LEVEL_Y } from "./seaLevelState.js";
 const resolveSeaLevelY = () => getSeaLevelY();
 
 // --- UNIFORM HEIGHT FIX ---
-// Define a single consistent ground elevation for the entire city.
+// Legacy reference elevation; placement samples the rendered terrain.
 // 2.5m is a safe height above water (Dry but close to sea level).
 const getCityGroundY = () => resolveSeaLevelY() + 2.5;
 export { getCityGroundY }; // Export for use across city systems
@@ -32,9 +32,14 @@ export const HARBOR_CENTER_3D = new THREE.Vector3(
   10,
 );
 
-// All districts now sit on the same flat plane
+// Canonical horizontal district anchors; runtime placement samples terrain height.
 export const AGORA_CENTER_3D = new THREE.Vector3(-30, getCityGroundY(), 20);
-export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-4, getCityGroundY(), 0);
+export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-24, getCityGroundY(), -8);
+// Grade the existing inland landmarks onto broad, walkable terraces.
+export const INLAND_LANDMARK_TERRACES = [
+  { x: ACROPOLIS_PEAK_3D.x - 8, z: ACROPOLIS_PEAK_3D.z - 20, halfWidth: 12, halfDepth: 17, heightAboveSea: 7.5 },
+  { x: AGORA_CENTER_3D.x - 34, z: AGORA_CENTER_3D.z + 29, halfWidth: 10, halfDepth: 15, heightAboveSea: 3.8 },
+];
 // Shared walking-space bounds: city placement and the visible square agree.
 export const AGORA_COURT_BOUNDS = {
   west: AGORA_CENTER_3D.x - 22, east: AGORA_CENTER_3D.x + 22,

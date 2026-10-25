@@ -58,6 +58,19 @@ test('terrain validation rejects invalid input, underwater worlds, flat sea-leve
   assert.equal(validateTerrain({ ...options, baseHeights: mainland }).valid, true);
 });
 
+test('collectible rewards do not leave invisible obstacles in static ground collision', async () => {
+  const { CollectiblesManager } = await import('../src/world/collectibles.js');
+  const scene = new THREE.Scene();
+  scene.add(new THREE.Mesh(new THREE.BoxGeometry(10, 1, 10), new THREE.MeshBasicMaterial()));
+  const rewards = new CollectiblesManager(scene);
+  rewards.spawnAt(0, 0.5, 0);
+  const environment = new EnvironmentCollider(); environment.fromStaticScene(scene);
+  assert.equal(environment.mesh.geometry.boundingBox.max.y, 0.5, 'The uncollected reward must not be baked into the collider.');
+  rewards.update(0, new THREE.Vector3(0, 1.5, 0));
+  assert.equal(rewards.score, 1, 'Pass-through rewards must still be collectible.');
+  assert.equal(environment.mesh.geometry.boundingBox.max.y, 0.5, 'Collecting must not leave a ghost obstacle.');
+});
+
 test('hidden ancestors and visual-only geometry stay out of collisions after batching', () => {
   const scene = new THREE.Group();
   const material = new THREE.MeshBasicMaterial();

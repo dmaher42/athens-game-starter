@@ -1086,7 +1086,8 @@ function isBlockedForCityLayout(worldX, worldZ) {
   const isInSetback = HARBOR_SETBACKS?.some?.((rect) =>
     isWithinSetbackRect(worldX, worldZ, rect),
   );
-  const inTemplePrecinct = worldX >= -27 && worldX <= 3 && worldZ >= -40 && worldZ <= -5;
+  const templeX = ACROPOLIS_PEAK_3D.x - 8, templeZ = ACROPOLIS_PEAK_3D.z - 20;
+  const inTemplePrecinct = Math.abs(worldX - templeX) <= 15 && Math.abs(worldZ - templeZ) <= 20;
   return isInSetback || isInAuthoredHarborFront(worldX, worldZ) || inTemplePrecinct;
 }
 
@@ -1805,9 +1806,8 @@ function generateRoadNetwork(terrainSampler) {
   // Curved ascent around the hill.
   const sacredWayPoints = [
     AGORA_CENTER_3D.clone(),
-    new THREE.Vector3(-26, 0, 9),
-    new THREE.Vector3(-20, 0, 0),
-    new THREE.Vector3(-8, 0, -3),
+    new THREE.Vector3(-25, 0, 8),
+    new THREE.Vector3(ACROPOLIS_PEAK_3D.x - 8, 0, ACROPOLIS_PEAK_3D.z - 2),
   ];
   sacredWayPoints.forEach(p => p.y = getH(p));
   segments.push(new SplineRoad(sacredWayPoints, 5, 'artery'));
@@ -1828,8 +1828,9 @@ function generateRoadNetwork(terrainSampler) {
   // South Neighborhood Loop
   segments.push(new SplineRoad([
     new THREE.Vector3(-30, getH({x:-30, z:20}), 20),
-    new THREE.Vector3(-28, getH({x:-28, z:3}), 3),
-    new THREE.Vector3(-35, getH({x:-35, z:-34}), -34),
+    new THREE.Vector3(-72, getH({x:-72, z:20}), 20),
+    new THREE.Vector3(-76, getH({x:-76, z:2}), 2),
+    new THREE.Vector3(-65, getH({x:-65, z:-34}), -34),
     new THREE.Vector3(-45, getH({x:-45, z:-60}), -60)
   ], 6, 'street'));
 
@@ -1894,9 +1895,9 @@ function branchSideStreets(segments, terrainSampler) {
   segments.push(new SplineRoad([
     new THREE.Vector3(10, getH(10, -18), -18),
     new THREE.Vector3(10, getH(10, -42), -42),
-    new THREE.Vector3(-8, getH(-8, -46), -46),
-    new THREE.Vector3(-35, getH(-35, -48), -48),
-    new THREE.Vector3(-42, getH(-42, -48), -48)
+    new THREE.Vector3(4, getH(4, -54), -54),
+    new THREE.Vector3(-24, getH(-24, -56), -56),
+    new THREE.Vector3(-45, getH(-45, -60), -60)
   ], 5, 'street'));
 
   // Branch 3: Northwest Commercial extension Alleys

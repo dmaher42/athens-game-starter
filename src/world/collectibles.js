@@ -71,6 +71,8 @@ export class CollectiblesManager {
 
     // Animation state
     group.userData = {
+      // Pickups disappear after collection; never bake them into static walls.
+      noCollision: true,
       baseY: group.position.y,
       phase: Math.random() * Math.PI * 2,
       collected: false,
