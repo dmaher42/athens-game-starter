@@ -39,6 +39,7 @@ interface TerrainValidationResult {
     waterLoopSeparating: boolean;
     nonSeaBordersTouched: number;
     cityCoreSlopeAverage: number;
+    inlandMaxClearance: number;
   };
 }
 
@@ -58,6 +59,7 @@ const DEFAULT_RESULT: TerrainValidationResult = {
     waterLoopSeparating: false,
     nonSeaBordersTouched: 0,
     cityCoreSlopeAverage: Number.POSITIVE_INFINITY,
+    inlandMaxClearance: Number.NEGATIVE_INFINITY,
   },
 };
 
@@ -248,7 +250,8 @@ export function validateTerrain({
   seaLevel,
   seaSide,
 }: TerrainValidationInput): TerrainValidationResult {
-  if (!baseHeights || !Number.isFinite(segments) || !Number.isFinite(size)) {
+  if (!baseHeights || !Number.isInteger(segments) || segments < 2 || !Number.isFinite(size) || size <= 0 ||
+      !Number.isFinite(seaLevel) || !['north', 'south', 'east', 'west'].includes(seaSide)) {
     return { ...DEFAULT_RESULT, failures: ["missing-inputs"] };
   }
 
@@ -256,6 +259,9 @@ export function validateTerrain({
   const total = stride * stride;
   if (baseHeights.length !== total) {
     return { ...DEFAULT_RESULT, failures: ["invalid-grid"] };
+  }
+  if (baseHeights.some((height) => !Number.isFinite(height))) {
+    return { ...DEFAULT_RESULT, failures: ['non-finite-heights'] };
   }
 
   const landGrid = buildLandGrid(baseHeights, seaLevel);
@@ -351,6 +357,16 @@ export function validateTerrain({
   });
 
   const failures: string[] = [];
+  let inlandMaxClearance = Number.NEGATIVE_INFINITY;
+  for (let z = 0; z < stride; z++) {
+    for (let x = 0; x < stride; x++) {
+      const distance = getDistanceToSeaNormalized((x / segments - 0.5) * size, (z / segments - 0.5) * size, seaSide, size / 2, size);
+      if (distance >= 0.6 && distance <= 0.95) {
+        inlandMaxClearance = Math.max(inlandMaxClearance, (baseHeights[z * stride + x] ?? seaLevel) - seaLevel);
+      }
+    }
+  }
+  if (inlandMaxClearance <= 0.05) failures.push('inland-at-waterline');
 
   if (waterTouchesAllBorders) {
     failures.push("water-touches-all-borders");
@@ -376,6 +392,7 @@ export function validateTerrain({
       waterLoopSeparating,
       nonSeaBordersTouched,
       cityCoreSlopeAverage,
+      inlandMaxClearance,
     },
   };
 }

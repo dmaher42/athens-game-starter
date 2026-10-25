@@ -92,6 +92,7 @@ function makeBaseShadow(w, d) {
   mesh.rotation.x = -Math.PI / 2;
   mesh.position.y = 0.01;
   mesh.name = "BuildingBaseShadow";
+  mesh.userData.noCollision = true;
   return mesh;
 }
 
@@ -539,6 +540,10 @@ export function poolMaterialsAndMerge(group) {
 
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry || !child.material) return;
+    // Batching must not turn hidden descendants into a visible solid batch.
+    for (let ancestor = child; ancestor; ancestor = ancestor.parent) {
+      if (!ancestor.visible) return;
+    }
     if (child.userData?.isWindowPane) return; 
     if (child.userData?.isFoliage) return; // Wave 3/4: Preserve foliage material fidelity
     if (
@@ -571,10 +576,16 @@ export function poolMaterialsAndMerge(group) {
     }
 
     const pooledMat = getPooledMaterial(child.material);
-    const matId = pooledMat.uuid;
+    let parent = child;
+    let noCollision = false;
+    while (parent) {
+      if (parent.userData?.noCollision === true) { noCollision = true; break; }
+      parent = parent.parent;
+    }
+    const matId = `${pooledMat.uuid}:${noCollision ? 'visual' : 'solid'}`;
 
     if (!geomMap.has(matId)) {
-      geomMap.set(matId, { material: pooledMat, geoms: [] });
+      geomMap.set(matId, { material: pooledMat, geoms: [], noCollision });
     }
 
     geomMap.get(matId).geoms.push(clonedGeom);
@@ -594,6 +605,7 @@ export function poolMaterialsAndMerge(group) {
         mergedMesh.castShadow = true;
         mergedMesh.receiveShadow = true;
         mergedMesh.name = `MergedBatch_${batch.material.userData?.materialType || 'Generic'}`;
+        mergedMesh.userData.noCollision = batch.noCollision;
         group.add(mergedMesh);
       }
     } catch (e) {

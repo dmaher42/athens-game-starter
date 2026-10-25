@@ -22,6 +22,12 @@ Any AI assistant working on this project must:
 - Catch asset loading issues before they appear in the final render (especially `.glb` files).
 
 ## 4. Game Design Priorities
+### Ground reliability pass (2026-10-25)
+- Terrain placement reads the current PlaneGeometry triangles, matching the reflective water's terrain-height convention. The sampler preserves exact sea-level classification by rounding sub-nanometre transform noise.
+- Hidden ancestors, backdrop/horizon geometry, world-floor cap and decorative building-shadow planes do not contribute to solid collision. City batching preserves visibility and `noCollision` ownership.
+- The canonical TypeScript terrain validator is active; the always-valid JavaScript placeholder is removed. Invalid grids, submerged worlds, isolated land and flat inland terrain are checked. The present `inland-at-waterline` diagnostic remains unresolved pending the separate landform pass; it is stored on `terrain.userData.validation` and does not block this playable preview.
+- This pass preserves the current terrain vertices, water renderer, harbour layout and water traversal behaviour. It does not yet correct the terrain's smoothing arguments or activate the old 220-metre inland-rise setting.
+
 ### City exploration pass (2026-10-25)
 - The surrounding city now has five connected destinations: Potters' Court west of the Agora, Olive Court to the north, Weavers' Yard to the southwest, North Garden beyond the residential streets, and Trading Court on the northern coastal side.
 - Seven new streets form return loops through these places and the existing north/south collectors. Low street-facing homes and workshops connect the courts. Reserve complete footprints at curved entrances; keep the terrain-following paving and central walking lines clear.

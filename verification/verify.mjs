@@ -209,6 +209,17 @@ async function runVerification() {
         const bounds = ocean.geometry.boundingBox.clone().applyMatrix4(ocean.matrixWorld);
         return {
           normalWater: !ocean.userData.isAutomationFallback && ocean.material.isShaderMaterial,
+          terrainValidation: terrain.userData.validation,
+          waterStillSolid: ocean.userData.noCollision !== true,
+          stableWaterline: [[-108, 42], [-80, 126], [-102, -78]].every(([x, z]) => terrain.userData.getHeightAt(x, z) === ocean.userData.seaLevel),
+          visualLayersExcluded: ['WorldFloorCap', 'HorizonSystem', 'ShoreTermination'].every((name) => scene.getObjectByName(name)?.userData.noCollision === true),
+          visualBatchesExcluded: civic.children.some((object) => object.name.startsWith('MergedBatch') && object.userData.noCollision === true),
+          heightErrors: [[5, 15], [15, 60], [25, 50], [-31.5, 34]].map(([x, z]) => {
+            const THREE = window.THREE;
+            const raycaster = new THREE.Raycaster(new THREE.Vector3(x, 100, z), new THREE.Vector3(0, -1, 0));
+            const hit = raycaster.intersectObject(terrain)[0];
+            return hit ? Math.abs(hit.point.y - terrain.userData.getHeightAt(x, z)) : null;
+          }),
           court: plan.agoraCourt,
           frontages: plan.frontages?.length ?? 0,
           neighbourhoods: plan.neighbourhoods,
@@ -253,6 +264,12 @@ async function runVerification() {
       });
       assert.ok(Math.abs(harborLayout.waterWest - 2) < 0.01, "Water must still cover the full harbor basin.");
       assert.equal(harborLayout.normalWater, true, "Verify the production Water shader rather than simplified automation water.");
+      assert.ok(harborLayout.heightErrors.every((error) => error !== null && error < 1e-6), "Ground placement must match the visible terrain triangles.");
+      assert.equal(harborLayout.waterStillSolid, true, "Preserve existing water traversal pending a separate gameplay decision.");
+      assert.equal(harborLayout.stableWaterline, true, "Keep the current flat-land classifications stable while the landform fix is deferred.");
+      assert.equal(harborLayout.visualLayersExcluded && harborLayout.visualBatchesExcluded, true, "Visual-only layers must remain outside collision ownership after batching.");
+      assert.equal(harborLayout.terrainValidation.valid, false, "Report the known flat-land issue honestly until the separate landform pass.");
+      assert.ok(harborLayout.terrainValidation.failures.includes('inland-at-waterline'));
       assert.equal(harborLayout.onFoot, true, "Begin the exploration walk on foot.");
       assert.equal(harborLayout.frontages, 5, "Frame the Agora with the authored shopfronts.");
       assert.equal(harborLayout.neighbourhoods.length, 5, "Render all five exploration destinations.");

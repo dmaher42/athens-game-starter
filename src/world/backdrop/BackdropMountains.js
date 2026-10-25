@@ -13,6 +13,7 @@ export class BackdropMountains {
     this.seaLevel = options.seaLevel || 0;
     this.seed = options.seed || 12345;
     this.group = new THREE.Group();
+    this.group.userData.noCollision = true;
     this.scene.add(this.group);
   }
 

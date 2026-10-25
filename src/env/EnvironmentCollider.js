@@ -81,7 +81,7 @@ export class EnvironmentCollider {
     const shouldInclude = (node) => {
       let current = node;
       while (current) {
-        if (current.userData?.noCollision === true) {
+        if (current.visible === false || current.userData?.noCollision === true) {
           return false;
         }
         current = current.parent;

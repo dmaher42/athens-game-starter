@@ -28,7 +28,8 @@ import {
   RIDGE_START,
   RIDGE_HEIGHT,
 } from "../config/terrainShape";
-import { validateTerrain } from "./terrainValidation.js";
+import { validateTerrain } from "./terrainValidation.ts";
+import { createTerrainGridSampler } from "./terrainHeight.js";
 
 // Lightweight gradient noise to break up perfectly flat surfaces.
 function gradientNoise(x, z) {
@@ -537,11 +538,13 @@ export function createTerrain(scene) {
       seaLevel,
       seaSide: SEA_SIDE,
     });
-    if (validationResult.valid) break;
+    // A missing inland height profile cannot be repaired by changing noise.
+    // Keep the diagnostic without repeating expensive, identical attempts.
+    if (validationResult.valid || validationResult.failures.includes('inland-at-waterline')) break;
   }
 
   if (validationResult && !validationResult.valid) {
-    console.warn("Terrain validation failed after retries.", validationResult);
+    console.warn("Terrain shape check reported unresolved issues.", validationResult);
   }
 
   positionAttribute.needsUpdate = true;
@@ -663,6 +666,7 @@ export function createTerrain(scene) {
   terrain.rotation.x = -Math.PI / 2;
   terrain.receiveShadow = true;
   terrain.name = "Terrain";
+  terrain.userData.validation = validationResult;
   // Terrain should render before the ocean surface so underwater ground stays
   // hidden below the water instead of visually conflicting with it.
   terrain.renderOrder = RENDER_LAYERS.TERRAIN;
@@ -697,48 +701,7 @@ export function createTerrain(scene) {
   
   scene.add(terrain);
 
-  const stride = segments + 1;
-  terrain.userData.getHeightAt = (worldX, worldZ) => {
-    const local = new THREE.Vector3(worldX, 0, worldZ);
-    terrain.worldToLocal(local);
-
-    const halfSize = size / 2;
-    const localX = local.x + halfSize;
-    // PlaneGeometry uses local Y as its second ground axis before the terrain
-    // mesh rotates into world XZ space.
-    const localZ = -local.y + halfSize;
-
-    if (localX < 0 || localX > size || localZ < 0 || localZ > size) {
-      return null;
-    }
-
-    const percentX = localX / size;
-    const percentZ = localZ / size;
-    const gridX = percentX * segments;
-    const gridZ = percentZ * segments;
-
-    const x0 = Math.floor(gridX);
-    const x1 = Math.min(x0 + 1, segments);
-    const z0 = Math.floor(gridZ);
-    const z1 = Math.min(z0 + 1, segments);
-
-    const sx = gridX - x0;
-    const sz = gridZ - z0;
-
-    const index00 = z0 * stride + x0;
-    const index10 = z0 * stride + x1;
-    const index01 = z1 * stride + x0;
-    const index11 = z1 * stride + x1;
-
-    const h00 = baseHeights[index00];
-    const h10 = baseHeights[index10];
-    const h01 = baseHeights[index01];
-    const h11 = baseHeights[index11];
-
-    const h0 = h00 + (h10 - h00) * sx;
-    const h1 = h01 + (h11 - h01) * sx;
-    return h0 + (h1 - h0) * sz;
-  };
+  terrain.userData.getHeightAt = createTerrainGridSampler(terrain);
 
   return terrain;
 }

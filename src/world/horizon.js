@@ -166,6 +166,7 @@ export function createHorizon(scene, options = {}) {
 
   const group = new THREE.Group();
   group.name = "HorizonSystem";
+  group.userData.noCollision = true;
 
   const ring = createHorizonRing({
     innerRadius,

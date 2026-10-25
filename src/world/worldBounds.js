@@ -38,6 +38,7 @@ export function createWorldFloorCap(scene, options = {}) {
 
   const cap = new THREE.Mesh(geometry, material);
   cap.name = "WorldFloorCap";
+  cap.userData.noCollision = true;
   cap.rotation.x = -Math.PI / 2;
   cap.position.y = seaLevel - depth;
   cap.renderOrder = -10;

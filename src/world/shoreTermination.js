@@ -157,6 +157,7 @@ export function createShorelineTermination(scene, options = {}) {
 
   const group = new THREE.Group();
   group.name = "ShoreTermination";
+  group.userData.noCollision = true;
   group.userData.nonInteractive = true;
 
   const waterFade = createWaterFadeRing({
