@@ -198,6 +198,11 @@ async function runVerification() {
       }
 
       await page.waitForFunction(() => typeof window.render_game_to_text === "function");
+      await page.waitForFunction(() => {
+        const civic = window.scene.getObjectByName('CivicDistrict');
+        const surfaces = civic.children.filter(o => o.userData.groundSurface);
+        return surfaces.length > 6 && surfaces.every(o => o.material.userData.__isGravel && o.material.map?.image?.width > 1);
+      }, null, { timeout: 60000 });
       const harborLayout = await page.evaluate(async () => {
         const scene = window.scene;
         const civic = scene.getObjectByName("CivicDistrict");
@@ -215,7 +220,9 @@ async function runVerification() {
           if (x >= 112 || (x >= 0 && z >= -80 && z <= 105)) protectedValues.push(x, z, vertices.getZ(i));
         }
         const digest = await crypto.subtle.digest('SHA-256', new Float32Array(protectedValues));
+        const terrainDigest = await crypto.subtle.digest('SHA-256', new Float32Array(Array.from({length: vertices.count}, (_,i) => [vertices.getX(i), -vertices.getY(i), vertices.getZ(i)]).flat()));
         return {
+          terrainProfile: Array.from(new Uint8Array(terrainDigest), v => v.toString(16).padStart(2, '0')).join(''),
           normalWater: !ocean.userData.isAutomationFallback && ocean.material.isShaderMaterial,
           terrainValidation: terrain.userData.validation,
           waterStillSolid: ocean.userData.noCollision !== true,
@@ -241,6 +248,17 @@ async function runVerification() {
             const normal = object.geometry.attributes.normal;
             for (let i = 0; i < normal.count; i++) if (normal.getY(i) < -0.001) return false;
             return true;
+          }),
+          groundSurfaces: civic.children.filter(o => o.userData.groundSurface).map(o => {
+            const uv = o.geometry.attributes.uv, color = o.geometry.attributes.color, pos = o.geometry.attributes.position;
+            const alpha = color && Array.from({length: color.count}, (_,i) => color.getW(i));
+            const origin = pos && o.localToWorld(new window.THREE.Vector3().fromBufferAttribute(pos, 0));
+            let metreScaled = Boolean(uv) && Math.abs(uv.getX(0)*4-origin.x)<0.001 && Math.abs(uv.getY(0)*4-origin.z)<0.001;
+            for (let i = 1; uv && i < uv.count; i++) {
+              const dx = pos.getX(i) - pos.getX(i-1), dz = pos.getZ(i) - pos.getZ(i-1);
+              if (Math.abs((uv.getX(i)-uv.getX(i-1))*4-dx) > 0.001 || Math.abs((uv.getY(i)-uv.getY(i-1))*4-dz) > 0.001) metreScaled = false;
+            }
+            return { kind: o.userData.groundSurface, stableOrder: o.renderOrder === (o.userData.groundSurface === 'court' ? 2.2 : o.userData.roadType === 'artery' ? 2.1 : 2), metreScaled, alphaRange: alpha && [Math.min(...alpha),Math.max(...alpha)], transparent: o.material.transparent, depthWrite: o.material.depthWrite, vertexColors: o.material.vertexColors, texture: o.material.map?.image?.width > 1 };
           }),
           templeColumns: (() => {
             const columns = [];
@@ -277,6 +295,8 @@ async function runVerification() {
       assert.equal(harborLayout.normalWater, true, "Verify the production Water shader rather than simplified automation water.");
       assert.ok(harborLayout.heightErrors.every((error) => error !== null && error < 1e-6), "Ground placement must match the visible terrain triangles.");
       assert.equal(harborLayout.waterStillSolid, true, "Preserve existing water traversal pending a separate gameplay decision.");
+      const terrainBaseline = JSON.parse(await readFile(new URL('./terrain-profile.json', import.meta.url), 'utf8'));
+      assert.equal(harborLayout.terrainProfile, terrainBaseline.sha256, 'Preserve the complete new landform, including inland slopes and temple terraces.');
       const coastalBaseline = JSON.parse(await readFile(new URL('./coast-profile.json', import.meta.url), 'utf8'));
       assert.equal(harborLayout.protectedCoast, coastalBaseline.sha256, "Preserve every protected coastal/harbour terrain vertex.");
       assert.equal(harborLayout.protectedVertices, coastalBaseline.vertices);
@@ -302,6 +322,8 @@ async function runVerification() {
       assert.ok(harborLayout.dryLots.some((cell) => cell.z > 116.8), "Check north-side city lots.");
       assert.ok(harborLayout.dryLots.some((cell) => cell.z < -76.8), "Check south-side city lots.");
       assert.deepEqual(harborLayout.dryLots.filter((cell) => cell.blocked && cell.reservation !== 'neighbourhood'), [], "Water rendering bounds must not block surrounding dry city lots; authored court reservations are intentional.");
+      assert.equal(harborLayout.groundSurfaces.filter(o => o.kind === 'court').length, 6, 'Preserve Agora and five terrain-following neighbourhood courts.');
+      assert.ok(harborLayout.groundSurfaces.every(o => o.stableOrder && o.metreScaled && o.texture && o.transparent && !o.depthWrite && o.vertexColors && o.alphaRange[0] === 0 && o.alphaRange[1] === 1), 'Every street/court needs metre-scaled texture and feathered edges without depth-writing seams.');
       assert.ok(harborLayout.roadMeshes > 0, "Preserve main's continuous streets.");
       assert.ok(harborLayout.cityBatches > 0, "Preserve main's batched city geometry.");
       assert.equal(harborLayout.basinBlocked, true, "Keep city buildings out of the harbor basin.");

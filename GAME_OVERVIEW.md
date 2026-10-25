@@ -30,7 +30,14 @@ Any AI assistant working on this project must:
 - The main temple anchor moves slightly inland to (-24, -8); the building remains offset to (-32, -28). Its approach, reserved precinct and quest collectible share the anchor and actual terrain height. The southern loop skirts the market frontages and temple instead of crossing them.
 - Protected waterfront vertices retain the preceding harbour profile byte for byte, checked against `verification/coast-profile.json`. Normal reflective Water, harbour layout and water traversal remain unchanged. The terrain grid is unchanged for performance.
 - Collectible rewards are pass-through objects, excluded from static collision so collection leaves no invisible obstacle.
-- Authored neighbourhood plants and rewards remain. Legacy random vegetation/treasure scatter stays off until it can respect current street and building footprints; inland elevation must not activate obsolete scatter. Road texture coordinates and ground-edge blending remain a later materials pass.
+- Authored neighbourhood plants and rewards remain. Legacy random vegetation/treasure scatter stays off until it can respect current street and building footprints; inland elevation must not activate obsolete scatter.
+
+### Ground texture and paving pass (2026-10-26)
+- Extend the existing spline streets and terrain-following courts. Streets and courts use world-aligned texture coordinates with a four-metre tile, so bends and joins do not stretch the grain or reset the stone pattern.
+- Shared existing rough stone textures mark main routes and all six gathering courts; packed earth marks smaller lanes. Texture loading runs after the district exists and loads the two maps concurrently. Selection follows authored surface roles, not the city group's origin height or random grass assignment.
+- Vertex alpha feathers the outer 0.65 metres of streets and roughly one metre of courts into earth. Transparent paving does not write depth; fixed finish order paints earth lanes, then stone routes, then courts so turning the camera cannot swap finishes at crossings. Preserve court metadata outside generic building batching. The route centre lines, widths, destinations and buildings are unchanged.
+- City ground grain repeats every four metres rather than about 29 metres. Coastal and inland/underwater materials remain unchanged. No new image assets, terrain vertices, higher terrain resolution or extra ground-overlay system are introduced.
+- `verification/terrain-profile.json` preserves all 66,049 terrain vertices from the landform update, alongside the existing protected harbour hash. Browser checks require loaded textures, metre alignment, feathered alpha and all six courts.
 
 ### City exploration pass (2026-10-25)
 - The surrounding city now has five connected destinations: Potters' Court west of the Agora, Olive Court to the north, Weavers' Yard to the southwest, North Garden beyond the residential streets, and Trading Court on the northern coastal side.

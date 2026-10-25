@@ -1,161 +1,51 @@
-// ---- src/features/roads-gravel.js ----
+// Apply shared, metre-scaled textures to the authored street/court surfaces.
 import * as THREE from "three";
 import { MATERIALS } from "../materials/materialRegistry.js";
-import {
-  GRASS_MIN_ELEV,
-  SAND_MAX_ELEV,
-  SLOPE_ROCK_MIN,
-} from "../config/terrainMaterials.js";
-import { getSeaLevelY } from "../world/locations.js";
-import { getSlope } from "../world/terrainUtils.js";
+import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
-/**
- * Applies gravel material to road meshes only.
- * Phase 3: Defer texture loading to requestAnimationFrame (5-8M deferral)
- * - Safe if textures missing (no-op).
- * - Idempotent: re-running won't double-apply.
- */
 export async function applyGravelToRoads({ scene } = {}) {
-  return new Promise((resolve) => {
-    requestAnimationFrame(async () => {
-      if (!scene) {
-        resolve();
-        return;
-      }
-
-      const tl = new THREE.TextureLoader();
-      const seaLevel = getSeaLevelY();
-      const terrainSampler =
-        scene?.userData?.getHeightAt ||
-        scene?.userData?.terrainHeightSampler ||
-        null;
-      let sandMap = null;
-      let grassMap = null;
-      let stoneMap = null;
-      let dirtMap = null;
-      try {
-        sandMap = await tl.loadAsync(MATERIALS.sand.albedo);
-        sandMap.wrapS = sandMap.wrapT = THREE.RepeatWrapping;
-        sandMap.repeat.set(6, 6);
-        sandMap.colorSpace = THREE.SRGBColorSpace;
-
-        grassMap = await tl.loadAsync(MATERIALS.grass.albedo);
-        grassMap.wrapS = grassMap.wrapT = THREE.RepeatWrapping;
-        grassMap.repeat.set(6, 6);
-        grassMap.colorSpace = THREE.SRGBColorSpace;
-
-        stoneMap = await tl.loadAsync(MATERIALS.stoneFallback.albedo);
-        stoneMap.wrapS = stoneMap.wrapT = THREE.RepeatWrapping;
-        stoneMap.repeat.set(8, 8);
-        stoneMap.colorSpace = THREE.SRGBColorSpace;
-
-        if (MATERIALS.dirt && MATERIALS.dirt.albedo) {
-          dirtMap = await tl.loadAsync(MATERIALS.dirt.albedo);
-          dirtMap.wrapS = dirtMap.wrapT = THREE.RepeatWrapping;
-          dirtMap.repeat.set(5, 5);
-          dirtMap.colorSpace = THREE.SRGBColorSpace;
-        }
-      } catch (err) {
-        console.warn("Texture loading failed in applyGravelToRoads", err);
-      }
-
-      const sandMaterial = new THREE.MeshStandardMaterial({
-        map: sandMap || null,
-        color: sandMap ? 0xb6956d : 0xcdb89c,
-        roughness: 0.85,
-      });
-      const grassMaterial = new THREE.MeshStandardMaterial({
-        map: grassMap || null,
-        color: grassMap ? 0x6f8057 : 0x7a8b62,
-        roughness: 0.9,
-      });
-      const dirtMaterial = new THREE.MeshStandardMaterial({
-        map: dirtMap || null,
-        color: dirtMap ? 0x8a5f41 : 0x8b6a46,
-        roughness: 0.92,
-      });
-      const cobbleMaterial = new THREE.MeshPhysicalMaterial({
-        map: stoneMap || null,
-        color: stoneMap ? 0x80776c : 0xd6d1c8,
-        roughness: 0.65,
-        clearcoat: 0.1,
-        clearcoatRoughness: 0.4,
-        sheen: 0.2,
-      });
-
-      if (!sandMaterial || !grassMaterial || !cobbleMaterial) {
-        resolve();
-        return;
-      }
-
-      const pickRoad = (o) => {
-        const name = (o.name || "").toLowerCase();
-        const u = o.userData || {};
-        return (
-          name.includes("road") ||
-          name.includes("street") ||
-          name.includes("path") ||
-          u.type === "road" ||
-          u.kind === "road" ||
-          u.category === "road"
-        );
-      };
-
-      const isMainRoad = (o) => {
-        const name = (o.name || "").toLowerCase();
-        const u = o.userData || {};
-        return (
-          name.includes("main") ||
-          name.includes("plaza") ||
-          u.kind === "plaza" ||
-          u.category === "plaza" ||
-          u.roadType === "artery"
-        );
-      };
-
-      const chooseMaterial = (o) => {
-        if (isMainRoad(o)) return cobbleMaterial;
-
-        const pos = o.getWorldPosition(new THREE.Vector3());
-        const elevation = Number.isFinite(pos.y) ? pos.y : 0;
-        const slope = terrainSampler ? getSlope(terrainSampler, pos.x, pos.z) : 0;
-
-        // Steep paths are always stone/cobble for traction
-        if (slope >= SLOPE_ROCK_MIN) {
-          return cobbleMaterial;
-        }
-
-        // Coastal paths use sand
-        if (elevation <= seaLevel + SAND_MAX_ELEV) {
-          return sandMaterial;
-        }
-
-        // Rural or high-elevation paths use dirt
-        if (elevation >= seaLevel + GRASS_MIN_ELEV + 10) {
-          return dirtMaterial;
-        }
-
-        // Neighborhood paths use dirt/grass mix
-        if (elevation >= seaLevel + GRASS_MIN_ELEV) {
-          return (Math.random() < 0.7) ? dirtMaterial : grassMaterial;
-        }
-
-        return cobbleMaterial;
-      };
-
-      let count = 0;
-      scene.traverse((o) => {
-        if (!o?.isMesh) return;
-        if (!pickRoad(o)) return;
-        if (o.material && o.material.userData?.__isGravel) return;
-        o.material = chooseMaterial(o);
-        o.material.userData = { ...(o.material.userData || {}), __isGravel: true };
-        o.receiveShadow = true;
-        count++;
-      });
-
-      console.info("[roads] Gravel textures applied in background");
-      resolve();
-    });
+  if (!scene) return;
+  const surfaces = [];
+  scene.traverse(o => {
+    if (o.isMesh && o.userData.groundSurface && !o.material?.userData?.__isGravel) surfaces.push(o);
   });
+  if (!surfaces.length) return;
+  const loader = new THREE.TextureLoader();
+  const load = async url => {
+    try {
+      const map = await loader.loadAsync(url);
+      map.wrapS = map.wrapT = THREE.RepeatWrapping;
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.anisotropy = 8;
+      return map;
+    } catch (error) {
+      console.warn('[roads] Using untextured ground fallback:', url, error);
+      return null;
+    }
+  };
+  const [stone, dirt] = await Promise.all([
+    load(joinPath(resolveBaseUrl(), 'textures/stone_rough.jpg')),
+    load(MATERIALS.dirt.albedo),
+  ]);
+  const materials = new Map();
+  for (const mesh of surfaces) {
+    const paved = mesh.userData.groundSurface === 'court' || mesh.userData.roadType === 'artery';
+    const color = mesh.userData.groundSurface === 'court' ? mesh.material.color.getHex() : paved ? 0xe0d4bd : 0xd2bd9d;
+    const key = `${paved}:${color}`;
+    if (!materials.has(key)) {
+      const material = new THREE.MeshStandardMaterial({
+        name: paved ? 'WornStonePaving' : 'PackedEarthLane',
+        color, map: paved ? stone : dirt, roughness: 0.96, metalness: 0,
+        vertexColors: true, transparent: true, depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      });
+      material.userData.__isGravel = true;
+      materials.set(key, material);
+    }
+    const previous = mesh.material;
+    mesh.material = materials.get(key);
+    previous.dispose();
+    mesh.receiveShadow = true;
+  }
+  console.info('[roads] Shared stone paving and packed-earth lane textures applied.');
 }

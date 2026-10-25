@@ -317,20 +317,30 @@ function createPavedStrip(width, length, color = 0xb49673) {
   return mesh;
 }
 
-function createTerrainCourt(width, depth, color, localX, localZ, sampleLocalHeight) {
+function createTerrainCourt(width, depth, color, localX, localZ, sampleLocalHeight, center) {
   const paving = createPavedStrip(width, depth, color);
   paving.geometry.dispose();
-  paving.geometry = new THREE.PlaneGeometry(width, depth, Math.ceil(width / 2), Math.ceil(depth / 2));
+  paving.geometry = new THREE.PlaneGeometry(width, depth, Math.ceil(width), Math.ceil(depth));
   paving.geometry.rotateX(-Math.PI / 2);
   paving.rotation.x = 0;
   const positions = paving.geometry.attributes.position;
+  const uv = paving.geometry.attributes.uv;
+  const colors = [];
   for (let i = 0; i < positions.count; i++) {
-    positions.setY(i, sampleLocalHeight(localX + positions.getX(i), localZ + positions.getZ(i)) + 0.035);
+    const x = positions.getX(i), z = positions.getZ(i);
+    positions.setY(i, sampleLocalHeight(localX + x, localZ + z) + 0.035);
+    uv.setXY(i, (localX + x + center.x) / 4, (localZ + z + center.z) / 4);
+    const edge = Math.min(width / 2 - Math.abs(x), depth / 2 - Math.abs(z));
+    colors.push(1, 1, 1, THREE.MathUtils.smoothstep(edge, 0, 0.9));
   }
+  paving.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4));
   paving.geometry.computeVertexNormals();
   paving.position.set(localX, 0, localZ);
+  paving.userData.groundSurface = 'court';
+  paving.material.vertexColors = true;
   paving.material.opacity = 1;
-  paving.material.transparent = false;
+  paving.material.depthWrite = false;
+  paving.renderOrder = 2.2;
   return paving;
 }
 
@@ -1699,8 +1709,11 @@ class SplineRoad {
     // Create ribbon geometry
     const ribbonGeo = new THREE.BufferGeometry();
     const vertices = [];
+    const uvs = [];
+    const colors = [];
     const indices = [];
     const roadWidth = this.width;
+    const offsets = [-roadWidth / 2, -roadWidth / 2 + 0.65, 0, roadWidth / 2 - 0.65, roadWidth / 2];
 
     for (let i = 0; i <= segments; i++) {
         const t = i / segments;
@@ -1717,32 +1730,26 @@ class SplineRoad {
         const normal = new THREE.Vector3(0, 1, 0);
         const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
 
-        // Left and right edges
-        const left = pos.clone().add(binormal.clone().multiplyScalar(roadWidth / 2));
-        const right = pos.clone().add(binormal.clone().multiplyScalar(-roadWidth / 2));
-        if (terrainSampler) {
-          for (const edge of [left, right]) {
-            const height = terrainSampler(edge.x, edge.z);
-            if (Number.isFinite(height)) edge.y = height;
-          }
+        // Texture coordinates use world metres, so bends and intersections
+        // share the same grain scale instead of stretching a map per street.
+        for (let lane = 0; lane < offsets.length; lane++) {
+          const edge = pos.clone().addScaledVector(binormal, offsets[lane]);
+          const height = terrainSampler?.(edge.x, edge.z);
+          if (Number.isFinite(height)) edge.y = height;
+          vertices.push(edge.x - center.x, edge.y - center.y + 0.15, edge.z - center.z);
+          uvs.push(edge.x / 4, edge.z / 4);
+          colors.push(1, 1, 1, lane === 0 || lane === offsets.length - 1 ? 0 : 1);
         }
-
-        // Offset slightly above terrain to prevent Z-fighting
-        const lift = 0.15;
-        vertices.push(
-            left.x - center.x, left.y - center.y + lift, left.z - center.z,
-            right.x - center.x, right.y - center.y + lift, right.z - center.z
-        );
 
         // The shared square has its own paving. Roads meet its edges instead
         // of drawing overlapping strips across the gathering space.
         const middle = i < segments ? points[i].clone().lerp(points[i + 1], 0.5) : pos;
         if (i < segments && !inAgoraCourt(middle.x, middle.z) && !neighbourhoodAt(middle.x, middle.z)) {
-            const base = i * 2;
-            // Face upward even after the gravel pass replaces the temporary
-            // double-sided material with the normal single-sided one.
-            indices.push(base, base + 2, base + 1);
-            indices.push(base + 1, base + 2, base + 3);
+            const base = i * offsets.length;
+            for (let lane = 0; lane < offsets.length - 1; lane++) {
+              indices.push(base + lane, base + lane + offsets.length, base + lane + 1);
+              indices.push(base + lane + 1, base + lane + offsets.length, base + lane + offsets.length + 1);
+            }
         }
     }
 
@@ -1757,18 +1764,27 @@ class SplineRoad {
       if (az * bx - ax * bz < 0) { indices[i + 1] = c; indices[i + 2] = b; }
     }
     ribbonGeo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    ribbonGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    ribbonGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4));
     ribbonGeo.setIndex(indices);
     ribbonGeo.computeVertexNormals();
 
     const roadColor = this.type === 'artery' ? 0xc9b58e : (this.type === 'street' ? 0xa18b6b : 0x8a7a6a);
     const material = new THREE.MeshStandardMaterial({
         color: roadColor,
-        roughness: 0.8,
+        vertexColors: true,
+        transparent: true,
+        depthWrite: false,
+        roughness: 0.95,
         side: THREE.DoubleSide
     });
     
     const mesh = new THREE.Mesh(ribbonGeo, material);
     mesh.name = `RoadSpline-${this.type}`;
+    // Paint stone routes over earth lanes consistently at crossings; camera
+    // depth sorting must not swap the two finishes as the player turns.
+    mesh.renderOrder = this.type === 'artery' ? 2.1 : 2;
+    mesh.userData.groundSurface = 'street';
     mesh.userData.roadType = this.type;
     mesh.userData.streetId = this.id ?? null;
     mesh.userData.routePoints = this.curve.points.map((p) => [p.x, p.z]);
@@ -2332,7 +2348,7 @@ export async function createCivicDistrict(scene, options = {}) {
   const centerPos = new THREE.Vector3(center.x, baseHeight + surfaceOffset, center.z);
   renderRoadNetworkSplines(group, roadNetwork, centerPos, terrainSampler);
 
-  const court = createTerrainCourt(44, 28, 0xcbbb9e, AGORA_CENTER_3D.x - center.x, AGORA_CENTER_3D.z - center.z, sampleLocalHeight);
+  const court = createTerrainCourt(44, 28, 0xcbbb9e, AGORA_CENTER_3D.x - center.x, AGORA_CENTER_3D.z - center.z, sampleLocalHeight, center);
   court.name = 'AgoraCourt';
   group.add(court);
   for (const f of AGORA_FRONTAGES) {
@@ -2359,7 +2375,7 @@ export async function createCivicDistrict(scene, options = {}) {
   // the rest of the city. Keep through routes and side entrances open.
   group.userData.plan.neighbourhoods = NEIGHBOURHOODS.map((place) => {
     const localX = place.x - center.x, localZ = place.z - center.z;
-    const paving = createTerrainCourt(place.width, place.depth, place.color, localX, localZ, sampleLocalHeight);
+    const paving = createTerrainCourt(place.width, place.depth, place.color, localX, localZ, sampleLocalHeight, center);
     paving.name = `NeighbourhoodCourt-${place.id}`;
     paving.receiveShadow = true;
     group.add(paving);

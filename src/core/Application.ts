@@ -677,8 +677,6 @@ export class Application {
         ]);
       }
 
-      applyGravelToRoads({ scene, baseUrl: BASE_URL, repeat: [6, 6] }).catch(() => {});
-
       updateTerrainCoverageMask(terrain, {
         buildingPlacements: buildingPlacements ?? [],
         roadCurves: roadCurves ?? [],
@@ -715,6 +713,9 @@ export class Application {
         center: AGORA_CENTER_3D,
         terrain,
       });
+
+      // Streets and courts must exist before applying their shared textures.
+      applyGravelToRoads({ scene }).catch(() => {});
 
       const backdrop = new BackdropMountains(worldRoot, {
         seaLevel: resolvedSeaLevel,

@@ -549,6 +549,7 @@ export function poolMaterialsAndMerge(group) {
     if (
       child.userData?.type === "road" ||
       child.userData?.roadType ||
+      child.userData?.groundSurface ||
       child.userData?.isFootpath ||
       /road|street|path/i.test(child.name || "")
     ) {
