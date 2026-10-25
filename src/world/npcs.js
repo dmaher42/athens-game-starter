@@ -1,7 +1,7 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Character } from '../characters/Character.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
-import { loadSafeTexture } from '../utils/TextureUtils.js';
 import { applyForegroundFogPolicy } from '../utils/materialUtils.js';
 
 function sanitizeRelativePath(value) {
@@ -33,17 +33,19 @@ const npcWarnings = new Set();
 const npcAvailability = new Map();
 const DEFAULT_ROLE_SEQUENCE = ['merchant', 'scholar', 'guard', 'artisan', 'citizen', 'dockworker', 'priest'];
 const SHARED_GEOMETRIES = {
-  body: new THREE.CapsuleGeometry(0.35, 1.0, 8, 16),
-  tunic: new THREE.CylinderGeometry(0.38, 0.42, 0.85, 12, 1, true), // Open-ended cylinder for cloth
-  head: new THREE.SphereGeometry(0.28, 16, 16),
-  arm: new THREE.CapsuleGeometry(0.1, 0.55, 6, 10),
-  leg: new THREE.CapsuleGeometry(0.11, 0.62, 6, 10),
+  body: new THREE.CylinderGeometry(0.27, 0.23, 0.74, 10),
+  tunic: new THREE.CylinderGeometry(0.29, 0.38, 0.82, 12, 1, false), // Tapered, closed shoulders and hem
+  head: new THREE.SphereGeometry(0.22, 12, 10),
+  hair: new THREE.SphereGeometry(0.228, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.43),
+  neck: new THREE.CylinderGeometry(0.09, 0.1, 0.3, 8),
+  arm: new THREE.CapsuleGeometry(0.075, 0.43, 4, 8).translate(0, -0.25, 0),
+  leg: new THREE.CapsuleGeometry(0.085, 0.45, 4, 8).translate(0, -0.27, 0),
   foot: new THREE.BoxGeometry(0.16, 0.06, 0.28),
-  belt: new THREE.TorusGeometry(0.32, 0.04, 8, 16),
-  cloak: new THREE.BoxGeometry(0.62, 1.0, 0.05),
+  belt: new THREE.TorusGeometry(0.30, 0.025, 6, 16),
+  cloak: new THREE.CylinderGeometry(0.25, 0.4, 0.95, 10, 1, true, Math.PI / 2, Math.PI),
   apron: new THREE.BoxGeometry(0.36, 0.72, 0.03),
   headwrap: new THREE.TorusGeometry(0.22, 0.045, 8, 18),
-  helmet: new THREE.SphereGeometry(0.3, 12, 12),
+  helmet: new THREE.SphereGeometry(0.245, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.46),
   cap: new THREE.CylinderGeometry(0.2, 0.24, 0.1, 12),
   basket: new THREE.CylinderGeometry(0.16, 0.22, 0.26, 12),
   scroll: new THREE.CylinderGeometry(0.04, 0.04, 0.3, 10),
@@ -54,11 +56,24 @@ const SHARED_GEOMETRIES = {
   toolHandle: new THREE.CylinderGeometry(0.022, 0.022, 0.4, 8),
   toolHead: new THREE.BoxGeometry(0.14, 0.05, 0.07),
   sash: new THREE.TorusGeometry(0.42, 0.06, 8, 18, Math.PI * 1.25),
-  lowBody: new THREE.BoxGeometry(0.6, 1.2, 0.32),
-  lowHead: new THREE.SphereGeometry(0.26, 12, 12),
-  lowBase: new THREE.CylinderGeometry(0.26, 0.32, 0.16, 10),
+  lowBody: new THREE.CylinderGeometry(0.29, 0.37, 0.95, 6),
+  lowHead: new THREE.SphereGeometry(0.22, 8, 6),
+  lowBase: mergeGeometries([new THREE.BoxGeometry(0.14, 0.55, 0.18).translate(-0.15, 0, 0), new THREE.BoxGeometry(0.14, 0.55, 0.18).translate(0.15, 0, 0)]),
 };
+const CITIZEN_FACE_GEOMETRY = mergeGeometries([
+  SHARED_GEOMETRIES.head,
+  new THREE.SphereGeometry(0.04, 8, 6).translate(-0.215, -0.015, 0),
+  new THREE.SphereGeometry(0.04, 8, 6).translate(0.215, -0.015, 0),
+  new THREE.ConeGeometry(0.035, 0.075, 6).rotateX(Math.PI / 2).translate(0, -0.025, 0.22),
+]);
+const CITIZEN_FEATURE_GEOMETRY = mergeGeometries([
+  new THREE.SphereGeometry(0.018, 6, 4).translate(-0.075, 0.015, 0.202),
+  new THREE.SphereGeometry(0.018, 6, 4).translate(0.075, 0.015, 0.202),
+  new THREE.BoxGeometry(0.065, 0.012, 0.012).translate(0, -0.105, 0.194),
+]);
+const CITIZEN_BEARD_GEOMETRY = new THREE.SphereGeometry(0.13, 10, 6).scale(1, 0.9, 0.55);
 const ROLE_MATERIALS = new Map();
+const SANDAL_MATERIAL = new THREE.MeshStandardMaterial({ color: 0x765238, roughness: 1 });
 const ROLE_PROFILES = {
   citizen: {
     id: 'citizen',
@@ -386,15 +401,11 @@ function getRoleMaterials(roleProfile) {
   const cached = ROLE_MATERIALS.get(roleProfile.id);
   if (cached) return cached;
 
-  const garmentTex = loadSafeTexture('textures/plaster_rough.jpg', {
-    repeat: [8, 8],
-    isColor: true
-  });
-
   const materials = {
+    hairMaterial: new THREE.MeshStandardMaterial({ color: roleProfile.id === 'priest' ? 0x91877b : roleProfile.id === 'scholar' ? 0x504337 : 0x392b23, roughness: 1 }),
+    faceMaterial: new THREE.MeshStandardMaterial({ color: 0x30271f, roughness: 1 }),
     garmentMaterial: new THREE.MeshStandardMaterial({
       color: roleProfile.garmentColor,
-      map: garmentTex,
       roughness: 0.92,
       metalness: roleProfile.id === 'guard' ? 0.04 : 0.01,
       fog: true,
@@ -462,7 +473,7 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
   lowGroup.visible = false;
   group.add(lowGroup);
 
-  const { garmentMaterial, skinMaterial, trimMaterial, accentMaterial } =
+  const { garmentMaterial, skinMaterial, trimMaterial, accentMaterial, hairMaterial, faceMaterial } =
     getRoleMaterials(roleProfile);
 
   let accessoryInstances = [];
@@ -475,41 +486,57 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
   tunic.position.y = 1.0;
   highGroup.add(tunic);
 
-  const head = new THREE.Mesh(SHARED_GEOMETRIES.head, skinMaterial);
-  head.position.y = 2.02;
+  const neck = new THREE.Mesh(SHARED_GEOMETRIES.neck, skinMaterial);
+  neck.position.y = 1.46;
+  highGroup.add(neck);
+  const head = new THREE.Group();
+  head.name = 'CitizenHead';
+  head.position.y = 1.83;
   highGroup.add(head);
+  head.add(new THREE.Mesh(CITIZEN_FACE_GEOMETRY, skinMaterial));
+  const features = new THREE.Mesh(CITIZEN_FEATURE_GEOMETRY, faceMaterial);
+  features.name = 'CitizenFaceFeatures';
+  head.add(features);
+  const hair = new THREE.Mesh(SHARED_GEOMETRIES.hair, hairMaterial);
+  hair.name = 'CitizenHair';
+  head.add(hair);
+  if (['scholar', 'priest', 'dockworker'].includes(roleProfile.id)) {
+    const beard = new THREE.Mesh(CITIZEN_BEARD_GEOMETRY, hairMaterial);
+    beard.position.set(0, -0.12, 0.14);
+    head.add(beard);
+  }
 
   const leftArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, skinMaterial);
-  leftArm.position.set(-0.48, 1.35, 0);
+  leftArm.position.set(-0.34, 1.49, 0);
   leftArm.rotation.z = 0.12;
   highGroup.add(leftArm);
 
   const rightArm = new THREE.Mesh(SHARED_GEOMETRIES.arm, skinMaterial);
-  rightArm.position.set(0.48, 1.35, 0);
+  rightArm.position.set(0.34, 1.49, 0);
   rightArm.rotation.z = -0.12;
   highGroup.add(rightArm);
 
-  const leftLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial);
-  leftLeg.position.set(-0.18, 0.42, 0);
+  const leftLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, skinMaterial);
+  leftLeg.position.set(-0.16, 0.65, 0);
   highGroup.add(leftLeg);
 
-  const rightLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, garmentMaterial);
-  rightLeg.position.set(0.18, 0.42, 0);
+  const rightLeg = new THREE.Mesh(SHARED_GEOMETRIES.leg, skinMaterial);
+  rightLeg.position.set(0.16, 0.65, 0);
   highGroup.add(rightLeg);
 
   const leftFoot = new THREE.Mesh(
     SHARED_GEOMETRIES.foot,
-    accentMaterial,
+    SANDAL_MATERIAL,
   );
-  leftFoot.position.set(-0.18, 0.05, 0.08);
-  highGroup.add(leftFoot);
+  leftFoot.position.set(0, -0.59, 0.08);
+  leftLeg.add(leftFoot);
 
   const rightFoot = new THREE.Mesh(
     SHARED_GEOMETRIES.foot,
-    accentMaterial,
+    SANDAL_MATERIAL,
   );
-  rightFoot.position.set(0.18, 0.05, 0.08);
-  highGroup.add(rightFoot);
+  rightFoot.position.set(0, -0.59, 0.08);
+  rightLeg.add(rightFoot);
 
   const belt = new THREE.Mesh(
     SHARED_GEOMETRIES.belt,
@@ -531,7 +558,7 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
       SHARED_GEOMETRIES.apron,
       trimMaterial,
     );
-    apron.position.set(0, 0.94, 0.26);
+    apron.position.set(0, 0.94, 0.355);
     highGroup.add(apron);
   }
 
@@ -541,22 +568,22 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
       trimMaterial,
     );
     headwrap.rotation.x = Math.PI / 2;
-    headwrap.position.y = 2.08;
+    headwrap.position.y = 1.95;
     highGroup.add(headwrap);
   } else if (roleProfile.id === 'guard') {
     const helmet = new THREE.Mesh(
       SHARED_GEOMETRIES.helmet,
       accentMaterial,
     );
-    helmet.scale.y = 0.7;
-    helmet.position.y = 2.05;
+    helmet.scale.y = 1;
+    helmet.position.y = 1.86;
     highGroup.add(helmet);
   } else if (roleProfile.id === 'scholar') {
     const cap = new THREE.Mesh(
       SHARED_GEOMETRIES.cap,
       trimMaterial,
     );
-    cap.position.y = 2.08;
+    cap.position.y = 2.02;
     highGroup.add(cap);
   }
 
@@ -597,10 +624,10 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
   lowBody.position.y = 1.0;
   lowGroup.add(lowBody);
   const lowHead = new THREE.Mesh(SHARED_GEOMETRIES.lowHead, skinMaterial);
-  lowHead.position.y = 1.82;
+  lowHead.position.y = 1.83;
   lowGroup.add(lowHead);
-  const lowBase = new THREE.Mesh(SHARED_GEOMETRIES.lowBase, accentMaterial);
-  lowBase.position.y = 0.12;
+  const lowBase = new THREE.Mesh(SHARED_GEOMETRIES.lowBase, skinMaterial);
+  lowBase.position.y = 0.3;
   lowGroup.add(lowBase);
 
   group.traverse((child) => {
@@ -707,7 +734,8 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
     } =
       createCitizenModel(roleProfile, rng, instancingContext);
     const scale = randomBetween(roleProfile.scaleRange[0], roleProfile.scaleRange[1], rng);
-    group.scale.setScalar(scale);
+    group.scale.setScalar(scale * 0.88);
+    group.userData.characterStyle = "city-citizen-v2";
     group.userData.npcRole = roleProfile.id;
     group.userData.npcLabel = roleProfile.label;
     group.userData.noCollision = true;
@@ -828,14 +856,14 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       }
       headYaw = smoothAngle(headYaw, headYawTarget, Math.min(1, dt * 3.2));
       idleTurnYaw = smoothAngle(idleTurnYaw, idleTurnTarget, Math.min(1, dt * 2.4));
-      body.position.y = 1.08 + (isIdle ? sway * 0.02 : gait * 0.06);
-      body.rotation.z = isIdle ? sway * 0.05 : gait * 0.16;
+      body.position.y = 1.08 + (isIdle ? sway * 0.02 : gait * 0.02);
+      body.rotation.z = isIdle ? sway * 0.05 : gait * 0.035;
       body.rotation.y = isIdle ? idleTurnYaw : 0;
       head.rotation.y = isIdle ? headYaw + Math.sin(stepPhase * 0.35) * 0.12 : headYaw * 0.35;
-      leftArm.rotation.z = isIdle
+      leftArm.rotation.x = isIdle
         ? 0.08 + sway * 0.06
         : 0.16 + gait * 0.32 * armSwingScale;
-      rightArm.rotation.z = isIdle
+      rightArm.rotation.x = isIdle
         ? -0.08 - sway * 0.06
         : -0.16 - gait * 0.32 * armSwingScale;
       leftLeg.rotation.x = isIdle ? 0 : gait * 0.45;

@@ -32,6 +32,12 @@ Any AI assistant working on this project must:
 - Collectible rewards are pass-through objects, excluded from static collision so collection leaves no invisible obstacle.
 - Authored neighbourhood plants and rewards remain. Legacy random vegetation/treasure scatter stays off until it can respect current street and building footprints; inland elevation must not activate obsolete scatter.
 
+### Character presentation pass (2026-10-26)
+- The player keeps the existing hero GLB, face, hair, mesh and animation rig. Linen, teal and indigo clothing materials distinguish the player from the city. `scripts/style-hero.mjs` edits only the GLB material table and preserves the binary geometry/animation buffer; it is idempotent.
+- Citizen models remain in `src/world/npcs.js`, with shared face/hair/neck geometry, role palettes and accessories. Beards distinguish scholars, priests and dockworkers. Improved proportions, shoulder/hip pivots, attached sandals and forward/back arm swing replace the old faceless capsule presentation. Aprons sit outside the tunic and cloaks wrap the back.
+- Shared materials and geometry, accessory instancing, distant LOD and update throttling remain active. Distant silhouettes retain the same body/head proportions. Characters remain non-colliding; movement rules, camera controls, routes, rewards and saved progress are unchanged.
+- `verification/characters.test.mjs` checks original hero buffer integrity, movement, terrain grounding, close/distant model switching and collision exclusion. No downloaded NPC model source or new sprite pipeline is introduced.
+
 ### Ground texture and paving pass (2026-10-26)
 - Extend the existing spline streets and terrain-following courts. Streets and courts use world-aligned texture coordinates with a four-metre tile, so bends and joins do not stretch the grain or reset the stone pattern.
 - Shared existing rough stone textures mark main routes and all six gathering courts; packed earth marks smaller lanes. Texture loading runs after the district exists and loads the two maps concurrently. Selection follows authored surface roles, not the city group's origin height or random grass assignment.
