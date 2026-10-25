@@ -23,6 +23,10 @@ Any AI assistant working on this project must:
 
 ## 4. Game Design Priorities
 ### City exploration pass (2026-10-25)
+- The surrounding city now has five connected destinations: Potters' Court west of the Agora, Olive Court to the north, Weavers' Yard to the southwest, North Garden beyond the residential streets, and Trading Court on the northern coastal side.
+- Seven new streets form return loops through these places and the existing north/south collectors. Low street-facing homes and workshops connect the courts. Reserve complete footprints at curved entrances; keep the terrain-following paving and central walking lines clear.
+- Each court uses the existing prefab/prop vocabulary, one local resident and an ordinary gold scroll reward through `CollectiblesManager`. No new quest instructions or navigation overlay is required.
+- House roofs stay above their walls; residential courtyard walls have a walkable entrance. The Agora paving follows ground height so players can return through its northern entrance on foot.
 - The Agora is the starting gathering space, framed by five low shopfronts. Reserve full building footprints around it; roads meet the edges of one continuous court.
 - An open eastern view and a broad street lead to shore steps and the harbour boardwalk. A narrower inland route reveals the taller temple landmark; western lanes retain smaller courts and ordinary buildings.
 - Begin on foot, facing the waterfront. Movement follows the visible camera. Flight remains available with F.

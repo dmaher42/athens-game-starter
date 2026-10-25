@@ -15,6 +15,7 @@ import {
   SLOPE_THRESHOLDS 
 } from './terrainUtils.js';
 import { createCypressTree, createOliveTree } from './foliage.js';
+import { NEIGHBOURHOODS, NEIGHBOURHOOD_STREETS, NEIGHBOURHOOD_STREET_FRONTAGES, neighbourhoodFrontages, neighbourhoodAt, isNeighbourhoodLotReserved } from './neighbourhoodLayout.js';
 
 /* PATCH: Harbor zone params */
 export const HARBOR_ZONE = { bandWidth: 35, spacingScale: 0.7, densityBoost: 0.25 };
@@ -314,6 +315,23 @@ function createPavedStrip(width, length, color = 0xb49673) {
   mesh.receiveShadow = true;
   mesh.castShadow = false;
   return mesh;
+}
+
+function createTerrainCourt(width, depth, color, localX, localZ, sampleLocalHeight) {
+  const paving = createPavedStrip(width, depth, color);
+  paving.geometry.dispose();
+  paving.geometry = new THREE.PlaneGeometry(width, depth, Math.ceil(width / 2), Math.ceil(depth / 2));
+  paving.geometry.rotateX(-Math.PI / 2);
+  paving.rotation.x = 0;
+  const positions = paving.geometry.attributes.position;
+  for (let i = 0; i < positions.count; i++) {
+    positions.setY(i, sampleLocalHeight(localX + positions.getX(i), localZ + positions.getZ(i)) + 0.035);
+  }
+  paving.geometry.computeVertexNormals();
+  paving.position.set(localX, 0, localZ);
+  paving.material.opacity = 1;
+  paving.material.transparent = false;
+  return paving;
 }
 
 function createCityFabricUnderlay(width, length, color = 0x97785a, opacity = 0.16) {
@@ -1663,7 +1681,7 @@ class SplineRoad {
   }
 
   isNear(point, tolerance = 1.0) {
-    const corridor = this.width / 2 + 2;
+    const corridor = this.width / 2 + 6;
     const threshold = Math.max((this.width / 2) + tolerance, corridor);
     const thresholdSq = threshold * threshold;
     const closest = this.closestPointToPoint(point, new THREE.Vector3());
@@ -1701,6 +1719,12 @@ class SplineRoad {
         // Left and right edges
         const left = pos.clone().add(binormal.clone().multiplyScalar(roadWidth / 2));
         const right = pos.clone().add(binormal.clone().multiplyScalar(-roadWidth / 2));
+        if (terrainSampler) {
+          for (const edge of [left, right]) {
+            const height = terrainSampler(edge.x, edge.z);
+            if (Number.isFinite(height)) edge.y = height;
+          }
+        }
 
         // Offset slightly above terrain to prevent Z-fighting
         const lift = 0.15;
@@ -1712,7 +1736,7 @@ class SplineRoad {
         // The shared square has its own paving. Roads meet its edges instead
         // of drawing overlapping strips across the gathering space.
         const middle = i < segments ? points[i].clone().lerp(points[i + 1], 0.5) : pos;
-        if (i < segments && !inAgoraCourt(middle.x, middle.z)) {
+        if (i < segments && !inAgoraCourt(middle.x, middle.z) && !neighbourhoodAt(middle.x, middle.z)) {
             const base = i * 2;
             // Face upward even after the gravel pass replaces the temporary
             // double-sided material with the normal single-sided one.
@@ -1745,6 +1769,8 @@ class SplineRoad {
     const mesh = new THREE.Mesh(ribbonGeo, material);
     mesh.name = `RoadSpline-${this.type}`;
     mesh.userData.roadType = this.type;
+    mesh.userData.streetId = this.id ?? null;
+    mesh.userData.routePoints = this.curve.points.map((p) => [p.x, p.z]);
     mesh.receiveShadow = true;
     return mesh;
   }
@@ -1792,7 +1818,7 @@ function generateRoadNetwork(terrainSampler) {
       new THREE.Vector3(-55, 0, 20),
       new THREE.Vector3(-70, 0, 28),
       new THREE.Vector3(-82, 0, 38),
-      new THREE.Vector3(-120, 0, 50)
+      new THREE.Vector3(-108, 0, 42)
   ];
   nwStripPoints.forEach(p => p.y = getH(p));
   segments.push(new SplineRoad(nwStripPoints, 4.5, 'street'));
@@ -1802,18 +1828,19 @@ function generateRoadNetwork(terrainSampler) {
   // South Neighborhood Loop
   segments.push(new SplineRoad([
     new THREE.Vector3(-30, getH({x:-30, z:20}), 20),
-    new THREE.Vector3(-34, getH({x:-34, z:2}), 2),
+    new THREE.Vector3(-28, getH({x:-28, z:3}), 3),
     new THREE.Vector3(-35, getH({x:-35, z:-34}), -34),
     new THREE.Vector3(-45, getH({x:-45, z:-60}), -60)
   ], 6, 'street'));
 
   // North Neighborhood Collector
   segments.push(new SplineRoad([
-    new THREE.Vector3(-15, getH({x:-15, z:35}), 35),
-    new THREE.Vector3(4, getH({x:4, z:58}), 58),
+    new THREE.Vector3(-31.5, getH({x:-31.5, z:34}), 34),
+    new THREE.Vector3(-31.5, getH({x:-31.5, z:47}), 47),
+    new THREE.Vector3(-18, getH({x:-18, z:63}), 63),
     new THREE.Vector3(12, getH({x:12, z:82}), 82),
     new THREE.Vector3(20, getH({x:20, z:105}), 105)
-  ], 6, 'street'));
+  ], 4, 'street'));
 
   // Harbor Perimeter Road (Curved)
   segments.push(new SplineRoad([
@@ -1823,6 +1850,12 @@ function generateRoadNetwork(terrainSampler) {
     new THREE.Vector3(10, getH({x:10, z:70}), 70)
   ], 3.5, 'street'));
 
+  for (const street of NEIGHBOURHOOD_STREETS) {
+    const points = street.points.map(([x, z]) => new THREE.Vector3(x, getH({ x, z }), z));
+    const road = new SplineRoad(points, 4, 'street');
+    road.id = street.id;
+    segments.push(road);
+  }
   return segments;
 }
 
@@ -1972,6 +2005,13 @@ function generateCityGrid(terrainSampler) {
         cell.type = 'blocked';
         cell.buildable = false;
         cell.blocked = true;
+        cells.push(cell);
+        continue;
+      }
+
+      if (isNeighbourhoodLotReserved(worldX, worldZ)) {
+        cell.type = 'blocked'; cell.blocked = true; cell.buildable = false;
+        cell.reservation = 'neighbourhood';
         cells.push(cell);
         continue;
       }
@@ -2291,11 +2331,8 @@ export async function createCivicDistrict(scene, options = {}) {
   const centerPos = new THREE.Vector3(center.x, baseHeight + surfaceOffset, center.z);
   renderRoadNetworkSplines(group, roadNetwork, centerPos, terrainSampler);
 
-  const court = createPavedStrip(44, 28, 0xcbbb9e);
-  court.material.opacity = 1;
-  court.material.transparent = false;
+  const court = createTerrainCourt(44, 28, 0xcbbb9e, AGORA_CENTER_3D.x - center.x, AGORA_CENTER_3D.z - center.z, sampleLocalHeight);
   court.name = 'AgoraCourt';
-  court.position.set(AGORA_CENTER_3D.x - center.x, sampleLocalHeight(0, 0) + 0.025, AGORA_CENTER_3D.z - center.z);
   group.add(court);
   for (const f of AGORA_FRONTAGES) {
       const frontage = Prefabs.stoa({ w: f.w, d: f.d, h: 4.3, rng: () => 0.45, openFront: true });
@@ -2316,6 +2353,61 @@ export async function createCivicDistrict(scene, options = {}) {
   group.add(olive);
   group.userData.plan.agoraCourt = { ...AGORA_COURT_BOUNDS };
   group.userData.plan.frontages = AGORA_FRONTAGES.map((f) => ({ ...f }));
+
+  // Give each loop a place to arrive, using the same prefabs and batching as
+  // the rest of the city. Keep through routes and side entrances open.
+  group.userData.plan.neighbourhoods = NEIGHBOURHOODS.map((place) => {
+    const localX = place.x - center.x, localZ = place.z - center.z;
+    const paving = createTerrainCourt(place.width, place.depth, place.color, localX, localZ, sampleLocalHeight);
+    paving.name = `NeighbourhoodCourt-${place.id}`;
+    paving.receiveShadow = true;
+    group.add(paving);
+
+    const put = (object, x, z, rotation = 0) => {
+      object.position.set(localX + x, sampleLocalHeight(localX + x, localZ + z), localZ + z);
+      object.rotation.y = rotation;
+      group.add(object);
+      return object;
+    };
+    const frontages = neighbourhoodFrontages(place);
+    frontages.forEach((f, i) => {
+      const options = { w: f.w, d: f.d, h: 3.3 + (i % 2) * 0.6, rng: () => 0.35 + (i % 3) * 0.2 };
+      const building = place.kind === 'pottery' || place.kind === 'weaving'
+        ? (i % 2 ? Prefabs.house(options) : Prefabs.workshop(options))
+        : place.kind === 'trade'
+          ? Prefabs.stoa({ ...options, openFront: true })
+          : Prefabs.house(options);
+      building.name = `NeighbourhoodFrontage-${place.id}`;
+      put(building, f.x - place.x, f.z - place.z, f.rotation);
+    });
+
+    if (place.kind === 'pottery') {
+      put(createCommercialAccent(() => 0.65), -7, 5);
+      for (let i = 0; i < 6; i++) put(Prefabs.urn({ radius: 0.35 + (i % 2) * 0.15, h: 0.8 + (i % 3) * 0.3 }), -9 + (i % 3) * 1.3, 6 + Math.floor(i / 3) * 1.3);
+      put(Prefabs.stoneBench(), 7, 7, Math.PI / 2);
+    } else if (place.kind === 'weaving' || place.kind === 'trade') {
+      put(Prefabs.marketStall({ w: 4, rng: () => 0.25 }), -9, 0, Math.PI / 2);
+      put(Prefabs.marketStall({ w: 4, rng: () => 0.75 }), 7, 6, -Math.PI / 2);
+      put(createCommercialAccent(() => 0.3), -7, -6);
+    } else {
+      for (const [x, z] of [[-8, -8], [-8, 8], [8, 8]]) {
+        put(place.kind === 'garden' ? createCypressTree({ scale: 1.8 }) : createOliveTree({ scale: 1.5 }), x, z);
+      }
+      put(Prefabs.stoneBench({ w: 3 }), 7, 7, Math.PI / 2);
+      put(place.kind === 'garden' ? createSacredAccent() : Prefabs.fountain({ radius: 1.6 }), -6, 4);
+    }
+    // The reward sits in a visible side pocket, away from scenery collisions.
+    return { ...place, frontages: frontages.length, reward: { x: place.x + 6, y: baseHeight + sampleLocalHeight(localX + 6, localZ - 5), z: place.z - 5 } };
+  });
+  for (const [i, f] of NEIGHBOURHOOD_STREET_FRONTAGES.entries()) {
+    const options = { w: f.w, d: f.d, h: 3.2 + (i % 3) * 0.45, rng: () => (i % 3) * 0.25 + 0.2 };
+    const building = f.workshop ? Prefabs.workshop(options) : Prefabs.house(options);
+    building.name = 'NeighbourhoodStreetFrontage';
+    building.position.set(f.x - center.x, sampleLocalHeight(f.x - center.x, f.z - center.z), f.z - center.z);
+    building.rotation.y = f.rotation;
+    group.add(building);
+  }
+  group.userData.plan.neighbourhoodStreetFrontages = NEIGHBOURHOOD_STREET_FRONTAGES.length;
   
   let roadSearchCount = 0;
   let roadSearchTimeTotal = 0;
@@ -2434,7 +2526,7 @@ export async function createCivicDistrict(scene, options = {}) {
        
         if (cell.type === 'building' && cell.buildable) {
             const nearAgora = cell.position.distanceTo(AGORA_CENTER_3D) < 80;
-            const numSubBuildings = (nearAgora || cell.district === 'commercial' || cell.district === 'harbor') ? 1 : (rng() < 0.4 ? 2 : 1);
+            const numSubBuildings = 1;
             let buildingPlaced = false;
 
             for (let i = 0; i < numSubBuildings; i++) {
@@ -2443,8 +2535,8 @@ export async function createCivicDistrict(scene, options = {}) {
              rng: rng,
              districtRules: resolveDistrictRuleForCell(cell.district, districtRules, cell),
              detailLevel,
-             w: nearAgora ? 11 : 5,
-             d: nearAgora ? 10 : 7,
+             w: nearAgora ? 11 : 9,
+             d: nearAgora ? 10 : 8,
              preferRowhouseMass:
                isHarborLaneFrontageCell(cell.gridX, cell.gridZ) ||
                isAgoraEdgeBuildingCell(cell.gridX, cell.gridZ) ||
@@ -2638,7 +2730,9 @@ export async function createCivicDistrict(scene, options = {}) {
       const localY = sampleLocalHeight(localX, localZ, 0);
 
       // Check harbor exclusion
-      if (Math.hypot(pathTile.position.x - AGORA_CENTER_3D.x, pathTile.position.z - AGORA_CENTER_3D.z) < 75) continue;
+      // Continuous streets now connect the outer neighbourhoods too. Isolated
+      // paving squares suggested routes that didn't actually join anything.
+      if (roadNetwork.length > 0) continue;
       const worldX = pathTile.position.x;
       const worldZ = pathTile.position.z;
       if (isBlockedForCityLayout(worldX, worldZ)) continue;
@@ -2713,6 +2807,9 @@ export async function createCivicDistrict(scene, options = {}) {
   console.log(`City: Road proximity search executed ${roadSearchCount} times, total time: ${roadSearchTimeTotal.toFixed(2)}ms`);
 
   const walkingLoops = [walkingLoop, walkingLoopInner, walkingLoopOuter];
+  const neighbourhoodLoops = NEIGHBOURHOODS.map((p) => new THREE.CatmullRomCurve3([
+    [-3, -2], [3, -2], [3, 2], [-3, 2],
+  ].map(([x, z]) => new THREE.Vector3(p.x + x, baseHeight + sampleLocalHeight(p.x + x - center.x, p.z + z - center.z), p.z + z)), true));
 
   // Optimize: Batch all generated buildings, props, and paths into merged geometries
   setTimeout(() => {
@@ -2728,6 +2825,7 @@ export async function createCivicDistrict(scene, options = {}) {
     group,
     walkingLoop,
     walkingLoops,
+    neighbourhoodLoops,
     plazaLength: 80, // Legacy support
     promenadeWidth: 14 // Legacy support
   };

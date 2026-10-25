@@ -34,7 +34,7 @@ function makeBox(w, h, d, mat) {
 
 function makeGableRoof(w, d, h, rng, color = null) {
   const g = new THREE.Group();
-  const roofColor = color || (rng() > 0.5 ? 0xffffff : 0xeeeeee);
+  const roofColor = color || (rng() > 0.5 ? 0xb97551 : 0xa76445);
   const mat = createMaterial("roof", rng, { color: roofColor });
   
   const shape = new THREE.Shape();
@@ -45,8 +45,9 @@ function makeGableRoof(w, d, h, rng, color = null) {
 
   const extrudeSettings = { depth: d, bevelEnabled: false };
   const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, extrudeSettings), mat);
-  mesh.rotation.x = Math.PI / 2;
-  mesh.position.z = d / 2;
+  // The shape already has vertical Y and extrudes along Z. Rotating it into
+  // the ground turned roof depth into a wall hanging through the house.
+  mesh.geometry.translate(0, 0, -d / 2);
   mesh.castShadow = mesh.receiveShadow = true;
   g.add(mesh);
   return g;
@@ -105,6 +106,13 @@ export const Prefabs = {
     g.add(makeBaseShadow(w, d));
     const body = makeBox(w, h, d, createMaterial("plaster", rng));
     body.position.y = h / 2; g.add(body);
+    const door = makeBox(1.1, 2, 0.06, new THREE.MeshStandardMaterial({ color: 0x76543b, roughness: 0.95 }));
+    door.position.set(0, 1, d / 2 + 0.035); g.add(door);
+    const windowMaterial = new THREE.MeshStandardMaterial({ color: 0x53686b, roughness: 0.8 });
+    for (const side of [-1, 1]) {
+      const window = makeBox(0.75, 0.8, 0.06, windowMaterial);
+      window.position.set(side * w * 0.28, Math.min(2.3, h * 0.7), d / 2 + 0.035); g.add(window);
+    }
     const roof = makeGableRoof(w + 0.4, d + 0.2, 1.2, rng);
     roof.position.y = h; g.add(roof);
     return g;
@@ -269,12 +277,15 @@ export const Prefabs = {
     g.add(makeBaseShadow(w, d));
     const wallHeight = 2.5;
     const walls = [
-      makeBox(w, wallHeight, 0.4, createMaterial("plaster", rng)),
+      makeBox((w - 2.4) / 2, wallHeight, 0.4, createMaterial("plaster", rng)),
       makeBox(w, wallHeight, 0.4, createMaterial("plaster", rng)),
       makeBox(0.4, wallHeight, d, createMaterial("plaster", rng)),
       makeBox(0.4, wallHeight, d, createMaterial("plaster", rng))
     ];
-    walls[0].position.set(0, wallHeight/2, d/2);
+    walls[0].position.set(-(w + 2.4) / 4, wallHeight/2, d/2);
+    const entranceSide = walls[0].clone();
+    entranceSide.position.x *= -1;
+    g.add(entranceSide);
     walls[1].position.set(0, wallHeight/2, -d/2);
     walls[2].position.set(w/2, wallHeight/2, 0);
     walls[3].position.set(-w/2, wallHeight/2, 0);

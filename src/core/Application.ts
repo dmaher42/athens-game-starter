@@ -776,6 +776,12 @@ export class Application {
       // Random "Treasure" scrolls (standard gold)
       collectibles.spawnRandomly(terrain, 12, AGORA_CENTER_3D, CITY_AREA_RADIUS * 0.8);
 
+      // Reward side-court exploration through the existing collection system.
+      // Keep quest items and harbour placements unchanged.
+      for (const place of civicDistrict.group.userData['plan'].neighbourhoods ?? []) {
+        collectibles.spawnAt(place.reward.x, place.reward.y, place.reward.z);
+      }
+
       // Initial HUD setup
       if (typeof collectibles.onScoreChange === 'function') {
         collectibles.onScoreChange(0, collectibles.total, '', 0);
@@ -833,6 +839,15 @@ export class Application {
       };
 
       let proceduralCrowdSpawned = false;
+      // Small local walks make the side courts inhabited even when the main
+      // crowd uses downloaded character models. Reuse the cached NPC assets.
+      const neighbourhoodRoles = ['artisan', 'citizen', 'artisan', 'priest', 'merchant'];
+      civicDistrict.neighbourhoodLoops.forEach((path: any, index: number) => {
+        const crowd = spawnCitizenCrowd(worldRoot, path, {
+          count: 1, roles: [neighbourhoodRoles[index]], minSpeed: 0.5, maxSpeed: 0.8, terrain, camera,
+        });
+        this.npcUpdaters.push(...crowd.updaters);
+      });
       const spawnProceduralCrowdFallback = () => {
         if (proceduralCrowdSpawned || !civicDistrict.walkingLoop) return;
         proceduralCrowdSpawned = true;
@@ -894,7 +909,7 @@ export class Application {
       scene.traverse((obj: any) => {
         if (obj.userData?.hasChimney) {
           const smoke = createSmokeEmitter(smokeSystemRoot, {
-            position: obj.position.clone().add(new THREE.Vector3(0, 4.5, 0)),
+            position: obj.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, 4.5, 0)),
             color: 0x888888,
             spawnRate: 15,
           });

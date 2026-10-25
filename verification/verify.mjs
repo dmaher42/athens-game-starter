@@ -211,6 +211,9 @@ async function runVerification() {
           normalWater: !ocean.userData.isAutomationFallback && ocean.material.isShaderMaterial,
           court: plan.agoraCourt,
           frontages: plan.frontages?.length ?? 0,
+          neighbourhoods: plan.neighbourhoods,
+          neighbourhoodStreetFrontages: plan.neighbourhoodStreetFrontages,
+          neighbourhoodStreets: civic.children.filter((object) => object.userData.streetId).length,
           onFoot: !JSON.parse(window.render_game_to_text()).player.flying,
           upwardRoads: civic.children.filter((object) => object.userData.roadType).every((object) => {
             const normal = object.geometry.attributes.normal;
@@ -238,7 +241,7 @@ async function runVerification() {
             cell.position.x > 2 && cell.position.x < 130 &&
             (cell.position.z > 116.8 || cell.position.z < -76.8)
           ).map((cell) => ({
-            x: cell.position.x, z: cell.position.z, blocked: cell.blocked, type: cell.type,
+            x: cell.position.x, z: cell.position.z, blocked: cell.blocked, type: cell.type, reservation: cell.reservation,
           })),
           // Main renders continuous roads and batches building meshes, rather
           // than keeping one scene object at every old grid-cell position.
@@ -252,6 +255,10 @@ async function runVerification() {
       assert.equal(harborLayout.normalWater, true, "Verify the production Water shader rather than simplified automation water.");
       assert.equal(harborLayout.onFoot, true, "Begin the exploration walk on foot.");
       assert.equal(harborLayout.frontages, 5, "Frame the Agora with the authored shopfronts.");
+      assert.equal(harborLayout.neighbourhoods.length, 5, "Render all five exploration destinations.");
+      assert.ok(harborLayout.neighbourhoodStreetFrontages >= 12, "Join the destinations with inhabited streets.");
+      assert.equal(harborLayout.neighbourhoodStreets, 7, "Connect the neighbourhoods through the existing street renderer.");
+      assert.ok(harborLayout.neighbourhoods.every((place) => place.frontages >= 2 && Number.isFinite(place.reward.y)), "Each destination needs buildings, open entrances and a grounded reward.");
         assert.equal(harborLayout.upwardRoads, true, "Road surfaces must remain visible with the normal gravel material.");
       assert.deepEqual(harborLayout.court, { west: -52, east: -8, south: 6, north: 34 });
       assert.ok(harborLayout.templeColumns.length >= 4 && harborLayout.templeColumns.every((height) => height > 5), "Landmark roofs must have full-height columns.");
@@ -260,7 +267,7 @@ async function runVerification() {
       assert.ok(harborLayout.cityHeights.every((height) => height >= harborLayout.seaLevel - 0.05), "Preserve dry city ground north and south of the harbor.");
       assert.ok(harborLayout.dryLots.some((cell) => cell.z > 116.8), "Check north-side city lots.");
       assert.ok(harborLayout.dryLots.some((cell) => cell.z < -76.8), "Check south-side city lots.");
-      assert.deepEqual(harborLayout.dryLots.filter((cell) => cell.blocked), [], "Water rendering bounds must not block surrounding dry city lots.");
+      assert.deepEqual(harborLayout.dryLots.filter((cell) => cell.blocked && cell.reservation !== 'neighbourhood'), [], "Water rendering bounds must not block surrounding dry city lots; authored court reservations are intentional.");
       assert.ok(harborLayout.roadMeshes > 0, "Preserve main's continuous streets.");
       assert.ok(harborLayout.cityBatches > 0, "Preserve main's batched city geometry.");
       assert.equal(harborLayout.basinBlocked, true, "Keep city buildings out of the harbor basin.");
