@@ -5,6 +5,16 @@ import { createHash } from 'node:crypto';
 import * as THREE from 'three';
 import { spawnCitizenCrowd } from '../src/world/npcs.js';
 import { EnvironmentCollider } from '../src/env/EnvironmentCollider.js';
+import { updateDistanceCulling } from '../src/utils/propCulling.js';
+import { getAthenianWrap, getPeplosOverfold } from '../src/characters/athenianDress.js';
+
+test('outer himation clears the peplos overfold without intersecting cloth shells', () => {
+  const radii = geometry => {
+    const p = geometry.attributes.position;
+    return Array.from({ length: p.count }, (_,i) => Math.hypot(p.getX(i), p.getZ(i) / 0.82));
+  };
+  assert.ok(Math.min(...radii(getAthenianWrap())) > Math.max(...radii(getPeplosOverfold())));
+});
 
 test('hero clothing update preserves the original geometry, skeleton and animation buffer', async () => {
   const bytes = await readFile(new URL('../public/models/character/hero.glb', import.meta.url));
@@ -29,11 +39,18 @@ test('updated citizens stay animated, switch distant detail and never obstruct w
     assert.ok(citizen.position.distanceTo(initial[i]) > 0);
     assert.equal(citizen.position.y, 0.55);
     assert.ok(citizen.getObjectByName('CitizenFaceFeatures'));
+    const dress = citizen.getObjectByName(`Athenian-${citizen.userData.athenianDress}`);
+    assert.ok(dress, 'Each person needs a modeled Greek garment, not a recoloured cylinder.');
+    dress.geometry.computeBoundingBox();
+    const hem = dress.geometry.boundingBox.min.y;
+    assert.ok(citizen.userData.npcRole === 'citizen' || citizen.userData.npcRole === 'priest' ? hem < 0.2 : hem > 0.5, 'Long and short garment silhouettes must remain distinct.');
     const height = new THREE.Box3().setFromObject(citizen).getSize(new THREE.Vector3()).y;
     assert.ok(height >= 1.5 && height < 2.3);
     const head = citizen.getObjectByName('CitizenHead');
     assert.equal(head.parent.visible, true);
     camera.position.set(1000, 0, 1000);
+    updateDistanceCulling(scene, camera, { nearDistance: 35, farDistance: 65 });
+    assert.equal(citizen.getObjectByName('CitizenFaceFeatures').visible, true, 'Prop culling must not independently remove faces or clothes.');
     crowd.updaters[i](1 / 30);
     assert.equal(head.parent.visible, false, 'Detailed faces must disappear at distance.');
     camera.position.copy(citizen.position);

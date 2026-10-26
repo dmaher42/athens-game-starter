@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Character } from '../characters/Character.js';
+import { ATHENIAN_DRESS, getAthenianGarment, getAthenianWrap, getPeplosOverfold, getChlamys, getCitizenCurls, SANDAL_SOLE, SANDAL_FOOT, SANDAL_STRAPS } from '../characters/athenianDress.js';
 import { resolveBaseUrl, joinPath } from '../utils/baseUrl.js';
 import { applyForegroundFogPolicy } from '../utils/materialUtils.js';
 
@@ -82,7 +83,7 @@ const ROLE_PROFILES = {
     trimColor: 0xf2ead8,
     accentColor: 0x8d5f3f,
     skinColor: 0xd6b087,
-    accessory: 'sash',
+    accessory: null,
     paceMultiplier: 0.96,
     scaleRange: [0.94, 1.05],
     moveAction: 'Walk',
@@ -224,6 +225,7 @@ function inferRoleFromFileName(fileName, fallbackIndex = 0, roles = DEFAULT_ROLE
 
 function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
   const accessoryRoot = new THREE.Group();
+  if (!roleProfile.accessory) return accessoryRoot;
   accessoryRoot.name = `${roleProfile.label}Accessory`;
 
   if (roleProfile.accessory === 'basket') {
@@ -305,6 +307,7 @@ function createRoleAccessory(roleProfile, rng, accentMaterial, trimMaterial) {
 }
 
 function buildAccessoryParts(roleProfile, rng) {
+  if (!roleProfile.accessory) return [];
   if (roleProfile.accessory === 'basket') {
     return [
       {
@@ -401,12 +404,16 @@ function getRoleMaterials(roleProfile) {
   const cached = ROLE_MATERIALS.get(roleProfile.id);
   if (cached) return cached;
 
+  const dress = ATHENIAN_DRESS[roleProfile.id];
   const materials = {
+    wrapMaterial: new THREE.MeshStandardMaterial({ color: dress.wrapColor ?? dress.color, vertexColors: true, roughness: 1, side: THREE.DoubleSide }),
     hairMaterial: new THREE.MeshStandardMaterial({ color: roleProfile.id === 'priest' ? 0x91877b : roleProfile.id === 'scholar' ? 0x504337 : 0x392b23, roughness: 1 }),
     faceMaterial: new THREE.MeshStandardMaterial({ color: 0x30271f, roughness: 1 }),
     garmentMaterial: new THREE.MeshStandardMaterial({
-      color: roleProfile.garmentColor,
-      roughness: 0.92,
+      color: dress.color,
+      vertexColors: true,
+      side: THREE.DoubleSide,
+      roughness: 0.98,
       metalness: roleProfile.id === 'guard' ? 0.04 : 0.01,
       fog: true,
     }),
@@ -473,7 +480,8 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
   lowGroup.visible = false;
   group.add(lowGroup);
 
-  const { garmentMaterial, skinMaterial, trimMaterial, accentMaterial, hairMaterial, faceMaterial } =
+  const dress = ATHENIAN_DRESS[roleProfile.id];
+  const { garmentMaterial, skinMaterial, trimMaterial, accentMaterial, hairMaterial, faceMaterial, wrapMaterial } =
     getRoleMaterials(roleProfile);
 
   let accessoryInstances = [];
@@ -482,8 +490,8 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
   body.position.y = 1.08;
   highGroup.add(body);
 
-  const tunic = new THREE.Mesh(SHARED_GEOMETRIES.tunic, garmentMaterial);
-  tunic.position.y = 1.0;
+  const tunic = new THREE.Mesh(getAthenianGarment(dress), garmentMaterial);
+  tunic.name = `Athenian-${dress.garment}`;
   highGroup.add(tunic);
 
   const neck = new THREE.Mesh(SHARED_GEOMETRIES.neck, skinMaterial);
@@ -497,10 +505,15 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
   const features = new THREE.Mesh(CITIZEN_FEATURE_GEOMETRY, faceMaterial);
   features.name = 'CitizenFaceFeatures';
   head.add(features);
-  const hair = new THREE.Mesh(SHARED_GEOMETRIES.hair, hairMaterial);
+  const hair = new THREE.Mesh(getCitizenCurls(SHARED_GEOMETRIES.hair), hairMaterial);
   hair.name = 'CitizenHair';
   head.add(hair);
-  if (['scholar', 'priest', 'dockworker'].includes(roleProfile.id)) {
+  if (dress.bun) {
+    const bun = new THREE.Mesh(SHARED_GEOMETRIES.head, hairMaterial);
+    bun.scale.set(0.48, 0.48, 0.48); bun.position.set(0, 0.04, -0.22);
+    head.add(bun);
+  }
+  if (dress.beard) {
     const beard = new THREE.Mesh(CITIZEN_BEARD_GEOMETRY, hairMaterial);
     beard.position.set(0, -0.12, 0.14);
     head.add(beard);
@@ -525,18 +538,23 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
   highGroup.add(rightLeg);
 
   const leftFoot = new THREE.Mesh(
-    SHARED_GEOMETRIES.foot,
+    SANDAL_SOLE,
     SANDAL_MATERIAL,
   );
   leftFoot.position.set(0, -0.59, 0.08);
   leftLeg.add(leftFoot);
 
   const rightFoot = new THREE.Mesh(
-    SHARED_GEOMETRIES.foot,
+    SANDAL_SOLE,
     SANDAL_MATERIAL,
   );
   rightFoot.position.set(0, -0.59, 0.08);
   rightLeg.add(rightFoot);
+  for (const sandal of [leftFoot, rightFoot]) {
+    sandal.name = 'LeatherSandal';
+    sandal.add(new THREE.Mesh(SANDAL_FOOT, skinMaterial));
+    sandal.add(new THREE.Mesh(SANDAL_STRAPS, SANDAL_MATERIAL));
+  }
 
   const belt = new THREE.Mesh(
     SHARED_GEOMETRIES.belt,
@@ -544,47 +562,32 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
   );
   belt.rotation.x = Math.PI / 2;
   belt.position.y = 1.0;
+  belt.scale.z = 0.82;
   highGroup.add(belt);
 
-  if (roleProfile.id === 'guard' || roleProfile.id === 'priest') {
-    const cloak = new THREE.Mesh(
-      SHARED_GEOMETRIES.cloak,
-      garmentMaterial,
-    );
-    cloak.position.set(0, 1.18, -0.2);
-    highGroup.add(cloak);
-  } else if (roleProfile.id === 'merchant' || roleProfile.id === 'artisan') {
-    const apron = new THREE.Mesh(
-      SHARED_GEOMETRIES.apron,
-      trimMaterial,
-    );
-    apron.position.set(0, 0.94, 0.355);
-    highGroup.add(apron);
+  if (dress.wrap) {
+    const wrap = new THREE.Mesh(getAthenianWrap(), wrapMaterial);
+    wrap.name = 'AthenianHimation'; highGroup.add(wrap);
   }
-
-  if (roleProfile.id === 'priest') {
-    const headwrap = new THREE.Mesh(
-      SHARED_GEOMETRIES.headwrap,
-      trimMaterial,
-    );
-    headwrap.rotation.x = Math.PI / 2;
-    headwrap.position.y = 1.95;
-    highGroup.add(headwrap);
-  } else if (roleProfile.id === 'guard') {
-    const helmet = new THREE.Mesh(
-      SHARED_GEOMETRIES.helmet,
-      accentMaterial,
-    );
-    helmet.scale.y = 1;
-    helmet.position.y = 1.86;
-    highGroup.add(helmet);
-  } else if (roleProfile.id === 'scholar') {
-    const cap = new THREE.Mesh(
-      SHARED_GEOMETRIES.cap,
-      trimMaterial,
-    );
-    cap.position.y = 2.02;
-    highGroup.add(cap);
+  if (dress.garment === 'peplos') {
+    const overfold = new THREE.Mesh(getPeplosOverfold(), garmentMaterial);
+    overfold.name = 'PeplosOverfold'; highGroup.add(overfold);
+  }
+  if (dress.cloak) {
+    const cloak = new THREE.Mesh(getChlamys(), wrapMaterial);
+    cloak.name = 'AthenianChlamys'; highGroup.add(cloak);
+  }
+  // Shoulder pins make the construction readable without modern shirt sleeves.
+  const pinSides = dress.garment === 'exomis' ? [-1] : [-1, 1];
+  for (const side of pinSides) {
+    const pin = new THREE.Mesh(SHARED_GEOMETRIES.scroll, accentMaterial);
+    pin.scale.set(0.65, 0.12, 0.65);
+    pin.rotation.x = Math.PI / 2; pin.position.set(side * 0.30, 1.49, 0.08);
+    highGroup.add(pin);
+  }
+  if (roleProfile.id === 'guard') {
+    const helmet = new THREE.Mesh(SHARED_GEOMETRIES.helmet, accentMaterial);
+    helmet.position.y = 1.86; highGroup.add(helmet);
   }
 
   let accessory = null;
@@ -620,9 +623,13 @@ function createCitizenModel(roleProfile, rng = Math.random, instancingContext = 
     highGroup.add(accessory);
   }
 
-  const lowBody = new THREE.Mesh(SHARED_GEOMETRIES.lowBody, garmentMaterial);
-  lowBody.position.y = 1.0;
+  const lowBody = new THREE.Mesh(getAthenianGarment(dress, true), garmentMaterial);
+  lowBody.name = `Athenian-${dress.garment}-distant`;
   lowGroup.add(lowBody);
+  if (dress.wrap) {
+    const wrap = new THREE.Mesh(getAthenianWrap(true), wrapMaterial);
+    wrap.name = 'AthenianHimation-distant'; lowGroup.add(wrap);
+  }
   const lowHead = new THREE.Mesh(SHARED_GEOMETRIES.lowHead, skinMaterial);
   lowHead.position.y = 1.83;
   lowGroup.add(lowHead);
@@ -735,7 +742,8 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       createCitizenModel(roleProfile, rng, instancingContext);
     const scale = randomBetween(roleProfile.scaleRange[0], roleProfile.scaleRange[1], rng);
     group.scale.setScalar(scale * 0.88);
-    group.userData.characterStyle = "city-citizen-v2";
+    group.userData.characterStyle = "athenian-citizen-v3";
+    group.userData.athenianDress = ATHENIAN_DRESS[roleProfile.id].garment;
     group.userData.npcRole = roleProfile.id;
     group.userData.npcLabel = roleProfile.label;
     group.userData.noCollision = true;

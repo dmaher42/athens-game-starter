@@ -19,7 +19,7 @@ const smallPropCache = new WeakMap();
 function isRigAttachment(mesh) {
   let current = mesh;
   while (current) {
-    if (current.isBone || current.isSkinnedMesh) {
+    if (current.isBone || current.isSkinnedMesh || current.userData?.npcRole) {
       return true;
     }
     current = current.parent ?? null;

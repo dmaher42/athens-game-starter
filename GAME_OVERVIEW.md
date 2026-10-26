@@ -32,6 +32,12 @@ Any AI assistant working on this project must:
 - Collectible rewards are pass-through objects, excluded from static collision so collection leaves no invisible obstacle.
 - Authored neighbourhood plants and rewards remain. Legacy random vegetation/treasure scatter stays off until it can respect current street and building footprints; inland elevation must not activate obsolete scatter.
 
+### Ancient Athenian townspeople (2026-10-27)
+- The owner requested that townspeople visibly read as ancient Athenians. Continue the existing procedural NPC source in `src/world/npcs.js`; `src/characters/athenianDress.js` supplies cached, folded native 3D garments, not a second character loader.
+- Art references: The Met, https://www.metmuseum.org/essays/ancient-greek-dress and the Acropolis Restoration Service dress kit, https://www.ysma.gr/en/museum-kits/ancient-greek-dress/ . The result is a stylized interpretation of Greek clothing, not a portrait reconstruction or claim that every Athenian dressed alike.
+- Short belted chitons, one-shoulder exomides for workers, long peplos-style citizen garments, long priestly garments and diagonal himation wraps create distinct silhouettes. Peplos overfolds, shoulder pins, cloth folds, curly hair/buns, beards and strapped leather sandals replace straight cylinders, rectangular aprons and scholar caps. Keep natural cloth colours and coloured wraps; do not make everyone white marble or add Roman togas.
+- Citizen LODs retain the same long/short hem and wrap silhouettes. Generic prop culling excludes NPC descendants so faces, limbs and clothing are controlled together by the existing citizen LOD system. No new character collisions, routes, dialogue or quest mechanics. The player model is unchanged in this pass.
+
 ### Character presentation pass (2026-10-26)
 - The player keeps the existing hero GLB, face, hair, mesh and animation rig. Linen, teal and indigo clothing materials distinguish the player from the city. `scripts/style-hero.mjs` edits only the GLB material table and preserves the binary geometry/animation buffer; it is idempotent.
 - Citizen models remain in `src/world/npcs.js`, with shared face/hair/neck geometry, role palettes and accessories. Beards distinguish scholars, priests and dockworkers. Improved proportions, shoulder/hip pivots, attached sandals and forward/back arm swing replace the old faceless capsule presentation. Aprons sit outside the tunic and cloaks wrap the back.
