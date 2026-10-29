@@ -274,7 +274,6 @@ export class LightingSystem {
         }
 
         const phase = timeOfDayState.timeOfDayPhase ?? 0;
-        try { setTimeOfDay(phase); } catch { }
         timeOfDayState.elapsedSeconds = elapsed;
 
         const activePresetForPhase = this._getPresetForPhase(phase);

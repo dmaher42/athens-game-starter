@@ -21,6 +21,10 @@ let exposureSlider = null;
 let hotkeyOverlay = null;
 
 export const UIManager = {
+  // Navigation is gameplay UI, independent of developer settings panels.
+  initWorldMap({getPosition,getDirection}) {
+    if (!minimap && getPosition && getDirection) minimap = mountMiniMap({getPosition,getDirection});
+  },
   init(options = {}) {
     const {
       renderer,
@@ -56,7 +60,7 @@ export const UIManager = {
     }
 
     // Initialize minimap
-    if (getPosition && getDirection) {
+    if (!minimap && getPosition && getDirection) {
       minimap = mountMiniMap({ getPosition, getDirection });
     }
 
@@ -119,6 +123,7 @@ export const UIManager = {
   dispose() {
     if (devHud?.dispose) devHud.dispose();
     if (minimap?.dispose) minimap.dispose();
+    minimap = null;
     if (audioMixer?.dispose) audioMixer.dispose();
     if (exposureSlider?.dispose) exposureSlider.dispose();
   },

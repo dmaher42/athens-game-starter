@@ -7,6 +7,7 @@ export class CollectiblesManager {
   items: Object3D[];
   score: number;
   total: number;
+  typeScores: Record<string, number>;
   onScoreChange: ((score: number, total: number, type: string, typeScore: number) => void) | null;
 
   constructor(scene: Object3D, questManager?: QuestManager | null);

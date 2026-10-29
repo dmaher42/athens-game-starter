@@ -234,6 +234,7 @@ export class ThirdPersonCamera {
     this.lookTarget = new THREE.Vector3();
 
     this.raycaster = new THREE.Raycaster();
+    this.raycaster.firstHitOnly = true; // Only the nearest camera obstruction is needed.
     this.intersections = [];
 
     this.solids = Array.isArray(options.solids)

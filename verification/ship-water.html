@@ -1,0 +1,29 @@
+<!doctype html><html><head><title>Ship water exclusion verification</title></head><body><script type="module">
+import * as THREE from 'three';
+import {createOcean,updateOcean} from '../src/world/ocean.js';
+import {createMerchantShip,createTriremeShip} from '../src/world/harborShips.js';
+import {configureShipWaterExclusions,isInsideShipWaterExclusion,MAX_HULL_EDGES} from '../src/world/shipWaterExclusion.js';
+const scene=new THREE.Scene(),renderer=new THREE.WebGLRenderer({antialias:false,preserveDrawingBuffer:true});renderer.setSize(512,512);document.body.append(renderer.domElement);
+const terrain=new THREE.Mesh(new THREE.PlaneGeometry(100,100,4,4),new THREE.MeshStandardMaterial({color:0x706751}));terrain.rotation.x=-Math.PI/2;terrain.position.y=-8;scene.add(terrain,new THREE.HemisphereLight(0xffffff,0x554433,2));
+const merchant=createMerchantShip(),naval=createTriremeShip();merchant.position.set(12,-1,8);merchant.rotation.y=-.31;merchant.scale.setScalar(1.16);naval.position.set(-14,-1,-10);naval.rotation.y=.47;naval.scale.set(1.1,1,.9);scene.add(merchant,naval);scene.updateMatrixWorld(true);
+const ships=[merchant,naval],water=await createOcean(scene,terrain,{seaLevel:-1,bounds:{west:-50,east:50,north:-50,south:50}}),camera=new THREE.PerspectiveCamera(55,1,.1,300),size=256,target=new THREE.WebGLRenderTarget(size,size),masked=new Uint8Array(size*size*4),baseline=new Uint8Array(masked.length),ray=new THREE.Raycaster(),plane=new THREE.Plane(new THREE.Vector3(0,1,0),1),point=new THREE.Vector3(),down=new THREE.Vector3(0,-1,0);
+camera.position.set(35,25,40);camera.lookAt(0,-1,0);camera.updateMatrixWorld();renderer.render(scene,camera);
+const boundaryDistance=(data,x,z)=>{let minimum=Infinity;for(let h=0;h<data.count;h++){const b=data.bounds[h];if(x<b.x-.1||z<b.y-.1||x>b.z+.1||z>b.w+.1)continue;for(let e=0;e<data.counts.getComponent(h);e++){const v=data.edges[h*MAX_HULL_EDGES+e],dx=v.z-v.x,dz=v.w-v.y,t=THREE.MathUtils.clamp(((x-v.x)*dx+(z-v.y)*dz)/(dx*dx+dz*dz),0,1);minimum=Math.min(minimum,Math.hypot(x-v.x-t*dx,z-v.y-t*dz));}}return minimum;};
+window.runShipWaterCheck=()=>{
+ let data=water.userData.shipWaterExclusions;if(data.count!==2)throw Error('Expected both actual hull masks');terrain.visible=false;ships.forEach(s=>s.visible=false);scene.background=null;renderer.setClearColor(0x000000,0);updateOcean(water,0,new THREE.Vector3(.7,.7,0));water.material.uniforms.time.value=1.5;
+ const render=(count,pixels)=>{water.material.uniforms.uWaterHullCount.value=count;renderer.setRenderTarget(target);renderer.render(scene,camera);renderer.readRenderTargetPixels(target,0,0,size,size,pixels);return{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};};
+ camera.position.set(0,65,.01);camera.lookAt(0,-1,0);camera.updateMatrixWorld();render(data.count,masked);const programsBefore=renderer.info.programs.length,materialVersion=water.material.version,gl=renderer.getContext(),compile=gl.compileShader,link=gl.linkProgram;let compiles=0,links=0;gl.compileShader=function(...a){compiles++;return compile.apply(this,a);};gl.linkProgram=function(...a){links++;return link.apply(this,a);};const results=[];
+ try{for(let view=0;view<4;view++){
+  if(view===3){merchant.position.x+=4;merchant.rotation.y+=.2;merchant.scale.z=.85;scene.updateMatrixWorld(true);data=configureShipWaterExclusions(water,ships);}
+  const eye=[[0,65,.01],[25,20,40],[0,110,80],[0,65,.01]][view];camera.position.set(...eye);camera.lookAt(0,-1,0);camera.updateMatrixWorld();const off=render(0,baseline),on=render(data.count,masked);let checked=0,inside=0,outside=0,maskMismatches=0,pixelMismatches=0,outsideColorMismatches=0;
+  for(let y=2;y<size-2;y+=2)for(let x=2;x<size-2;x+=2){ray.setFromCamera(new THREE.Vector2((x+.5)/size*2-1,(y+.5)/size*2-1),camera);if(!ray.ray.intersectPlane(plane,point)||Math.abs(point.x)>=49.5||Math.abs(point.z)>=49.5||boundaryDistance(data,point.x,point.z)<.025)continue;
+   const expectedMask=isInsideShipWaterExclusion(data,point.x,point.z);let actualHull=false;for(const ship of ships){const hull=ship.getObjectByName('CurvedShipHull');ray.set(new THREE.Vector3(point.x,-1.001,point.z),down);if(ray.intersectObject(hull,false).length){actualHull=true;break;}}
+   checked++;if(expectedMask!==actualHull)maskMismatches++;const index=(y*size+x)*4;if(baseline[index+3]===0)pixelMismatches++;if(actualHull){inside++;if(masked[index+3]!==0)pixelMismatches++;}else{outside++;if(masked[index+3]===0)pixelMismatches++;for(let c=0;c<4;c++)if(masked[index+c]!==baseline[index+c]){outsideColorMismatches++;break;}}
+  }
+  results.push({view,eye,checked,inside,outside,maskMismatches,pixelMismatches,outsideColorMismatches,off,on,edgeCounts:data.hulls.map(h=>h.edgeCount)});
+ }}finally{gl.compileShader=compile;gl.linkProgram=link;renderer.setRenderTarget(null);water.material.uniforms.uWaterHullCount.value=data.count;terrain.visible=true;ships.forEach(s=>s.visible=true);scene.background=new THREE.Color(0xbad7ec);renderer.setClearColor(0xbad7ec,1);renderer.render(scene,camera);}
+ return{normalWater:water.isWater&&!water.userData.isAutomationFallback,count:data.count,programsBefore,programsAfter:renderer.info.programs.length,compiles,links,materialVersionBefore:materialVersion,materialVersionAfter:water.material.version,results};
+};
+window.advanceTime=()=>renderer.render(scene,camera);window.render_game_to_text=()=>JSON.stringify({ships:2,waterExclusionCount:water.userData.shipWaterExclusions.count,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles});window.ready=true;
+</script></body></html>
+

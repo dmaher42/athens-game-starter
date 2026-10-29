@@ -3,11 +3,17 @@ import * as THREE from "three";
 import { MATERIALS } from "../materials/materialRegistry.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
+// Walkable architecture also has groundSurface metadata for collision support.
+// Only authored road ribbons and court overlays belong to this material pass.
+export function isRoadSurface(mesh) {
+  return mesh?.userData?.groundSurface === 'street' || mesh?.userData?.groundSurface === 'court';
+}
+
 export async function applyGravelToRoads({ scene } = {}) {
   if (!scene) return;
   const surfaces = [];
   scene.traverse(o => {
-    if (o.isMesh && o.userData.groundSurface && !o.material?.userData?.__isGravel) surfaces.push(o);
+    if (o.isMesh && isRoadSurface(o) && !o.material?.userData?.__isGravel) surfaces.push(o);
   });
   if (!surfaces.length) return;
   const loader = new THREE.TextureLoader();
@@ -42,9 +48,8 @@ export async function applyGravelToRoads({ scene } = {}) {
       material.userData.__isGravel = true;
       materials.set(key, material);
     }
-    const previous = mesh.material;
     mesh.material = materials.get(key);
-    previous.dispose();
+    // Source materials may still be shared by architecture or other surfaces.
     mesh.receiveShadow = true;
   }
   console.info('[roads] Shared stone paving and packed-earth lane textures applied.');

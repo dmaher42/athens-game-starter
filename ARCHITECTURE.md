@@ -1,3 +1,71 @@
+Current water-interior fix: see SHIP_MODELS.md. One Ocean clips only inside measured static hull waterlines; no new ground/geometry/collision.46 tests/typecheck/build/seven browser checks pass, including GPU outside-sea identity and actual production registration. Current preview buildindex-B2ZaDDiJ.js. Earlier dated build identities below are historical.
+
+Current deck-material update: see SHIP_MODELS.md for the completed warm-plank deck/jetty distinction, unchanged physics and explicit +2draw objects per ship. Current served hash and42-test validation are recorded there. No browser hold or source change remains pending.
+
+# Current ship presentation checkpoint - 28 October 2026
+
+Ship upgrade complete. See [SHIP_MODELS.md](./SHIP_MODELS.md) for visual/collision ownership, sources, budgets and final verification. Current build index-ByWuHb7N.js matches normal preview4177;42 tests,typecheck/build and six browser integration checks pass. Normal-shader harbour/boarding/near-far views and browser client were inspected. No native steady-FPS claim; preserve the existing performance fixes and user resources. The earlier dated status paragraphs below are historical evidence, not pending browser holds or the current build identity.
+
+# Current runtime ownership — 27 October 2026
+Current city-structure checkpoint: Daniel's personal hobby world has no mandatory classroom/student/device target. The bounded pass is implemented through the existing city renderer and prefabs. neighbourhoodLayout.js owns all19 authored street control-point sets, descriptive quarter bounds, smooth workshop/home recipe influences, five Agora frontage placements and the existing Agora furnishings. cityPlan.js renders/places them once. The old civic/commercial/residential tags remain engine recipe/shadow categories, not competing city maps. See WORLD_BUILDING_PLAN.md.
+
+Local build index-DH8Ofxte.js (SHA256171C13FB777E646154D8EF302516582158A42676E483A0D0052FB7706C716AC2) matches the preserved port4177/PID13152 preview.38 non-browser tests,typecheck and build pass. Flat-terrain fixture:185 building lots,26 street frontages,19 ribbons,343 meshes and0 lights remain; triangles65700->64696. Original road centre lines and clear-lot reservations are hash-identical; tapered ribbons add no road triangles. Actual generated-city capsule checks traverse five routes for5633frames after relocating existing fountain/banner props off the western exit. This fixture does not replace real-terrain/native visual,FPS or full browser acceptance. Browser permission was resumed; current completed ship/district checks above supersede this historical checkpoint. No external assets adopted,no new light/NPC/save/terrain/render systems,no settings changes or publication.
+Previous harbour/scroll verification: `index-C55XAAkp.js`, SHA256 `5A327B22BB9820337AB6698120E22CC036E9A70A1083B395B50A1454330CBA30`, served identically on the preserved port4177 preview. Typecheck,35 Node tests, production smoke, actual-WebGL pickup regression,22,260 water samples,12,935 city/neighbourhood walking frames, activity keyboard/quest/replay checks and2,593 boarding/return frames pass. No publication.
+
+The yellow-scroll freeze was caused by hiding a pickup group containing a PointLight: the native approach added23 shader programs and69 compile/link calls, extending beyond39 seconds while the score callback took0ms. Collection now hides meshes and sets existing lights to0 intensity, retaining the renderer light layout. Repeated collection is idempotent. The WebGL regression retains2 programs across repeated pickups, and the full-game repeat retains49 programs; both issue zero new compile/link calls. Preserve this light-layout invariant.
+
+Normal-shader harbour overview, close merchant/trireme views and activity dialog were captured and inspected. Performance is not signed off: the final timed pier attempt had substantial rendering stalls under378-389MB available system RAM and paging. Closing only owned test resources recovered1932-2217MB. A fresh fixed-distance sampler was prepared but never started because native browser readiness was stopped. Earlier city pairs predate the scroll fix and use background presentation; they do not establish current smoothness or Chromebook performance. Do not stop user apps or change settings for testing without permission.
+
+This section supersedes the older coordinate, terrain, water and deployment notes below. The older sections are historical records, not authority to recreate removed systems. Current user instructions permit local development/testing only: no push, merge or publication, no new settings UI, no stopping user apps/tabs/servers. Only positively identified test-created browsers/servers may be closed. Preserve the normal preview on 127.0.0.1:4177.
+
+## Source map
+
+| Responsibility | Active owner | Boundary to preserve |
+| --- | --- | --- |
+| Entry/render loop | main.ts → main.runtime.js → core/Application.ts; core/GameLoop.js; core/Scene.js | One application, scene, renderer and world loop. UI callbacks are not another world renderer. |
+| Terrain and shore | world/terrain.js; world/terrainHeight.js; world/harborCoast.js | One rendered terrain mesh (256 segments), disjoint material groups, exact triangle height sampler. No new ground plane. |
+| Roads and courts | world/cityPlan.js and its existing grounded surface builders | Deliberate paved overlays with authored routes; keep feathered joins and collision conventions. |
+| Quay and piers | world/harbor.js; world/harborPlacement.js | Existing curved quay generator, timber loading piers and short boarding ramps are physical structures over terrain, not alternative terrain generators. No terrain/water reshaping in this pass. |
+| Ships | world/harborShips.js called by the existing harbor.js factories | Static procedural templates, shared existing materials, curved hulls, instanced cargo/oars. harbor.js and locations.js own placement and sea-relative origin. No second loader or rope/boat physics loop. |
+| Ocean | world/ocean.js; world/shipWaterExclusion.js; locations.js / seaLevelState.js | One guarded AegeanOcean Water instance serves inlet and open sea. Shore clipping samples the actual terrain; ordinary depth testing places water below quay/deck surfaces. Normal-only SSAO passes must not launch reflections. |
+| Collision/camera | env/EnvironmentCollider.js; systems/PlayerSystem.js; controls/PlayerController.js and ThirdPersonCamera.js | Geometry owns the collision BVH for capsule and nearest-hit camera queries. No duplicate raw-terrain camera scan. Preserve current water-walking policy. |
+| Static render batching | utils/staticRenderBatches.js | Original authored nodes retain geometry/metadata and collision ownership but use layer mask 0. Render-only copies share exact materials/shadow policy and are noCollision. Rebuild after source transforms change. Props/buildings managed by existing cullers, interactive ancestors and custom render/shadow callbacks are excluded. |
+| Visibility | utils/propCulling.js; utils/buildingCulling.js; Three render-time frustum culling | Existing cullers remain sole owners of individual prop/building visibility. Batch spheres include transformed geometry; avoid main-camera visibility flags that break mirrored views. |
+| Sky/daylight | systems/LightingSystem.js; world/sky/DynamicSky.js; HDR background/fallback | Dynamic sky and HDR fallback are intentional layers. createLighting reuses the sky's sun, not a second sun. Keep 4096 shadows and existing SSAO quality unless a measured comparison justifies change. |
+| Input/use | input/InputMap.ts; world/interactions.js | One E/click use path and registered-target list. Empty means no pickable target, never whole-scene fallback. Ranged third-person signs use the same registry/onUse callback with player distance checks. |
+| Objectives/activity | state/QuestManager.js; state/HarborActivity.js; world/harborActivity.js | QuestManager alone owns the displayed objective/completion. activityId protects it; the tour pauses progression and delayed follow-ups queue until release. The activity model owns evidence/choices only. Existing quests are suspended/restored, not deleted. UI updates on state changes; no new RAF/save engine/runtime AI. |
+| NPCs | world/npcs.js and characters/athenianDress.js / existing GLB fallback | Preserve shared garments, LOD, accessory instancing, animation throttling and the current player model. |
+
+## Audit distinctions
+
+- The terrain coverage-mask function currently exits without baseBlend state. Legacy road/layout metadata therefore does not prove a second active painted ground system.
+- The empty-road dust call returns null. Definition-only underlay/skirt helpers and the disabled legacy keyboard block are not active duplicated rendering.
+- Actual measured waste fixed here: collision BVH was not attached where standard raycasts looked; the camera also queried raw terrain; empty interaction registries scanned the world; Water reflected the city during the SSAO normal override; harbour lighting repeatedly traversed/reallocated shared colours.
+- Actual ownership issue addressed for the new activity: the tour used to update any active objective. Activity ownership now prevents that overwrite and pauses tour progression while preserving its prior quest.
+- Remaining focused follow-up: EnvironmentManager captures lights/dynamicSky before LightingSystem initializes; optional HUD look/fog callbacks use that stale facade while production hotkeys use LightingSystem/Scene. Do not rebuild the sky because of this. Consolidate callback ownership only with targeted tests.
+- Legacy collectible quests and their type/timing assumptions require their own audit; the evidence activity does not depend on collecting those items or discard them.
+
+## Harbour learning design and evidence
+
+The map remains a stylized coastal interpretation, not a scale model of Athens. The activity identifies **Piraeus — port of Athens**, explains that the game compresses the distance, and contrasts commercial and naval ship functions. No exact year or surveyed harbour reconstruction is asserted.
+
+- [National Hellenic Research Foundation: Piraeus](https://archaeologia.eie.gr/archaeologia/gr/02_deltia/piraeus.html): the port was distinct from inland Athens; Kantharos hosted commerce, while Zea/Mounichia held naval facilities. Schematic masonry quays are an interpretation, not measured excavation geometry.
+- [Danish Institute: Zea Harbour Project](https://diathens.gr/en/projects/piraeus): shipsheds, slipways, moles and towers document naval infrastructure. Do not infer a vast excavated timber promenade.
+- [Acropolis Museum: Lenormant Relief](https://www.theacropolismuseum.gr/en/relief-depicting-trireme-lenormant-relief): late-fifth-century-BC evidence for a trireme with three oar rows. The game uses a narrow hull, ram and three distinguishable banks schematically.
+- [Institute of Nautical Archaeology: Kyrenia](https://nauticalarch.org/projects/kyrenia-shipwreck-excavation/): merchant hull/cargo comparison from a later wreck (the source dates the wreck 295 BC). It is not an exact fifth-century Athenian ship template.
+- [Penn Museum: Traders and Trading](https://www.penn.museum/sites/expedition/traders-and-trading/): grain imports helped feed Classical Athens; beamy merchant ships carried cargo. Amphoras alone are not evidence that their contents were grain. The displayed sacks/cargo are explicitly an invented teaching example, not an ancient manifest.
+
+One complete loop: inspect merchant hold/cargo, inspect trireme oars/ram, choose the cargo vessel, explain the food-supply connection. Both inspections and a correct explanation are required. Wrong choices give specific hints and unlimited retry. Completion, reset/replay, Escape/keyboard focus, nearby E use and return-to-exploration restore the old quest. No claim that all rowers were enslaved or that harbour society comprised only citizen men.
+
+## Validation and performance budget
+
+Pre-content performance checkpoint: typecheck + 21 tests + build + browser/network checks + real-Water regression (22,260 samples) + 12,931 walking frames passed. Verified Intel Arc 1366×768 paired route: batching on 40.02/40.62 FPS, off 34.76/34.87 FPS; p95 ≈33.4ms. Earlier 1280×720 captures and invalid half-float byte readbacks must not be cited as full-size or pixel-identical evidence.
+
+The new harbour/activity sources require their own final verification. Acceptance: unchanged terrain/water ownership, solid quay/boarding/decks, correctly floated ships, no introduced visibility pops, keyboard evidence→choice→reason→completion/reset, restoration of the previous objective, no console/network errors, and matched representative frame times after warm-up. Aim to stay within 10% of the current route average, p95≤50ms and p99≤67ms on the measured laptop; report spikes honestly. Functional headless tests are not native FPS evidence. No Chromebook speed promise is established by an Intel Arc laptop measurement.
+
+---
+
+## Historical architecture notes (older values below are superseded)
 # ARCHITECTURE.md
 
 ## Overview
@@ -529,3 +597,50 @@ if (typeof window !== 'undefined') {
 ---
 
 Last Updated: January 3, 2026
+
+
+
+Activity verification ownership: verification/harbor-approach.fixture.js is test-only. It derives its routes from the existing authored pier sections and uses the production collider and PlayerController to prove/walk them; it adds no runtime navigation owner. Reset only to a verified clear inshore standing anchor, then walk the full supported route. Do not restore a fixed west-of-marker teleport into randomized dock cargo or relax the original support/interaction assertions. Game-side positions and activity state remain owned by harbor.js/harborActivity.js.
+
+Agora life ownership: neighbourhoodLayout.AGORA_LIFE_POCKETS references existing frontage indices; cityPlan places/decorates once; agoraLife supplies shared static goods and benches. Application reassigns the four existing fallback actors through world/npcs.js. Dialogue uses createInteractor.showDialogue, not another UI/quest system. Keep the square and source street network open; preserve authored goods from generic small-prop pruning.
+
+### Workshop craft details
+The existing NEIGHBOURHOODS/neighbourhoodFrontages in neighbourhoodLayout.js still own court/building/street placement. cityPlan.js replaces two existing court accent slots with createWorkshopLife in world/workshopLife.js. That module owns only static craft props plus WORKSHOP_LIFE dialogue text; large bench/kiln parts collide, small goods do not. Application passes these two dialogue records to existing neighbourhood residents, without adding another NPC or interaction loop. Agora and harbour ownership stay unchanged.
+
+### Agora–Potters connector ownership
+WORKSHOP_CONNECTOR and workshopConnectorLot/workshopConnectorFrontage in world/neighbourhoodLayout.js own this bounded adjustment of existing slots. cityPlan.js samples terrain at final positions and records actual moved lot transforms in plan.workshopConnector; grid coordinates remain stable lot identities. Front-depth comes from the existing geometry, keeping the authored road clear. All existing street curves and reward anchors remain unchanged. The relocated artisan consumes neighbourhood craftStation metadata through the existing spawnCitizenCrowd path in Application. Do not add a second street/frontage/ground/NPC system.
+
+### Agora commission and activity progress
+QuestManager.getActivityRecord/saveActivityRecord/claimActivityReward own the optional browser-local activity save (athens.activities.v1). Existing beginActivity/endActivity retain one objective owner and suspended/queued legacy quests. CollectiblesManager.awardActivityOnce uses that receipt and the existing gold score; only commission award receipts rehydrate, not an invented full-game inventory save. state/AgoraCommission.js owns the two-plan commission domain. world/agoraCommission.js binds existing NPC onUse callbacks and registered E inspection cues, modal input/focus and dynamic gathering visibility; agoraLife.js supplies native shared-resource display geometry. Application mounts/updates/disposes once through its existing lifecycle. No parallel quest/save/input/currency/terrain or NPC engine.
+The city poolMaterialsAndMerge guard must exclude interactable ancestors as well as hidden ancestors: gathering outcome meshes are mutable after a saved reload. Otherwise their previous visible choice gets permanently baked and cannot be replaced. The focused commission test covers this while keeping normal city merging intact.
+
+
+### Great Theatre ownership (2026-10-28)
+world/greatTheatreLayout.js owns the bounded site/reservation/approach; cityPlan respects that reservation while preserving all19 canonical street curves. world/greatTheatre.js owns structural meshes and stage dressing, samples the existing terrain once, and retains collider authoring on original structural geometry with render-only shared-material batches. Application creates the shell before its existing collider refresh. No second terrain/physics/road owner.
+state/TheatreRehearsal.js owns An Opening for the City progress and finite original pieces through existing QuestManager activity save/objective ownership. world/theatreRehearsal.js binds registered E cues, modal focus/captions, saved props and three actors using existing NPC updater/LOD; the optional NPC canMove callback gates only the two performers during a piece. Application mounts, updates and disposes once. The roadside approach cue routes to the same entry UI; do not add another quest/input/save/currency engine. Props remain outside immutable structure batching and preserve noCull for small authored masks. No theatre score reward, automatic replay, recorded speech or external assets. Agora commission records/reward receipts and harbour objective ownership are preserved.
+
+
+### City purpose and landmark hierarchy (2026-10-28)
+neighbourhoodLayout.js remains the source of truth for named courts,19 street curves and26 neighbourhood street frontages. CITY_LANDMARKS now replaces the four hardcoded Application temple calls with explicit Hill sanctuary/Council porch/Harbour shrine/Porters’ storehouse roles. cityLandmarks.js renders once before the existing EnvironmentCollider construction, using existing Prefabs, temple kit and harbour land placement; it queues static E notices through the existing interactor. Do not resurrect disabled LandmarkManager as a second owner. Application only calls createCityLandmarks when its existing landmark flag is enabled.
+COURT_LIFE contains optional dialogue for the existing three non-craft court residents; Application passes it to the same NPC spawn/updater. No extra citizens, save namespace, quest currency or per-frame scene scan. Existing craft/Agora/theatre interaction owners remain authoritative.
+CITY_GROUND_ENVELOPE/isCityDryGround classify dry urban triangles within terrain.js's existing three material groups. Broad ocean-sheet bounds overlap dry land and must not force those samples into grass. Coastal and submerged handling retain precedence; this is not a height/shoreline/second-ground system. Workshop and storehouse changes live in existing Prefabs; decorative fronts/roofs are noCollision, original solid building cores remain authoritative. All court/reward anchors and canonical street definitions preserved.
+
+Theatre approach ribbon: shared arc-length edge samples in greatTheatre.js own both rendered and collider authoring triangles. Do not recreate per-segment side offsets or add an overlaid fix plane; adjacent segment edges must remain identical.
+
+
+### Enterable Olive Court home (2026-10-28)
+neighbourhoodLayout.isCourtyardHomeFrontage selects one existing Olive Court frontage; homeCourtFrontage tightens three existing neighbours. cityPlan creates courtyardHome.js once in that slot before collider refresh and returns its geometry references; it adds no terrain or global road owner. Original shell footprint remains 11 × 6 metres, with local supported floor and apron. Static architecture is batched normally. Dynamic roof (dynamicVisibility) and registered outcome subtree retain their own visibility; do not bake them into permanent batches.
+Application mounts/updates/disposes courtyardHousehold.js once. The existing Olive Court NPC slot consumes its host position, floor sampler and interaction; one porter uses the same NPC system. HouseholdWater in state/ owns only the optional favour and uses QuestManager’s existing activity record and objective suspension. No separate inventory/save/currency/input manager. Water outcomes replace each other; replay awards no gold. Activity carrying is journal state. Do not move the fountain or court reward anchors to shortcut the task.
+
+
+### Weathered pier and offshore vessel (2026-10-28)
+harbor.js owns shared WeatheredPierTimber, local harbour-warmth factors and the single offshore placement at (210, sea level, 60). Dock, boardwalk and boarding ramps retain original geometry/collision transforms; warm ship decks retain their separate material. harborPlacement.js owns neutral quay coping. createOffshoreGalley in harborShips.js reuses the existing trireme family, with full sail and static display scale; its shipType is offshore-galley, boardable false, noCollision true. Do not include it in the two boardable merchant/trireme water-mask registry or activity selection. Existing static harbour batching and material caches remain the rendering owners. No parallel boat engine or update loop.
+
+
+### Market work routines (2026-10-29)
+marketLife.js derives two routes from existing Agora food and Trading Court packing anchors; npcWaypointRoutine.js is the pure bounded waypoint/dwell helper. Application assigns these to the two existing procedural workers in world/npcs.js, which retains the only NPC update/pose/LOD owner (13 callbacks total). No extra actor, geometry, light, timer, save or economy owner is introduced. Nearby players, the existing Agora panel and brief E conversations pause the routes. The food seller still opens AgoraCommission; the porter uses existing interactor dialogue with phase-specific directions. Food, jars and packing props remain static displays.
+The selected workers prefer a valid aimed E target over nearby inspection-marker fallback; all other interaction targets retain existing proximity behavior. Do not replace this with another input handler. Pure coverage is verification/market-routine.test.mjs; isolated real-E route/save coverage is in the task market-life-smoke.json. Active NPC manifest is currently empty, so these routines apply to current procedural fallback actors, not future GLB crowd assets.
+
+Agora arrival material hierarchy (2026-10-29): cityPlan creates one shared AgoraFrontageLimestone for the existing five AGORA_FRONTAGES and passes it through Prefabs.stoa.masonryMaterial. This changes walls and columns only. Their transforms, geometry, shadow flags, counters, collision surfaces, activity stations and layout owner stay unchanged; Parthenon, paving and other prefab materials are unaffected. Do not add replacement shells or globally alter marble to change market appearance.
+
+2026-10-29 wall/counter finish: acropolisPrecinct.masonryUV changes only UVs on existing merged retaining wall and NorthSanctuaryTerrace; the same 512x256 canvas masonry now repeats at 6.4m by 2.4m (four courses), avoiding giant stretched courses. No position/index/normal or collider change. materials.getMarketCounterMaterial caches one muted 128x64 code-native timber texture/material; cityPlan passes it to the existing five Agora stoa prefabs via optional counterMaterial. Other wood, ships, jetty, furnishings and building defaults remain unchanged. No extra overlay geometry, terrain, manager, frame updater or saved state.

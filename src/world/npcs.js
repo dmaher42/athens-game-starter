@@ -1,3 +1,5 @@
+import {createWaypointRoutine,advanceWaypointRoutine} from './npcWaypointRoutine.js';
+import {queueSceneInteractable} from './interactions.js';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Character } from '../characters/Character.js';
@@ -745,20 +747,22 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
     group.userData.characterStyle = "athenian-citizen-v3";
     group.userData.athenianDress = ATHENIAN_DRESS[roleProfile.id].garment;
     group.userData.npcRole = roleProfile.id;
-    group.userData.npcLabel = roleProfile.label;
+    group.userData.npcLabel = options.label ?? roleProfile.label;
+    if(options.dialogue){let owner=scene;while(owner.parent)owner=owner.parent;group.userData.npcDialogue=options.dialogue;group.userData.interactable=true;group.userData.interactionRange=4;group.userData.onUse=()=>typeof options.onUse==='function'?options.onUse(group):owner.userData.interactor?.showDialogue(options.dialogue);queueSceneInteractable(owner,group);}
+    if(Number.isFinite(options.facingYaw))group.rotation.y=options.facingYaw;
     group.userData.noCollision = true;
     scene.add(group);
     citizens.push(group);
 
     const speed =
       THREE.MathUtils.lerp(minSpeed, maxSpeed, rng()) * roleProfile.paceMultiplier;
-    let progress = (i / count + rng() * 0.1) % 1;
+    let progress = options.stationary ? 0 : (i / count + rng() * 0.1) % 1;
     let stepPhase = rng() * Math.PI * 2;
     const gaitScale = randomBetween(0.85, 1.18, rng);
     const swayScale = randomBetween(0.85, 1.15, rng);
     const armSwingScale = randomBetween(0.85, 1.2, rng);
     let moveTimeRemaining = randomBetween(2.8, 6.2, rng);
-    let idleTimeRemaining = 0;
+    let idleTimeRemaining = options.stationary ? Infinity : 0;
     let targetYaw = 0;
     let headYaw = 0;
     let headYawTarget = 0;
@@ -769,13 +773,21 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
     let skipFrameCounter = 0;
     let usingHighDetail = true;
 
+    const routine=options.routine??null,routineState=routine?createWaypointRoutine(routine):null;
+    const routinePosition=new THREE.Vector3();
+    if(routineState){group.userData.preferAimedUse=true;group.userData.npcRoutine={id:routine.id,...routineState};group.userData.pauseRoutine=(seconds=8)=>{routineState.hold=Math.max(routineState.hold,Math.min(20,Math.max(0,seconds)));};}
+
     const update = (dt) => {
       if (!Number.isFinite(dt)) return;
-      const isIdle = idleTimeRemaining > 0;
+      const activityIdle=typeof options.canMove==='function'&&!options.canMove(group);
+      let isIdle = activityIdle || idleTimeRemaining > 0;
+      if(!routineState){
       if (isIdle) {
+        if(!activityIdle){
         idleTimeRemaining = Math.max(0, idleTimeRemaining - dt);
         if (idleTimeRemaining === 0) {
           moveTimeRemaining = randomBetween(2.6, 6.4, rng);
+        }
         }
       } else {
         const distancePerSecond = speed;
@@ -791,8 +803,13 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
         }
       }
 
-      const position = pathCurve.getPointAt(progress);
-      const tangent = pathCurve.getTangentAt(progress);
+      }
+      let position,tangent;
+      if(routineState){
+        advanceWaypointRoutine(routineState,routine,dt,activityIdle);isIdle=!routineState.moving;
+        position=routinePosition.set(routineState.x,0,routineState.z);
+        Object.assign(group.userData.npcRoutine,routineState);
+      }else{position=pathCurve.getPointAt(progress);tangent=pathCurve.getTangentAt(progress);}
 
       group.position.copy(position);
 
@@ -800,8 +817,9 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       const sampledY = getHeightAt ? getHeightAt(group.position.x, group.position.z) : position.y;
       group.position.y = Number.isFinite(sampledY) ? sampledY + 0.05 : position.y + 0.05;
 
-      if (tangent) {
-        targetYaw = Math.atan2(tangent.x, tangent.z);
+      if(routineState){targetYaw=routineState.phase==='paused'?group.rotation.y:routineState.yaw;}
+      else if (tangent) {
+        targetYaw = options.stationary && Number.isFinite(options.facingYaw) ? options.facingYaw : Math.atan2(tangent.x, tangent.z);
       }
       group.rotation.y = smoothAngle(
         group.rotation.y,
@@ -842,7 +860,7 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
         }
       }
 
-      stepPhase += dt * speed * (isIdle ? 1.8 : 6.4);
+      stepPhase += dt * (routine?.speed ?? speed) * (isIdle ? 1.8 : 6.4);
       const gait = Math.sin(stepPhase) * gaitScale;
       const sway = Math.cos(stepPhase * 0.5) * swayScale;
       if (isIdle) {
@@ -874,6 +892,9 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       rightArm.rotation.x = isIdle
         ? -0.08 - sway * 0.06
         : -0.16 - gait * 0.32 * armSwingScale;
+      if(routineState?.phase==='working'&&['tend','sort'].includes(routineState.action)){
+        rightArm.rotation.x=-.6+Math.sin(stepPhase*.6)*.08;leftArm.rotation.x=-.25+sway*.04;
+      }
       leftLeg.rotation.x = isIdle ? 0 : gait * 0.45;
       rightLeg.rotation.x = isIdle ? 0 : -gait * 0.45;
       leftFoot.position.z = isIdle ? 0.08 : 0.08 + gait * 0.06;
@@ -900,6 +921,7 @@ export function spawnCitizenCrowd(scene, pathCurve, options = {}) {
       }
     };
 
+    if(routineState)update(0); // Place authored workers before their first visible frame.
     updaters.push(update);
   }
 

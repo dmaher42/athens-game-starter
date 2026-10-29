@@ -1,4 +1,8 @@
+import { createMerchantShip, createTriremeShip, createFishingSkiff, createOffshoreGalley } from './harborShips.js';
+import { batchStaticMeshes } from '../utils/staticRenderBatches.js';
 import * as THREE from "three";
+import { harborShoreX, harborCoastHeight } from "./harborCoast.js";
+import { placeHarborOnLand, createCurvedHarborQuays, createHarborBoardingRamp } from "./harborPlacement.js";
 import { IS_DEV } from "../utils/env.js";
 import {
   HARBOR_WATER_BOUNDS,
@@ -19,18 +23,36 @@ import {
   analyzeHarborZone,
   HARBOR_ZONE_CONFIG,
 } from "./coastalZones.js";
-import { makeAncientWoodMaterial } from "./materials.js";
+import { makeAncientWoodMaterial, makeMonumentalStoneMaterial } from "./materials.js";
 
 const DOCK_SECTION_LENGTH = 9.5;
 const DOCK_SECTION_WIDTH = 5.8;
 const DOCK_THICKNESS = 0.45;
 const DOCK_POST_HEIGHT = 1.6;
 const DOCK_GAP = 0.35;
-const DOCK_LIFT = 1.22; // Raised slightly more to clear water z-fighting
-const QUAY_EDGE_X = 68;
+const DOCK_LIFT = HARBOR_GROUND_HEIGHT; // Raised slightly more to clear water z-fighting
+const QUAY_EDGE_X = 57;
 const QUAY_SPAN_NORTH = -30;
 const QUAY_SPAN_SOUTH = 34;
 const waterTextureLoader = new THREE.TextureLoader();
+
+let sharedShipWood = null;
+let sharedQuayStone = null;
+function getQuayStone() { if (!sharedQuayStone) { sharedQuayStone = makeMonumentalStoneMaterial(); sharedQuayStone.roughness = 0.98; sharedQuayStone.metalness = 0; sharedQuayStone.clearcoat = 0; sharedQuayStone.color.set(0xa5a69f); sharedQuayStone.userData.harborWarmth=.035; } return sharedQuayStone; }
+function getShipWood() { return sharedShipWood ||= makeAncientWoodMaterial(); }
+
+// Weathering is local to the pier: no global sunlight or ship-deck changes.
+let sharedPierWood;
+function getPierWood(){
+ if(sharedPierWood)return sharedPierWood;
+ const size=128,pixels=new Uint8Array(size*size*4);
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+  const board=Math.floor(y/16),grain=2.4*Math.sin(y*1.2+Math.sin(x*.08))+.9*Math.sin(x*.17+y*.5),tone=((board*13)%11)-5,k=(y*size+x)*4;
+  pixels[k]=Math.round(119+tone+grain);pixels[k+1]=Math.round(117+tone+grain);pixels[k+2]=Math.round(110+tone*.8+grain);pixels[k+3]=255;
+ }
+ const map=new THREE.DataTexture(pixels,size,size,THREE.RGBAFormat);map.name='SharedWeatheredPierGrain';map.colorSpace=THREE.SRGBColorSpace;map.generateMipmaps=true;map.minFilter=THREE.LinearMipmapLinearFilter;map.magFilter=THREE.LinearFilter;map.wrapS=map.wrapT=THREE.RepeatWrapping;map.anisotropy=4;map.needsUpdate=true;
+ sharedPierWood=new THREE.MeshStandardMaterial({map,roughness:.97,metalness:0,envMapIntensity:.2});sharedPierWood.name='WeatheredPierTimber';sharedPierWood.userData.harborWarmth=.025;return sharedPierWood;
+}
 
 const BOAT_STYLES = [
   { hull: 0x2f6e8d, accent: 0xe2a86a },
@@ -45,25 +67,50 @@ function enableShadows(mesh) {
   mesh.receiveShadow = true;
 }
 
-function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOCK_SECTION_WIDTH } = {}) {
-  const woodMaterial = makeAncientWoodMaterial();
-  const deck = new THREE.Mesh(
-    new THREE.BoxGeometry(length, DOCK_THICKNESS, width),
-    woodMaterial,
+let sharedDockMaterials = null;
+const sharedDockDecks = new Map();
+const sharedDockPosts = new THREE.CylinderGeometry(0.35, 0.42, DOCK_POST_HEIGHT + 3.2, 10);
+function addHarborDeckJoints(harbor) {
+  harbor.updateWorldMatrix(true, true);
+  const inverse = harbor.matrixWorld.clone().invert(), vertices = [];
+  harbor.traverse(deck => {
+    if (!deck.isMesh || !['HarborPierDeck','HarborMerchantBoarding','HarborNavalBoarding'].includes(deck.name)) return;
+    if (!deck.geometry.boundingBox) deck.geometry.computeBoundingBox();
+    const bounds = deck.geometry.boundingBox, transform = inverse.clone().multiply(deck.matrixWorld);
+    for (let x=bounds.min.x+0.72; x<bounds.max.x-0.15; x+=0.72) {
+      for (const z of [bounds.min.z+0.06,bounds.max.z-0.06]) {
+        const point = new THREE.Vector3(x,bounds.max.y+0.008,z).applyMatrix4(transform);
+        vertices.push(point.x,point.y,point.z);
+      }
+    }
+  });
+  const joints = new THREE.LineSegments(
+    new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(vertices,3)),
+    new THREE.LineBasicMaterial({color:0x53534d,transparent:true,opacity:0.5,depthWrite:false}),
   );
-  // Local Y relative to harbor group (group Y = harborGroundY)
-  deck.position.y = (seaLevel - HARBOR_GROUND_HEIGHT) + DOCK_LIFT - DOCK_THICKNESS * 0.5;
-  enableShadows(deck);
-
-  const postMaterial = woodMaterial.clone();
-  if (postMaterial.map) {
-    postMaterial.map = postMaterial.map.clone();
-    postMaterial.map.repeat.set(1, 2);
+  joints.name='HarborDeckJoints';joints.userData.noCollision=true;harbor.add(joints);
+}
+function createDockSection(seaLevel, { length = DOCK_SECTION_LENGTH, width = DOCK_SECTION_WIDTH } = {}) {
+  if (!sharedDockMaterials) {
+    const woodMaterial = getPierWood();
+    const postMaterial = woodMaterial.clone();
+    if (postMaterial.map) {
+      postMaterial.map = postMaterial.map.clone();
+      postMaterial.map.repeat.set(1, 2);
+    }
+    sharedDockMaterials = {woodMaterial, postMaterial};
   }
-  const postGeometry = new THREE.CylinderGeometry(0.35, 0.42, DOCK_POST_HEIGHT + 0.6, 10);
+  const {woodMaterial, postMaterial} = sharedDockMaterials;
+  const key = `${length}:${width}`;
+  if (!sharedDockDecks.has(key)) sharedDockDecks.set(key, new THREE.BoxGeometry(length, DOCK_THICKNESS, width));
+  const deck = new THREE.Mesh(sharedDockDecks.get(key), woodMaterial);
+  deck.name = 'HarborPierDeck';
+  deck.position.y = -HARBOR_GROUND_HEIGHT + DOCK_LIFT - DOCK_THICKNESS * 0.5;
+  enableShadows(deck);
+  const postGeometry = sharedDockPosts;
 
   const posts = new THREE.Group();
-  const postY = (seaLevel - HARBOR_GROUND_HEIGHT) + DOCK_LIFT - (DOCK_POST_HEIGHT + 0.6) * 0.5;
+  const postY = -HARBOR_GROUND_HEIGHT + DOCK_LIFT - (DOCK_POST_HEIGHT + 3.2) * 0.5;
   const offsets = [
     [length * 0.5 - 0.9, width * 0.5 - 0.7],
     [-length * 0.5 + 0.9, width * 0.5 - 0.7],
@@ -97,7 +144,7 @@ function createPierLine(startX, z, sectionCount, seaLevel) {
   for (let i = 0; i < sectionCount; i++) {
     const section = createDockSection(seaLevel);
     // Local Y relative to harbor group origin
-    section.position.set(cursorX, seaLevel - HARBOR_GROUND_HEIGHT, z);
+    section.position.set(cursorX, 0, z);
     pier.add(section);
     sections.push(section);
     cursorX -= section.userData.length - DOCK_GAP;
@@ -116,7 +163,7 @@ function createVerticalPierLine(x, startZ, sectionCount, seaLevel) {
     const section = createDockSection(seaLevel);
     // Rotate 90 degrees for north-south orientation
     section.rotation.y = Math.PI / 2;
-    section.position.set(x, seaLevel - HARBOR_GROUND_HEIGHT, cursorZ);
+    section.position.set(x, 0, cursorZ);
     pier.add(section);
     sections.push(section);
     cursorZ -= section.userData.length - DOCK_GAP;
@@ -125,165 +172,9 @@ function createVerticalPierLine(x, startZ, sectionCount, seaLevel) {
   return { pier, sections };
 }
 
-function createFishingBoat({ length = 10, width = 3.4, seaLevel = 0, hull = 0x2f6bb4, accent = 0xf2a541 }) {
-  const boat = new THREE.Group();
-  boat.name = "HarborBoat";
+function createFishingBoat(options) { return createFishingSkiff({ ...options, woodMaterial: getShipWood() }); }
 
-  const woodMaterial = makeAncientWoodMaterial();
-  const hullMaterial = woodMaterial.clone();
-  hullMaterial.color.set(hull);
-
-  const hullMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(length, 1.1, width),
-    hullMaterial,
-  );
-  // Local offsets relative to boat origin (will be positioned relative to harbor group)
-  hullMesh.position.y = 0.55;
-  enableShadows(hullMesh);
-  boat.add(hullMesh);
-
-  const bow = new THREE.Mesh(
-    new THREE.ConeGeometry(width * 0.55, 1.6, 10),
-    new THREE.MeshStandardMaterial({ color: accent, roughness: 0.46, metalness: 0.12 }),
-  );
-  bow.rotation.z = Math.PI;
-  bow.position.set(length * 0.5 - 1.0, 1.15, 0);
-  enableShadows(bow);
-  boat.add(bow);
-
-  const cabin = new THREE.Mesh(
-    new THREE.BoxGeometry(length * 0.28, 1.0, width * 0.6),
-    new THREE.MeshStandardMaterial({ color: 0xf7f1d0, roughness: 0.35 }),
-  );
-  cabin.position.set(-length * 0.18, 1.35, 0);
-  enableShadows(cabin);
-  boat.add(cabin);
-
-  const mast = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.08, 0.08, 3.0, 8),
-    new THREE.MeshStandardMaterial({ color: 0xe6dfd7, roughness: 0.4 }),
-  );
-  mast.position.set(-length * 0.05, 2.2, 0);
-  enableShadows(mast);
-  boat.add(mast);
-
-  return boat;
-}
-
-function createHeroHarborShip({ seaLevel = 0, hull = 0x285779, accent = 0xd7a15a } = {}) {
-  const ship = new THREE.Group();
-  ship.name = "HarborHeroShip";
-
-  const woodMaterial = makeAncientWoodMaterial();
-  const hullMaterial = woodMaterial.clone();
-  hullMaterial.color.set(hull);
-  
-  const accentMaterial = new THREE.MeshStandardMaterial({
-    color: accent,
-    roughness: 0.52,
-    metalness: 0.08,
-  });
-  const mastMaterial = woodMaterial.clone();
-  mastMaterial.color.set(0xe8dbc8);
-
-  const hullBase = new THREE.Mesh(
-    new THREE.BoxGeometry(22, 1.8, 5.4),
-    hullMaterial,
-  );
-  hullBase.position.y = 0.9;
-  enableShadows(hullBase);
-  ship.add(hullBase);
-
-  const bow = new THREE.Mesh(
-    new THREE.ConeGeometry(2.7, 4.6, 10),
-    accentMaterial,
-  );
-  bow.rotation.z = Math.PI / 2;
-  bow.position.set(12.4, 1.25, 0);
-  enableShadows(bow);
-  ship.add(bow);
-
-  const stern = new THREE.Mesh(
-    new THREE.BoxGeometry(2.4, 2.2, 5.1),
-    new THREE.MeshStandardMaterial({ color: 0xe8dcc3, roughness: 0.42, metalness: 0.08 }),
-  );
-  stern.position.set(-9.2, 2.1, 0);
-  enableShadows(stern);
-  ship.add(stern);
-
-  const deck = new THREE.Mesh(
-    new THREE.BoxGeometry(18.5, 0.22, 4.3),
-    new THREE.MeshStandardMaterial({ color: 0xc7a07d, roughness: 0.72, metalness: 0.03 }),
-  );
-  deck.position.y = 1.9;
-  enableShadows(deck);
-  ship.add(deck);
-
-  const mastPositions = [-3.4, 4.6];
-  mastPositions.forEach((x, index) => {
-    const mast = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.14, 7.8, 10),
-      mastMaterial,
-    );
-    mast.position.set(x, 5.2, 0);
-    enableShadows(mast);
-    ship.add(mast);
-
-    const yard = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.07, 5.2 - index * 0.5, 8),
-      mastMaterial,
-    );
-    yard.rotation.z = Math.PI / 2;
-    yard.position.set(x, 6.2 - index * 0.3, 0);
-    enableShadows(yard);
-    ship.add(yard);
-
-    const sail = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.2 - index * 0.4, 3.8 - index * 0.3),
-      new THREE.MeshStandardMaterial({
-        color: index === 0 ? 0xf1e5ca : 0xe4d6bb,
-        side: THREE.DoubleSide,
-        roughness: 0.9,
-        metalness: 0,
-      }),
-    );
-    sail.position.set(x + 0.18, 5.2 - index * 0.2, 0);
-    sail.rotation.y = Math.PI / 2;
-    enableShadows(sail);
-    ship.add(sail);
-  });
-
-  const railMaterial = new THREE.MeshStandardMaterial({
-    color: 0x8d6d50,
-    roughness: 0.74,
-    metalness: 0.04,
-  });
-  [-1.95, 1.95].forEach((z) => {
-    const rail = new THREE.Mesh(
-      new THREE.BoxGeometry(17.5, 0.14, 0.18),
-      railMaterial,
-    );
-    rail.position.set(0.5, 2.45, z);
-    enableShadows(rail);
-    ship.add(rail);
-  });
-
-  for (let i = 0; i < 10; i++) {
-    const oar = new THREE.Mesh(
-      new THREE.BoxGeometry(2.6, 0.05, 0.07),
-      new THREE.MeshStandardMaterial({ color: 0xb68d64, roughness: 0.82, metalness: 0.02 }),
-    );
-    const side = i % 2 === 0 ? -1 : 1;
-    const offsetIndex = Math.floor(i / 2);
-    oar.position.set(-6 + offsetIndex * 2.8, 1.55, side * 2.75);
-    oar.rotation.z = side * THREE.MathUtils.degToRad(10);
-    enableShadows(oar);
-    ship.add(oar);
-  }
-
-  ship.position.y = seaLevel - HARBOR_GROUND_HEIGHT;
-  return ship;
-}
+function createHeroHarborShip(options) { return createMerchantShip({ ...options, woodMaterial: getShipWood() }); }
 
 function createCrateCluster() {
   const group = new THREE.Group();
@@ -664,38 +555,17 @@ function createWarehouseFrontage() {
   return frontage;
 }
 
-function createHeroShipMooring(shipPosition) {
-  const mooring = new THREE.Group();
-  mooring.name = "HarborHeroShipMooring";
-
-  const gangplank = createGangplank();
-  gangplank.position.set(
-    (QUAY_EDGE_X + shipPosition.x) * 0.5 - 1.8,
-    -0.1,
-    shipPosition.z + 0.8,
-  );
-  gangplank.rotation.z = THREE.MathUtils.degToRad(-11);
-  gangplank.rotation.y = THREE.MathUtils.degToRad(1);
-  mooring.add(gangplank);
-
-  const quayTiePoints = [
-    new THREE.Vector3(QUAY_EDGE_X - 1.3, 0.6, shipPosition.z - 5.8),
-    new THREE.Vector3(QUAY_EDGE_X - 1.3, 0.6, shipPosition.z),
-    new THREE.Vector3(QUAY_EDGE_X - 1.3, 0.6, shipPosition.z + 5.2),
-  ];
-  const shipTiePoints = [
-    new THREE.Vector3(shipPosition.x + 6.8, 0.9, shipPosition.z - 2.4),
-    new THREE.Vector3(shipPosition.x + 7.9, 1.0, shipPosition.z + 0.2),
-    new THREE.Vector3(shipPosition.x + 5.9, 0.9, shipPosition.z + 2.8),
-  ];
-  for (let i = 0; i < quayTiePoints.length; i++) {
-    mooring.add(createCurvedRope(quayTiePoints[i], shipTiePoints[i], { sag: 1.25 }));
+function createHeroShipMooring(ship) {
+  const shipPosition = ship.position;
+  const mooring = new THREE.Group(); mooring.name = 'HarborHeroShipMooring';
+  ship.updateMatrix();
+  const start = new THREE.Vector3(shipPosition.x, DOCK_LIFT - HARBOR_GROUND_HEIGHT, DOCK_SECTION_WIDTH / 2);
+  const end = new THREE.Vector3(0, ship.userData.deckHeight, -2.1).applyMatrix4(ship.matrix);
+  const plank = createHarborBoardingRamp(start, end, 2.4, getPierWood());
+  plank.name = 'HarborMerchantBoarding'; mooring.add(plank);  for (const dx of [-5,5]) {
+    mooring.add(createCurvedRope(new THREE.Vector3(shipPosition.x+dx,0.12,2.6), new THREE.Vector3(shipPosition.x+dx,0.7,shipPosition.z-2.5), {sag:0.18}));
   }
-
-  const coil = createRopeCoil({ radius: 0.58 });
-  coil.position.set(QUAY_EDGE_X - 3.3, 0.45, shipPosition.z - 1.4);
-  mooring.add(coil);
-
+  const coil=createRopeCoil({radius:0.4}); coil.position.set(shipPosition.x-5,0.04,0.5); mooring.add(coil);
   return mooring;
 }
 
@@ -932,19 +802,20 @@ function createHarborBreakwaters() {
   const localWaterEast = HARBOR_WATER_EAST_LIMIT - HARBOR_CENTER_3D.x;
   const createArm = (direction = 1) => {
     const arm = new THREE.Group();
-    const zBase = direction * 25;
+    const zBase = direction * 70;
+    const shore = harborShoreX(HARBOR_CENTER_3D.z + zBase) - HARBOR_CENTER_3D.x;
     const segments = [
-      { x: localWaterEast - 2, z: zBase, len: 10, rot: direction * 0.04 },
-      { x: localWaterEast + 7, z: zBase + direction * 1.8, len: 11, rot: direction * 0.1 },
-      { x: localWaterEast + 17, z: zBase + direction * 4.2, len: 12, rot: direction * 0.18 },
+      { x: shore - 2, z: zBase, len: 10, rot: direction * 0.04 },
+      { x: shore + 7, z: zBase + direction * 1.8, len: 11, rot: direction * 0.1 },
+      { x: shore + 17, z: zBase + direction * 4.2, len: 12, rot: direction * 0.18 },
     ];
 
     segments.forEach(({ x, z, len, rot }, index) => {
       const base = new THREE.Mesh(
-        new THREE.BoxGeometry(len, 1.7, 4.2),
+        new THREE.BoxGeometry(len, 4.2, 4.2),
         stoneMaterial,
       );
-      base.position.set(x, -0.7, z);
+      base.position.set(x, -2.1, z);
       base.rotation.y = rot;
       enableShadows(base);
       arm.add(base);
@@ -953,7 +824,7 @@ function createHarborBreakwaters() {
         new THREE.BoxGeometry(len - 0.4, 0.28, 3.3),
         copingMaterial,
       );
-      coping.position.set(x, 0.32, z);
+      coping.position.set(x, 0.12, z);
       coping.rotation.y = rot;
       enableShadows(coping);
       arm.add(coping);
@@ -1145,9 +1016,9 @@ function scatterDockProps(target, dockSections, seaLevel) {
     if (Math.random() < 0.4) continue;
     const prop = Math.random() > 0.5 ? createCrateCluster() : createBarrelCluster();
     const localX = THREE.MathUtils.randFloatSpread(section.userData.length * 0.6);
-    const localZ = THREE.MathUtils.randFloatSpread(section.userData.width * 0.5);
+    const localZ = (Math.random() < 0.5 ? -1 : 1) * (section.userData.width / 2 - 0.85);
     // Y is local to harbor group: seaLevel is 0, add lift and thickness
-    const localY = (seaLevel - HARBOR_GROUND_HEIGHT) + DOCK_LIFT + DOCK_THICKNESS * 0.5 + 0.15;
+    const localY = 0.025;
     prop.position.set(section.position.x + localX, localY, section.position.z + localZ);
     prop.userData.category = "harbor-prop-dock";
     target.add(prop);
@@ -1223,7 +1094,7 @@ function createCityHarborConnector(cityGroundY, heightSampler) {
   // rather than treating the nominal harbour ground height as the group Y.
   const groupY = HARBOR_CENTER_3D.y;
   const elevationDiff = cityGroundY - groupY;
-  const endElevation = getSeaLevelY() + 0.6 - groupY;
+  const endElevation = getSeaLevelY() + HARBOR_GROUND_HEIGHT - groupY;
   
   // Keep the connector on the harbor side so it reads as a destination ramp
   // instead of a silhouette slicing across the spawn view.
@@ -1233,11 +1104,7 @@ function createCityHarborConnector(cityGroundY, heightSampler) {
   const boardwalkThickness = 0.35;
   
   // Wood planks material
-  const woodMaterial = new THREE.MeshStandardMaterial({
-    color: 0xa89075,
-    roughness: 0.75,
-    metalness: 0.02,
-  });
+  const woodMaterial = getPierWood();
 
   // Main boardwalk deck segments with gradual slope
   const segmentCount = 7;
@@ -1305,23 +1172,28 @@ function createCityHarborConnector(cityGroundY, heightSampler) {
     metalness: 0.0,
   });
 
+  connector.userData.quayAccess = [];
   [-boardwalkWidth / 2, boardwalkWidth / 2].forEach(side => {
-    const railingPoints = [];
-    for (let i = 0; i <= 16; i++) {
-      const t = i / 16;
-      const xPos = boardwalkStartX + (t * boardwalkLength);
-      const yPos = THREE.MathUtils.lerp(elevationDiff, endElevation, t) + railingHeight;
-      railingPoints.push(new THREE.Vector3(xPos, yPos, side));
+    // The existing guardrail must open where the new stone quay crosses it.
+    // Keep the exposed boardwalk edges guarded; do not make rails non-solid.
+    const accessX = harborShoreX(HARBOR_CENTER_3D.z + side) - 5 - HARBOR_CENTER_3D.x;
+    const gateStart = THREE.MathUtils.clamp(accessX - 2.5, boardwalkStartX, 0);
+    const gateEnd = THREE.MathUtils.clamp(accessX + 2.5, boardwalkStartX, 0);
+    connector.userData.quayAccess.push({ z: HARBOR_CENTER_3D.z + side, west: gateStart + HARBOR_CENTER_3D.x, east: gateEnd + HARBOR_CENTER_3D.x });
+    const deckY = x => THREE.MathUtils.lerp(elevationDiff, endElevation, (x - boardwalkStartX) / boardwalkLength);
+    for (const [start, end] of [[boardwalkStartX, gateStart], [gateEnd, 0]]) {
+      if (end - start < 0.1) continue;
+      const curve = new THREE.LineCurve3(new THREE.Vector3(start, deckY(start) + railingHeight, side), new THREE.Vector3(end, deckY(end) + railingHeight, side));
+      const railing = new THREE.Mesh(new THREE.TubeGeometry(curve, 1, railingRadius, 8, false), railingMaterial);
+      railing.name = 'HarborConnectorRailing'; railing.userData.noCull = true;
+      railing.receiveShadow = true; railing.castShadow = true; connector.add(railing);
     }
-    
-    const railingCurve = new THREE.CatmullRomCurve3(railingPoints);
-    const railingGeometry = new THREE.TubeGeometry(railingCurve, 32, railingRadius, 8, false);
-    const railing = new THREE.Mesh(railingGeometry, railingMaterial);
-    railing.receiveShadow = true;
-    railing.castShadow = true;
-    connector.add(railing);
+    for (const x of [gateStart, gateEnd]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, railingHeight, 8), railingMaterial);
+      post.name = 'HarborQuayAccessPost'; post.userData.noCull = true;
+      post.position.set(x, deckY(x) + railingHeight / 2, side); post.castShadow = true; post.receiveShadow = true; connector.add(post);
+    }
   });
-
   // The dry street meets shallow stone steps, then the existing boardwalk.
   const footY = heightSampler?.(HARBOR_LAND_APPROACH_X, HARBOR_CENTER_3D.z) ?? getSeaLevelY();
   const steps = 12;
@@ -1341,31 +1213,31 @@ function createCityHarborConnector(cityGroundY, heightSampler) {
   const stallA = createMarketStall({ width: 4.8, depth: 2.6, cloth: 0xc77244 });
   stallA.position.set(-29, elevationDiff + 0.02, -5.8);
   stallA.rotation.y = THREE.MathUtils.degToRad(8);
-  threshold.add(stallA);
+  threshold.add(placeHarborOnLand(stallA, {x:7, z:2}, heightSampler));
 
   const stallB = createMarketStall({ width: 4.4, depth: 2.5, cloth: 0x2f7891 });
   stallB.position.set(-22, elevationDiff + 0.02, 6.2);
   stallB.rotation.y = THREE.MathUtils.degToRad(-10);
-  threshold.add(stallB);
+  threshold.add(placeHarborOnLand(stallB, {x:7, z:19}, heightSampler));
 
   const amphorae = createAmphoraStack(5);
   amphorae.position.set(-26, elevationDiff + 0.02, -8.8);
-  threshold.add(amphorae);
+  threshold.add(placeHarborOnLand(amphorae, {x:5, z:0}, heightSampler));
 
   const cargo = createCrateCluster();
   cargo.position.set(-19.5, elevationDiff + 0.02, 8.7);
   cargo.scale.setScalar(0.9);
-  threshold.add(cargo);
+  threshold.add(placeHarborOnLand(cargo, {x:6, z:23}, heightSampler));
 
   const netBundle = createNetBundle({ width: 1.8, depth: 1.2, color: 0x8fa4a6 });
   netBundle.position.set(-31.5, elevationDiff + 0.06, 7.4);
   netBundle.rotation.y = THREE.MathUtils.degToRad(12);
-  threshold.add(netBundle);
+  threshold.add(placeHarborOnLand(netBundle, {x:3, z:21}, heightSampler));
 
   const worker = createHarborWorker({ tunic: 0xc4ad8b, accent: 0x6f4f37 });
   worker.position.set(-24.5, elevationDiff + 0.02, 0.6);
   worker.rotation.y = THREE.MathUtils.degToRad(96);
-  threshold.add(worker);
+  threshold.add(placeHarborOnLand(worker, {x:8, z:24}, heightSampler));
 
   connector.add(threshold);
 
@@ -1468,11 +1340,11 @@ function createLighthouse() {
 }
 
 /**
- * Creates a clocktower on a raised platform.
- * Includes square tower with clock faces and peaked roof.
+ * Creates a schematic harbour lookout on the existing raised platform.
+ * Uses a square stone tower and tiled roof, without an anachronistic clock face.
  */
-function createClocktower() {
-  const clocktower = new THREE.Group();
+function createWatchtower() {
+  const watchtower = new THREE.Group();
 
   // Base platform
   const baseGeometry = new THREE.BoxGeometry(2.5, 0.5, 2.5);
@@ -1485,7 +1357,7 @@ function createClocktower() {
   base.position.y = 0.25;
   base.castShadow = true;
   base.receiveShadow = true;
-  clocktower.add(base);
+  watchtower.add(base);
 
   // Tower (square)
   const towerGeometry = new THREE.BoxGeometry(1.8, 4.0, 1.8);
@@ -1498,29 +1370,7 @@ function createClocktower() {
   tower.position.y = 2.5;
   tower.castShadow = true;
   tower.receiveShadow = true;
-  clocktower.add(tower);
-
-  // Clock faces (four sides)
-  const clockFaceGeometry = new THREE.CircleGeometry(0.5, 16);
-  const clockFaceMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.3,
-    metalness: 0.1,
-  });
-  
-  const clockPositions = [
-    { x: 0, z: 0.91, rotY: 0 },      // Front
-    { x: 0.91, z: 0, rotY: Math.PI/2 }, // Right
-    { x: 0, z: -0.91, rotY: Math.PI },  // Back
-    { x: -0.91, z: 0, rotY: -Math.PI/2 } // Left
-  ];
-
-  clockPositions.forEach(pos => {
-    const face = new THREE.Mesh(clockFaceGeometry, clockFaceMaterial);
-    face.position.set(pos.x, 3.8, pos.z);
-    face.rotation.y = pos.rotY;
-    clocktower.add(face);
-  });
+  watchtower.add(tower);
 
   // Roof (pyramid)
   const roofGeometry = new THREE.ConeGeometry(1.4, 1.2, 4);
@@ -1533,132 +1383,17 @@ function createClocktower() {
   roof.position.y = 5.1;
   roof.rotation.y = Math.PI / 4;
   roof.castShadow = true;
-  clocktower.add(roof);
+  watchtower.add(roof);
 
-  return clocktower;
+  return watchtower;
 }
 
 /**
  * Creates a high-fidelity Greek Trireme warship.
  * Features 3 banks of oars, a bronze ram, and a large decorative sail.
  */
-function createTrireme({ seaLevel = 0, hull = 0x1a3a5a, accent = 0xcd853f } = {}) {
-  const ship = new THREE.Group();
-  ship.name = "HarborTrireme";
+function createTrireme(options) { return createTriremeShip({ ...options, woodMaterial: getShipWood() }); }
 
-  const hullMaterial = new THREE.MeshStandardMaterial({
-    color: hull,
-    roughness: 0.85,
-    metalness: 0.1,
-  });
-  
-  const ramMaterial = new THREE.MeshStandardMaterial({
-    color: 0xcd7f32, // Bronze
-    roughness: 0.35,
-    metalness: 0.82,
-  });
-
-  const woodMaterial = new THREE.MeshStandardMaterial({
-    color: 0x8b5a2b,
-    roughness: 0.7,
-  });
-
-  // Main Hull
-  const hullBase = new THREE.Mesh(
-    new THREE.BoxGeometry(28, 2.2, 5.2),
-    hullMaterial
-  );
-  hullBase.position.y = 1.1;
-  enableShadows(hullBase);
-  ship.add(hullBase);
-
-  // Bronze Ram (Prow)
-  const ram = new THREE.Mesh(
-    new THREE.ConeGeometry(1.2, 3.5, 12),
-    ramMaterial
-  );
-  ram.rotation.z = Math.PI / 2;
-  ram.position.set(15.2, 0.6, 0);
-  enableShadows(ram);
-  ship.add(ram);
-
-  // Stern (Aft curvature)
-  const stern = new THREE.Mesh(
-    new THREE.CylinderGeometry(2.6, 2.6, 5.2, 12, 1, false, 0, Math.PI),
-    hullMaterial
-  );
-  stern.rotation.x = Math.PI / 2;
-  stern.position.set(-14, 2.6, 0);
-  enableShadows(stern);
-  ship.add(stern);
-
-  // Banks of Oars (3 levels)
-  const oarGeometry = new THREE.CylinderGeometry(0.06, 0.06, 6.5, 8);
-  const oarMaterial = woodMaterial;
-  
-  for (let level = 0; level < 3; level++) {
-    const yPos = 0.8 + level * 0.45;
-    for (let i = 0; i < 12; i++) {
-      const xPos = -8 + i * 1.8;
-      [-1, 1].forEach(side => {
-        const oar = new THREE.Mesh(oarGeometry, oarMaterial);
-        oar.rotation.z = Math.PI / 1.8; // Angle into water
-        oar.rotation.x = side * 0.15;
-        oar.position.set(xPos, yPos, side * 2.8);
-        ship.add(oar);
-      });
-    }
-  }
-
-  // Mast & Sail
-  const mast = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.18, 0.22, 12, 12),
-    woodMaterial
-  );
-  mast.position.set(0, 6, 0);
-  ship.add(mast);
-
-  const horizontalSpar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.12, 0.12, 10, 8),
-    woodMaterial
-  );
-  horizontalSpar.rotation.z = Math.PI / 2;
-  horizontalSpar.position.set(0, 10, 0);
-  ship.add(horizontalSpar);
-
-  const sail = new THREE.Mesh(
-    new THREE.PlaneGeometry(9.5, 7),
-    new THREE.MeshStandardMaterial({
-      color: 0xeeeedd,
-      side: THREE.DoubleSide,
-      roughness: 0.9,
-    })
-  );
-  sail.position.set(0, 6.5, 0.1);
-  ship.add(sail);
-
-  // Decorative Eyes
-  const eyeGeom = new THREE.CircleGeometry(0.6, 16);
-  const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-  [-1, 1].forEach(side => {
-    const eye = new THREE.Mesh(eyeGeom, eyeMat);
-    eye.position.set(12, 1.8, side * 2.62);
-    eye.rotation.y = side * Math.PI / 2;
-    ship.add(eye);
-    
-    const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.2, 16), new THREE.MeshStandardMaterial({ color: 0x000000 }));
-    pupil.position.set(12.01, 1.8, side * 2.63);
-    pupil.rotation.y = side * Math.PI / 2;
-    ship.add(pupil);
-  });
-
-  return ship;
-}
-
-/**
- * Creates a Maritime Stoa (trading hall).
- * Features a long colonnade with a terracotta roof.
- */
 function createMaritimeStoa() {
   const stoa = new THREE.Group();
   stoa.name = "MaritimeStoa";
@@ -1713,7 +1448,7 @@ function createMaritimeStoa() {
  * 6. Sheds/Warehouses - Two storage buildings with terracotta roofs
  * 7. City Connector - Wooden boardwalk ramp from city level to harbor level
  * 8. Lighthouse - Tall stone tower on raised platform (if available)
- * 9. Clocktower - Square tower with clock faces on raised platform (if available)
+ * 9. Watchtower - Square tower with clock faces on raised platform (if available)
  * 
  * All elements are positioned relative to harborGroundY (seaLevel + HARBOR_GROUND_HEIGHT)
  * to ensure they sit above water level.
@@ -1735,7 +1470,7 @@ export function createHarbor(scene, options = {}) {
   // Get terrain sampler if available
   const terrainSampler = options.terrain?.userData?.getHeightAt || 
                         options.terrainSampler ||
-                        scene?.userData?.getHeightAt;
+                        scene?.userData?.getHeightAt || ((x,z) => harborCoastHeight(x,z,seaLevel));
 
   if (IS_DEV) console.log('[Harbor] Creating coastal harbor with grid-aligned placement...');
 
@@ -1759,10 +1494,8 @@ export function createHarbor(scene, options = {}) {
     raisedSlots = analysis.bestRaisedPositions || [];
   }
 
-  harbor.add(createQuayEdge());
-  harbor.add(createHarborEdgeTransitions());
-  harbor.add(createQuayForecourt());
-  harbor.add(createHarborMouthMarkers());
+  harbor.add(createCurvedHarborQuays({ stoneMaterial: getQuayStone() }));
+  harbor.add(placeHarborOnLand(createQuayForecourt(), {x: 43, z: 94}, terrainSampler));
   harbor.add(createHarborBreakwaters());
 
   // Use grid-aligned dock slots if available, otherwise fallback to default positions
@@ -1773,42 +1506,16 @@ export function createHarbor(scene, options = {}) {
   // Track pier positions for boat placement
   const pierPositions = [];
 
-  if (dockSlots.length >= 3) {
-    // Place piers in best grid-aligned slots
-    if (IS_DEV) console.log(`[Harbor] Placing piers in ${Math.min(3, dockSlots.length)} grid-aligned slots`);
-    
-    for (let i = 0; i < Math.min(3, dockSlots.length); i++) {
-      const slot = dockSlots[i];
-      // Convert world coordinates to local harbor coordinates
-      const localX = slot.x - HARBOR_CENTER_3D.x;
-      const localZ = slot.z - HARBOR_CENTER_3D.z;
-      
-      const sections = 4 + Math.floor(Math.random() * 2);
-      const { pier, sections: pierSections } = createPierLine(localX, localZ, sections, seaLevel);
-      allSections.push(...pierSections);
-      piersGroup.add(pier);
-      
-      // Store pier position for boat placement
-      pierPositions.push({ x: localX, z: localZ });
-    }
-  } else {
-    // Fallback to default pier positions - vertical (north-south) orientation
-    if (IS_DEV) console.log('[Harbor] Using default vertical pier positions (north-south)');
-    const pierStartZ = 40;
-    const pierColumns = [
-      { x: -15, sections: 4 },
-      { x: 0, sections: 5 },
-      { x: 15, sections: 4 },
-    ];
-
-    for (const col of pierColumns) {
-      const { pier, sections } = createVerticalPierLine(col.x, pierStartZ, col.sections, seaLevel);
-      allSections.push(...sections);
-      piersGroup.add(pier);
-      
-      // Store pier position for boat placement
-      pierPositions.push({ x: col.x, z: pierStartZ });
-    }
+  // Piers begin on the curved bank and extend seaward; all deck tops
+  // share the boardwalk/quay elevation, independent of absolute sea level.
+  for (const z of [-18, 10, 42]) {
+    const west = harborShoreX(z) - 12;
+    const count = z === 10 ? 14 : 7;
+    const east = west + (count - 1) * (DOCK_SECTION_LENGTH - DOCK_GAP);
+    const localX = east - HARBOR_CENTER_3D.x, localZ = z - HARBOR_CENTER_3D.z;
+    const {pier, sections} = createPierLine(localX, localZ, count, seaLevel);
+    allSections.push(...sections); piersGroup.add(pier);
+    pierPositions.push({ x: localX - 12, z: localZ });
   }
   
   harbor.add(piersGroup);
@@ -1829,11 +1536,8 @@ export function createHarbor(scene, options = {}) {
       new THREE.MeshStandardMaterial({ color: 0x7a6248, roughness: 0.78 }),
     );
     const localWaterEast = HARBOR_WATER_EAST_LIMIT - HARBOR_CENTER_3D.x;
-    post.position.set(
-      localWaterEast + 4.0,
-      1.2,
-      dressingZ[i],
-    );
+    const worldZ = [-90, 80, 115][i];
+    post.position.set(harborShoreX(worldZ) - 8 - HARBOR_CENTER_3D.x, 1.2, worldZ - HARBOR_CENTER_3D.z);
     shorelineGroup.add(post);
   }
 
@@ -1857,7 +1561,7 @@ export function createHarbor(scene, options = {}) {
     // Water is at seaLevel (0), so relative to group it's at seaLevel - harborGroundY = -2.0
     boat.position.set(
       pierPos.x - DOCK_SECTION_LENGTH * 1.6, 
-      seaLevel - HARBOR_GROUND_HEIGHT, 
+      -HARBOR_GROUND_HEIGHT,
       pierPos.z + (Math.random() > 0.5 ? moorOffset : -moorOffset)
     );
     boat.userData.category = "harbor-boat";
@@ -1871,19 +1575,21 @@ export function createHarbor(scene, options = {}) {
     accent: heroStyle.accent,
   });
   heroShip.scale.setScalar(1.16);
-  heroShip.position.set(54, seaLevel - HARBOR_GROUND_HEIGHT, 6);
+  heroShip.position.set(54, -HARBOR_GROUND_HEIGHT, 6);
   heroShip.rotation.y = -0.18;
   heroShip.userData.category = "harbor-hero-ship";
   boatsGroup.add(heroShip);
 
   harbor.add(boatsGroup);
-  harbor.add(createHeroShipMooring(heroShip.position.clone()));
+  harbor.add(createHeroShipMooring(heroShip));
 
   const propsGroup = new THREE.Group();
   propsGroup.name = "HarborProps";
   scatterDockProps(propsGroup, allSections, seaLevel);
-  scatterShoreProps(propsGroup, harborGroundY);
-  propsGroup.add(createHarborWorkZone());
+  const shoreProps = new THREE.Group();
+  scatterShoreProps(shoreProps, harborGroundY);
+  [...shoreProps.children].forEach((prop, i) => propsGroup.add(placeHarborOnLand(prop, {x:78, z:-112+i*7}, terrainSampler)));
+  propsGroup.add(placeHarborOnLand(createHarborWorkZone(), {x:70, z:-83}, terrainSampler));
   harbor.add(propsGroup);
 
   // Sheds positioned in local coordinates
@@ -1891,10 +1597,10 @@ export function createHarbor(scene, options = {}) {
     createShed(new THREE.Vector3(18, 5.2, 12), 0, new THREE.Vector3(70 + 12, 0, -10)),
     createShed(new THREE.Vector3(22, 6, 14), 0, new THREE.Vector3(70 + 24, 0, 8)),
   ];
-  sheds.forEach((shed) => harbor.add(shed));
-  harbor.add(createWarehouseFrontage());
+  sheds.forEach((shed, index) => harbor.add(placeHarborOnLand(shed, {x:86, z:index ? -115 : 108}, terrainSampler, {building:true})));
+  harbor.add(placeHarborOnLand(createWarehouseFrontage(), {x:72, z:86}, terrainSampler));
 
-  // Place lighthouse and clocktower on raised platforms if available
+  // Place lighthouse and watchtower on raised platforms if available
   if (raisedSlots.length >= 1) {
     // Sort raised slots by elevation (highest first)
     const sortedRaised = [...raisedSlots].sort((a, b) => b.elevation - a.elevation);
@@ -1907,19 +1613,19 @@ export function createHarbor(scene, options = {}) {
     const lighthouseLocalZ = lighthouseSlot.z - HARBOR_CENTER_3D.z;
     lighthouse.position.set(lighthouseLocalX, lighthouseSlot.elevation - harborGroundY, lighthouseLocalZ);
     lighthouse.userData.category = "harbor-lighthouse";
-    harbor.add(lighthouse);
+    harbor.add(placeHarborOnLand(lighthouse, {x:98, z:128}, terrainSampler, {building:true}));
     if (IS_DEV) console.log(`[Harbor] Lighthouse placed at (${lighthouseLocalX.toFixed(1)}, ${lighthouseSlot.elevation.toFixed(2)}, ${lighthouseLocalZ.toFixed(1)})`);
 
-    // Place clocktower on second highest raised platform if available
+    // Place watchtower on second highest raised platform if available
     if (sortedRaised.length >= 2) {
-      const clocktowerSlot = sortedRaised[1];
-      const clocktower = createClocktower();
-      const clocktowerLocalX = clocktowerSlot.x - HARBOR_CENTER_3D.x;
-      const clocktowerLocalZ = clocktowerSlot.z - HARBOR_CENTER_3D.z;
-      clocktower.position.set(clocktowerLocalX, clocktowerSlot.elevation - harborGroundY, clocktowerLocalZ);
-      clocktower.userData.category = "harbor-clocktower";
-      harbor.add(clocktower);
-      console.log(`[Harbor] Clocktower placed at (${clocktowerLocalX.toFixed(1)}, ${clocktowerSlot.elevation.toFixed(2)}, ${clocktowerLocalZ.toFixed(1)})`);
+      const watchtowerSlot = sortedRaised[1];
+      const watchtower = createWatchtower();
+      const watchtowerLocalX = watchtowerSlot.x - HARBOR_CENTER_3D.x;
+      const watchtowerLocalZ = watchtowerSlot.z - HARBOR_CENTER_3D.z;
+      watchtower.position.set(watchtowerLocalX, watchtowerSlot.elevation - harborGroundY, watchtowerLocalZ);
+      watchtower.userData.category = "harbor-watchtower";
+      harbor.add(placeHarborOnLand(watchtower, {x:60, z:-122}, terrainSampler, {building:true}));
+      console.log(`[Harbor] Watchtower placed at (${watchtowerLocalX.toFixed(1)}, ${watchtowerSlot.elevation.toFixed(2)}, ${watchtowerLocalZ.toFixed(1)})`);
     }
   }
 
@@ -1931,25 +1637,36 @@ export function createHarbor(scene, options = {}) {
   // --- NEW: MARITIME LANDMARKS ---
   // Create a Maritime Stoa along the northern quay
   const stoa = createMaritimeStoa();
-  stoa.position.set(-10, 0, -32);
-  stoa.rotation.y = Math.PI / 2.2;
-  harbor.add(stoa);
+  harbor.add(placeHarborOnLand(stoa, {x:76, z:-72}, terrainSampler, {building:true}));
 
   // Create a Military Pier specifically for the Trireme
-  const militaryPierX = -55;
-  const militaryPierZ = -10;
+  const militaryPierX = harborShoreX(-38) + 42 - HARBOR_CENTER_3D.x;
+  const militaryPierZ = -38 - HARBOR_CENTER_3D.z;
   const { pier: militaryPier } = createPierLine(militaryPierX, militaryPierZ, 6, seaLevel);
   harbor.add(militaryPier);
 
   const trireme = createTrireme({ seaLevel });
-  trireme.position.set(militaryPierX - 10, seaLevel - HARBOR_GROUND_HEIGHT, militaryPierZ + 6);
+  trireme.position.set(militaryPierX - 10, -HARBOR_GROUND_HEIGHT, militaryPierZ + 6);
   trireme.rotation.y = -0.05;
   harbor.add(trireme);
+  trireme.updateMatrix();
+  const navalStart = new THREE.Vector3(trireme.position.x - 4, DOCK_LIFT - HARBOR_GROUND_HEIGHT, militaryPierZ + DOCK_SECTION_WIDTH / 2);
+  const navalEnd = new THREE.Vector3(-4, trireme.userData.deckHeight, -1).applyMatrix4(trireme.matrix);
+  const navalBoarding = createHarborBoardingRamp(navalStart, navalEnd, 2.0, getPierWood());
+  navalBoarding.name = 'HarborNavalBoarding'; harbor.add(navalBoarding);
   // --- END NEW LANDMARKS ---
+
+  // A static offshore vessel in the existing ship family. It never enters the
+  // boarding registry, shoreline placement or two boardable-hull water masks.
+  const offshoreGalley=createOffshoreGalley({woodMaterial:getShipWood()});
+  offshoreGalley.position.set(210-HARBOR_CENTER_3D.x,-HARBOR_GROUND_HEIGHT,60-HARBOR_CENTER_3D.z);
+  offshoreGalley.rotation.y=.65;harbor.add(offshoreGalley);
 
   // Position harbor group in world space
   harbor.position.copy(HARBOR_CENTER_3D);
+  addHarborDeckJoints(harbor);
   optimizeHarborShadowCost(harbor);
+  batchStaticMeshes(harbor);
 
   if (scene) {
     scene.add(harbor);
@@ -1958,69 +1675,52 @@ export function createHarbor(scene, options = {}) {
   return harbor;
 }
 
+// The harbor is constructed synchronously. Cache its unique materials once;
+// lighting changes only need a refresh when the night factor moves visibly.
+const harborLightingCache = new WeakMap();
+const harborWarmSunlight = new THREE.Color('#e3b07a');
+const harborCoolAmbient = new THREE.Color('#d2d9e4');
+
 export function updateHarborLighting(harbor, nightFactor = 0) {
   if (!harbor) return;
-
   const clampedNight = THREE.MathUtils.clamp(nightFactor ?? 0, 0, 1);
+  let state = harborLightingCache.get(harbor);
+  if (!state) {
+    const materials = new Set();
+    harbor.traverse(child => {
+      if (!child.isMesh) return;
+      for (const material of Array.isArray(child.material) ? child.material : [child.material]) {
+        if (material?.isMaterial) materials.add(material);
+      }
+    });
+    state = { materials: [...materials], lastNight: NaN };
+    harborLightingCache.set(harbor, state);
+  }
+  // At most 0.1% of the day/night interpolation is deferred, with immediate
+  // updates for preset changes. Avoid frame-rate-dependent timer behaviour.
+  if (Math.abs(clampedNight - state.lastNight) < 0.001) return;
+  state.lastNight = clampedNight;
   const daylight = 1 - clampedNight;
-  const warmSunlight = new THREE.Color("#e3b07a");
-  const coolAmbient = new THREE.Color("#d2d9e4");
-
-  harbor.traverse((child) => {
-    if (!child.isMesh) return;
-    const materials = Array.isArray(child.material)
-      ? child.material
-      : [child.material];
-
-    for (const material of materials) {
-      if (!material || !material.isMaterial) continue;
-
-      material.userData = material.userData || {};
-
-      if (material.color && !material.userData.baseColor) {
-        material.userData.baseColor = material.color.clone();
-      }
-      if (
-        material.envMapIntensity !== undefined &&
-        material.userData.baseEnvMapIntensity === undefined
-      ) {
-        material.userData.baseEnvMapIntensity = material.envMapIntensity ?? 1;
-      }
-      if (
-        material.roughness !== undefined &&
-        material.userData.baseRoughness === undefined
-      ) {
-        material.userData.baseRoughness = material.roughness;
-      }
-
-      if (material.color && material.userData.baseColor) {
-        const cooled = material.userData.baseColor
-          .clone()
-          .lerp(coolAmbient, clampedNight * 0.2);
-        material.color.copy(cooled.lerp(warmSunlight, daylight * 0.18));
-      }
-
-      if (material.envMapIntensity !== undefined) {
-        const baseEnv = material.userData.baseEnvMapIntensity ?? 1;
-        const dayReflect = baseEnv * 1.25;
-        const nightReflect = baseEnv * 0.32;
-        material.envMapIntensity = THREE.MathUtils.lerp(
-          dayReflect,
-          nightReflect,
-          clampedNight,
-        );
-      }
-
-      if (material.roughness !== undefined) {
-        const baseRoughness = material.userData.baseRoughness ?? material.roughness;
-        const dayRoughness = Math.max(0.02, baseRoughness - 0.08 * daylight);
-        const nightRoughness = Math.min(1, baseRoughness + 0.1 * clampedNight);
-        material.roughness = THREE.MathUtils.lerp(
-          dayRoughness,
-          nightRoughness,
-          clampedNight,
-        );
-      }
+  for (const material of state.materials) {
+    const data = material.userData;
+    if (material.color && !data.baseColor) data.baseColor = material.color.clone();
+    if (material.envMapIntensity !== undefined && data.baseEnvMapIntensity === undefined) {
+      data.baseEnvMapIntensity = material.envMapIntensity ?? 1;
     }
-  });
+    if (material.roughness !== undefined && data.baseRoughness === undefined) data.baseRoughness = material.roughness;
+    if (material.color && data.baseColor) {
+      material.color.copy(data.baseColor)
+        .lerp(harborCoolAmbient, clampedNight * 0.2)
+        .lerp(harborWarmSunlight, daylight * (data.harborWarmth ?? 0.18));
+    }
+    if (material.envMapIntensity !== undefined) {
+      const baseEnv = data.baseEnvMapIntensity ?? 1;
+      material.envMapIntensity = THREE.MathUtils.lerp(baseEnv * 1.25, baseEnv * 0.32, clampedNight);
+    }
+    if (material.roughness !== undefined) {
+      const base = data.baseRoughness ?? material.roughness;
+      material.roughness = THREE.MathUtils.lerp(
+        Math.max(0.02, base - 0.08 * daylight), Math.min(1, base + 0.1 * clampedNight), clampedNight);
+    }
+  }
 }

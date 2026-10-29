@@ -1,0 +1,24 @@
+.harbor-activity-backdrop[hidden] { display:none; }
+.harbor-activity-backdrop { position:fixed; inset:0; z-index:1800; display:grid; place-items:center; padding:16px; background:rgba(7,16,22,.65); color:#f5efe2; font:16px/1.5 system-ui,sans-serif; }
+.harbor-activity { width:min(620px,100%); max-height:86vh; overflow:auto; box-sizing:border-box; padding:24px; border:1px solid #a78b59; border-radius:14px; background:#122733; box-shadow:0 18px 60px #0008; }
+.harbor-activity header { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.harbor-activity h2 { font-size:25px; line-height:1.2; margin:0 0 10px; flex:1 1 280px; }
+.harbor-activity h3 { margin:0 0 8px; font-size:19px; }
+.harbor-activity p { margin:10px 0; }
+.harbor-activity__eyebrow { flex-basis:100%; color:#dbba7a; font-size:12px; font-weight:750; letter-spacing:.09em; }
+.harbor-activity__note { color:#c0cbd0; font-size:13px; }
+.harbor-activity__evidence { background:#203d49; border-left:4px solid #d7b06b; border-radius:7px; padding:16px; margin-top:14px; }
+.harbor-activity__progress { color:#e2c797; font-weight:650; }
+.harbor-activity fieldset { border:1px solid #66808b; border-radius:8px; padding:12px; margin:14px 0; }
+.harbor-activity legend { padding:0 6px; font-weight:650; }
+.harbor-activity button { color:#f7f0df; background:#2a4b58; border:1px solid #8da5a8; border-radius:7px; padding:10px 13px; font:inherit; text-align:left; cursor:pointer; margin:4px; }
+.harbor-activity fieldset button { display:block; width:calc(100% - 8px); }
+.harbor-activity button:hover { background:#3d6170; }
+.harbor-activity button:focus-visible,.harbor-activity a:focus-visible,.harbor-activity summary:focus-visible { outline:3px solid #f4c36b; outline-offset:3px; }
+.harbor-activity button:disabled { opacity:.45; cursor:default; }
+.harbor-activity__actions { display:flex; gap:4px; flex-wrap:wrap; margin:10px 0; }
+.harbor-activity__feedback { background:#213944; padding:12px; border-radius:7px; }
+.harbor-activity__success { background:#214b3e; padding:12px; border-radius:7px; color:#e0ffe8; }
+.harbor-activity details { font-size:13px; margin-top:16px; border-top:1px solid #5b737c; padding-top:12px; }
+.harbor-activity a { color:#c8e4ff; }
+@media(max-width:600px) { .harbor-activity { padding:16px; max-height:92vh; } .harbor-activity-backdrop { padding:8px; font-size:15px; } }

@@ -1,4 +1,7 @@
+import {shapeAcropolisGround} from './acropolisLayout.js';
+import {isCityDryGround} from './neighbourhoodLayout.js';
 import * as THREE from "three";
+import { harborCoastBlend, harborCoastHeight } from "./harborCoast.js";
 import {
   getSeaLevelY,
   AEGEAN_OCEAN_BOUNDS,
@@ -244,7 +247,9 @@ function getElevation(
     (1 - THREE.MathUtils.smoothstep(outsideHarborBand, 0, 50));
   const seaEdgeLock = THREE.MathUtils.smoothstep(x, 85, 112);
   const coastLock = Math.max(harborLock, seaEdgeLock);
-  if (preservedCoast < seaLevel || coastLock >= 1) return preservedCoast;
+  const bayBlend = harborCoastBlend(x, worldZ);
+  const finishCoast = height => THREE.MathUtils.lerp(height, harborCoastHeight(x, worldZ, seaLevel), bayBlend);
+  if (preservedCoast < seaLevel || coastLock >= 1) return finishCoast(preservedCoast);
 
   const distanceInland = Math.max(0, AEGEAN_OPEN_SEA_WEST - x);
   let h = seaLevel + 2 + INLAND_RISE * THREE.MathUtils.smoothstep(distanceInland, 0, 460);
@@ -264,7 +269,8 @@ function getElevation(
   const court = AGORA_COURT_BOUNDS;
   const courtDistance = Math.hypot(Math.max(court.west - x, x - court.east, 0), Math.max(court.south - worldZ, worldZ - court.north, 0));
   h = THREE.MathUtils.lerp(h, seaLevel + 2.5, 1 - THREE.MathUtils.smoothstep(courtDistance, 0, 18));
-  return THREE.MathUtils.lerp(h, preservedCoast, coastLock);
+  h = shapeAcropolisGround(x,worldZ,h,seaLevel);
+  return finishCoast(THREE.MathUtils.lerp(h, preservedCoast, coastLock));
 }
 
 function createSkirtGeometry(sourceGeometry, seaLevel) {
@@ -479,7 +485,8 @@ export function createTerrain(scene) {
     const isHarborShoreline =
       harborDistance <= HARBOR_COASTAL_BAND &&
       (isShallowWater || touchesWaterline);
-    const shouldUseCoastalMaterial =
+    const dryBayShore = harborCoastBlend(centerX, -centerZ) > 0 && minHeight > seaLevel + 0.05 && avgHeight < seaLevel + 3.5;
+    const shouldUseCoastalMaterial = dryBayShore ||
       (isShallowUnderwater || !isFullyUnderwater) && (
         dSea < 0.15 ||
         (dSea < SHORELINE_SAND_BAND && (isShallowWater || touchesWaterline)) ||
@@ -490,7 +497,12 @@ export function createTerrain(scene) {
 
     if (shouldUseCoastalMaterial) {
       coastalIndices.push(a, b, c);
-    } else if (!isFullyUnderwater && dSea <= SHORELINE_CITY_LIMIT && !isWaterBodyTriangle) {
+    } else if (!isFullyUnderwater && (
+      (dSea <= SHORELINE_CITY_LIMIT && !isWaterBodyTriangle) ||
+      // The wide ocean sheet overlaps dry land. Its bounds alone must not
+      // turn occupied inland districts into disconnected grass rectangles.
+      isCityDryGround(centerX,-centerZ)
+    )) {
       cityIndices.push(a, b, c);
     } else {
       inlandIndices.push(a, b, c);

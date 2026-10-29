@@ -1,3 +1,4 @@
+import {ACROPOLIS} from './acropolisLayout.js';
 import * as THREE from "three";
 import {
   MAIN_ROAD_WIDTH,
@@ -17,11 +18,7 @@ export function createMainHillRoad(scene, terrain) {
     HARBOR_CENTER_3D.clone()
       .lerp(AGORA_CENTER_3D, 0.42)
       .add(new THREE.Vector3(-1, 0.8, 5)),
-    AGORA_CENTER_3D.clone().add(new THREE.Vector3(2, 0, -1)),
-    AGORA_CENTER_3D.clone()
-      .lerp(ACROPOLIS_PEAK_3D, 0.58)
-      .add(new THREE.Vector3(1, 1.1, -3)),
-    ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(-0.5, 0, -0.5)),
+    ...ACROPOLIS.sacredWay.map(([x,z])=>new THREE.Vector3(x,0,z)),
   ];
   const curve = new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0.1);
 

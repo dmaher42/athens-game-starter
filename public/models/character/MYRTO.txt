@@ -1,0 +1,91 @@
+MYRTO — ATHENIAN CIVILIAN / CHARACTER REVIEW v01
+Original stylised 3D character for Daniel • 29 October 2026
+
+START HERE
+• Myrto_Character_Review.png — front, back, portrait and three-quarter preview.
+• Myrto_Walk_Preview.gif / .mp4 — a short in-place walk, rendered from the exported GLB.
+• Myrto_Athenian_Character_v01.blend — editable source, individual named meshes,
+  materials, deform rig, two actions, camera, lights and preview plinth.
+• Myrto_Athenian_Character_v01.glb — self-contained browser/engine asset, without
+  studio, camera, lights or plinth. Standard glTF 2.0; no external textures needed.
+• validation.json — actual export/reimport and animation continuity checks.
+• build_character.py / export_and_validate.py — reproducible Blender 4.3 scripts.
+
+DESIGN
+A fictional adult Athenian civilian, broadly inspired by Classical-period dress.
+Myrto is a working character name, not an identified historical person. The goal
+is a calm, approachable player-character silhouette rather than a goddess,
+warrior, or generic white-marble statue. No weapon, laurel crown, fantasy armour,
+or modern high heels. The face, hair, palette and modelling are original.
+
+She wears an ochre, shoulder-pinned peplos with a visible upper overfold, simple
+waist tie, long pleated skirt, sea-green mantle and low leather sandals. The
+hem is raised slightly above the ankles for a readable walk and easier game
+integration. The mantle and skinning are deliberately simplified for real-time
+use. This is a historically informed interpretation, NOT a scholarly costume
+reconstruction or a simulated garment made from a sewing pattern.
+
+REFERENCE BASIS (consulted 29 October 2026)
+1. Metropolitan Museum of Art, Department of Greek and Roman Art,
+   “Ancient Greek Dress” (2003).
+   https://www.metmuseum.org/essays/ancient-greek-dress
+   Basis: rectangular garments, shoulder fastening, waist belting, overfold,
+   colored cloth, diagonal mantle arrangements and sandals.
+2. Harold Koda, Metropolitan Museum of Art,
+   “The Chiton, Peplos, and Himation in Modern Dress” (2003).
+   https://www.metmuseum.org/essays/the-chiton-peplos-and-himation-in-modern-dress
+   Basis: structural distinction of the peplos, its overfold and shoulder pins;
+   the himation as a rectangular mantle. Also cautions against treating the
+   evidence for ancient dress as completely uniform or certain.
+3. Dr Chrysanthi Tsouli, National Archaeological Museum, Athens,
+   “A peplos for Athena …” (2017), sculpture inv. 1732, c. 440 BCE.
+   https://www.namuseum.gr/en/monthly_artefact/a-peplos-for-athena/
+   Basis: Classical-period peplos, fastening, belting and pleated drapery.
+   The character is not a copy of the sculpture, and is not intended as Athena.
+
+RIG / SCALE / AXES
+• Units: metres. Approximately 1.76 m including gathered hair.
+• Blender: Z-up, face points -Y. GLB: Y-up, face points +Z.
+• Origin at ground centre. No root-motion translation is baked into the clips.
+• 26-bone FK deform skeleton: root, pelvis, spine, chest, neck, head;
+  clavicle/upper arm/forearm/hand on each side; thigh/shin/foot/toe on each side;
+  four secondary skirt bones. Names use .L / .R conventions.
+• Body and clothing have explicit skin weights. The full skirt is not bound
+  independently to the two legs, so its hem can remain continuous.
+• Idle: 3 seconds / 72-frame cycle at 24 fps.
+• Walk: 1 second / 24-frame cycle at 24 fps.
+• The duplicated closing key is present at frame 73 or 25 for seamless looping.
+• In Blender, the two actions are saved with fake users and muted NLA tracks.
+  Idle is active on opening. To preview Walk, select Myrto_Rig, choose Walk in
+  the Action Editor and set the playback end to 24. Do not unmute both tracks.
+
+EDITING / EXPORT
+Source parts are deliberately separate and named. Change the 14 shared PBR
+materials to recolor the asset. The included GLB combines these parts into one
+skinned mesh with material primitives to reduce draw calls; this does not flatten
+or remove the original editable parts in the .blend source.
+
+To rebuild using the installed Blender version:
+  blender -b -t 8 -P build_character.py
+  blender -b -t 8 -P export_and_validate.py
+The first script creates the source and still renders. The second optimises the
+GLB, reimports it, validates skinning and looping, and renders the walk sequence.
+Scripts write only beside themselves; keep a separate copy before experimenting.
+
+REVIEW LIMITATIONS
+• This is a reviewable prototype, not a final production character. Clothing
+  folds, feet, hands and facial detail are intentionally stylised.
+• No facial blendshapes, blinking, speech, fingers, IK control rig, collisions,
+  LODs, retargeting profile, or cloth simulation. The hands move with hand bones.
+• The simple FK walk is a small in-place movement, not foot-locked motion capture.
+  Long garments and fast/extreme poses will need more weighting and pose testing.
+• The source torso is a concealed support form, not a complete unclothed base mesh.
+• Actual game-controller, gameplay-scale, performance, browser and lighting
+  integration have not been tested. No existing game file was changed or deployed.
+• All geometry and materials were generated for this request; no downloaded model,
+  photographic texture, commercial asset or third-party character was reused.
+
+CURRENT EXPORT BUDGET
+The review GLB has one skinned mesh, 14 material primitives and 82,336 triangles
+(about 3 MB). This prioritises review detail over a mobile-game triangle budget;
+create a lower-detail variant after the visual direction and target are approved.

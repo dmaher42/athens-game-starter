@@ -17,6 +17,9 @@ try {
   await page.waitForFunction(() => window.ready, null, { timeout: 60000 });
   const report = await page.evaluate(() => window.runShorelineCheck());
   assert.equal(report.normalWater, true);
+  assert.equal(report.auxiliaryReflections, 0, 'Normal-only passes must not render the mirrored city.');
+  assert.ok(report.beautyReflections > 0, 'Visible water must retain live reflections.');
+  assert.equal(report.beautyMismatches, 0, 'An auxiliary pass must not change the subsequent visible water pixels.');
   assert.equal(report.waterTime, 1.5, 'The normal Water material must receive frame updates.');
   assert.ok(report.sunLengthSq > 0.99, 'A zero lighting update must not invalidate the Water shader.');
   assert.equal(report.shorelineCompiled, true, 'The actual compiled Water shader must contain the shoreline mask.');

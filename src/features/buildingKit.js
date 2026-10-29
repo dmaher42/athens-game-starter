@@ -156,7 +156,13 @@ export async function makeMarbleMaterialSet({
       }),
     ]);
 
-  const procedural = ensureGenerated();
+  // Generate the fallback only when an actual texture failed to load. Temple
+  // parts share successful file requests; preparing unused procedural maps
+  // otherwise blocks city startup without changing the result.
+  const procedural =
+    mapTexture && normalTexture && roughTexture && aoTexture
+      ? null
+      : ensureGenerated();
 
   return {
     map: mapTexture || procedural?.map || fallback.map,

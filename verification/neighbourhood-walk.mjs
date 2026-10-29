@@ -67,6 +67,13 @@ try {
     const nw = paths.find((p) => p.routePoints[0][0] === -30 && p.routePoints.at(-1)[0] === -108);
     const south = paths.find((p) => p.routePoints[0][0] === -30 && p.routePoints.at(-1)[0] === -45);
     const north = paths.find((p) => p.routePoints[0][0] === -31.5 && p.routePoints.at(-1)[0] === 20);
+    const harbour = paths.find(p=>p.routePoints[0][0]===-30 && p.routePoints.at(-1)[0]===0 && p.routePoints.at(-1)[1]===10);
+    if(!harbour)throw new Error('Missing harbour approach');
+    follow(harbour);
+    for(let x=0;x<=110;x+=2)walkTo(x,10);
+    if(player.position.y<1.7)throw new Error('Player left the pier and walked on the water.');
+    for(let x=110;x>=0;x-=2)walkTo(x,10);
+    follow(harbour,true);walkTo(-30,20);
     const sacred = paths.find((p) => p.routePoints.at(-1)[0] === -32 && p.routePoints.at(-1)[1] === -10);
     if (!sacred) throw new Error('Missing temple approach');
     follow(sacred); walkTo(-24, -8);
@@ -77,7 +84,7 @@ try {
     follow(byId('traders-city')); follow(north, true); walkTo(-30, 20);
     follow(south); follow(byId('weavers-city')); follow(byId('weavers-potters'));
     follow(byId('potters-olive')); follow(byId('olive-traders'));
-    return { templeReached: true, visited: [...visited], walks, frames, onFoot: !player.flying, finalPosition: player.position.toArray() };
+    return { harbourReached: true, templeReached: true, visited: [...visited], walks, frames, onFoot: !player.flying, finalPosition: player.position.toArray() };
   });
   assert.equal(report.visited.length, 5); assert.equal(report.onFoot, true); assert.deepEqual(errors, []);
   console.log(JSON.stringify({ neighbourhoodWalking: report }));

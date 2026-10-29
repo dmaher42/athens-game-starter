@@ -1,0 +1,8 @@
+.theatre-rehearsal-backdrop { background:rgba(18,24,28,.65); }
+.theatre-rehearsal { background:#263139; border-color:#b8a16e; }
+.theatre-rehearsal button { background:#3a4d57; }
+.theatre-rehearsal__voice { font:18px/1.5 Georgia,serif; border-left:3px solid #c9ac6e; padding-left:14px; color:#f4ead6; }
+.theatre-rehearsal__list { list-style:none; padding:12px; border:1px solid #758386; border-radius:7px; }
+.theatre-rehearsal__list li { padding:5px 0; }
+.theatre-rehearsal-caption { position:fixed; z-index:1500; left:50%; bottom:28px; transform:translateX(-50%); width:min(650px,85vw); box-sizing:border-box; padding:18px 24px; border:1px solid #c2a76a; border-radius:8px; background:#17232de8; color:#fff0d5; font:20px/1.45 Georgia,serif; text-align:center; pointer-events:none; }
+.theatre-rehearsal-caption[hidden] { display:none; }

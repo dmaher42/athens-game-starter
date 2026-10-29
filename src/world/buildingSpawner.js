@@ -1,3 +1,4 @@
+import {getResidentialPalette,residentialStyle,addResidentialFacade} from './residentialFacades.js';
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { 
@@ -102,30 +103,21 @@ function makeBaseShadow(w, d) {
  */
 export const Prefabs = {
   house({ w = 4, d = 4, h = 3, rng = Math.random } = {}) {
-    const g = new THREE.Group();
-    g.name = "ProceduralHouse";
-    g.add(makeBaseShadow(w, d));
-    const body = makeBox(w, h, d, createMaterial("plaster", rng));
-    body.position.y = h / 2; g.add(body);
-    const door = makeBox(1.1, 2, 0.06, new THREE.MeshStandardMaterial({ color: 0x76543b, roughness: 0.95 }));
-    door.position.set(0, 1, d / 2 + 0.035); g.add(door);
-    const windowMaterial = new THREE.MeshStandardMaterial({ color: 0x53686b, roughness: 0.8 });
-    for (const side of [-1, 1]) {
-      const window = makeBox(0.75, 0.8, 0.06, windowMaterial);
-      window.position.set(side * w * 0.28, Math.min(2.3, h * 0.7), d / 2 + 0.035); g.add(window);
-    }
-    const roof = makeGableRoof(w + 0.4, d + 0.2, 1.2, rng);
-    roof.position.y = h; g.add(roof);
+    const g = new THREE.Group();g.name='ProceduralHouse';g.add(makeBaseShadow(w,d));
+    // Preserve the original one RNG draw formerly used by the roof colour.
+    const variant=residentialStyle(rng()),palette=getResidentialPalette();
+    const body=makeBox(w,h,d,palette.plaster[variant]);body.name='ResidentialSolidCore';body.position.y=h/2;g.add(body);
+    addResidentialFacade(g,{w,d,h,variant});
+    const roof=makeGableRoof(w+.4,d+.2,1.2,rng,[0xa76c4e,0x936049,0x9f7055][variant]);roof.position.y=h;g.add(roof);
     return g;
   },
   rowhouse({ w = 3.5, d = 6, h = 5, rng = Math.random } = {}) {
-    const g = new THREE.Group();
-    g.name = "ProceduralRowhouse";
-    g.add(makeBaseShadow(w, d));
-    const body = makeBox(w, h, d, createMaterial("plaster", rng, { color: 0xd7ccc8 }));
-    body.position.y = h / 2; g.add(body);
-    const roof = makeGableRoof(w + 0.2, d + 0.4, 1.5, rng, 0x5d4037);
-    roof.position.y = h; g.add(roof);
+    const g = new THREE.Group();g.name='ProceduralRowhouse';g.add(makeBaseShadow(w,d));
+    // The old rowhouse consumed no RNG draws; dimensions give stable variation.
+    const variant=residentialStyle(((w*19+d*11+h*7)%13)/13),palette=getResidentialPalette();
+    const body=makeBox(w,h,d,palette.plaster[variant]);body.name='ResidentialSolidCore';body.position.y=h/2;g.add(body);
+    addResidentialFacade(g,{w,d,h,variant,rowhouse:true});
+    const roof=makeGableRoof(w+.2,d+.4,1.5,rng,[0x825a46,0x76513e,0x90674d][variant]);roof.position.y=h;g.add(roof);
     return g;
   },
   shop({ w = 5, d = 5, h = 4, rng = Math.random } = {}) {
@@ -143,41 +135,67 @@ export const Prefabs = {
     g.name = "ProceduralWorkshop";
     g.userData.hasChimney = true; // Signal for smoke VFX
     g.add(makeBaseShadow(w, d));
-    const body = makeBox(w, h, d, createMaterial("stone", rng, { color: 0x8d6e63 }));
+    const wallMaterial=createMaterial("plaster",rng,{color:0xb8ab94});wallMaterial.map?.repeat.set(1,1);
+    const body = makeBox(w, h, d, wallMaterial);
     body.position.y = h / 2; g.add(body);
-    const chimney = makeBox(0.8, 2.5, 0.8, createMaterial("stone", rng));
-    chimney.position.set(w * 0.3, h + 1, d * 0.3); g.add(chimney);
+    // Existing solid building core remains the collision owner. Street-facing
+    // joinery and a modest pitched roof identify a working shop, not a brick cube.
+    const detail = new THREE.Group(); detail.userData.noCollision = true; g.add(detail);
+    const timber = createMaterial("wood", rng, { color: 0x72523b });
+    const door = makeBox(Math.min(1.8,w*.32), 2.15, .09, timber);
+    door.name = 'WorkshopStreetDoor'; door.position.set(-w*.17,1.075,d/2+.055); detail.add(door);
+    const seam=makeBox(.035,2.05,.025,createMaterial("wood",rng,{color:0x493a2d}));
+    seam.position.set(-w*.17,1.075,d/2+.11); detail.add(seam);
+    const lintel=makeBox(Math.min(2.2,w*.4),.17,.18,timber);
+    lintel.position.set(-w*.17,2.28,d/2+.09);detail.add(lintel);
+    const shutter=makeBox(Math.min(1.2,w*.24),.85,.08,timber);
+    shutter.position.set(w*.27,Math.min(h-.6,2.3),d/2+.05);detail.add(shutter);
+    const roof=makeGableRoof(w+.4,d+.35,.9,rng,0x98664c);roof.position.y=h;detail.add(roof);
+    const plinth=makeBox(w+.025,.38,d+.025,createMaterial("stone",rng,{color:0xa29883}));
+    plinth.position.y=.19;detail.add(plinth);
+    detail.traverse(o=>{if(o.isMesh){o.userData.noCull=true;o.castShadow=false;}});
+    const chimney = makeBox(0.65, 1.1, 0.65, createMaterial("plaster", rng,{color:0xa89d87}));
+    chimney.position.set(w * 0.3, h + .95, d * 0.15); chimney.userData.noCollision=true; g.add(chimney);
     return g;
   },
   warehouse({ w = 10, d = 15, h = 6, rng = Math.random } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralWarehouse";
     g.add(makeBaseShadow(w, d));
-    const body = makeBox(w, h, d, createMaterial("stone", rng, { color: 0x757575 }));
+    const wallMaterial=createMaterial("plaster",rng,{color:0xaaa18e});wallMaterial.map?.repeat.set(1,1);
+    const body = makeBox(w,h,d,wallMaterial);
     body.position.y = h / 2; g.add(body);
+    const detail=new THREE.Group();detail.userData.noCollision=true;g.add(detail);
+    const timber=createMaterial("wood",rng,{color:0x6f513a});
+    const doors=makeBox(Math.min(3.2,w*.45),Math.min(3,h-.3),.1,timber);
+    doors.name='StorehouseLoadingDoors';doors.position.set(0,Math.min(3,h-.3)/2,d/2+.06);detail.add(doors);
+    const beam=makeBox(Math.min(3.6,w*.5),.24,.22,timber);beam.position.set(0,Math.min(3,h-.3)+.15,d/2+.1);detail.add(beam);
+    const roof=makeGableRoof(w+.5,d+.4,1.05,rng,0x93644c);roof.position.y=h;detail.add(roof);
+    detail.traverse(o=>{if(o.isMesh){o.userData.noCull=true;o.castShadow=false;}});
     return g;
   },
-  stoa({ w = 15, d = 4, h = 5, rng = Math.random, openFront = false } = {}) {
+  stoa({ w = 15, d = 4, h = 5, rng = Math.random, openFront = false, counters = true, counterZ = null, columnCount = 8, masonryMaterial = null, counterMaterial = null } = {}) {
     const g = new THREE.Group();
     g.name = "ProceduralStoa";
     g.add(makeBaseShadow(w, d));
-    const body = makeBox(w, h, openFront ? d * 0.45 : d, createMaterial("marble", rng));
+    const body = makeBox(w, h, openFront ? d * 0.45 : d, masonryMaterial ?? createMaterial("marble", rng));
     body.position.y = h / 2; g.add(body);
     if (openFront) {
       body.position.z = -d * 0.25;
       const canopy = makeBox(w + 0.6, 0.28, d + 1.2, createMaterial("roof", rng, { color: 0xb76f47 }));
       canopy.position.y = h + 0.14;
       g.add(canopy);
-      for (let x = -w / 2 + 2; x < w / 2 - 1; x += 4) {
-        const counter = makeBox(2.4, 0.85, 0.7, createMaterial("wood", rng));
-        counter.position.set(x, 0.425, d * 0.12);
+      for (let x = -w / 2 + 2; counters && x < w / 2 - 1; x += 4) {
+        const counter = makeBox(2.4, 0.85, 0.7, counterMaterial ?? createMaterial("wood", rng));
+        counter.name = "StoaCounter";
+        counter.position.set(x, 0.425, counterZ ?? d * 0.12);
         g.add(counter);
       }
     }
-    const colCount = 8;
+    const colCount = columnCount;
     for (let i = 0; i < colCount; i++) {
       const x = (i / (colCount - 1) - 0.5) * w * 0.9;
-      const col = makeDetailedColumn(h, 0.3, rng, "low");
+      const col = makeDetailedColumn(h, 0.3, rng, "low", masonryMaterial);
       col.position.set(x, h/2, d/2 + 0.5); g.add(col);
     }
     return g;
@@ -356,9 +374,9 @@ export const Prefabs = {
   }
 };
 
-function makeDetailedColumn(height, radius, rng, detailLevel = "full") {
+function makeDetailedColumn(height, radius, rng, detailLevel = "full", material = null) {
   const g = new THREE.Group();
-  const colMat = createMaterial("marble", rng, { metalness: 0.04 });
+  const colMat = material ?? createMaterial("marble", rng, { metalness: 0.04 });
   
   // Shaft
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.9, radius, height, 16), colMat);
@@ -540,9 +558,10 @@ export function poolMaterialsAndMerge(group) {
 
   group.traverse((child) => {
     if (!child.isMesh || !child.geometry || !child.material) return;
-    // Batching must not turn hidden descendants into a visible solid batch.
+    // Mutable registered subtrees own their visibility (including saved outcomes).
+    // Do not bake them or hidden descendants into a permanent city batch.
     for (let ancestor = child; ancestor; ancestor = ancestor.parent) {
-      if (!ancestor.visible) return;
+      if (!ancestor.visible || ancestor.userData?.interactable || ancestor.userData?.dynamicVisibility) return;
     }
     if (child.userData?.isWindowPane) return; 
     if (child.userData?.isFoliage) return; // Wave 3/4: Preserve foliage material fidelity
@@ -583,10 +602,14 @@ export function poolMaterialsAndMerge(group) {
       if (parent.userData?.noCollision === true) { noCollision = true; break; }
       parent = parent.parent;
     }
-    const matId = `${pooledMat.uuid}:${noCollision ? 'visual' : 'solid'}`;
+    // Shadow policy is part of the batch key: ordinary houses must not
+    // start casting shadows just because they share a landmark material.
+    const castShadow = child.castShadow === true;
+    const receiveShadow = child.receiveShadow === true;
+    const matId = `${pooledMat.uuid}:${noCollision ? 'visual' : 'solid'}:${castShadow}:${receiveShadow}`;
 
     if (!geomMap.has(matId)) {
-      geomMap.set(matId, { material: pooledMat, geoms: [], noCollision });
+      geomMap.set(matId, { material: pooledMat, geoms: [], noCollision, castShadow, receiveShadow });
     }
 
     geomMap.get(matId).geoms.push(clonedGeom);
@@ -603,16 +626,23 @@ export function poolMaterialsAndMerge(group) {
       const mergedGeom = BufferGeometryUtils.mergeGeometries(batch.geoms, false);
       if (mergedGeom) {
         const mergedMesh = new THREE.Mesh(mergedGeom, batch.material);
-        mergedMesh.castShadow = true;
-        mergedMesh.receiveShadow = true;
+        mergedMesh.castShadow = batch.castShadow;
+        mergedMesh.receiveShadow = batch.receiveShadow;
         mergedMesh.name = `MergedBatch_${batch.material.userData?.materialType || 'Generic'}`;
         mergedMesh.userData.noCollision = batch.noCollision;
+        mergedMesh.userData.isCityBatch = true;
+        // Bounds include all constituent buildings, rather than the group pivot.
+        mergedGeom.computeBoundingSphere();
         group.add(mergedMesh);
       }
     } catch (e) {
       console.warn("[buildingSpawner] Failed to merge batch", e);
     }
   }
+  // Deferred batches replace meshes after boot; invalidate cached culling lists.
+  let root = group;
+  while (root.parent) root = root.parent;
+  root.userData.cityBatchRevision = (root.userData.cityBatchRevision || 0) + 1;
 }
 
 function clamp(v, a, b) { return Math.min(Math.max(v, a), b); }

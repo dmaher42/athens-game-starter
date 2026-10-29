@@ -1,3 +1,4 @@
+import {makeParthenonColumnGeometry,getParthenonStone,createParthenonCella,finishParthenonTemple} from './parthenonArchitecture.js';
 import * as THREE from "three";
 import { applyTextureBudgetToObject } from "../utils/textureBudget.js";
 import {
@@ -107,7 +108,7 @@ export async function buildTemple(options = {}) {
   const pedimentHeight = pedimentHeightOverride ?? columnHeight * 0.22;
   const roofHeight = roofHeightOverride ?? columnHeight * 0.3;
 
-  const columnSample = await makeColumn({
+  const columnSample = options.parthenon ? {geometry:makeParthenonColumnGeometry(columnHeight),material:getParthenonStone()} : await makeColumn({
     height: columnHeight,
     materialOptions,
   });
@@ -183,6 +184,7 @@ export async function buildTemple(options = {}) {
   roof.position.y = stylobateHeight + columnHeight + entablatureHeight;
   group.add(roof);
 
+  if(options.parthenon){group.add(createParthenonCella({width,depth,columnHeight,base:stylobateHeight}));}else{
   const cellaInsetX = Math.max(spacingX * 0.8, 3);
   const cellaInsetZ = Math.max(spacingZ * 0.8, 3);
   const cellaWidth = Math.max(4, width - cellaInsetX);
@@ -199,7 +201,9 @@ export async function buildTemple(options = {}) {
   cella.userData.noCollision = false;
   group.add(cella);
 
+  }
   setCollisionTag(group, true);
+  if(options.parthenon)finishParthenonTemple(group,{width,depth,columnHeight,base:stylobateHeight,entablatureHeight,pedimentHeight,pedimentDepth});
 
   if (Number.isFinite(scale)) {
     group.scale.setScalar(scale);

@@ -48,9 +48,10 @@ export function queueSceneInteractable(scene, object, options = {}) {
  * @param {THREE.Scene} scene - The scene graph containing objects to test against.
  * @returns {Object} interactor helper
  */
-export function createInteractor(renderer, camera, scene) {
+export function createInteractor(renderer, camera, scene, { getPlayerPosition } = {}) {
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
+  const interactWorldPosition = new THREE.Vector3();
   const hoverCameraPosition = new THREE.Vector3();
   const lastHoverCameraPosition = new THREE.Vector3();
   const hoverCameraQuaternion = new THREE.Quaternion();
@@ -85,6 +86,31 @@ export function createInteractor(renderer, camera, scene) {
     return false;
   }
 
+  function isWithinRange(object) {
+    const range = object?.userData?.interactionRange;
+    if (!Number.isFinite(range) || range <= 0) return true;
+    const actor = getPlayerPosition?.();
+    if (!actor || !isInScene(object)) return false;
+    for (let parent = object; parent; parent = parent.parent) if (!parent.visible) return false;
+    object.getWorldPosition(interactWorldPosition);
+    return interactWorldPosition.distanceToSquared(actor) <= range * range;
+  }
+
+  // Ranged keyboard targets use the same registered objects and onUse handler
+  // as ray picking. This keeps third-person interaction usable without aiming
+  // the camera precisely through the character at a small evidence sign.
+  function findNearbyInteractable() {
+    const actor = getPlayerPosition?.();
+    if (!actor) return null;
+    let nearest = null, distance = Infinity;
+    for (const object of trackedInteractables.keys()) {
+      if (!Number.isFinite(object.userData?.interactionRange) || !isWithinRange(object)) continue;
+      object.getWorldPosition(interactWorldPosition);
+      const next = interactWorldPosition.distanceToSquared(actor);
+      if (next < distance) { nearest = object; distance = next; }
+    }
+    return nearest;
+  }
   function rebuildTargets() {
     intersectTargets.length = 0;
     for (const object of trackedInteractables.keys()) {
@@ -103,7 +129,9 @@ export function createInteractor(renderer, camera, scene) {
     if (targetsDirty) {
       rebuildTargets();
     }
-    return intersectTargets.length > 0 ? intersectTargets : scene.children;
+    // An empty registry means nothing is pickable. Traversing the entire world
+    // here scans terrain/buildings that can never produce an interaction.
+    return intersectTargets;
   }
 
   function addTrackedObject(object) {
@@ -343,10 +371,14 @@ export function createInteractor(renderer, camera, scene) {
 
     stationaryHoverTimer = 0;
     const hit = pickCenter();
-    const citizenHit = resolveCitizenHit(hit);
+    const nearbyTarget = findNearbyInteractable();
+    const citizenHit = nearbyTarget ? null : resolveCitizenHit(hit);
     setCitizenHover(citizenHit);
 
-    const target = citizenHit ? hit?.object : hit ? findInteractable(hit.object) : null;
+    let target = citizenHit ? hit?.object : hit ? findInteractable(hit.object) : null;
+    if (target && !isWithinRange(target)) target = null;
+    // An explicitly aimed worker must not be replaced by a nearby display sign.
+    target = target?.userData?.preferAimedUse ? target : nearbyTarget || target;
 
     if (!target) {
       clearHover();
@@ -367,6 +399,10 @@ export function createInteractor(renderer, camera, scene) {
   }
 
   function useObject() {
+    const aimedWorker = currentHover?.userData?.preferAimedUse && isWithinRange(currentHover);
+    const nearby = aimedWorker ? null : findNearbyInteractable();
+    if (nearby) { setCitizenHover(null); if (nearby !== currentHover) { clearHover(); applyHighlight(nearby); } }
+    if (currentHover && !isWithinRange(currentHover)) { clearHover(); return; }
     if (currentCitizenHit) {
       handleCitizenInteraction(currentCitizenHit);
       return;
@@ -407,7 +443,10 @@ export function createInteractor(renderer, camera, scene) {
   function setCitizenHover(hit) {
     currentCitizenHit = hit;
     if (citizenPrompt) {
-      citizenPrompt.style.opacity = hit ? "1" : "0";
+      const local=currentHover?.userData?.npcDialogue;
+      const label=local ? (currentHover.userData.npcLabel || "Citizen")+": [Press E to Talk]" : CITIZEN_PROMPT_TEXT;
+      if(citizenPrompt.textContent!==label)citizenPrompt.textContent=label;
+      citizenPrompt.style.opacity = hit || local ? "1" : "0";
     }
   }
 
@@ -461,10 +500,10 @@ export function createInteractor(renderer, camera, scene) {
     mesh.instanceMatrix.needsUpdate = true;
   }
 
-  function showCitizenDialogue() {
+  function showCitizenDialogue(text) {
     if (!citizenDialogueOverlay) return;
 
-    const dialogue = CITIZEN_DIALOGUES[Math.floor(Math.random() * CITIZEN_DIALOGUES.length)];
+    const dialogue = typeof text === "string" ? text : CITIZEN_DIALOGUES[Math.floor(Math.random() * CITIZEN_DIALOGUES.length)];
     citizenDialogueOverlay.textContent = dialogue;
     citizenDialogueOverlay.style.opacity = "1";
 
@@ -474,10 +513,11 @@ export function createInteractor(renderer, camera, scene) {
 
     dialogueHideTimer = setTimeout(() => {
       citizenDialogueOverlay.style.opacity = "0";
-    }, 3200);
+    }, typeof text === "string" ? 7000 : 3200);
   }
 
   const api = {
+    showDialogue: showCitizenDialogue,
     raycaster,
     mouse,
     pickObject,

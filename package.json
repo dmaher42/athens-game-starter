@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "build": "vite build && node scripts/ensure-three-bundled.mjs && node scripts/build-bundleless-sources.mjs && node scripts/copy-bundleless-sources.mjs && node scripts/sanitize-bare-import-text.mjs",
     "build:analyze": "vite build --mode analyze && node scripts/ensure-three-bundled.mjs && node scripts/build-bundleless-sources.mjs && node scripts/copy-bundleless-sources.mjs && node scripts/sanitize-bare-import-text.mjs",
-    "verify": "node --test verification/building-textures.test.mjs verification/navigation.test.mjs verification/neighbourhoods.test.mjs verification/ground.test.mjs verification/characters.test.mjs && npm run build && node verification/verify.mjs && node verification/water-shoreline.mjs && node verification/neighbourhood-walk.mjs",
+    "verify:layout": "node --test verification/city-structure.test.mjs verification/neighbourhoods.test.mjs verification/navigation.test.mjs verification/ground-support.test.mjs",
+    "verify": "node --test verification/city-structure.test.mjs verification/collectibles-freeze.test.mjs verification/ground-support.test.mjs verification/harbor-activity.test.mjs verification/harbor-ships.test.mjs verification/ship-water.test.mjs verification/performance.test.mjs verification/building-textures.test.mjs verification/navigation.test.mjs verification/neighbourhoods.test.mjs verification/ground.test.mjs verification/characters.test.mjs verification/harbor.test.mjs && npm run build && node verification/verify.mjs && node verification/collectibles-render.mjs && node verification/water-shoreline.mjs && node verification/ship-water-render.mjs && node verification/neighbourhood-walk.mjs && node verification/harbor-activity.mjs && node verification/harbor-walk.mjs",
     "deploy": "npm run build"
   },
   "dependencies": {

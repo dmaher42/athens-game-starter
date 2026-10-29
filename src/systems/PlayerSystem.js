@@ -130,8 +130,8 @@ export class PlayerSystem {
     const thirdPersonSolids = [];
     if (envCollider?.mesh) {
       thirdPersonSolids.push(envCollider.mesh);
-    }
-    if (terrain) {
+    } else if (terrain) {
+      // Combined collision already includes terrain; keep this only as a fallback.
       thirdPersonSolids.push(terrain);
     }
 
@@ -241,6 +241,7 @@ export class PlayerSystem {
 
   async loadCharacter() {
     const character = new Character();
+    const myrtoPath = joinPath(this.baseUrl, "models/character/myrto-v01.glb");
     const heroRootPath = "models/character/hero.glb";
     const absolutePath = "/athens-game-starter/models/character/hero.glb";
     const bundledHeroName = encodeURIComponent("astronaut.glb");
@@ -249,7 +250,7 @@ export class PlayerSystem {
     const bundledHeroRootPath = `models/character/${bundledHeroName}`;
     const heroCandidates = Array.from(
       new Set(
-        [absolutePath, heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean),
+        [myrtoPath, absolutePath, heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean),
       ),
     );
 
@@ -296,7 +297,18 @@ export class PlayerSystem {
           }
         });
 
+        // Myrto is authored feet-at-origin; the controller object is capsule-centred.
+        // Apply this only to her asset, keeping the legacy hero fallback unchanged.
+        const isMyrto = loadedHero.url?.includes("myrto-v01.glb");
+        if (isMyrto) {
+          const bounds = new THREE.Box3().setFromObject(root);
+          root.position.y = -this.player.height * 0.5 - bounds.min.y;
+          root.name = "MyrtoPlayerModel";
+        }
         character.initializeFromGLTF(root, gltf.animations);
+        if (isMyrto && !character.actions.has("Jump")) {
+          character.actions.set("Jump", character.actions.get("Idle"));
+        }
         this.player.attachCharacter(character);
         
         // Hide fallback capsule if it exists

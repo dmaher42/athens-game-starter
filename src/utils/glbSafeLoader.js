@@ -207,7 +207,10 @@ class GLTFMaterialsPbrSpecularGlossinessExtension {
     this.name = "KHR_materials_pbrSpecularGlossiness";
   }
 
-  getMaterialType() {
+  getMaterialType(materialIndex) {
+    // Ordinary metallic-roughness glTF materials must retain Three.js defaults.
+    const materialDef = this.parser.json.materials?.[materialIndex];
+    if (!materialDef?.extensions?.[this.name]) return null;
     return GLTFMeshStandardSGMaterial;
   }
 

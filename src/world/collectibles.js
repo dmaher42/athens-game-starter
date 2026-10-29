@@ -9,6 +9,12 @@ export class CollectiblesManager {
     this.total = 0;
     this.typeScores = {}; // Track count per type
     this.onScoreChange = null;
+    this.activityRewardIds = new Set(Object.keys(questManager?.rewardRecords || {}));
+    // Rehydrate only earned commission awards, never old world pickups.
+    for(const receipt of Object.values(questManager?.rewardRecords || {})){
+      this.score+=receipt.amount;this.total+=receipt.amount;
+      this.typeScores[receipt.type]=(this.typeScores[receipt.type]||0)+receipt.amount;
+    }
 
     // Shared geometry/material for performance
     this.geometry = new THREE.CylinderGeometry(0.08, 0.08, 0.5, 12);
@@ -42,6 +48,13 @@ export class CollectiblesManager {
 
     // Paper part of the scroll (white ends)
     this.paperMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  }
+
+  awardActivityOnce(id) {
+    if(this.activityRewardIds.has(id)||!this.questManager?.claimActivityReward(id))return false;
+    this.activityRewardIds.add(id);this.score++;this.total++;
+    this.typeScores.gold=(this.typeScores.gold||0)+1;
+    this.onScoreChange?.(this.score,this.total,'gold',this.typeScores.gold);return true;
   }
 
   spawnAt(x, y, z, type = 'gold') {
@@ -126,8 +139,15 @@ export class CollectiblesManager {
   }
 
   collect(item) {
+    if (item.userData.collected) return;
     item.userData.collected = true;
-    item.visible = false;
+    // Keep the renderer's light layout stable. Hiding the entire group removes
+    // its PointLight and recompiles every lit material on the pickup frame.
+    // Zero energy gives the same collected appearance without that shader stall.
+    item.traverse(object => {
+      if (object.isMesh || object.isSprite) object.visible = false;
+      if (object.isLight) object.intensity = 0;
+    });
     
     const type = item.userData.type || 'gold';
     this.score++;

@@ -169,6 +169,8 @@ export class EnvironmentCollider {
     if (this.positionAttr && this.positionAttr.count > 0) {
       try {
         this.boundsTree = new MeshBVH(merged, { lazyGeneration: false, maxDepth: 64 });
+        // Standard raycasts and capsule queries share the current collision index.
+        merged.boundsTree = this.boundsTree;
       } catch (err) {
         console.warn('Failed to build environment bounds tree', err);
         this.boundsTree = null;

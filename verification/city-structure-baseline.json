@@ -1,0 +1,13 @@
+{
+  "note": "Pre-pass existing geometry on flat height4 Node fixture; no browser/GPU/FPS evidence. Great Theatre reservation: exact bounded grid delta checked against saved pre-theatre generator; street geometry and limits unchanged.",
+  "streetHash": "1bc6e317050dda79a700d2b7e560f428f2f74b77e4369e966460cfc0c70b27e6",
+  "gridHash": "8bcfddb38a711e4e9744064c2d9b58ef78fa564a1c4b634b72e0fbf33257609f",
+  "roadTriangles": 22664,
+  "city": {
+    "triangles": 65700,
+    "meshes": 343,
+    "lights": 0,
+    "buildingLots": 183,
+    "streetFrontages": 26
+  }
+}

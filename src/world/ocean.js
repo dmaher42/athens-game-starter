@@ -1,3 +1,4 @@
+import { configureShipWaterExclusions } from './shipWaterExclusion.js';
 import * as THREE from "three";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 import { Water } from "three/examples/jsm/objects/Water.js";
@@ -358,6 +359,15 @@ export async function createOcean(scene, terrain, options = {}) {
         fog: !!scene.fog,
       });
 
+  // SSAO renders this mesh again with an override normal material. Its normal
+  // pass cannot use the reflection texture, so avoid rendering the mirrored
+  // city a second time. The visible water pass keeps its normal reflection.
+  const renderOceanReflection = water.onBeforeRender;
+  water.onBeforeRender = function (renderer, renderScene) {
+    if (renderScene.overrideMaterial) return;
+    return renderOceanReflection.apply(this, arguments);
+  };
+
   // Shader injection for shoreline interaction and distance fade
   {
     terrain.updateWorldMatrix(true, false);
@@ -524,6 +534,11 @@ export async function createOcean(scene, terrain, options = {}) {
   }
 
   scene.add(water);
+  // createOcean awaits normals; the existing harbour is placed synchronously
+  // before this continuation. Read its actual static hull geometry, not a map copy.
+  const boardableShips = [];
+  scene.traverse(object => { if (['merchant','trireme'].includes(object.userData?.shipType)) boardableShips.push(object); });
+  configureShipWaterExclusions(water, boardableShips);
 
   // Debug info
   if (import.meta.env?.DEV) {
@@ -590,3 +605,4 @@ export function updateOcean(ocean, deltaSeconds = 0, sunDir, mood = 0, sunColor,
     uniforms.waterColor.value.b = Math.min(Math.max(uniforms.waterColor.value.b, 0), 1);
   }
 }
+

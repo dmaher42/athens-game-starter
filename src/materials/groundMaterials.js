@@ -1,3 +1,4 @@
+import { applyCityGroundVariation } from "./cityGroundSurface.js";
 import * as THREE from "three";
 import { loadSafeTexture } from "../utils/TextureUtils.js";
 
@@ -75,6 +76,8 @@ export const CityGroundMaterial = createGroundMaterial({
   normalScale: 0.28,
   aoIntensity: 0.5,
 });
+
+applyCityGroundVariation(CityGroundMaterial);
 
 export const InlandGroundMaterial = createGroundMaterial({
   name: "InlandGroundMaterial",

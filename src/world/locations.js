@@ -1,3 +1,4 @@
+import {ACROPOLIS} from './acropolisLayout.js';
 import * as THREE from "three";
 import {
   getSeaLevelY,
@@ -34,10 +35,12 @@ export const HARBOR_CENTER_3D = new THREE.Vector3(
 
 // Canonical horizontal district anchors; runtime placement samples terrain height.
 export const AGORA_CENTER_3D = new THREE.Vector3(-30, getCityGroundY(), 20);
-export const ACROPOLIS_PEAK_3D = new THREE.Vector3(-24, getCityGroundY(), -8);
-// Grade the existing inland landmarks onto broad, walkable terraces.
+export const ACROPOLIS_PEAK_3D = new THREE.Vector3(ACROPOLIS.visit[0], resolveSeaLevelY()+ACROPOLIS.heightAboveSea, ACROPOLIS.visit[1]);
+// The broad base landform stays fixed to protect the theatre. The bounded
+// Acropolis profile is sculpted by the same terrain owner; the quest/minimap
+// anchor above is its accessible northern promenade, not a second hill.
 export const INLAND_LANDMARK_TERRACES = [
-  { x: ACROPOLIS_PEAK_3D.x - 8, z: ACROPOLIS_PEAK_3D.z - 20, halfWidth: 12, halfDepth: 17, heightAboveSea: 7.5 },
+  { x: -32, z: -28, halfWidth: 12, halfDepth: 17, heightAboveSea: 7.5 },
   { x: AGORA_CENTER_3D.x - 34, z: AGORA_CENTER_3D.z + 29, halfWidth: 10, halfDepth: 15, heightAboveSea: 3.8 },
 ];
 // Shared walking-space bounds: city placement and the visible square agree.
@@ -151,11 +154,11 @@ export const HARBOR_WATER_CENTER = new THREE.Vector3(
 
 // Sync updates
 subscribeSeaLevelChange((seaLevelY) => {
-  HARBOR_CENTER_3D.y = seaLevelY;
+  HARBOR_CENTER_3D.y = seaLevelY + HARBOR_GROUND_HEIGHT;
   HARBOR_WATER_CENTER.y = seaLevelY;
 
   const newGroundY = seaLevelY + 2.5;
   AGORA_CENTER_3D.y = newGroundY;
-  ACROPOLIS_PEAK_3D.y = newGroundY;
+  ACROPOLIS_PEAK_3D.y = seaLevelY + ACROPOLIS.heightAboveSea;
   CITY_CHUNK_CENTER.y = newGroundY;
 });

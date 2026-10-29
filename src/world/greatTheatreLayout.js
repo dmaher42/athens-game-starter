@@ -1,0 +1,4 @@
+// This compressed landmark is Athens-inspired, not an excavated-site plan.
+export const GREAT_THEATRE={x:-24,z:-78,innerRadius:7.5,rowDepth:.9,rowRise:.35,rows:14,gangwayWidth:1.3,outerRadius:23,stage:{z:-10.5,width:15,depth:4,height:.45},approach:[[-53,-69],[-54,-76],[-49,-79.7]]};
+export function theatreReserved(x,z){const dx=x-GREAT_THEATRE.x,dz=z-GREAT_THEATRE.z;return (dz>=-4&&Math.hypot(dx,dz)<GREAT_THEATRE.outerRadius+5)||(Math.abs(dx)<13&&dz>=-24&&dz< -4)||GREAT_THEATRE.approach.slice(1).some(([px,pz])=>Math.hypot(x-px,z-pz)<7);}
+export function theatreHeightAtRadius(r){const d=GREAT_THEATRE,row7=d.innerRadius+7*d.rowDepth;if(r<=row7)return Math.max(0,(r-d.innerRadius)/d.rowDepth*d.rowRise);if(r<row7+d.gangwayWidth)return 7*d.rowRise;return Math.min(d.rows*d.rowRise,7*d.rowRise+(r-row7-d.gangwayWidth)/d.rowDepth*d.rowRise);}

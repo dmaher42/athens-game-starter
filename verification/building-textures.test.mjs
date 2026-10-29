@@ -3,6 +3,24 @@ import assert from 'node:assert/strict';
 import { Texture, TextureLoader } from 'three';
 import { makeMarbleMaterialSet, makeColumn } from '../src/features/buildingKit.js';
 
+test('successful marble files do not allocate procedural canvases', async (t) => {
+  const originalLoad = TextureLoader.prototype.loadAsync;
+  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  let canvases = 0;
+  t.after(() => {
+    TextureLoader.prototype.loadAsync = originalLoad;
+    if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument);
+    else delete globalThis.document;
+  });
+  TextureLoader.prototype.loadAsync = async () => new Texture();
+  Object.defineProperty(globalThis, 'document', {
+    configurable: true,
+    value: { createElement() { canvases++; throw new Error('Unused procedural canvas'); } },
+  });
+  const maps = await makeMarbleMaterialSet({ baseUrl: 'https://example.test/no-procedural/' });
+  assert.equal(canvases, 0, 'Loaded marble files must not build unused procedural maps.');
+  assert.ok(maps.map instanceof Texture && maps.normalMap instanceof Texture);
+});
 test('shared building maps load once, keep independent tiling, and recover after failure', async (t) => {
   const original = TextureLoader.prototype.loadAsync;
   const originalWarn = console.warn;

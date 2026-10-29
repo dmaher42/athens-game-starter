@@ -1,12 +1,6 @@
 import type { Vector3 } from "three";
 
-import {
-  ACROPOLIS_PEAK_3D,
-  AGORA_CENTER_3D,
-  CITY_AREA_RADIUS,
-  CITY_CHUNK_CENTER,
-  HARBOR_CENTER_3D,
-} from "../world/locations.js";
+import { CITY_MAP_FEATURES, CITY_MAP_ROUTES } from "../world/cityMapData.js";
 import { createHudPanel } from "./hudShared.js";
 import { registerUIUpdate } from "./updateLoop.js";
 import { registerPanel, unregisterPanel } from "./HudManager.js";
@@ -30,7 +24,7 @@ export interface MiniMapFeature {
   readonly id: string;
   readonly name: string;
   readonly position: MiniMapPoint;
-  readonly type: "district";
+  readonly type: "district" | "landmark" | "activity";
 }
 
 export interface MiniMapOptions {
@@ -59,80 +53,7 @@ function normalizePosition(position: unknown): MiniMapPoint | null {
   return null;
 }
 
-function buildDistrictFeatures(): MiniMapFeature[] {
-  const agora = normalizePosition(AGORA_CENTER_3D);
-  const harbor = normalizePosition(HARBOR_CENTER_3D);
-  const acropolis = normalizePosition(ACROPOLIS_PEAK_3D);
-  const features: MiniMapFeature[] = [];
-  if (harbor) {
-    features.push({
-      id: "district:harbor",
-      name: "Harbor District",
-      position: harbor,
-      type: "district",
-    });
-  }
-  if (agora) {
-    features.push({
-      id: "district:agora",
-      name: "Agora",
-      position: agora,
-      type: "district",
-    });
-    features.push({
-      id: "district:civic-core",
-      name: "Civic Core",
-      position: { x: agora.x, z: agora.z + 20 },
-      type: "district",
-    });
-    features.push({
-      id: "district:innovation",
-      name: "Innovation Corridor",
-      position: { x: agora.x + 70, z: agora.z + 10 },
-      type: "district",
-    });
-    features.push({
-      id: "district:neighborhood",
-      name: "Neighborhood Rings",
-      position: { x: agora.x, z: agora.z - 60 },
-      type: "district",
-    });
-    features.push({
-      id: "district:green-belt",
-      name: "Green & Blue Belt",
-      position: { x: agora.x - 70, z: agora.z - 20 },
-      type: "district",
-    });
-    features.push({
-      id: "district:gateway",
-      name: "Gateway Districts",
-      position: { x: agora.x, z: agora.z + 110 },
-      type: "district",
-    });
-  }
-  if (acropolis) {
-    features.push({
-      id: "district:acropolis",
-      name: "Acropolis Plateau",
-      position: acropolis,
-      type: "district",
-    });
-  }
-  return features;
-}
-
-function combineFeatures(): MiniMapFeature[] {
-  const combined = buildDistrictFeatures();
-  const seen = new Set<string>();
-  return combined.filter((feature) => {
-    if (!feature?.id) return false;
-    if (seen.has(feature.id)) return false;
-    seen.add(feature.id);
-    return true;
-  });
-}
-
-const DEFAULT_FEATURES: MiniMapFeature[] = combineFeatures();
+const DEFAULT_FEATURES: MiniMapFeature[] = CITY_MAP_FEATURES as MiniMapFeature[];
 
 function worldToCanvas(
   point: MiniMapPoint | null,
@@ -150,31 +71,13 @@ function worldToCanvas(
 }
 
 function computeBounds(features: readonly MiniMapFeature[]): MiniMapBounds {
-  const center = normalizePosition(CITY_CHUNK_CENTER) ?? { x: 0, z: 0 };
-  const radius = Number.isFinite(CITY_AREA_RADIUS) ? CITY_AREA_RADIUS : 260;
-  let minX = center.x - radius;
-  let maxX = center.x + radius;
-  let minZ = center.z - radius;
-  let maxZ = center.z + radius;
-  for (const feature of features) {
-    const { position } = feature || {};
-    if (!position) continue;
-    if (typeof position.x === "number") {
-      minX = Math.min(minX, position.x);
-      maxX = Math.max(maxX, position.x);
-    }
-    if (typeof position.z === "number") {
-      minZ = Math.min(minZ, position.z);
-      maxZ = Math.max(maxZ, position.z);
-    }
-  }
-  const padding = 20;
-  return {
-    minX: minX - padding,
-    maxX: maxX + padding,
-    minZ: minZ - padding,
-    maxZ: maxZ + padding,
-  };
+  const points = [...features.map(f => f.position), ...CITY_MAP_ROUTES.flatMap(r => r.points)];
+  const xs = points.map(p => p.x), zs = points.map(p => p.z);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+  // Equal scale in both axes: directions and road shapes remain trustworthy.
+  const half = Math.max(Math.max(...xs)-Math.min(...xs), Math.max(...zs)-Math.min(...zs), 80)/2 + 22;
+  return {minX:cx-half,maxX:cx+half,minZ:cz-half,maxZ:cz+half};
 }
 
 function drawCompass(
@@ -242,6 +145,18 @@ function drawGrid(ctx: CanvasRenderingContext2D | null, canvas: HTMLCanvasElemen
   ctx.restore();
 }
 
+function drawStreets(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, bounds: MiniMapBounds): void {
+  ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+  for (const route of CITY_MAP_ROUTES) {
+    ctx.strokeStyle = route.type === "artery" ? "#baa984" : "#687979";
+    ctx.lineWidth = route.type === "artery" ? 2.4 : 1.3;
+    ctx.beginPath();
+    route.points.forEach((p, i) => {const q=worldToCanvas(p,canvas,bounds)!; if(i)ctx.lineTo(q.x,q.y);else ctx.moveTo(q.x,q.y);});
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawFeatures(
   ctx: CanvasRenderingContext2D | null,
   canvas: HTMLCanvasElement,
@@ -252,11 +167,12 @@ function drawFeatures(
   ctx.save();
   ctx.font = "10px ui-sans-serif";
   ctx.textBaseline = "top";
-  for (const feature of features) {
+  const boxes: {x:number;y:number;w:number;h:number}[] = [];
+  for (const feature of [...features].sort((a,b)=>Number(a.type==='district')-Number(b.type==='district'))) {
     const { position, name, type } = feature || {};
     const mapped = worldToCanvas(position, canvas, bounds);
     if (!mapped) continue;
-    const color = "#72e0ff";
+    const color = type === "activity" ? "#e4be76" : type === "landmark" ? "#ded8c4" : "#81ac9b";
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(mapped.x, mapped.y, 2.5, 0, Math.PI * 2);
@@ -266,11 +182,14 @@ function drawFeatures(
     if (label) {
       const textWidth = ctx.measureText(label).width;
       const padding = 4;
-      const boxX = mapped.x + 6;
-      const boxY = mapped.y - 10;
+      const boxX = Math.min(canvas.width-textWidth-10,Math.max(2,mapped.x+6));
+      let boxY = mapped.y - 10;
       const boxWidth = textWidth + padding * 2;
       const boxHeight = 14;
-      ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+      const clear = [boxY,boxY+15,boxY-15,boxY+30].find(y=>y>=2&&y+14<canvas.height&&!boxes.some(b=>boxX<b.x+b.w&&boxX+boxWidth>b.x&&y<b.y+b.h&&y+14>b.y));
+      if(clear===undefined)continue;
+      boxY=clear; boxes.push({x:boxX,y:boxY,w:boxWidth,h:14});
+      ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
       ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
       ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
       ctx.fillText(label, boxX + padding, boxY + 2);
@@ -335,7 +254,7 @@ function updateLegend(
   for (const entry of items) {
     const li = document.createElement("li");
     const label = document.createElement("span");
-    label.textContent = "District";
+    label.textContent = entry.type === "activity" ? "Visit" : entry.type === "landmark" ? "Landmark" : "District";
     const name = document.createElement("strong");
     name.textContent = entry.name;
     name.style.fontWeight = "600";
@@ -365,14 +284,15 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
   canvas.className = "mini-map__canvas";
   const legend = document.createElement("div");
   legend.className = "mini-map__legend";
-  legend.innerHTML = "<h4>Nearby</h4>";
+  legend.innerHTML = `<h4>Nearby places</h4><p style="font-size:11px;margin:4px 0 8px;color:#bbb">Gold: activities / Ivory: landmarks / Green: courts</p>`;
   const list = document.createElement("ul");
   legend.appendChild(list);
 
   let wrap: HTMLDivElement | null = null;
   let isExpanded = false;
   const applyExpandedState = () => {
-    const targetSize = isExpanded ? 360 : 260;
+    const targetSize = isExpanded ? 360 : 220;
+    legend.hidden = !isExpanded;
     canvas.width = targetSize;
     canvas.height = targetSize;
     if (wrap) {
@@ -381,7 +301,7 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
   };
 
   const panel = createHudPanel({
-    title: "City Mini Map",
+    title: "Athens map",
     className: "mini-map-panel",
     initialCollapsed: true,
     collapseContent: false,
@@ -424,7 +344,7 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
       const rawPosition = getPosition?.();
       const position = normalizePosition(rawPosition);
       const direction = getDirection?.();
-      const drawKey = `${buildPositionKey(position)}::${buildPositionKey(direction)}`;
+      const drawKey = `${canvas.width}::${buildPositionKey(position)}::${buildPositionKey(direction)}`;
 
       if (drawKey !== lastDrawKey) {
         lastDrawKey = drawKey;
@@ -436,6 +356,7 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         drawGrid(ctx, canvas);
+        drawStreets(ctx, canvas, bounds);
         drawFeatures(ctx, canvas, features, bounds);
 
         if (position) {

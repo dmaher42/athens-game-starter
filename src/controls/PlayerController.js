@@ -73,6 +73,7 @@ export class PlayerController {
 
     this.velocity = new THREE.Vector3();
     this.groundNormal = new THREE.Vector3(0, 1, 0);
+    this.groundProbe = new THREE.Ray(new THREE.Vector3(), new THREE.Vector3(0, -1, 0));
     this.grounded = false;
     this.jumpLocked = false;
 
@@ -360,21 +361,11 @@ export class PlayerController {
     const collider = this.env;
 
     const allowGrounding = !this.flying;
+    const retainedSupport = this.grounded;
     this.grounded = false;
     let slopeNormal = null;
 
     if (collider?.capsuleIntersect) {
-      // Perform a downward raycast from the capsule's center to detect ground.
-      // This provides a more reliable ground detection than just capsule intersection.
-      const center = this.getCapsuleCenter(this.tmpVec3);
-      const ray = new THREE.Ray(center, new THREE.Vector3(0, -1, 0));
-      const hit = collider.boundsTree ? collider.boundsTree.raycastFirst(ray) : null;
-
-      let groundDistance = Infinity;
-      if (hit) {
-        groundDistance = center.y - hit.point.y;
-      }
-
       for (let i = 0; i < 3; i++) {
         const result = collider.capsuleIntersect(this.capsule);
         if (!result) break;
@@ -403,9 +394,27 @@ export class PlayerController {
         }
       }
 
-      // If the raycast found ground nearby, and we're not flying, consider us grounded.
-      if (groundDistance < (this.height * 0.5 + 0.1) && allowGrounding) {
-        this.grounded = true;
+      // Probe after wall/capsule corrections, at the actual current position.
+      // A proximity flag alone leaves a 0.1m hover gap on descents and flickers
+      // grounding/damping as the ramp drops away. Adhere to the real support
+      // within the existing 0.1m range. A grounded uphill walk may have a
+      // positive slope-projected velocity; jumping clears grounding beforehand.
+      if (allowGrounding && (retainedSupport || this.velocity.y <= 0) && collider.boundsTree) {
+        this.groundProbe.origin.copy(this.getCapsuleCenter(this.tmpVec3));
+        const support = collider.boundsTree.raycastFirst(this.groundProbe);
+        const normal = support?.face?.normal;
+        if (support && normal) {
+          const gap = this.capsule.start.y - this.radius - support.point.y;
+          const angle = THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(normal.dot(UP), -1, 1)));
+          if (gap >= -this.terrainSnapThreshold && gap <= 0.1 && angle <= this.slopeLimit) {
+            if (gap > this.terrainSnapThreshold) {
+              this.tmpVec.set(0, -gap, 0);
+              this.capsule.translate(this.tmpVec);
+            }
+            this.grounded = true;
+            this.groundNormal.copy(normal);
+          }
+        }
       }
 
     } else {

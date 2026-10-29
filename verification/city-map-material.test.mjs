@@ -1,0 +1,32 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {pathToFileURL,fileURLToPath} from 'node:url';
+const repo=fileURLToPath(new URL('../',import.meta.url)).replaceAll('\\','/').replace(/\/$/,'');
+const load=p=>import(pathToFileURL(repo+'/src/'+p));
+const {CITY_MAP_FEATURES:features,CITY_MAP_ROUTES:routes}=await load('world/cityMapData.js');
+const {CITY_STREETS}=await load('world/neighbourhoodLayout.js');
+assert.equal(new Set(features.map(p=>p.id)).size,features.length);
+assert.equal(routes.length,20);
+assert.deepEqual(routes.slice(0,19).map(r=>r.id),CITY_STREETS.map(r=>r.id));
+for(const route of routes) for(const p of route.points) assert.ok(Number.isFinite(p.x)&&Number.isFinite(p.z));
+for(const id of ['agora','harbour','parthenon','gateway','theatre','courtyard-home','potters','olive','weavers','garden','traders']) assert.ok(features.some(p=>p.id===id),id);
+assert.equal(features.find(p=>p.id==='courtyard-home').position.x,-72);
+assert.equal(features.find(p=>p.id==='courtyard-home').position.z,143);
+const {isRoadSurface}=await load('features/roads-gravel.js');
+assert.ok(isRoadSurface({userData:{groundSurface:'street'}}));
+assert.ok(isRoadSurface({userData:{groundSurface:'court'}}));
+assert.equal(isRoadSurface({userData:{groundSurface:'building'}}),false);
+const {createGLTFLoader}=await load('utils/glbSafeLoader.js');
+// This fixture parses an uncompressed local GLB in Node; browser-only decoder
+// prefetch is irrelevant and cannot resolve root-relative URLs here.
+const {DRACOLoader}=await import(pathToFileURL(repo+'/node_modules/three/examples/jsm/loaders/DRACOLoader.js'));
+const originalPreload=DRACOLoader.prototype.preload;
+DRACOLoader.prototype.preload=function(){return this;};
+const loader=await createGLTFLoader();
+DRACOLoader.prototype.preload=originalPreload;
+const bytes=fs.readFileSync(repo+'/public/models/landmarks/acropolis/propylaia-v1.glb');
+const gltf=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+let checked=0;gltf.scene.traverse(o=>{if(o.isMesh){assert.equal(o.material.isGLTFSpecularGlossinessMaterial,undefined,o.name);assert.ok(Number.isFinite(o.material.roughness));checked++;}});
+assert.equal(checked,34);
+const result={pass:true,features:features.length,canonicalStreets:19,theatreFootpath:1,ordinaryGLTFMaterials:checked,architecturalMaterialsProtected:true};
+console.log(result);

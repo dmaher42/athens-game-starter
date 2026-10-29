@@ -187,11 +187,13 @@ export function installApplicationRuntimeControls({
     }
   });
 
-  window.addEventListener("resize", () => {
+  const resizeGame = () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-    bloomPass.setSize(window.innerWidth, window.innerHeight);
-  });
+    composer?.setSize(window.innerWidth, window.innerHeight);
+    bloomPass?.setSize(window.innerWidth, window.innerHeight);
+  };
+  window.addEventListener("resize", resizeGame);
+  resizeGame();
 }

@@ -1,0 +1,33 @@
+import { chromium } from 'playwright';
+import { createServer } from 'vite';
+import assert from 'node:assert/strict';
+const server=await createServer({server:{host:'127.0.0.1',port:0},logLevel:'error'});await server.listen();const browser=await chromium.launch(),errors=[];
+try{
+ const page=await browser.newPage({viewport:{width:640,height:400}});page.on('pageerror',e=>errors.push(String(e)));
+ await page.addInitScript(()=>{let seed=123456;Math.random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);const request=requestAnimationFrame.bind(window);window.harborWalkFrames=new Set();window.harborWalkRAF=request;window.requestAnimationFrame=callback=>{let id=request(time=>{window.harborWalkFrames.delete(id);callback(time)});window.harborWalkFrames.add(id);return id;};});
+ await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/athens-game-starter/`,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>typeof render_game_to_text==='function',null,{timeout:120000});
+ const report=await page.evaluate(async()=>{
+  for(const id of window.harborWalkFrames)cancelAnimationFrame(id);window.requestAnimationFrame=cb=>cb.name==='bound _loop'?0:window.harborWalkRAF(cb);
+  const {PlayerController}=await import('/athens-game-starter/src/controls/PlayerController.js');const {EnvironmentCollider}=await import('/athens-game-starter/src/env/EnvironmentCollider.js');const {harborShoreX}=await import('/athens-game-starter/src/world/harborCoast.js');const {getSeaLevelY}=await import('/athens-game-starter/src/world/locations.js');
+  const T=window.THREE,scene=window.scene,terrain=scene.getObjectByName('Terrain'),environment=new EnvironmentCollider();environment.fromStaticScene(scene);
+  const camera=new T.PerspectiveCamera(),input={forward:false,consumeLookDelta:()=>({yaw:0,pitch:0})},player=new PlayerController(input,environment,{camera,terrainHeightSampler:terrain.userData.getHeightAt});player.cameraControlledExternally=true;
+  player.position.set(25,getSeaLevelY()+3.3,10);player.syncCapsuleToObject();for(let i=0;i<30;i++)player.update(1/60);
+  const legs=[];let frames=0;
+  function walkTo(x,z,label,minFoot=getSeaLevelY()+1.6){
+   input.forward=true;let steps=0,minY=Infinity;
+   while(Math.hypot(player.position.x-x,player.position.z-z)>.45){camera.position.copy(player.position).add(new T.Vector3(0,2,0));camera.lookAt(x,camera.position.y,z);camera.updateMatrixWorld();player.update(1/30);frames++;steps++;minY=Math.min(minY,player.capsule.start.y-player.radius);if(steps>1200){const box=new T.Box3().setFromPoints([player.capsule.start,player.capsule.end]).expandByScalar(player.radius+.02),nearby=[];scene.traverse(object=>{if(!object.isMesh||!object.geometry)return;for(let p=object;p;p=p.parent)if(!p.visible||p.userData?.noCollision)return;const bounds=new T.Box3().setFromObject(object);if(bounds.intersectsBox(box)){const size=bounds.getSize(new T.Vector3());nearby.push({name:object.name,parent:object.parent?.name,min:bounds.min.toArray(),max:bounds.max.toArray(),volume:size.x*size.y*size.z});}});nearby.sort((a,b)=>a.volume-b.volume);throw new Error(`${label}: blocked at ${player.position.toArray()} heading to ${x},${z}; colliders=${JSON.stringify(nearby.slice(0,12))}`);}if(player.capsule.start.y-player.radius<minFoot)throw new Error(`${label}: fell below supported deck/quay at ${player.position.toArray()}`);}
+   input.forward=false;for(let i=0;i<10;i++)player.update(1/60);if(!player.grounded||player.flying){const probe=new T.Raycaster(player.position.clone(),new T.Vector3(0,-1,0));probe.firstHitOnly=true;const support=probe.intersectObject(environment.mesh)[0];throw new Error(`${label}: did not finish grounded/on foot; state=${JSON.stringify({position:player.position.toArray(),feet:player.capsule.start.y-player.radius,velocity:player.velocity.toArray(),groundNormal:player.groundNormal.toArray(),grounded:player.grounded,support:support?{point:support.point.toArray(),distance:support.distance,normal:support.face?.normal?.toArray()}:null})}`);}legs.push({label,steps,minFootY:minY,end:player.position.toArray()});
+  }
+  walkTo(harborShoreX(10)-5,10,'pier to stone quay',getSeaLevelY()+2.05);
+  for(const z of [2,-6,-14,-22,-30,-38])walkTo(harborShoreX(z)-5,z,'follow curved quay',getSeaLevelY()+2.05);
+  const navy=scene.getObjectByName('HarborTrireme'),merchant=scene.getObjectByName('HarborHeroShip'),navalRamp=scene.getObjectByName('HarborNavalBoarding'),merchantRamp=scene.getObjectByName('HarborMerchantBoarding');
+  if(!navy||!merchant||!navalRamp||!merchantRamp)throw new Error('Missing ship or short boarding ramp');
+  const navalRampWorld=navalRamp.getWorldPosition(new T.Vector3());
+  walkTo(navalRampWorld.x,-38,'naval loading pier');walkTo(navalRampWorld.x,navalRampWorld.z,'naval boarding ramp');const navalDeck=navy.localToWorld(new T.Vector3(-4,1.7,-1));walkTo(navalDeck.x,navalDeck.z,'trireme deck');walkTo(navalRampWorld.x,navalRampWorld.z,'return naval ramp');walkTo(navalRampWorld.x,-38,'return naval pier');walkTo(harborShoreX(-38)-5,-38,'return stone quay');
+  for(const z of [-30,-22,-14,-6,2,10])walkTo(harborShoreX(z)-5,z,'follow quay to merchant',getSeaLevelY()+2.05);
+  const merchantRampWorld=merchantRamp.getWorldPosition(new T.Vector3());walkTo(merchantRampWorld.x,10,'merchant loading pier');walkTo(merchantRampWorld.x,merchantRampWorld.z,'merchant boarding ramp');const merchantLanding=merchantRamp.parent.localToWorld(new T.Vector3().fromArray(merchantRamp.userData.boarding.end));walkTo(merchantLanding.x,merchantLanding.z,'merchant landing');const merchantDeck=merchant.localToWorld(new T.Vector3(3,merchant.userData.deckHeight,-2.1));walkTo(merchantDeck.x,merchantDeck.z,'merchant deck aisle');walkTo(merchantLanding.x,merchantLanding.z,'return merchant landing');walkTo(merchantRampWorld.x,merchantRampWorld.z,'return merchant ramp');walkTo(merchantRampWorld.x,10,'return merchant pier');
+  const floats=[navy,merchant].map(ship=>({name:ship.name,originY:ship.getWorldPosition(new T.Vector3()).y,sea:getSeaLevelY()}));
+  return {harborWalking:{frames,legs,floats,navalBoarded:true,merchantBoarded:true,grounded:player.grounded,flying:player.flying}};
+ });
+ assert.equal(report.harborWalking.grounded,true);assert.equal(report.harborWalking.flying,false);for(const ship of report.harborWalking.floats)assert.ok(Math.abs(ship.originY-ship.sea)<1e-6,`${ship.name} must float at the shared sea level`);assert.deepEqual(errors,[]);console.log(JSON.stringify(report));
+}finally{await browser.close();await server.close();}

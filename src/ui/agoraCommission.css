@@ -1,0 +1,11 @@
+.agora-commission-backdrop { background:rgba(29,21,13,.63); }
+.agora-commission { background:#30291f; border-color:#c3a46a; }
+.agora-commission button { background:#53452f; border-color:#bba67a; }
+.agora-commission button:hover { background:#6b5739; }
+.agora-commission__voice { font-family:Georgia,serif; font-size:18px; color:#fff1d5; border-left:3px solid #caab6b; padding-left:14px; }
+.agora-commission__journal { background:#201e18; border:1px solid #776847; border-radius:8px; padding:14px; margin:14px 0; }
+.agora-commission__journal ul { padding-left:0; list-style:none; margin:8px 0; columns:2; }
+.agora-commission__journal li { break-inside:avoid; padding:3px 0; }
+.agora-commission .harbor-activity__feedback { background:#463a28; }
+.agora-commission .harbor-activity__note { color:#d7c5a3; }
+@media(max-width:520px){.agora-commission__journal ul{columns:1;}}

@@ -30,7 +30,7 @@ function isRigAttachment(mesh) {
 /**
  * Check if a mesh is a small prop based on bounding box size
  */
-function isSmallProp(mesh) {
+export function isSmallProp(mesh) {
   if (!mesh.isMesh) return false;
   if (!mesh.geometry) return false;
   if (mesh.userData?.noCull) return false;

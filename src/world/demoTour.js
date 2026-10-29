@@ -249,7 +249,7 @@ function markNoCollision(object) {
   });
 }
 
-function createLabelSprite(text, accentColor, scale = { x: 9.5, y: 3 }) {
+export function createLabelSprite(text, accentColor, scale = { x: 9.5, y: 3 }) {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 160;
@@ -265,10 +265,15 @@ function createLabelSprite(text, accentColor, scale = { x: 9.5, y: 3 }) {
   ctx.lineWidth = 8;
   ctx.strokeRect(20, 24, canvas.width - 40, canvas.height - 48);
   ctx.fillStyle = "#f7f1e4";
-  ctx.font = "600 52px Georgia";
+  let fontSize = 52;
+  ctx.font = `600 ${fontSize}px Georgia`;
+  while (fontSize > 24 && ctx.measureText(text).width > canvas.width - 72) {
+    fontSize -= 2;
+    ctx.font = `600 ${fontSize}px Georgia`;
+  }
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2, canvas.width - 72);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -908,7 +913,7 @@ export function createDemoTour(scene, { terrain, questManager, showGuides = fals
         }
       }
 
-      if (!playerPosition || completed) {
+      if (!playerPosition || completed || questManager?.activityId) {
         return;
       }
 

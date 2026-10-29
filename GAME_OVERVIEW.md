@@ -1,4 +1,23 @@
 # GAME_OVERVIEW.md
+## Current world-building direction
+
+This is Daniel's personal hobby world. Exploration, atmosphere, creative city building and enjoyment lead. Historical sources inspire the design without requiring an exact reconstruction. The existing harbour activity remains optional. Future citizen life, economy and relationships are ideas, not part of the current implementation.
+
+The bounded first city-structure pass reuses the existing nineteen streets, building lots, prefabs and landmarks. Read WORLD_BUILDING_PLAN.md for quarter bounds, gradual transitions, performance budget and current native-browser verification limits. No extra ground/sky system, settings UI or publication is authorised.
+
+## Current local harbour/activity pass — 27 October 2026
+
+The current owner authorises local optimisation, harbour/quay/boarding and ship upgrades, and the existing optional harbour history activity. This task runs on the connected Acer Windows laptop with an existing local preview. Earlier automatic-publish/Chromebook-only instructions below are historical and do not authorise a push or deployment. Preserve user apps, tabs, sign-ins, unsaved work, sync, active servers and settings. Only positively identified temporary test-created browsers/servers may be closed.
+
+Read the current ownership map and primary-source notes at the top of ARCHITECTURE.md before changing systems. The world remains a compressed coastal interpretation. The activity labels Piraeus as Athens' port rather than asserting that inland Athens sat on the sea or that this map reproduces excavated harbour dimensions.
+
+Existing procedural ship factories now delegate to harborShips.js: a broad merchant hull/cargo/square sail/steering oar and a narrow trireme with ram and three instanced oar banks. Existing placements and sea-level ownership remain in harbor.js/locations.js. Existing curved-quay geometry becomes an exposed stone retaining edge; added boarding details are short, and timber/masonry joints are visual line detail, not another ground layer. Terrain and Water sources remain unchanged.
+
+The single learning loop is 'Which ship feeds Athens?': physically inspect merchant cargo and trireme evidence, select the cargo ship, then explain the food-supply connection. Both inspections and the correct explanation are required; hints, retry, keyboard/E use, completion, reset/replay and return-to-exploring are included. Cargo sacks are an invented teaching example, not an ancient manifest. No runtime AI or external API is required.
+
+QuestManager retains sole ownership of objective/completion state. An activity lock suspends/restores the prior quest and queues delayed follow-ups; the existing tour pauses its stage progression. The domain model tracks evidence/choices, the existing interactor handles E/click/range, and the existing game loop updates the panel prompt. No second quest engine, input loop, terrain generator or save system is added.
+
+Status: the preceding harbour/scroll build passed35tests, production smoke, water, city walking, activity and boarding regressions. Clean final pier frame-pacing acceptance remains unresolved. The current city-structure pass passed38 Node tests, typecheck/build and six browser integration checks, plus normal-shader visuals. Native route measurements remain pressure-confounded; no steady-play claim. The final preview4177 was absent, so its current served hash is not verified. Read WORLD_BUILDING_PLAN.md for the evidence and blockers.
 
 ## 1. Project Summary
 This is a solo-built, AI-assisted web game titled **Athens Walkable World**. It is designed to explore city layout, walkability, and grounded architectural illusions in a stylized coastal environment inspired by ancient Athens. It uses a Three.js-based rendering engine, deployed on GitHub Pages, with all assets and content delivered through the `docs/` folder.
@@ -8,7 +27,7 @@ The goal is to create a **visually coherent, walkable city** with a mix of proce
 ## 2. Creator Profile
 **Name:** Daniel Maher  
 **Experience:** No formal coding skills. Relies on natural language prompts and guided AI support.  
-**Tools:** IT-managed Chromebook. Cannot run local dev servers or terminal commands. Prefers web-only deployment and usage.
+**Tools:** Acer Windows laptop with local development and preview. This is a personal hobby world with no mandatory student, classroom or school-device target. Older Chromebook/deployment instructions are historical.
 
 ## 3. AI Responsibilities
 Any AI assistant working on this project must:
@@ -28,9 +47,17 @@ Any AI assistant working on this project must:
 - The canonical TypeScript terrain validator is active. Invalid grids, submerged worlds, isolated land and flat inland terrain are checked; the new mainland profile passes and is stored on `terrain.userData.validation`.
 - Inland landforms use the existing terrain generator: corrected land smoothing, a gentle 10-metre inland rise and 28-metre distant ridge contribution. The old 220-metre rise is retired. Broad terraces support both inland temples; the Agora stays low, with smooth walking approaches.
 - The main temple anchor moves slightly inland to (-24, -8); the building remains offset to (-32, -28). Its approach, reserved precinct and quest collectible share the anchor and actual terrain height. The southern loop skirts the market frontages and temple instead of crossing them.
-- Protected waterfront vertices retain the preceding harbour profile byte for byte, checked against `verification/coast-profile.json`. Normal reflective Water, harbour layout and water traversal remain unchanged. The terrain grid is unchanged for performance.
+- Earlier waterfront vertices are recorded in `verification/coast-profile.json`; the later requested inlet correction deliberately replaces the local harbour profile and protects everything outside its explicit edit bounds. Normal reflective Water, harbour layout and water traversal remain unchanged. The terrain grid is unchanged for performance.
 - Collectible rewards are pass-through objects, excluded from static collision so collection leaves no invisible obstacle.
 - Authored neighbourhood plants and rewards remain. Legacy random vegetation/treasure scatter stays off until it can respect current street and building footprints; inland elevation must not activate obsolete scatter.
+
+### Harbour inlet and dry-shore correction (2026-10-27)
+- The owner reported a pool-shaped harbour and buildings standing in water. The existing terrain generator now blends a rounded inlet into the open sea through `harborCoast.js`, confined to x=0..130 and z=-140..160. `harbor-outside-profile.json` records the preceding build's 65,633 vertices outside that edit area, all preserved byte for byte. The older whole-terrain/coastal hashes remain historical records of the pre-inlet profile, not invariants for the requested reshaping.
+- The existing normal Water shader, exact terrain-triangle sampler, shoreline clipping and water collision policy are preserved. Only the local shore geometry/material assignment changes; no extra water/ground overlay is introduced. Dry reclaimed shoreline uses coastal ground material rather than the old underwater/grass material classification.
+- Corrected sea-level synchronization: harbour origin stays at sea plus harbour ground height, while water stays at sea. Dock sections apply this origin once, with deck tops at quay height; boats sit at sea height. Curved quays and grounded breakwaters replace the old unsupported straight seawall. Main/side piers extend from the bank; cargo stays out of the main walking lane.
+- `harborPlacement.js` samples complete rotated footprints before grounding warehouses, work areas, stalls, towers, the maritime stoa and the two waterside temples. Structures are preserved and moved to dry shore, with foundations where needed. Roofs/steps are included in the footprint checks. City lot exclusions reserve actual wet shore footprints without removing the surrounding neighbourhood network.
+- Amphora pickups follow the physical dock/boat/water surface after correcting the origin height. The city approach remains connected and the walking verification explicitly reaches the main pier, checks that the player stays above the water, returns, then visits the temple and all five neighbourhood rewards.
+- Separate concurrent performance edits are present in this checkout. Preserve them; the current preview is a combined local build. Do not represent those changes or this harbour work as published or merged.
 
 ### Ancient Athenian townspeople (2026-10-27)
 - The owner requested that townspeople visibly read as ancient Athenians. Continue the existing procedural NPC source in `src/world/npcs.js`; `src/characters/athenianDress.js` supplies cached, folded native 3D garments, not a second character loader.
@@ -49,7 +76,7 @@ Any AI assistant working on this project must:
 - Shared existing rough stone textures mark main routes and all six gathering courts; packed earth marks smaller lanes. Texture loading runs after the district exists and loads the two maps concurrently. Selection follows authored surface roles, not the city group's origin height or random grass assignment.
 - Vertex alpha feathers the outer 0.65 metres of streets and roughly one metre of courts into earth. Transparent paving does not write depth; fixed finish order paints earth lanes, then stone routes, then courts so turning the camera cannot swap finishes at crossings. Preserve court metadata outside generic building batching. The route centre lines, widths, destinations and buildings are unchanged.
 - City ground grain repeats every four metres rather than about 29 metres. Coastal and inland/underwater materials remain unchanged. No new image assets, terrain vertices, higher terrain resolution or extra ground-overlay system are introduced.
-- `verification/terrain-profile.json` preserves all 66,049 terrain vertices from the landform update, alongside the existing protected harbour hash. Browser checks require loaded textures, metre alignment, feathered alpha and all six courts.
+- `verification/terrain-profile.json` records the 66,049-vertex pre-inlet landform baseline. The later harbour correction uses `verification/harbor-outside-profile.json` to preserve every vertex outside its local edit area. Browser checks require loaded textures, metre alignment, feathered alpha and all six courts.
 
 ### City exploration pass (2026-10-25)
 - The surrounding city now has five connected destinations: Potters' Court west of the Agora, Olive Court to the north, Weavers' Yard to the southwest, North Garden beyond the residential streets, and Trading Court on the northern coastal side.

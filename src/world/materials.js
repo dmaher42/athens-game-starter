@@ -130,3 +130,17 @@ export function makeTreeMaterials() {
     bark: barkMaterial,
   };
 }
+
+// Shared restrained market timber; code-native texture, no extra plank geometry.
+let marketTimber;
+export function getMarketCounterMaterial(){
+ if(marketTimber)return marketTimber;
+ let map=null;if(typeof document!=='undefined'){
+  const c=document.createElement('canvas');c.width=128;c.height=64;const ctx=c.getContext('2d');
+  const pixels=ctx.createImageData(128,64);for(let y=0;y<64;y++)for(let x=0;x<128;x++){const i=(y*128+x)*4;
+   const grain=Math.round(Math.sin(y*2.1+Math.sin(x*.045)) *2+Math.sin(x*.2+y*9)*1.5);
+   const seam=(y%16===0)?-9:0;pixels.data.set([126+grain+seam,97+grain+seam,72+grain+seam,255],i);
+  }ctx.putImageData(pixels,0,0);map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;map.name='Quiet market timber grain';
+ }
+ marketTimber=new THREE.MeshStandardMaterial({name:'AgoraCounterTimber',color:0xffffff,map,roughness:1,metalness:0,envMapIntensity:.08});marketTimber.userData.materialType='marketTimber';return marketTimber;
+}

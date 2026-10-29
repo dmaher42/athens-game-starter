@@ -1,3 +1,12 @@
+import {foodSellerRoutine,tradingPorterRoutine,porterWorkLine} from '../world/marketLife.js';
+import { preloadPropylaea } from '../world/propylaeaIntegration.js';
+import {mountCourtyardHousehold} from '../world/courtyardHousehold.js';
+import {COURT_LIFE} from "../world/neighbourhoodLayout.js";
+import {mountTheatreRehearsal} from '../world/theatreRehearsal.js';
+import {createGreatTheatre} from '../world/greatTheatre.js';
+import {mountAgoraCommission} from '../world/agoraCommission.js';
+import {WORKSHOP_LIFE} from '../world/workshopLife.js';
+import { mountHarborActivity } from '../world/harborActivity.js';
 import * as THREE from "three";
 import { Soundscape } from "../audio/soundscape.js";
 import { createInteractor } from "../world/interactions.js";
@@ -8,6 +17,7 @@ import { createShorelineTermination } from "../world/shoreTermination.js";
 import { createOcean, updateOcean } from "../world/ocean.js";
 import { createWorldFloorCap, applyKillPlane } from "../world/worldBounds.js";
 import { createHarbor } from "../world/harbor.js";
+import { placeHarborOnLand } from "../world/harborPlacement.js";
 import { BackdropMountains } from "../world/backdrop/BackdropMountains.js";
 import { createShorelineDressing } from "../world/backdrop/ShorelineDressing.js";
 import { createMainHillRoad } from "../world/roads_hillcity.js";
@@ -54,7 +64,7 @@ import { QuestManager } from "../state/QuestManager.js";
 // === CODex: Aristotle PBR hook (non-breaking) ===
 import { attachAristotleMarblePBR } from "../features/aristotle-texture.js";
 import { applyGravelToRoads } from "../features/roads-gravel.js";
-import { buildTemple } from "../features/temples.js";
+import {createCityLandmarks} from "../world/cityLandmarks.js";
 import { AssetLoader } from "./AssetLoader.js";
 import { createRenderer, createSceneContext, WORLD_ROOT_NAME } from "./Scene.js";
 import { GameLoop } from "./GameLoop.js";
@@ -127,6 +137,11 @@ export class Application {
   lightingSystem: any;
   environmentManager: any;
   playerSystem: any;
+  harborActivity: any;
+  agoraCommission: any;
+  greatTheatre: any;
+  theatreRehearsal: any;
+  courtyardHousehold: any;
 
   constructor({
     baseUrl = DEFAULT_BASE_URL,
@@ -172,6 +187,8 @@ export class Application {
     this.lightingSystem = null;
     this.environmentManager = null;
     this.playerSystem = null;
+    this.harborActivity = null;
+    this.agoraCommission = null;
   }
 
   async run() {
@@ -215,6 +232,9 @@ export class Application {
     });
 
     this.renderer = createRenderer();
+    // Fetch optional gateway assets while the existing terrain/city initialize.
+    // Installation remains atomic and preserves the old gate on load failure.
+    void preloadPropylaea();
     const renderer = this.renderer;
 
     // Cap device pixel ratio more aggressively so the default build stays
@@ -555,23 +575,6 @@ export class Application {
 
       const landmarksEnabled = parseBooleanQuery("landmarks", true);
 
-      const placeLandmark = async (
-        sceneRef: THREE.Object3D,
-        terrainRef: any,
-        position: THREE.Vector3,
-        opts: any = {},
-      ) => {
-        const { rotationRad = 0, ...rest } = opts;
-        const temple = await buildTemple({ materialPreset: "marble", ...rest });
-        const height = terrainRef?.userData?.getHeightAt?.(position.x, position.z);
-        const authoredY = Number.isFinite(position?.y) ? position.y : 0;
-        const y = Number.isFinite(height) ? height : authoredY;
-        temple.position.set(position.x, y + 0.05, position.z);
-        if (rotationRad) temple.rotation.y = rotationRad;
-        sceneRef.add(temple);
-        return temple;
-      };
-
       const { group: roadGroup, curve: mainRoad } = createMainHillRoad(
         worldRoot,
         terrain,
@@ -616,66 +619,7 @@ export class Application {
 
       updateLoadingStatus("Raising temples, homes, and harbors...");
 
-      if (landmarksEnabled) {
-        await Promise.all([
-          placeLandmark(
-            worldRoot,
-            terrain,
-            HARBOR_CENTER_3D.clone().add(new THREE.Vector3(-18, 0, -56)),
-            {
-              width: 10,
-              depth: 18,
-              columnHeight: 5.5,
-              colX: 6,
-              colZ: 2,
-              materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(22),
-            },
-          ),
-          // Keep one smaller district temple away from the harbor/Agora skyline.
-          placeLandmark(
-            worldRoot,
-            terrain,
-            AGORA_CENTER_3D.clone().add(new THREE.Vector3(58, 0, 44)),
-            {
-              width: 8,
-              depth: 18,
-              colX: 5,
-              colZ: 2,
-              materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(-18),
-            },
-          ),
-          placeLandmark(
-            worldRoot,
-            terrain,
-            AGORA_CENTER_3D.clone().add(new THREE.Vector3(-34, 0, 29)),
-            {
-              width: 14,
-              depth: 22,
-              columnHeight: 6,
-              colX: 6,
-              colZ: 2,
-              materialPreset: "plaster",
-              rotationRad: THREE.MathUtils.degToRad(0),
-            },
-          ),
-          placeLandmark(
-            worldRoot,
-            terrain,
-            ACROPOLIS_PEAK_3D.clone().add(new THREE.Vector3(-8, 0, -20)),
-            {
-              width: 16,
-              depth: 26,
-              columnHeight: 9,
-              roofHeight: 2.7,
-              colX: 6,
-              colZ: 11,
-              rotationRad: 0,
-            },
-          ),
-        ]);
-      }
+      if (landmarksEnabled) await createCityLandmarks(worldRoot,{terrain});
 
       updateTerrainCoverageMask(terrain, {
         buildingPlacements: buildingPlacements ?? [],
@@ -714,6 +658,9 @@ export class Application {
         terrain,
       });
 
+      const greatTheatre=createGreatTheatre(worldRoot,{terrain});
+      this.greatTheatre=greatTheatre;
+
       // Streets and courts must exist before applying their shared textures.
       applyGravelToRoads({ scene }).catch(() => {});
 
@@ -731,26 +678,23 @@ export class Application {
       const collectibles = new CollectiblesManager(worldRoot, questManager);
 
       collectibles.onScoreChange = (score: number, total: number, type: string, typeScore: number) => {
-        // Quest 1: The Lost Scrolls
-        if (questManager.currentQuest?.title === "The Lost Scrolls" && type === 'wisdom_scroll') {
-          questManager.updateProgress(typeScore);
-          
-          // Trigger transition to next quest if just completed
-          if (questManager.currentQuest.status === 'Completed') {
+        const receivingQuest = questManager.activityId
+          ? questManager.queuedQuest || questManager.suspendedQuest
+          : questManager.currentQuest;
+        if (receivingQuest?.title === "The Lost Scrolls" && type === 'wisdom_scroll') {
+          const completed = questManager.recordProgress("The Lost Scrolls", typeScore);
+          if (completed) {
             setTimeout(() => {
               questManager.startQuest("The Forgotten Shipment", "Recover lost amphorae from the harbor", 5);
-              interactionHud.showAnnouncement("New Quest: The Forgotten Shipment", 0xffd700);
+              questManager.recordProgress("The Forgotten Shipment", collectibles.typeScores['amphora_rare'] || 0);
+              if (!questManager.activityId) interactionHud.showAnnouncement("New Quest: The Forgotten Shipment", 0xffd700);
             }, 3000);
           }
         }
-        
-        // Quest 2: The Forgotten Shipment
-        if (questManager.currentQuest?.title === "The Forgotten Shipment" && type === 'amphora_rare') {
-          // rare amphorae uses the collective typeScore for this type
-          questManager.updateProgress(typeScore);
+        if (receivingQuest?.title === "The Forgotten Shipment" && type === 'amphora_rare') {
+          questManager.recordProgress("The Forgotten Shipment", typeScore);
         }
       };
-
       const demoTour = createDemoTour(worldRoot, {
         terrain,
         questManager,
@@ -770,11 +714,13 @@ export class Application {
       const hX = HARBOR_CENTER_3D.x;
       const hY = HARBOR_CENTER_3D.y;
       const hZ = HARBOR_CENTER_3D.z;
-      collectibles.spawnAt(hX - 15, hY, hZ - 28, 'amphora_rare');
-      collectibles.spawnAt(hX - 65, hY, hZ - 5, 'amphora_rare');
-      collectibles.spawnAt(hX + 85, hY, hZ + 0, 'amphora_rare');
-      collectibles.spawnAt(hX + 32, hY, hZ + 10, 'amphora_rare');
-      collectibles.spawnAt(hX + 55, hY, hZ + 8, 'amphora_rare');
+      for (const [x,z] of [[hX-15,hZ-28],[hX-65,hZ-5],[hX+85,hZ],[hX+32,hZ+10],[hX+55,hZ+8]] as const) {
+        // Pickups follow the physical dock/boat/water surface, not the raised
+        // harbour origin; offshore amphorae must remain within pickup reach.
+        const ray = new THREE.Raycaster(new THREE.Vector3(x,resolvedSeaLevel+3.5,z),new THREE.Vector3(0,-1,0),0,30);
+        const hit = ray.intersectObject(envCollider.mesh)[0];
+        collectibles.spawnAt(x, hit?.point.y ?? hY, z, 'amphora_rare');
+      }
 
       // Keep rewards authored until random placement respects building footprints.
       // Raised inland ground must not activate unreachable legacy scatter.
@@ -791,7 +737,21 @@ export class Application {
       }
       const interactionHud = new InteractionHud();
 
-      let interactor: any = createInteractor(renderer, camera, scene);
+      let interactor: any = createInteractor(renderer, camera, scene, {
+        getPlayerPosition: () => playerSystem.player?.position,
+      });
+      const harborActivity = mountHarborActivity({
+        scene, harbor, questManager, interactor, player: playerSystem.player,
+        collider: envCollider, interactionHud, canvas: renderer.domElement,
+      });
+      this.harborActivity = harborActivity;
+      const agoraCommission=mountAgoraCommission({scene,civicDistrict,questManager,collectibles,interactor,player:playerSystem.player,canvas:renderer.domElement});
+      this.agoraCommission=agoraCommission;
+      const theatreRehearsal=mountTheatreRehearsal({scene,worldRoot,theatre:greatTheatre,questManager,interactor,player:playerSystem.player,camera,canvas:renderer.domElement});
+      this.theatreRehearsal=theatreRehearsal;
+      this.npcUpdaters.push(...theatreRehearsal.updaters);
+      const courtyardHousehold=mountCourtyardHousehold({scene,worldRoot,home:civicDistrict.courtyardHome,questManager,interactor,player:playerSystem.player,camera,canvas:renderer.domElement,terrain});
+      this.courtyardHousehold=courtyardHousehold;this.npcUpdaters.push(...courtyardHousehold.updaters);
 
       // Safe mode texture budgeting is intentionally disabled for normal gameplay.
 
@@ -841,44 +801,34 @@ export class Application {
         };
       };
 
+      const marketCanMove=(citizen:any)=>{const position=playerSystem.player?.position;return !!position&&!agoraCommission.panelOpen&&citizen.position.distanceToSquared(position)>2.6*2.6;};
       let proceduralCrowdSpawned = false;
       // Small local walks make the side courts inhabited even when the main
       // crowd uses downloaded character models. Reuse the cached NPC assets.
       const neighbourhoodRoles = ['artisan', 'citizen', 'artisan', 'priest', 'merchant'];
       civicDistrict.neighbourhoodLoops.forEach((path: any, index: number) => {
-        const crowd = spawnCitizenCrowd(worldRoot, path, {
-          count: 1, roles: [neighbourhoodRoles[index]], minSpeed: 0.5, maxSpeed: 0.8, terrain, camera,
+        const isHome=civicDistrict.group.userData['plan'].neighbourhoods[index]?.id==='olive';
+        const station=isHome?courtyardHousehold.host.position.toArray():civicDistrict.group.userData['plan'].neighbourhoods[index]?.craftStation;
+        const residentPath=station?new THREE.LineCurve3(new THREE.Vector3(...station),new THREE.Vector3(...station).add(new THREE.Vector3(0,0,.01))):path;
+        const crowd = spawnCitizenCrowd(worldRoot, residentPath, {
+          count: 1, roles: [neighbourhoodRoles[index]], minSpeed: 0.5, maxSpeed: 0.8, stationary:!!station,facingYaw:Math.PI,
+          ...(index===4?{routine:tradingPorterRoutine(),canMove:marketCanMove,onUse:(citizen:any)=>{citizen.userData.pauseRoutine?.(8);interactor.showDialogue(porterWorkLine(citizen.userData.npcRoutine));}}:{}),
+          ...(isHome ? courtyardHousehold.host : index===0 ? {...WORKSHOP_LIFE.potters,onUse:()=>agoraCommission.open('workshop')} : index===2 ? WORKSHOP_LIFE.weavers : (COURT_LIFE as Record<string, {label:string;dialogue:string}>)[civicDistrict.group.userData['plan'].neighbourhoods[index]?.id] ?? {}), terrain:isHome?courtyardHousehold.actorTerrain:terrain, camera,
         });
         this.npcUpdaters.push(...crowd.updaters);
       });
       const spawnProceduralCrowdFallback = () => {
         if (proceduralCrowdSpawned || !civicDistrict.walkingLoop) return;
         proceduralCrowdSpawned = true;
-        const loops = Array.isArray(civicDistrict.walkingLoops) && civicDistrict.walkingLoops.length > 0
-          ? civicDistrict.walkingLoops
-          : [civicDistrict.walkingLoop];
-        const loopCounts = [2, 1, 1];
-        const loopRoles = [
-          ["merchant", "scholar", "guard", "citizen"],
-          ["artisan", "citizen", "merchant"],
-          ["priest", "citizen", "dockworker"],
-        ];
-
-        loops.forEach((loop, index) => {
-          const crowd = spawnCitizenCrowd(worldRoot, loop, {
-            count: loopCounts[index] ?? 3,
-            minSpeed: 0.65 + index * 0.05,
-            maxSpeed: 1.25 + index * 0.05,
-            roles: loopRoles[index] ?? loopRoles[0],
-            terrain,
-            camera,
-          });
-          this.npcUpdaters.push(...crowd.updaters);
-        });
+        for(const place of civicDistrict.group.userData['plan'].agoraLife ?? []){
+ const pos=new THREE.Vector3(...place.station),path=new THREE.LineCurve3(pos,pos.clone().add(new THREE.Vector3(0,0,.01)));
+ const crowd=spawnCitizenCrowd(worldRoot,path,{count:1,roles:[place.role],stationary:true,facingYaw:place.facingYaw,label:place.label,dialogue:place.dialogue,onUse:(citizen:any)=>{citizen.userData.pauseRoutine?.(8);agoraCommission.open(place.kind==='food'?'food':place.kind==='pottery'?'potter':'speaker');},...(place.kind==='food'?{routine:foodSellerRoutine(place),canMove:marketCanMove}:{}),terrain,camera});this.npcUpdaters.push(...crowd.updaters);
+ }
+ const shopper=spawnCitizenCrowd(worldRoot,civicDistrict.walkingLoops[2] ?? civicDistrict.walkingLoop,{count:1,roles:['citizen'],minSpeed:.6,maxSpeed:.9,label:'Market visitor',onUse:()=>agoraCommission.open('visitor'),dialogue:'I came for bread and a new cup. Under the western stoa there is always news to hear.',terrain,camera});this.npcUpdaters.push(...shopper.updaters);
       };
 
       if (ENABLE_GLB_MODE) {
-        spawnGLBNPCs(worldRoot, mainRoad, {
+        spawnGLBNPCs(worldRoot, civicDistrict.walkingLoop, {
           terrain,
           roles: ["dockworker", "merchant", "guard", "citizen", "artisan", "dockworker"],
         })
@@ -966,6 +916,10 @@ export class Application {
         if (roadDustSystem) roadDustSystem.update(deltaTime);
 
         interactor.updateHover(deltaTime);
+        harborActivity?.update();
+        agoraCommission?.update();
+        theatreRehearsal?.update(deltaTime);
+        courtyardHousehold.update();
 
         const formattedTime = formatPhaseAsTime(lightingSystem.timeOfDayState.timeOfDayPhase);
         if (formattedTime !== lastDisplayedTime) {
@@ -1047,7 +1001,12 @@ export class Application {
                 status: currentQuest.status,
               }
             : null,
-          nearbyPrompt: interactionHud?.root?.textContent?.trim?.() || null,
+          activity: harborActivity?.snapshot() ?? null,
+          agoraCommission: agoraCommission?.snapshot() ?? null,
+          household:courtyardHousehold.snapshot(),
+          theatre:{location:[greatTheatre.layout.x,greatTheatre.base,greatTheatre.layout.z],entry:greatTheatre.points.entry.toArray(),rows:greatTheatre.layout.rows,rehearsal:theatreRehearsal.snapshot()},
+          collectibles: {score:collectibles.score,total:collectibles.total,typeScores:{...collectibles.typeScores}},
+            nearbyPrompt: interactionHud?.root?.textContent?.trim?.() || null,
           targets: landmarkTargets,
           performance: getPerformanceSnapshot(),
         };
@@ -1108,6 +1067,8 @@ export class Application {
         (window as any).SHOW_EXPOSURE = resolveFeatureToggle((engineConfig.debug?.overlays as any)?.exposureSlider);
         (window as any).SHOW_HOTKEYS = resolveFeatureToggle((engineConfig.debug?.overlays as any)?.hotkeyReference);
       }
+
+      UIManager.initWorldMap({ getPosition, getDirection });
 
       if (resolveFeatureToggle(devHudToggle) || resolveFeatureToggle(cameraHudToggle)) {
         UIManager.init({
@@ -1388,6 +1349,14 @@ export class Application {
   }
 
   cleanUp() {
+    this.courtyardHousehold?.dispose();
+    this.courtyardHousehold=null;
+    this.theatreRehearsal?.dispose();
+    this.theatreRehearsal=null;
+    this.agoraCommission?.dispose();
+    this.agoraCommission = null;
+    this.harborActivity?.dispose();
+    this.harborActivity = null;
     if (this.sceneContext) {
       disposeSkybox(this.sceneContext.scene);
       this.sceneContext.scene.traverse((object: any) => {
@@ -1424,3 +1393,4 @@ export class Application {
     }
   }
 }
+

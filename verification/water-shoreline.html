@@ -70,6 +70,39 @@ window.runShorelineCheck = () => {
   }
   }
   terrain.visible = true;
+  // Exercise the real Water callback in an auxiliary normal pass, then prove
+  // that the following visible render is pixel-identical and still reflective.
+  const originalRender = renderer.render;
+  let renderDepth = 0, nestedRenders = 0;
+  renderer.render = function (...args) {
+    if (renderDepth > 0) nestedRenders++;
+    renderDepth++;
+    try { return originalRender.apply(this, args); }
+    finally { renderDepth--; }
+  };
+  const normalMaterial = new THREE.MeshNormalMaterial();
+  let auxiliaryReflections, beautyReflections, beautyMismatches = 0;
+  const beautyPixels = new Uint8Array(pixels.length);
+  try {
+    renderer.setRenderTarget(target);
+    nestedRenders = 0;
+    renderer.render(scene, camera);
+    beautyReflections = nestedRenders;
+    renderer.readRenderTargetPixels(target, 0, 0, 128, 128, beautyPixels);
+    nestedRenders = 0;
+    scene.overrideMaterial = normalMaterial;
+    renderer.render(scene, camera);
+    auxiliaryReflections = nestedRenders;
+    scene.overrideMaterial = null;
+    renderer.render(scene, camera);
+    renderer.readRenderTargetPixels(target, 0, 0, 128, 128, pixels);
+    for (let i = 0; i < pixels.length; i++) if (pixels[i] !== beautyPixels[i]) beautyMismatches++;
+  } finally {
+    scene.overrideMaterial = null;
+    renderer.render = originalRender;
+    renderer.setRenderTarget(null);
+    normalMaterial.dispose();
+  }
   renderer.setClearColor(0xbad7ec, 1);
   renderer.render(scene, camera);
   const gl = renderer.getContext();
@@ -77,6 +110,7 @@ window.runShorelineCheck = () => {
   return {
     normalWater: water.isWater && water.material.isShaderMaterial && !water.userData.isAutomationFallback,
     waterTime: water.material.uniforms.time.value,
+    auxiliaryReflections, beautyReflections, beautyMismatches,
     sunLengthSq: water.material.uniforms.sunDirection.value.lengthSq(),
     shorelineCompiled: compiled.some(source => source.includes('float terrainVertexHeight') && source.includes('if (waterDepth <= 0.05)')),
     results,

@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { CITY_STREETS, NEIGHBOURHOOD_STREETS } from "../src/world/neighbourhoodLayout.js";
 import assert from "node:assert/strict";
 import { HARBOR_SETBACKS, HARBOR_WATER_BOUNDS } from "../src/world/locations.js";
 import { spawn } from "node:child_process";
@@ -198,6 +199,7 @@ async function runVerification() {
       }
 
       await page.waitForFunction(() => typeof window.render_game_to_text === "function");
+      await page.waitForFunction(() => Boolean(window.scene?.getObjectByName('AegeanOcean')?.material?.uniforms), null, {timeout:60000});
       await page.waitForFunction(() => {
         const civic = window.scene.getObjectByName('CivicDistrict');
         const surfaces = civic.children.filter(o => o.userData.groundSurface);
@@ -220,9 +222,20 @@ async function runVerification() {
           if (x >= 112 || (x >= 0 && z >= -80 && z <= 105)) protectedValues.push(x, z, vertices.getZ(i));
         }
         const digest = await crypto.subtle.digest('SHA-256', new Float32Array(protectedValues));
+        const outside = [];
+        for(let i=0;i<vertices.count;i++){const x=vertices.getX(i),z=-vertices.getY(i);if(!(x>0&&x<130&&Math.abs(z-10)<150))outside.push(x,z,vertices.getZ(i));}
+        const outsideDigest = await crypto.subtle.digest('SHA-256',new Float32Array(outside));
         const terrainDigest = await crypto.subtle.digest('SHA-256', new Float32Array(Array.from({length: vertices.count}, (_,i) => [vertices.getX(i), -vertices.getY(i), vertices.getZ(i)]).flat()));
         return {
+          outsideHarborProfile: Array.from(new Uint8Array(outsideDigest),v=>v.toString(16).padStart(2,'0')).join(''),
+          groundedHarbor: (()=>{const all=[];scene.getObjectByName('Harbor').traverse(o=>{const f=o.userData.groundFootprint;if(f){const heights=[];for(const dx of [-f.width/2,0,f.width/2])for(const dz of [-f.depth/2,0,f.depth/2])heights.push(terrain.userData.getHeightAt(f.x+dx,f.z+dz));all.push({name:o.name,building:o.userData.harborLandBuilding,dry:heights.every(h=>h>=ocean.userData.seaLevel+1)});}});return all;})(),
+          dockResources: (()=>{const maps=new Set(),geometries=new Set();scene.getObjectByName('Harbor').traverse(o=>{if(o.name==='HarborPierDeck'){maps.add(o.material.map?.uuid);geometries.add(o.geometry.uuid);}});return {maps:maps.size,geometries:geometries.size};})(),
+          harborDeckClearance: (()=>{const y=[];scene.getObjectByName('Harbor').traverse(o=>{if(o.name==='HarborPierDeck')y.push(new window.THREE.Box3().setFromObject(o).max.y-ocean.userData.seaLevel);});return y;})(),
+          landmarkDryFootprints: (()=>{const dry=[];scene.traverse(o=>{if(o.name.startsWith('ProceduralTemple_')){const b=new window.THREE.Box3().setFromObject(o);const heights=[];for(const x of [b.min.x,(b.min.x+b.max.x)/2,b.max.x])for(const z of [b.min.z,(b.min.z+b.max.z)/2,b.max.z])heights.push(terrain.userData.getHeightAt(x,z));dry.push({name:o.name,position:o.position.toArray(),heights,dry:heights.every(h=>h>ocean.userData.seaLevel+0.5)});}});return dry;})(),
+          bayTransects: [-100,-70,-40,10,50,80,110].map(z=>({z,dry:terrain.userData.getHeightAt(2,z)>ocean.userData.seaLevel,wet:terrain.userData.getHeightAt(140,z)<ocean.userData.seaLevel})),
           terrainProfile: Array.from(new Uint8Array(terrainDigest), v => v.toString(16).padStart(2, '0')).join(''),
+          waterHullCount: ocean.userData.shipWaterExclusions?.count ?? 0,
+          waterHullNames: ocean.userData.shipWaterExclusions?.hulls?.map(hull=>hull.name) ?? [],
           normalWater: !ocean.userData.isAutomationFallback && ocean.material.isShaderMaterial,
           terrainValidation: terrain.userData.validation,
           waterStillSolid: ocean.userData.noCollision !== true,
@@ -242,7 +255,7 @@ async function runVerification() {
           frontages: plan.frontages?.length ?? 0,
           neighbourhoods: plan.neighbourhoods,
           neighbourhoodStreetFrontages: plan.neighbourhoodStreetFrontages,
-          neighbourhoodStreets: civic.children.filter((object) => object.userData.streetId).length,
+          streetIds: civic.children.filter((object) => object.userData.streetId).map(object=>object.userData.streetId),
           onFoot: !JSON.parse(window.render_game_to_text()).player.flying,
           upwardRoads: civic.children.filter((object) => object.userData.roadType).every((object) => {
             const normal = object.geometry.attributes.normal;
@@ -295,11 +308,14 @@ async function runVerification() {
       assert.equal(harborLayout.normalWater, true, "Verify the production Water shader rather than simplified automation water.");
       assert.ok(harborLayout.heightErrors.every((error) => error !== null && error < 1e-6), "Ground placement must match the visible terrain triangles.");
       assert.equal(harborLayout.waterStillSolid, true, "Preserve existing water traversal pending a separate gameplay decision.");
-      const terrainBaseline = JSON.parse(await readFile(new URL('./terrain-profile.json', import.meta.url), 'utf8'));
-      assert.equal(harborLayout.terrainProfile, terrainBaseline.sha256, 'Preserve the complete new landform, including inland slopes and temple terraces.');
-      const coastalBaseline = JSON.parse(await readFile(new URL('./coast-profile.json', import.meta.url), 'utf8'));
-      assert.equal(harborLayout.protectedCoast, coastalBaseline.sha256, "Preserve every protected coastal/harbour terrain vertex.");
-      assert.equal(harborLayout.protectedVertices, coastalBaseline.vertices);
+      const outsideBaseline = JSON.parse(await readFile(new URL('./harbor-outside-profile.json', import.meta.url), 'utf8'));
+      assert.equal(harborLayout.outsideHarborProfile, outsideBaseline.sha256, 'Preserve every terrain vertex outside the explicitly redesigned harbour shoreline.');
+      assert.ok(harborLayout.groundedHarbor.length >= 16 && harborLayout.groundedHarbor.every(o=>o.dry), 'Every harbour land building and work area needs a fully dry footprint.');
+      assert.ok(harborLayout.groundedHarbor.filter(o=>o.building).length >= 3, 'Preserve and ground the two warehouses and maritime stoa.');
+      assert.deepEqual(harborLayout.dockResources,{maps:1,geometries:1},'Repeated dock sections must share geometry and the uploaded wood texture.');
+      assert.ok(harborLayout.harborDeckClearance.length >= 30 && harborLayout.harborDeckClearance.every(h=>Math.abs(h-2.2)<0.001), 'All docks must stand above the water at the common quay height.');
+      assert.ok(harborLayout.landmarkDryFootprints.length >= 4 && harborLayout.landmarkDryFootprints.every(o=>o.dry), 'Entire temple footprints must stay on dry ground: '+JSON.stringify(harborLayout.landmarkDryFootprints));
+      assert.ok(harborLayout.bayTransects.every(t=>t.dry&&t.wet), 'The inlet must remain attached to dry city ground and open sea.');
       assert.ok(harborLayout.landHeights[0] >= 1.8 && harborLayout.landHeights[0] <= 2.8, 'Keep the Agora low and walkable.');
       assert.ok(harborLayout.landHeights[1] >= 3 && harborLayout.landHeights[2] >= 3, 'Neighbourhoods must rise inland.');
       assert.ok(harborLayout.landHeights[3] > harborLayout.landHeights[0] + 3 && harborLayout.landHeights[3] < 10, 'Give the temple a modest supported hill.');
@@ -307,11 +323,15 @@ async function runVerification() {
       assert.ok(Math.max(...harborLayout.templeFootprint) - Math.min(...harborLayout.templeFootprint) < 0.25, 'Support the complete temple footprint on its terrace.');
       assert.equal(harborLayout.terrainValidation.valid, true, 'The mainland profile must pass the real terrain checks.');
       assert.deepEqual(harborLayout.terrainValidation.failures, []);
+      assert.equal(harborLayout.waterHullCount, 2, 'The production boot must register both boardable ship waterlines.');
+      assert.deepEqual([...harborLayout.waterHullNames].sort(), ['HarborHeroShip','HarborTrireme']);
       assert.equal(harborLayout.onFoot, true, "Begin the exploration walk on foot.");
       assert.equal(harborLayout.frontages, 5, "Frame the Agora with the authored shopfronts.");
       assert.equal(harborLayout.neighbourhoods.length, 5, "Render all five exploration destinations.");
       assert.ok(harborLayout.neighbourhoodStreetFrontages >= 12, "Join the destinations with inhabited streets.");
-      assert.equal(harborLayout.neighbourhoodStreets, 7, "Connect the neighbourhoods through the existing street renderer.");
+      assert.equal(harborLayout.streetIds.filter(id=>NEIGHBOURHOOD_STREETS.some(street=>street.id===id)).length, 7, "Connect all seven neighbourhood links through the existing street renderer.");
+      assert.equal(harborLayout.streetIds.length,19,"Render the nineteen established streets once each.");
+      assert.deepEqual([...harborLayout.streetIds].sort(),CITY_STREETS.map(street=>street.id).sort(),"Rendered street IDs must exactly match the single authored network.");
       assert.ok(harborLayout.neighbourhoods.every((place) => place.frontages >= 2 && Number.isFinite(place.reward.y)), "Each destination needs buildings, open entrances and a grounded reward.");
         assert.equal(harborLayout.upwardRoads, true, "Road surfaces must remain visible with the normal gravel material.");
       assert.deepEqual(harborLayout.court, { west: -52, east: -8, south: 6, north: 34 });
@@ -321,7 +341,7 @@ async function runVerification() {
       assert.ok(harborLayout.cityHeights.every((height) => height >= harborLayout.seaLevel - 0.05), "Preserve dry city ground north and south of the harbor.");
       assert.ok(harborLayout.dryLots.some((cell) => cell.z > 116.8), "Check north-side city lots.");
       assert.ok(harborLayout.dryLots.some((cell) => cell.z < -76.8), "Check south-side city lots.");
-      assert.deepEqual(harborLayout.dryLots.filter((cell) => cell.blocked && cell.reservation !== 'neighbourhood'), [], "Water rendering bounds must not block surrounding dry city lots; authored court reservations are intentional.");
+      assert.deepEqual(harborLayout.dryLots.filter((cell) => cell.blocked && cell.reservation !== 'neighbourhood' && cell.reservation !== 'harbour-shore'), [], "Water rendering bounds must not block surrounding dry city lots; authored court reservations are intentional.");
       assert.equal(harborLayout.groundSurfaces.filter(o => o.kind === 'court').length, 6, 'Preserve Agora and five terrain-following neighbourhood courts.');
       assert.ok(harborLayout.groundSurfaces.every(o => o.stableOrder && o.metreScaled && o.texture && o.transparent && !o.depthWrite && o.vertexColors && o.alphaRange[0] === 0 && o.alphaRange[1] === 1), 'Every street/court needs metre-scaled texture and feathered edges without depth-writing seams.');
       assert.ok(harborLayout.roadMeshes > 0, "Preserve main's continuous streets.");
@@ -354,3 +374,4 @@ runVerification().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });
+
