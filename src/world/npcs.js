@@ -1188,3 +1188,20 @@ export async function spawnGLBNPCs(scene, pathCurve, options = {}) {
 }
 
 export default spawnCitizenCrowd;
+
+// Named portrait variation of the existing native citizen pipeline, not another loader.
+export function createSocratesModel(){
+ const m=createCitizenModel(ROLE_PROFILES.scholar,()=>.5),g=m.group;g.name='Socrates';m.lowGroup.removeFromParent();m.accessory?.removeFromParent();
+ g.scale.setScalar(.88);g.userData={noCollision:true,noCull:true,npcRole:'philosopher',npcLabel:'Socrates',characterStyle:'socrates-native-v1'};
+ const hair=new THREE.MeshStandardMaterial({color:0x8e8980,roughness:1}),cloth=new THREE.MeshStandardMaterial({color:0x958a73,roughness:1,vertexColors:true});
+ for(const o of [...m.head.children])if(o.name==='CitizenHair'||o.geometry===CITIZEN_BEARD_GEOMETRY)o.removeFromParent();
+ m.highGroup.traverse(o=>{if(!o.isMesh)return;if(o.name==='AthenianHimation'||o.name.startsWith('Athenian-chiton'))o.material=cloth;o.castShadow=false;o.userData.noCollision=true;});
+ const skin=m.body.material,curl=new THREE.SphereGeometry(.046,7,5);
+ for(let j=0;j<17;j++){const a=.48+j/16*(Math.PI*2-.96),o=new THREE.Mesh(curl,hair);o.position.set(Math.sin(a)*.205,.035,Math.cos(a)*.205);m.head.add(o);}
+ const beard=new THREE.Mesh(new THREE.LatheGeometry([new THREE.Vector2(0,-.34),new THREE.Vector2(.09,-.30),new THREE.Vector2(.155,-.15),new THREE.Vector2(.17,-.08),new THREE.Vector2(.10,-.03)],12),hair);beard.position.z=.10;beard.scale.z=.72;m.head.add(beard);
+ for(let j=0;j<9;j++){const a=j/8*Math.PI,o=new THREE.Mesh(curl,hair);o.position.set(Math.cos(a)*.12,-.15-(j%3)*.035,.17+Math.sin(a)*.045);m.head.add(o);}
+ const nose=new THREE.Mesh(new THREE.SphereGeometry(.065,10,7),skin);nose.scale.set(1.15,.75,1);nose.position.set(0,-.025,.225);m.head.add(nose);
+ for(const side of [-1,1]){const brow=new THREE.Mesh(new THREE.CapsuleGeometry(.018,.07,3,6),hair);brow.rotation.z=side*1.3;brow.position.set(side*.082,.061,.20);m.head.add(brow);}
+ m.head.scale.set(1.08,1,1.04);m.rightArm.rotation.set(-.55,0,-.58);m.leftArm.rotation.z=.18;
+ let meshes=0,triangles=0;g.traverse(o=>{if(o.isMesh){o.userData.noCollision=true;o.castShadow=false;o.receiveShadow=true;meshes++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;}});g.userData.assetBudget={meshes,triangles,newUpdates:0};return g;
+}

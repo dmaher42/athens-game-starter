@@ -452,7 +452,7 @@ export function homeCourtFrontage(place,f){if(place.id!=='olive')return f;if(Mat
 // activity frontages are separate owners and never enter this policy.
 // Retired lots remain recoverable in the source checkpoint/manifest; save IDs
 // and the grid's logical path coordinates are unchanged.
-export const CITY_INFILL_CONSOLIDATION={maxStreetDistance:38,moves:[
+export const CITY_INFILL_CONSOLIDATION={maxStreetDistance:38,excessLots:['-2:0'],moves:[
   {
     "id": "-6:1",
     "x": -133.64531682509926,
@@ -488,7 +488,7 @@ export function cityInfillDecision(cell){
  const distance=Math.min(...infillStreetSamples.map(p=>Math.hypot(p.x-cell.position.x,p.z-cell.position.z)));
  const move=CITY_INFILL_CONSOLIDATION.moves.find(p=>p.id===id);
  const protectedLot=WORKSHOP_CONNECTOR.lots.some(p=>p.gridX===cell.gridX&&p.gridZ===cell.gridZ);
- return {id,distance,retire:!protectedLot&&!move&&cell.district!=='civic'&&cell.district!=='sacred'&&cell.district!=='harbor'&&distance>CITY_INFILL_CONSOLIDATION.maxStreetDistance,move:move??null};
+ return {id,distance,retire:!protectedLot&&!move&&(CITY_INFILL_CONSOLIDATION.excessLots.includes(id)||cell.district!=='civic'&&cell.district!=='sacred'&&cell.district!=='harbor'&&distance>CITY_INFILL_CONSOLIDATION.maxStreetDistance),move:move??null};
 }
 
 // Practical court-edge pockets, clear of fountains, gates and through streets.

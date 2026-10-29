@@ -1,3 +1,4 @@
+import {createPrecinctLife} from './precinctLife.js';
 import {installPropylaea} from './propylaeaIntegration.js';
 import {createHellenisticSanctuary} from './hellenisticSanctuary.js';
 import * as THREE from 'three';
@@ -12,7 +13,8 @@ function masonryUV(geometry,offset={x:0,y:0,z:0}){
  for(let i=0;i<p.count;i++){const x=p.getX(i)+offset.x,y=p.getY(i)+offset.y,z=p.getZ(i)+offset.z;
   const nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i)),nz=Math.abs(n.getZ(i));
   uv.setXY(i,(ny>nx&&ny>nz?x:nx>nz?z:x)/6.4,(ny>nx&&ny>nz?z:y)/2.4);
- }uv.needsUpdate=true;return geometry;
+ }uv.needsUpdate=true;
+ const colors=[];for(let i=0;i<p.count;i++){const x=p.getX(i)+offset.x,y=p.getY(i)+offset.y,z=p.getZ(i)+offset.z;const tone=.92+.055*Math.sin(x*.065+z*.11)+.025*Math.min(1,Math.max(0,y/14));colors.push(tone,tone,tone*.99);}geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));return geometry;
 }
 function masonryMaterial(){
  let map=null;
@@ -23,7 +25,7 @@ function masonryMaterial(){
   const data=ctx.getImageData(0,0,512,256);for(let i=0;i<data.data.length;i+=4){const grain=((i*13>>>2)%7)-3;for(let k=0;k<3;k++)data.data[i+k]+=grain;}ctx.putImageData(data,0,0);
   map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;map.wrapS=map.wrapT=THREE.RepeatWrapping;map.name='Acropolis masonry courses';
  }
- return new THREE.MeshStandardMaterial({name:'Acropolis retaining masonry',color:0xd3d0c5,map,roughness:1,metalness:0,envMapIntensity:.06});
+ return new THREE.MeshStandardMaterial({name:'Acropolis retaining masonry',color:0xd3d0c5,map,vertexColors:true,roughness:1,metalness:0,envMapIntensity:.06});
 }
 export async function createAcropolisPrecinct(parent,{terrain,seaLevel}){
  const root=new THREE.Group();root.name='AcropolisPrecinct';root.userData.acropolis=true;parent.add(root);
@@ -68,6 +70,7 @@ export async function createAcropolisPrecinct(parent,{terrain,seaLevel}){
  const label=createLabelSprite('ACROPOLIS  /  PARTHENON',0xb7b0a0,{x:5.6,y:1});label.position.y=2;cue.add(label);cue.traverse(o=>{o.userData.noCollision=true;o.userData.noCull=true;});root.add(cue);
  const gatewayFallback=new THREE.Group();gatewayFallback.name='GatewayProceduralFallback';for(const child of [...gate.children])gatewayFallback.add(child);gate.add(gatewayFallback);
  createHellenisticSanctuary(root,{terrain,seaLevel});
+ createPrecinctLife(root,{scene,terrain});
  root.userData.period=ACROPOLIS.period;
  await installPropylaea(gate,{terrain,seaLevel,foundationMaterial:retaining.material});
  root.userData.layoutOwner='acropolisLayout.js';root.userData.gateClearWidth=9.5;

@@ -1,3 +1,4 @@
+import {mountSocratesEncounter} from '../world/socratesEncounter.js';
 import {foodSellerRoutine,tradingPorterRoutine,porterWorkLine} from '../world/marketLife.js';
 import { preloadPropylaea } from '../world/propylaeaIntegration.js';
 import {mountCourtyardHousehold} from '../world/courtyardHousehold.js';
@@ -139,6 +140,7 @@ export class Application {
   playerSystem: any;
   harborActivity: any;
   agoraCommission: any;
+  socratesEncounter: any;
   greatTheatre: any;
   theatreRehearsal: any;
   courtyardHousehold: any;
@@ -189,6 +191,7 @@ export class Application {
     this.playerSystem = null;
     this.harborActivity = null;
     this.agoraCommission = null;
+    this.socratesEncounter = null;
   }
 
   async run() {
@@ -747,6 +750,8 @@ export class Application {
       this.harborActivity = harborActivity;
       const agoraCommission=mountAgoraCommission({scene,civicDistrict,questManager,collectibles,interactor,player:playerSystem.player,canvas:renderer.domElement});
       this.agoraCommission=agoraCommission;
+      const socratesEncounter=mountSocratesEncounter({scene,terrain,questManager,interactor,player:playerSystem.player,canvas:renderer.domElement});
+      this.socratesEncounter=socratesEncounter;
       const theatreRehearsal=mountTheatreRehearsal({scene,worldRoot,theatre:greatTheatre,questManager,interactor,player:playerSystem.player,camera,canvas:renderer.domElement});
       this.theatreRehearsal=theatreRehearsal;
       this.npcUpdaters.push(...theatreRehearsal.updaters);
@@ -918,6 +923,7 @@ export class Application {
         interactor.updateHover(deltaTime);
         harborActivity?.update();
         agoraCommission?.update();
+        socratesEncounter.update();
         theatreRehearsal?.update(deltaTime);
         courtyardHousehold.update();
 
@@ -1003,6 +1009,7 @@ export class Application {
             : null,
           activity: harborActivity?.snapshot() ?? null,
           agoraCommission: agoraCommission?.snapshot() ?? null,
+          socrates:socratesEncounter.snapshot(),
           household:courtyardHousehold.snapshot(),
           theatre:{location:[greatTheatre.layout.x,greatTheatre.base,greatTheatre.layout.z],entry:greatTheatre.points.entry.toArray(),rows:greatTheatre.layout.rows,rehearsal:theatreRehearsal.snapshot()},
           collectibles: {score:collectibles.score,total:collectibles.total,typeScores:{...collectibles.typeScores}},
@@ -1353,6 +1360,8 @@ export class Application {
     this.courtyardHousehold=null;
     this.theatreRehearsal?.dispose();
     this.theatreRehearsal=null;
+    this.socratesEncounter?.dispose();
+    this.socratesEncounter=null;
     this.agoraCommission?.dispose();
     this.agoraCommission = null;
     this.harborActivity?.dispose();
