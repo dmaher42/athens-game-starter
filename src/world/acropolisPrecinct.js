@@ -50,11 +50,11 @@ export async function createAcropolisPrecinct(parent,{terrain,seaLevel}){
  // The coarse terrain cell beside the old promenade remains unchanged. This
  // solid retained sanctuary terrace is architectural support, not a second
  // terrain mesh or a competing height sampler.
- const terraceBottom=Math.min(sample(-69,-13),sample(-24,-13),sample(-69,2),sample(-24,2))-1;
+ const terraceBottom=Math.min(sample(-159,-13),sample(-114,-13),sample(-159,2),sample(-114,2))-1;
  const terraceTop=seaLevel+ACROPOLIS.heightAboveSea;
  const terrace=new THREE.Mesh(new THREE.BoxGeometry(47,terraceTop-terraceBottom,17),retaining.material);
- masonryUV(terrace.geometry,{x:-46.5,y:(terraceTop+terraceBottom)/2,z:-5.5});
- terrace.name='NorthSanctuaryTerrace';terrace.position.set(-46.5,(terraceTop+terraceBottom)/2,-5.5);terrace.receiveShadow=true;terrace.userData.groundSurface='building';root.add(terrace);
+ masonryUV(terrace.geometry,{x:-136.5,y:(terraceTop+terraceBottom)/2,z:-5.5});
+ terrace.name='NorthSanctuaryTerrace';terrace.position.set(-136.5,(terraceTop+terraceBottom)/2,-5.5);terrace.receiveShadow=true;terrace.userData.groundSurface='building';root.add(terrace);
  const gate=new THREE.Group();gate.name='AcropolisWestGateway';gate.userData.assetSlot={...ACROPOLIS.gatewayAsset};gate.position.set(ACROPOLIS.gate.x,sample(ACROPOLIS.gate.x,ACROPOLIS.gate.z),ACROPOLIS.gate.z);root.add(gate);
  const columnGeometry=makeParthenonColumnGeometry(5.8),columns=new THREE.InstancedMesh(columnGeometry,getParthenonStone(),4),dummy=new THREE.Object3D(),footings=[];let index=0;
  for(const x of[-2,2])for(const z of[-5.5,5.5]){dummy.position.set(x,0,z);dummy.updateMatrix();columns.setMatrixAt(index++,dummy.matrix);const drop=gate.position.y-sample(gate.position.x+x,gate.position.z+z);if(drop>.03){const g=new THREE.BoxGeometry(1.8,drop+.15,1.8);g.translate(x,-(drop+.15)/2+.05,z);footings.push(g);}}columns.instanceMatrix.needsUpdate=true;columns.castShadow=true;columns.receiveShadow=true;columns.name='GatewayDoricColumns';gate.add(columns);
@@ -63,7 +63,7 @@ export async function createAcropolisPrecinct(parent,{terrain,seaLevel}){
  const triangle=new THREE.Shape();triangle.moveTo(-6.8,0);triangle.lineTo(0,1.35);triangle.lineTo(6.8,0);triangle.closePath();
  const roofGeometry=new THREE.ExtrudeGeometry(triangle,{depth:5.6,bevelEnabled:false,steps:1});roofGeometry.translate(0,0,-2.8);roofGeometry.rotateY(Math.PI/2);
  const roof=new THREE.Mesh(roofGeometry,getParthenonStone());roof.name='AcropolisGatewayPediment';roof.position.y=6.43;roof.castShadow=true;roof.receiveShadow=true;gate.add(roof);
- const cue=new THREE.Group();cue.name='AgoraAcropolisDirection';cue.position.set(-66,sample(-66,18),18);cue.userData.noCollision=true;
+ const cue=new THREE.Group();cue.name='AgoraAcropolisDirection';cue.position.set(-120,sample(-120,18),18);cue.userData.noCollision=true;
  const post=new THREE.Mesh(new THREE.BoxGeometry(.13,1.8,.13),new THREE.MeshStandardMaterial({color:0x625546,roughness:1}));post.position.y=.9;cue.add(post);
  const label=createLabelSprite('ACROPOLIS  /  PARTHENON',0xb7b0a0,{x:5.6,y:1});label.position.y=2;cue.add(label);cue.traverse(o=>{o.userData.noCollision=true;o.userData.noCull=true;});root.add(cue);
  const gatewayFallback=new THREE.Group();gatewayFallback.name='GatewayProceduralFallback';for(const child of [...gate.children])gatewayFallback.add(child);gate.add(gatewayFallback);

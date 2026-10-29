@@ -1,3 +1,4 @@
+import {theatreReserved,GREAT_THEATRE} from '../src/world/greatTheatreLayout.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -11,10 +12,10 @@ import {PlayerController} from '../src/controls/PlayerController.js';
 
 test('sanctuary layout preserves identities and one shared food frontage',()=>{
  assert.equal(CITY_STREETS.length,19);assert.equal(new Set(CITY_STREETS.map(s=>s.id)).size,19);assert.equal(NEIGHBOURHOOD_STREETS.length,7);
- assert.equal(ACROPOLIS.id,'sacred-temple');assert.deepEqual(ACROPOLIS.visit,[-24,-16.8]);
+ assert.equal(ACROPOLIS.id,'sacred-temple');assert.deepEqual(ACROPOLIS.bounds,{west:-160,east:0,south:-105,north:-15});assert.equal(CITY_STREETS.find(s=>s.id==='sacred-way').points,ACROPOLIS.sacredWay);assert.deepEqual(ACROPOLIS.visit,[-29,-50.8]);
  assert.deepEqual(ACROPOLIS.temple,{width:20,depth:45,columnHeight:10.2,rotation:Math.PI/2,colX:8,colZ:17});
  assert.equal(AGORA_LIFE_POCKETS.find(p=>p.kind==='food').frontage,4);assert.deepEqual([AGORA_FRONTAGES[4].x,AGORA_FRONTAGES[4].z],[-11,3]);
- for(const[x,z]of[[-35,-6],[-76,-40],[-81.4,-25],[-94,-25]])assert.ok(isAcropolisReserved(x,z));
+ for(const[x,z]of[[-125,-6],[-166,-40],[-171.4,-25],[-184,-25]])assert.ok(isAcropolisReserved(x,z));
 });
 
 test('supplied Blender files retain their checked source hashes',()=>{
@@ -36,3 +37,5 @@ test('gateway collision proxy supports the actual controller in both directions'
   input.forward=false;for(let i=0;i<14;i++)player.update(1/60);assert.equal(player.grounded,true,'Lost gateway support at '+x);
  }
 });
+
+test('theatre approach reserves intermediate lots without taking harbour space',()=>{assert.ok(theatreReserved(-70,-137));assert.ok(theatreReserved(-140,-123));assert.equal(theatreReserved(95,-38),false);assert.ok(GREAT_THEATRE.z+GREAT_THEATRE.outerRadius<ACROPOLIS.bounds.south-10);});

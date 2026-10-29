@@ -31,7 +31,7 @@ export async function installPropylaea(gate,{terrain,seaLevel,foundationMaterial
   const shape=new THREE.Shape();shape.moveTo(start,datum-.25);shape.lineTo(end,datum-.25);shape.lineTo(end,top);shape.lineTo(start,datum);shape.closePath();
   const geometry=new THREE.ExtrudeGeometry(shape,{depth:3.2,steps:1,bevelEnabled:false});geometry.translate(0,0,-26.6);
   const ramp=new THREE.Mesh(geometry,foundationMaterial);ramp.name='FallbackGatewayRamp';ramp.receiveShadow=true;ramp.userData.groundSurface='building';route.add(ramp);
-  const landing=new THREE.Mesh(new THREE.BoxGeometry(-67.8-end,.25,3.2),foundationMaterial);landing.name='FallbackGatewayLanding';landing.position.set((end-67.8)/2,top-.125,-25);landing.receiveShadow=true;landing.userData.groundSurface='building';route.add(landing);
+  const landing=new THREE.Mesh(new THREE.BoxGeometry(ACROPOLIS.gate.x+2.2-end,.25,3.2),foundationMaterial);landing.name='FallbackGatewayLanding';landing.position.set((end+ACROPOLIS.gate.x+2.2)/2,top-.125,-25);landing.receiveShadow=true;landing.userData.groundSurface='building';route.add(landing);
  }
  let timer;
  try{

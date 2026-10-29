@@ -8,18 +8,18 @@ import {createLabelSprite} from './demoTour.js';
 // Local architecture only. Terrain, state, input and asset loading keep their
 // established owners. Blender replacements attach at these named site roots.
 export function createHellenisticSanctuary(parent,{terrain,seaLevel}){
- const root=new THREE.Group();root.name='HellenisticSanctuary';parent.add(root);
+ const root=new THREE.Group();root.name='HellenisticSanctuary';root.position.x=ACROPOLIS.sanctuaryOffsetX??0;parent.add(root);
  const stone=getParthenonStone(),roofMaterial=stone.clone();roofMaterial.color.setHex(0xc5c5bb);
  const bronze=new THREE.MeshStandardMaterial({color:0x52635b,roughness:.8,metalness:.28,envMapIntensity:.12});
  const blue=new THREE.MeshStandardMaterial({color:0x455563,roughness:.95});
  const y=seaLevel+ACROPOLIS.heightAboveSea;
  let scene=parent;while(scene.parent)scene=scene.parent;
- const sample=(x,z)=>terrain.userData.getHeightAt(x,z);
+ const sample=(x,z)=>terrain.userData.getHeightAt(x+root.position.x,z);
  function box(p,name,w,h,d,x,py,z,material=stone,decorative=false){
   const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.name=name;o.position.set(x,py,z);o.castShadow=!decorative;o.receiveShadow=true;
   if(decorative)o.userData.noCollision=true;p.add(o);return o;
  }
- function site(name,x,z){const g=new THREE.Group();g.name=name;g.position.set(x,y+.03,z);g.userData.assetAttachment=true;root.add(g);return g;}
+ function site(name,x,z){const g=new THREE.Group();g.name=name;g.position.set(x-root.position.x,y+.03,z);g.userData.assetAttachment=true;root.add(g);return g;}
  // A narrow retained western ambulatory links gateway arrival and Nike. Its
  // support belongs to the same architectural/collision root as the sanctuary.
  const westBottom=Math.min(sample(-69.5,-25),sample(-69.5,-38),sample(-66.9,-38))-.3;
@@ -30,7 +30,7 @@ export function createHellenisticSanctuary(parent,{terrain,seaLevel}){
  const northLink=new THREE.Mesh(northGeometry,stone);northLink.name='GatewayToNorthPromenade';northLink.position.x=-66.4;northLink.receiveShadow=true;northLink.userData.groundSurface='building';root.add(northLink);
  const nikeBottom=Math.min(sample(-72.5,-38),sample(-72.5,-34))-.3;
  const nikeCourt=box(root,'NikeArrivalCourt',5.6,y-nikeBottom,5,-69.7,(y+nikeBottom)/2,-35.5);nikeCourt.userData.groundSurface='building';
- const g=ACROPOLIS.gatewayAsset,startX=-88,endX=g.originX-2.4*g.scale,startHeight=sample(startX,-25)+.015,endHeight=y-g.exitRise;
+ const g=ACROPOLIS.gatewayAsset,startX=-88,endX=g.originX-root.position.x-2.4*g.scale,startHeight=sample(startX,-25)+.015,endHeight=y-g.exitRise;
  const bridgeBottom=Math.min(startHeight,endHeight,sample((startX+endX)/2,-25))-.3;
  const bridgeShape=new THREE.Shape();bridgeShape.moveTo(startX,bridgeBottom);bridgeShape.lineTo(endX,bridgeBottom);bridgeShape.lineTo(endX,endHeight);bridgeShape.lineTo(startX,startHeight);bridgeShape.closePath();
  const bridgeGeometry=new THREE.ExtrudeGeometry(bridgeShape,{depth:3.2,steps:1,bevelEnabled:false});bridgeGeometry.translate(0,0,-26.6);

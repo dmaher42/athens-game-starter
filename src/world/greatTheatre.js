@@ -65,7 +65,7 @@ export function createGreatTheatre(parent,{terrain}={}){
   return[point.clone().add(side),point.clone().sub(side)].map(p=>new THREE.Vector3(p.x-PLAN.x,approachHeight(p)-base,p.z-PLAN.z));
  });
  for(let i=0;i<edges.length-1;i++){const[A,B]=edges[i],[D,C]=edges[i+1];for(const p of[A,D,C,A,C,B])vertices.push(p.x,p.y,p.z);}
- const pathGeometry=new THREE.BufferGeometry();pathGeometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));pathGeometry.computeVertexNormals();add(pathGeometry,'warm','TheatreApproach');
+ const pathGeometry=new THREE.BufferGeometry();pathGeometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));pathGeometry.computeVertexNormals();add(pathGeometry,'earth','TheatreApproach');
  // One immutable material batch per stone/timber family; source collision
  // triangles are kept separately as the authoring shapes, never re-sampled.
  for(const[k,meshes]of parts){if(meshes.length<2)continue;const geos=meshes.map(m=>m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone()),merged=mergeGeometries(geos.map(g=>{g.deleteAttribute('uv');return g;}),false);for(const g of geos)g.dispose();if(!merged)continue;const render=new THREE.Mesh(merged,mats[k]);render.name='TheatreRender_'+k;render.receiveShadow=true;render.userData.noCollision=true;render.userData.noCull=true;root.add(render);for(const m of meshes)m.layers.mask=0;}

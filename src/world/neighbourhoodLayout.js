@@ -5,7 +5,7 @@ import { CatmullRomCurve3, Vector3 } from 'three';
 export const NEIGHBOURHOODS = [
   { id: 'potters', label: "Potters' Court", x: -108, z: 42, kind: 'pottery', width: 26, depth: 22, color: 0xc79668 },
   { id: 'olive', label: 'Olive Court', x: -80, z: 126, kind: 'residential', width: 28, depth: 24, color: 0xc5ba94 },
-  { id: 'weavers', label: "Weavers' Yard", x: -102, z: -78, kind: 'weaving', width: 28, depth: 22, color: 0xc2a383 },
+  { id: 'weavers', label: "Weavers' Yard", x: -180, z: -78, kind: 'weaving', width: 28, depth: 22, color: 0xc2a383 },
   { id: 'garden', label: 'North Garden', x: -85, z: 250, kind: 'garden', width: 30, depth: 26, color: 0xb8b49a },
   { id: 'traders', label: 'Trading Court', x: 60, z: 146, kind: 'trade', width: 28, depth: 24, color: 0xc8b18c },
 ];
@@ -30,8 +30,8 @@ export const NEIGHBOURHOOD_STREETS = [
   { id: 'garden-traders', points: [[-85, 250], [-12, 252], [50, 210], [60, 146]] },
   { id: 'traders-city', points: [[60, 146], [40, 126], [20, 105]] },
   { id: 'olive-traders', points: [[-80, 126], [-36, 100], [-8, 116], [20, 130], [60, 146]] },
-  { id: 'weavers-city', points: [[-45, -60], [-64, -80], [-102, -78]] },
-  { id: 'weavers-potters', points: [[-102, -78], [-136, -30], [-124, 15], [-108, 42]] },
+  { id: 'weavers-city', points: [[-170,8],[-184,-8],[-184,-55],[-180,-78]] },
+  { id: 'weavers-potters', points: [[-180,-78],[-194,-30],[-170,15],[-108,42]] },
 ];
 
 // Shared city structure: these are the existing nineteen streets, not another
@@ -244,28 +244,7 @@ const CITY_SIDE_STREETS = [
     "endWidth": 5,
     "role": "harbour",
     "type": "street",
-    "points": [
-      [
-        10,
-        -18
-      ],
-      [
-        10,
-        -42
-      ],
-      [
-        4,
-        -54
-      ],
-      [
-        -24,
-        -56
-      ],
-      [
-        -45,
-        -60
-      ]
-    ]
+    "points": [[10,-18],[10,-60],[8,-116],[-55,-130]]
   },
   {
     "id": "potters-back-lane",
