@@ -1,10 +1,12 @@
+import {installSocratesVisual} from './socratesVisual.js';
 import * as THREE from 'three';
 import {createSocratesModel} from './npcs.js';
 import {createLabelSprite} from './demoTour.js';
 import '../ui/harborActivity.css';
 const ID='socrates-lost-purse';
-export function mountSocratesEncounter({scene,terrain,questManager,interactor,player,canvas}){
+export function mountSocratesEncounter({scene,terrain,questManager,interactor,player,canvas,renderer}){
  const actor=createSocratesModel();actor.position.set(-47,terrain.userData.getHeightAt(-47,27)+.05,27);actor.rotation.y=Math.PI/2;
+ const imported=installSocratesVisual(actor,{renderer});
  const label=createLabelSprite('SOCRATES',0xcbbf9e,{x:2.1,y:.45});label.position.y=2.25;actor.add(label);
  actor.userData.interactable=true;actor.userData.preferAimedUse=true;actor.userData.interactionRange=3.5;actor.userData.onUse=open;scene.add(actor);interactor.registerInteractable(actor);
  let saved=questManager.getActivityRecord(ID)||{},step=0,choice=['return','verify','need'].includes(saved.choice)?saved.choice:null,completed=!!saved.completed;
@@ -23,5 +25,5 @@ export function mountSocratesEncounter({scene,terrain,questManager,interactor,pl
  panel.append(el('p','Creative time blend: Socrates lived in the fifth century BCE and died in 399 BCE, before this city’s Hellenistic setting. This original encounter brings his questioning spirit into the imagined world.'),el('p',questManager.activityStorageAvailable?'Your chosen approach is remembered in this browser at this game address.':'This conversation is session-only because browser saving is unavailable.'));panel.querySelector('button')?.focus();}
  function keys(e){e.stopPropagation();if(e.key==='Escape'){e.preventDefault();close();}if(e.key==='Tab'){const b=[...panel.querySelectorAll('button')],first=b[0],last=b.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}}
  overlay.addEventListener('keydown',keys);for(const event of ['keyup','pointerdown','pointerup','wheel'])overlay.addEventListener(event,e=>e.stopPropagation());
- return{actor,open,snapshot:()=>({location:actor.position.toArray(),choice,completed,panelOpen:!overlay.hidden,budget:actor.userData.assetBudget}),update(){if(!overlay.hidden)player.input.resetKeys?.();},dispose(){interactor.unregisterInteractable(actor);actor.removeFromParent();overlay.remove();}};
+ return{actor,open,snapshot:()=>({location:actor.position.toArray(),choice,completed,panelOpen:!overlay.hidden,assetStatus:actor.userData.assetStatus,assetSource:actor.userData.assetSource,budget:actor.userData.assetBudget}),update(delta){imported.update(delta,actor.position.distanceToSquared(player.position)<45*45);if(!overlay.hidden)player.input.resetKeys?.();},dispose(){imported.dispose();interactor.unregisterInteractable(actor);actor.removeFromParent();overlay.remove();}};
 }

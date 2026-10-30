@@ -750,7 +750,7 @@ export class Application {
       this.harborActivity = harborActivity;
       const agoraCommission=mountAgoraCommission({scene,civicDistrict,questManager,collectibles,interactor,player:playerSystem.player,canvas:renderer.domElement});
       this.agoraCommission=agoraCommission;
-      const socratesEncounter=mountSocratesEncounter({scene,terrain,questManager,interactor,player:playerSystem.player,canvas:renderer.domElement});
+      const socratesEncounter=mountSocratesEncounter({scene,terrain,questManager,interactor,player:playerSystem.player,canvas:renderer.domElement,renderer});
       this.socratesEncounter=socratesEncounter;
       const theatreRehearsal=mountTheatreRehearsal({scene,worldRoot,theatre:greatTheatre,questManager,interactor,player:playerSystem.player,camera,canvas:renderer.domElement});
       this.theatreRehearsal=theatreRehearsal;
@@ -923,7 +923,7 @@ export class Application {
         interactor.updateHover(deltaTime);
         harborActivity?.update();
         agoraCommission?.update();
-        socratesEncounter.update();
+        socratesEncounter.update(deltaTime);
         theatreRehearsal?.update(deltaTime);
         courtyardHousehold.update();
 
