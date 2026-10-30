@@ -241,6 +241,7 @@ export class PlayerSystem {
 
   async loadCharacter() {
     const character = new Character();
+    const hoplitePath = joinPath(this.baseUrl, "models/character/hoplite-v04.glb");
     const myrtoPath = joinPath(this.baseUrl, "models/character/myrto-v01.glb");
     const heroRootPath = "models/character/hero.glb";
     const absolutePath = "/athens-game-starter/models/character/hero.glb";
@@ -250,7 +251,7 @@ export class PlayerSystem {
     const bundledHeroRootPath = `models/character/${bundledHeroName}`;
     const heroCandidates = Array.from(
       new Set(
-        [myrtoPath, absolutePath, heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean),
+        [hoplitePath, myrtoPath, absolutePath, heroRootPath, bundledHeroPath, bundledHeroRootPath].filter(Boolean),
       ),
     );
 
@@ -299,14 +300,26 @@ export class PlayerSystem {
 
         // Myrto is authored feet-at-origin; the controller object is capsule-centred.
         // Apply this only to her asset, keeping the legacy hero fallback unchanged.
+        const isHoplite = loadedHero.url?.includes("hoplite-v04.glb");
         const isMyrto = loadedHero.url?.includes("myrto-v01.glb");
+        if (isHoplite) {
+          // Fit the person, not the tall spear, to the existing capsule.
+          const body = root.getObjectByName("Hoplite_body");
+          if (!body) throw new Error("Hoplite body anchor is missing");
+          const bodyBounds = new THREE.Box3().setFromObject(body);
+          root.scale.multiplyScalar(this.player.height / (bodyBounds.max.y - bodyBounds.min.y));
+          root.updateMatrixWorld(true);
+          const fitted = new THREE.Box3().setFromObject(body);
+          root.position.y = -this.player.height * 0.5 - fitted.min.y;
+          root.name = "HoplitePlayerModel";
+        }
         if (isMyrto) {
           const bounds = new THREE.Box3().setFromObject(root);
           root.position.y = -this.player.height * 0.5 - bounds.min.y;
           root.name = "MyrtoPlayerModel";
         }
         character.initializeFromGLTF(root, gltf.animations);
-        if (isMyrto && !character.actions.has("Jump")) {
+        if ((isMyrto || isHoplite) && !character.actions.has("Jump")) {
           character.actions.set("Jump", character.actions.get("Idle"));
         }
         this.player.attachCharacter(character);

@@ -1,3 +1,4 @@
+import {agoraPoint} from './cityCivicLayout.js';
 import {installSocratesVisual} from './socratesVisual.js';
 import * as THREE from 'three';
 import {createSocratesModel} from './npcs.js';
@@ -5,7 +6,7 @@ import {createLabelSprite} from './demoTour.js';
 import '../ui/harborActivity.css';
 const ID='socrates-lost-purse';
 export function mountSocratesEncounter({scene,terrain,questManager,interactor,player,canvas,renderer}){
- const actor=createSocratesModel();actor.position.set(-47,terrain.userData.getHeightAt(-47,27)+.05,27);actor.rotation.y=Math.PI/2;
+ const site=agoraPoint(-17,7),actor=createSocratesModel();actor.position.set(site.x,terrain.userData.getHeightAt(site.x,site.z)+.05,site.z);actor.rotation.y=Math.PI/2;
  const imported=installSocratesVisual(actor,{renderer});
  const label=createLabelSprite('SOCRATES',0xcbbf9e,{x:2.1,y:.45});label.position.y=2.25;actor.add(label);
  actor.userData.interactable=true;actor.userData.preferAimedUse=true;actor.userData.interactionRange=3.5;actor.userData.onUse=open;scene.add(actor);interactor.registerInteractable(actor);

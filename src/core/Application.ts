@@ -1,3 +1,4 @@
+import {mountTriremeVisit} from '../world/triremeVisit.js';
 import {mountSocratesEncounter} from '../world/socratesEncounter.js';
 import {foodSellerRoutine,tradingPorterRoutine,porterWorkLine} from '../world/marketLife.js';
 import { preloadPropylaea } from '../world/propylaeaIntegration.js';
@@ -39,6 +40,7 @@ import {
 import { createCivicDistrict } from "../world/cityPlan.js";
 import { EnvironmentCollider } from "../env/EnvironmentCollider.js";
 import { UIManager } from "./UIManager.js";
+import {cityDailyJourneys,dailyJourneyLine,addJourneyCargo,gardenHouseholdRoutine,gardenHouseholdLine} from '../world/cityDailyRoutines.js';
 import { spawnCitizenCrowd, spawnGLBNPCs } from "../world/npcs.js";
 import { QuestHud } from "../ui/questHud.js";
 import { InteractionHud } from "../ui/interactionHud.js";
@@ -139,6 +141,7 @@ export class Application {
   environmentManager: any;
   playerSystem: any;
   harborActivity: any;
+  triremeVisit: any;
   agoraCommission: any;
   socratesEncounter: any;
   greatTheatre: any;
@@ -190,6 +193,7 @@ export class Application {
     this.environmentManager = null;
     this.playerSystem = null;
     this.harborActivity = null;
+    this.triremeVisit = null;
     this.agoraCommission = null;
     this.socratesEncounter = null;
   }
@@ -743,9 +747,11 @@ export class Application {
       let interactor: any = createInteractor(renderer, camera, scene, {
         getPlayerPosition: () => playerSystem.player?.position,
       });
+      const triremeVisit=mountTriremeVisit({scene,camera,renderer,playerSystem,interactor,soundscape,questManager,timeDisplay:timeOfDayDisplay,onUiSuspend:(paused:boolean)=>UIManager.setSceneSuspended(paused)});
+      this.triremeVisit=triremeVisit;
       const harborActivity = mountHarborActivity({
         scene, harbor, questManager, interactor, player: playerSystem.player,
-        collider: envCollider, interactionHud, canvas: renderer.domElement,
+        collider: envCollider, interactionHud, canvas: renderer.domElement, onBoardTrireme:()=>triremeVisit.enter(),
       });
       this.harborActivity = harborActivity;
       const agoraCommission=mountAgoraCommission({scene,civicDistrict,questManager,collectibles,interactor,player:playerSystem.player,canvas:renderer.domElement});
@@ -807,6 +813,13 @@ export class Application {
       };
 
       const marketCanMove=(citizen:any)=>{const position=playerSystem.player?.position;return !!position&&!agoraCommission.panelOpen&&citizen.position.distanceToSquared(position)>2.6*2.6;};
+      // Four work rounds reuse the same citizen lifecycle and city frame branch.
+      for(const journey of cityDailyJourneys()){
+        const first=journey.routine.stops[0],position=new THREE.Vector3(first.x,0,first.z),path=new THREE.LineCurve3(position,position.clone().add(new THREE.Vector3(0,0,.01)));
+        const crowd=spawnCitizenCrowd(worldRoot,path,{count:1,roles:[journey.role],label:journey.label,routine:journey.routine,canMove:marketCanMove,dialogue:dailyJourneyLine(journey,null),onUse:(citizen:any)=>{citizen.userData.pauseRoutine?.(10);interactor.showDialogue(dailyJourneyLine(journey,citizen.userData.npcRoutine));},terrain,camera});
+        for(const citizen of crowd.citizens){citizen.userData['dailyJourney']=journey.id;addJourneyCargo(citizen,journey.cargo);}
+        this.npcUpdaters.push(...crowd.updaters);
+      }
       let proceduralCrowdSpawned = false;
       // Small local walks make the side courts inhabited even when the main
       // crowd uses downloaded character models. Reuse the cached NPC assets.
@@ -817,6 +830,7 @@ export class Application {
         const residentPath=station?new THREE.LineCurve3(new THREE.Vector3(...station),new THREE.Vector3(...station).add(new THREE.Vector3(0,0,.01))):path;
         const crowd = spawnCitizenCrowd(worldRoot, residentPath, {
           count: 1, roles: [neighbourhoodRoles[index]], minSpeed: 0.5, maxSpeed: 0.8, stationary:!!station,facingYaw:Math.PI,
+          ...(index===3?{routine:gardenHouseholdRoutine(),canMove:marketCanMove,onUse:(citizen:any)=>{citizen.userData.pauseRoutine?.(8);interactor.showDialogue(gardenHouseholdLine(citizen.userData.npcRoutine));}}:{}),
           ...(index===4?{routine:tradingPorterRoutine(),canMove:marketCanMove,onUse:(citizen:any)=>{citizen.userData.pauseRoutine?.(8);interactor.showDialogue(porterWorkLine(citizen.userData.npcRoutine));}}:{}),
           ...(isHome ? courtyardHousehold.host : index===0 ? {...WORKSHOP_LIFE.potters,onUse:()=>agoraCommission.open('workshop')} : index===2 ? WORKSHOP_LIFE.weavers : (COURT_LIFE as Record<string, {label:string;dialogue:string}>)[civicDistrict.group.userData['plan'].neighbourhoods[index]?.id] ?? {}), terrain:isHome?courtyardHousehold.actorTerrain:terrain, camera,
         });
@@ -882,7 +896,11 @@ export class Application {
         particleCount: 1500,
       });
 
-      const onFrame = (deltaTime: number, elapsed: number) => {
+      let cityPausedSeconds=0;
+      const onFrame = (deltaTime: number, totalElapsed: number) => {
+        if(triremeVisit.active){cityPausedSeconds+=deltaTime;triremeVisit.update(deltaTime);return;}
+        const elapsed=totalElapsed-cityPausedSeconds;
+        triremeVisit.noteCityFrame();
         if (!scene) return;
 
         if (!scene.background || scene.background === null) {
@@ -975,7 +993,8 @@ export class Application {
         ];
 
         const payload = {
-          mode: "play",
+          mode: triremeVisit.active?"trireme":"play",
+          triremeVisit:triremeVisit.snapshot(),
           coordinateSystem: "World space centered near the city core; x/z are horizontal ground axes and y is vertical.",
           time: {
             phase: Number((lightingSystem.timeOfDayState.timeOfDayPhase ?? 0).toFixed(4)),
@@ -1120,6 +1139,8 @@ export class Application {
       }
 
       installApplicationRuntimeControls({
+        isWorldActive:()=>!triremeVisit.active,
+        getActiveInteractor:()=>triremeVisit.active?triremeVisit.interactor:interactor,
         scene,
         playerSystem,
         lightingSystem,
@@ -1360,6 +1381,8 @@ export class Application {
     this.courtyardHousehold=null;
     this.theatreRehearsal?.dispose();
     this.theatreRehearsal=null;
+    this.triremeVisit?.dispose();
+    this.triremeVisit=null;
     this.socratesEncounter?.dispose();
     this.socratesEncounter=null;
     this.agoraCommission?.dispose();

@@ -1,6 +1,8 @@
+import{applyCityGroundVariation}from'../materials/cityGroundSurface.js';
 import * as THREE from 'three';
-import{mergeGeometries}from'three/examples/jsm/utils/BufferGeometryUtils.js';
-import{GREAT_THEATRE as PLAN,theatreHeightAtRadius}from'./greatTheatreLayout.js';
+import{mergeGeometries,mergeVertices}from'three/examples/jsm/utils/BufferGeometryUtils.js';
+import{queueSceneInteractable}from'./interactions.js';
+import{GREAT_THEATRE as PLAN,theatreHeightAtRadius,theatreShoulderRadius,THEATRE_SANCTUARY}from'./greatTheatreLayout.js';
 
 // Ring-sector masonry and ramps are structural walking surfaces, owned by this
 // landmark. The existing terrain and its sampler remain untouched.
@@ -14,11 +16,16 @@ export function createGreatTheatre(parent,{terrain}={}){
  const root=new THREE.Group();root.name='GreatTheatre';root.position.set(PLAN.x,0,PLAN.z);parent.add(root);const sample=(x,z)=>terrain.userData.getHeightAt(x,z);
  let base=sample(PLAN.x,PLAN.z),minimum=base;for(let x=-9;x<=9;x+=1.5)for(let z=-12.5;z<=8;z+=1.5){if(x*x+z*z<64||Math.abs(x)<8&&z< -7){const y=sample(PLAN.x+x,PLAN.z+z);base=Math.max(base,y);minimum=Math.min(minimum,y);}}base+=.08;
  root.position.y=base;const bottom=minimum-base-.4;
- const mats={stone:new THREE.MeshStandardMaterial({color:0xa4a7a3,roughness:1}),warm:new THREE.MeshStandardMaterial({color:0x989b94,roughness:1}),edge:new THREE.MeshStandardMaterial({color:0x858c88,roughness:1}),earth:new THREE.MeshStandardMaterial({color:0x847c69,roughness:1}),sand:new THREE.MeshStandardMaterial({color:0xa49983,roughness:1}),plaster:new THREE.MeshStandardMaterial({color:0xb4b8b1,roughness:1}),wood:new THREE.MeshStandardMaterial({color:0x755238,roughness:1}),roof:new THREE.MeshStandardMaterial({color:0x8c5c48,roughness:1})};
+ const mats={stone:new THREE.MeshStandardMaterial({color:0x969a94,roughness:1}),warm:new THREE.MeshStandardMaterial({color:0x8e928b,roughness:1}),edge:new THREE.MeshStandardMaterial({color:0x7e8581,roughness:1}),rock:new THREE.MeshStandardMaterial({color:0x868174,roughness:1}),earth:new THREE.MeshStandardMaterial({color:0x847c69,roughness:1}),sand:new THREE.MeshStandardMaterial({color:0xa49983,roughness:1}),plaster:new THREE.MeshStandardMaterial({color:0xb4b8b1,roughness:1}),wood:new THREE.MeshStandardMaterial({color:0x755238,roughness:1}),roof:new THREE.MeshStandardMaterial({color:0x8c5c48,roughness:1})};
+ // Reuse the one existing terrain finish on the replacement support bank.
+ // Shared images and atlas keep its edge continuous with the hillside.
+ const cityGround=(Array.isArray(terrain.material)?terrain.material:[terrain.material]).find(m=>m?.name==='CityGroundMaterial');
+ if(cityGround){mats.rock=cityGround.clone();mats.rock.name='TheatreHillsideFill';applyCityGroundVariation(mats.rock);}
+ terrain.geometry?.computeBoundingBox();const terrainBounds=terrain.geometry?.boundingBox;
  const parts=new Map(),architecture=[];
  // Theatre limestone variation stays in shared vertex colours: no texture,
  // shader patch, extra surface or change to structural/collision positions.
- const stoneFamilies=new Set(['stone','warm','edge','sand','plaster','earth']);
+ const stoneFamilies=new Set(['stone','warm','edge','sand','plaster','earth','rock']);
  function add(g,kind,name){
   if(stoneFamilies.has(kind)){
    const p=g.getAttribute('position'),n=g.getAttribute('normal'),colors=[];
@@ -26,7 +33,8 @@ export function createGreatTheatre(parent,{terrain}={}){
     const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
     const weather=.965+.018*Math.sin(x*.73+z*.41)+.012*Math.sin(z*1.17-y*.83);
     const face=Math.abs(n.getY(i))<.35?.91:1;
-    const tone=weather*face;colors.push(tone,tone,tone);
+    const block=name==='TheatreSeatingRow'?.97+.012*((Math.floor(Math.atan2(z,x)*Math.hypot(x,z)/1.8)+Math.floor(y/.7)*3+5000)%5):1;
+    const tone=weather*face*block;colors.push(tone,tone,tone);
    }
    g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));mats[kind].vertexColors=true;
   }
@@ -44,13 +52,26 @@ export function createGreatTheatre(parent,{terrain}={}){
  add(sector(PLAN.outerRadius-.3,PLAN.outerRadius,0,Math.PI,5.55,5.55,4.9),'stone','TheatreUpperParapet');
  for(const side of[-1,1])box('stone','TheatreGangwayEndGuard',side*(outer+.8),5.225,0,1.6,.65,.3);
  // Backfill skirt falls to the unchanged hillside around the outer masonry.
- const fill=[];for(let i=0;i<60;i++){const a=i*Math.PI/60,b=(i+1)*Math.PI/60;const p=(r,t,y)=>[Math.cos(t)*r,y,Math.sin(t)*r];const A=p(PLAN.outerRadius,a,4.9),B=p(PLAN.outerRadius,b,4.9),C=p(PLAN.outerRadius+2.5,b,sample(PLAN.x+Math.cos(b)*(PLAN.outerRadius+2.5),PLAN.z+Math.sin(b)*(PLAN.outerRadius+2.5))-base-.1),D=p(PLAN.outerRadius+2.5,a,sample(PLAN.x+Math.cos(a)*(PLAN.outerRadius+2.5),PLAN.z+Math.sin(a)*(PLAN.outerRadius+2.5))-base-.1);fill.push(...A,...B,...C,...A,...C,...D);}const fg=new THREE.BufferGeometry();fg.setAttribute('position',new THREE.Float32BufferAttribute(fill,3));fg.computeVertexNormals();add(fg,'earth','TheatreBackfill');
+ const fill=[],bankBands=4;
+ const bankPoint=(angle,t)=>{const r=THREE.MathUtils.lerp(PLAN.outerRadius,theatreShoulderRadius(angle),t),x=Math.cos(angle)*r,z=Math.sin(angle)*r,target=sample(PLAN.x+Math.cos(angle)*theatreShoulderRadius(angle),PLAN.z+Math.sin(angle)*theatreShoulderRadius(angle))-base;
+  const interpolated=THREE.MathUtils.lerp(4.9,target,t),surface=sample(PLAN.x+x,PLAN.z+z)-base;
+  // At the outer edge meet the sole terrain owner. Between it and the seating,
+  // retain the original structural bank rather than intersect the rising hill.
+  return[x,t===0?4.9:t===1?surface:Math.max(surface+.025,interpolated),z];};
+ for(let i=0;i<60;i++)for(let band=0;band<bankBands;band++){const a=i*Math.PI/60,b=(i+1)*Math.PI/60,A=bankPoint(a,band/bankBands),B=bankPoint(b,band/bankBands),C=bankPoint(b,(band+1)/bankBands),D=bankPoint(a,(band+1)/bankBands);fill.push(...A,...B,...C,...A,...C,...D);}
+ const fg=new THREE.BufferGeometry();fg.setAttribute('position',new THREE.Float32BufferAttribute(fill,3));
+ const bankUV=[];terrain.updateWorldMatrix?.(true,false);
+ for(let i=0;i<fill.length;i+=3){const p=new THREE.Vector3(PLAN.x+fill[i],base+fill[i+1],PLAN.z+fill[i+2]);if(terrainBounds){terrain.worldToLocal(p);bankUV.push((p.x-terrainBounds.min.x)/(terrainBounds.max.x-terrainBounds.min.x),(p.y-terrainBounds.min.y)/(terrainBounds.max.y-terrainBounds.min.y));}else bankUV.push(p.x/4,p.z/4);}
+ fg.setAttribute('uv',new THREE.Float32BufferAttribute(bankUV,2));const smoothBank=mergeVertices(fg);smoothBank.computeVertexNormals();fg.dispose();add(smoothBank,'rock','TheatreBackfill');
  // Parodoi stay south of the seating ramps so entrances cannot hit their walls.
  box('warm','TheatreWestParodos',-15.5,bottom/2,-1.7,19,-bottom,3.0);box('warm','TheatreEastParodos',15,bottom/2,-1.7,18,-bottom,3.0);box('stone','TheatreEastRetainingGuard',24.1,.4,-1.7,.35,.8,3.0);
  box('stone','TheatreStage',0,(bottom+.45)/2,-10.5,15,.45-bottom,4);
  // Low pitched skene, open stage and painted timber door; no Roman colonnade.
  box('plaster','TheatreSkene',0,2.35,-13.6,15,3.8,2.2);box('wood','TheatreDoor',0,1.65,-12.47,1.7,2.4,.08);
  const roofProfile=new THREE.Shape();roofProfile.moveTo(-1.6,0);roofProfile.lineTo(0,1);roofProfile.lineTo(1.6,0);roofProfile.closePath();const roof=new THREE.ExtrudeGeometry(roofProfile,{depth:15.8,bevelEnabled:false});roof.translate(0,0,-7.9);roof.rotateY(Math.PI/2);roof.translate(0,4.25,-13.6);add(roof,'roof','TheatreSkeneRoof');
+ // Modest timber framing articulates the existing skene door; it remains closed.
+ for(const x of[-.94,.94])box('wood','TheatreSkeneDoorFrame',x,1.7,-12.4,.13,2.6,.14).userData.noCollision=true;
+ box('wood','TheatreSkeneDoorLintel',0,3.05,-12.4,2.05,.18,.18).userData.noCollision=true;
  // A single graded stage apron; collision uses the same visible geometry.
  const apron=new THREE.BufferGeometry();apron.setAttribute('position',new THREE.Float32BufferAttribute([-1.8,0,-7.2,1.8,0,-7.2,1.8,.45,-8.8,-1.8,0,-7.2,1.8,.45,-8.8,-1.8,.45,-8.8],3));apron.computeVertexNormals();add(apron,'warm','TheatreStageApron');
  box('wood','TheatrePropsTable',-5.5,1.28,-10,2.4,.13,.8);for(const x of[-6.4,-4.6])box('wood','TheatreTableLeg',x,.84,-10,.12,.78,.12);
@@ -69,6 +90,17 @@ export function createGreatTheatre(parent,{terrain}={}){
  // One immutable material batch per stone/timber family; source collision
  // triangles are kept separately as the authoring shapes, never re-sampled.
  for(const[k,meshes]of parts){if(meshes.length<2)continue;const geos=meshes.map(m=>m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone()),merged=mergeGeometries(geos.map(g=>{g.deleteAttribute('uv');return g;}),false);for(const g of geos)g.dispose();if(!merged)continue;const render=new THREE.Mesh(merged,mats[k]);render.name='TheatreRender_'+k;render.receiveShadow=true;render.userData.noCollision=true;render.userData.noCull=true;root.add(render);for(const m of meshes)m.layers.mask=0;}
+ // A small authored sanctuary below the theatre, not another generic temple.
+ const sanctuary=new THREE.Group();sanctuary.name='TheatreSanctuaryCue';sanctuary.userData.interactable=true;sanctuary.userData.interactionRange=3.5;
+ sanctuary.position.set(THEATRE_SANCTUARY.x-PLAN.x,sample(THEATRE_SANCTUARY.x,THEATRE_SANCTUARY.z)-base,THEATRE_SANCTUARY.z-PLAN.z);root.add(sanctuary);
+ const altarStone=mats.warm.clone();altarStone.vertexColors=false;const rim=mats.stone.clone();rim.vertexColors=false;const clay=new THREE.MeshStandardMaterial({color:0x9f7259,roughness:1});
+ const place=(g,m,x,y,z,name,solid=true)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.name=name;o.receiveShadow=true;o.userData.noCull=true;o.userData.noCollision=!solid;sanctuary.add(o);return o;};
+ place(new THREE.BoxGeometry(2.2,.18,1.8),altarStone,0,.09,0,'DionysosAltarPlinth');place(new THREE.BoxGeometry(1.4,.7,.95),altarStone,0,.53,0,'DionysosAltarBody');place(new THREE.BoxGeometry(1.6,.14,1.12),rim,0,.95,0,'DionysosAltarCap');
+ const basin=new THREE.LatheGeometry([[0,0],[.25,0],[.38,.18],[.4,.32],[.34,.32],[.29,.15],[0,.07]].map(p=>new THREE.Vector2(...p)),16);place(basin,rim,-.15,1.03,0,'SanctuaryOfferingBasin',false);
+ const jug=new THREE.LatheGeometry([[0,0],[.1,0],[.17,.18],[.13,.34],[.065,.4],[.065,.47]].map(p=>new THREE.Vector2(...p)),12);place(jug,clay,.55,1.03,.1,'SanctuaryOfferingJug',false);
+ sanctuary.userData.onUse=()=>{let scene=root;while(scene.parent)scene=scene.parent;scene.userData.interactor?.showDialogue('The theatre rose above the sanctuary of Dionysos, whose festival brought drama to Athens. Take a quiet moment before the chorus calls. The western path returns to the rehearsal entrance.');};
+ let scene=parent;while(scene.parent)scene=scene.parent;queueSceneInteractable(scene,sanctuary,{includeChildren:true});
+ root.userData.slopePolish={version:1,bankBands,sanctuary:{x:THEATRE_SANCTUARY.x,z:THEATRE_SANCTUARY.z},seatingPositionsUnchanged:true};
  const props=new THREE.Group();props.name='TheatreRehearsalProps';props.userData.noCollision=true;props.visible=false;root.add(props);
  const cloth=new THREE.Mesh(new THREE.PlaneGeometry(5,1.6),new THREE.MeshStandardMaterial({color:0x8f5841,roughness:1,side:THREE.DoubleSide}));cloth.position.set(3,2.8,-12.43);props.add(cloth);
  const maskMat=new THREE.MeshStandardMaterial({color:0xc89266,roughness:1}),dark=new THREE.MeshStandardMaterial({color:0x352c24,roughness:1});for(let i=0;i<2;i++){const mask=new THREE.Mesh(new THREE.SphereGeometry(.25,12,8),maskMat);mask.scale.set(1,1.3,.3);mask.position.set(-6+i*.9,1.68,-9.9);props.add(mask);for(const side of[-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.045,6,4),dark);eye.scale.set(1,1,.3);eye.position.set(mask.position.x+side*.09,1.75,-9.82);props.add(eye);}}
@@ -77,3 +109,7 @@ export function createGreatTheatre(parent,{terrain}={}){
  const world=(x,y,z)=>new THREE.Vector3(PLAN.x+x,base+y,PLAN.z+z);
  return{root,base,props,approachCurve:curve,points:{entry:world(-21,0,-1.7),guide:world(-5,0,-5),props:world(-5.5,.45,-9),view:world(0,4.9,22)},orchestraY:base,layout:PLAN,heightAtRadius:r=>base+theatreHeightAtRadius(r)};
 }
+
+
+
+

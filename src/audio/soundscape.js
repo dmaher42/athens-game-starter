@@ -199,7 +199,7 @@ export class Soundscape {
 
     const ctx = this.listener.context;
     this.masterGain = ctx.createGain();
-    this.masterGain.gain.value = 0.9;
+    this.masterGain.gain.value = this.sceneSuspended?0:0.9;
     this.masterGain.connect(this.listener.getInput());
 
     this.bus = {
@@ -512,19 +512,17 @@ export class Soundscape {
   }
 
   scheduleOneShots(buffer, position, group, minS = 12, maxS = 24) {
-    if (!buffer) return;
-    const scheduleTick = (delay) => {
-      const id = setTimeout(() => {
-        this._removeOneShotTimer(id);
-        const src = this._makePositional(buffer, position, group, { loop: false, volume: 0.35, refDistance: 8 });
-        if (src) { src.play(); }
-        const next = (Math.random() * (maxS - minS) + minS) * 1000;
-        scheduleTick(next);
-      }, delay);
-      this.oneShotTimers.push(id);
-    };
-    const first = (Math.random() * (maxS - minS) + minS) * 1000;
-    scheduleTick(first);
+    if(!buffer)return;
+    this.sceneSuspensionJobs??=new Set();
+    const job={timer:null,remaining:0,nextAt:0,schedule:null};
+    const scheduleTick=delay=>{job.remaining=delay;if(this.sceneSuspended)return;job.nextAt=performance.now()+delay;const id=setTimeout(()=>{job.timer=null;this._removeOneShotTimer(id);if(this.sceneSuspended)return;const src=this._makePositional(buffer,position,group,{loop:false,volume:.35,refDistance:8});if(src)src.play();scheduleTick((Math.random()*(maxS-minS)+minS)*1000);},delay);job.timer=id;this.oneShotTimers.push(id);};
+    job.schedule=scheduleTick;this.sceneSuspensionJobs.add(job);scheduleTick((Math.random()*(maxS-minS)+minS)*1000);
+  }
+
+  setSceneSuspended(value){
+    const next=!!value;if(next===!!this.sceneSuspended)return;this.sceneSuspended=next;
+    if(next){this.sceneSuspensionGain=this.masterGain?.gain.value??.9;if(this.masterGain)this.masterGain.gain.value=0;}else if(this.masterGain)this.masterGain.gain.value=this.sceneSuspensionGain??.9;
+    for(const job of this.sceneSuspensionJobs??[]){if(next&&job.timer!==null){job.remaining=Math.max(0,job.nextAt-performance.now());clearTimeout(job.timer);this._removeOneShotTimer(job.timer);job.timer=null;}else if(!next&&job.timer===null)job.schedule(job.remaining);}
   }
 
   /**
@@ -532,7 +530,7 @@ export class Soundscape {
    * @param {THREE.Vector3} playerPos  (optional, for future distance-based mixing)
    */
   update(playerPos) {
-    if (!this.ready || !this.bus) return;
+    if (!this.ready || !this.bus || this.sceneSuspended) return;
     const nightPreference = this.mode === "night" ? 1 : this.mode === "day" ? 0 : null;
     const night =
       nightPreference ?? (this.lightingRef?.getNightFactor?.() ?? 0);

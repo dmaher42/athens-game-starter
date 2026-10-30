@@ -19,6 +19,8 @@ a testbed for AI-assisted development using tools like Codex and Jules.
 
 ## Documentation for AI Assistants
 
+**[WORLD_BUILDING_PLAN.md](./WORLD_BUILDING_PLAN.md)** - Current bounded district structure, source ownership, performance budget and verification limits.
+
 **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Complete technical architecture, file structure, recent fixes, and common pitfalls. **READ THIS FIRST** before making any code changes.
 
 **[GAME_OVERVIEW.md](./GAME_OVERVIEW.md)** - Design philosophy, creator profile, and game priorities.

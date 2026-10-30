@@ -91,6 +91,8 @@ export const UIManager = {
     updateLayout();
   },
 
+  setSceneSuspended(value){minimap?.setSuspended?.(value);},
+
   updateDevHud(data) {
     if (devHud && data.activePreset) {
       devHud.setActivePreset?.(data.activePreset);

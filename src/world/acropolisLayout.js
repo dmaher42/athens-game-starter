@@ -1,3 +1,4 @@
+import {AGORA_LAYOUT,agoraXZ} from './cityCivicLayout.js';
 import {CatmullRomCurve3,Vector3} from 'three';
 // Canonical design coordinates for this game's compressed, Athens-inspired hill.
 // Existing terrain/city/landmark owners consume this; it creates no scene/state.
@@ -56,48 +57,7 @@ export const ACROPOLIS={
       "z": -8
     }
   },
-  "precinctOutline": [
-    [
-      -160,
-      -105
-    ],
-    [
-      0,
-      -105
-    ],
-    [
-      0,
-      -15
-    ],
-    [
-      -113,
-      -15
-    ],
-    [
-      -113,
-      3
-    ],
-    [
-      -160,
-      3
-    ],
-    [
-      -160,
-      -34
-    ],
-    [
-      -170,
-      -34
-    ],
-    [
-      -170,
-      -46
-    ],
-    [
-      -160,
-      -46
-    ]
-  ],
+  "precinctOutline": [[-160,-105],[-140,-109],[-115,-112],[-89,-109],[-62,-112],[-35,-106],[-15,-102],[-4,-91],[1,-77],[-2,-58],[-6,-39],[-6,-22],[-12,-15],[-113,-15],[-113,3],[-160,3],[-160,-34],[-170,-34],[-170,-46],[-160,-46]],
   "gatewayAsset": {
     "path": "models/landmarks/acropolis/propylaia-v1.glb",
     "collisionPath": "models/landmarks/acropolis/propylaia-collision-v1.glb",
@@ -112,16 +72,8 @@ export const ACROPOLIS={
     -29,
     -50.8
   ],
-  "ramp": [[-30,20,2.5],[-76,18,2.5],[-152,8,3.8],[-166,8,4.8],[-173,-6,7],[-181,-12,9],[-181,-25,10],[-178,-25,10],[-173.35,-25,11.94],[-162.625,-25,13.5],[-157.1,-25,13.5]],
-  "sacredWay": [
-    [
-      -30,
-      20
-    ],
-    [
-      -76,
-      18
-    ],
+  "ramp": [[AGORA_LAYOUT.x,AGORA_LAYOUT.z,2.5],[-127,36,2.5],[-142,36,2.5],[-152,8,3.8],[-166,8,4.8],[-173,-6,7],[-181,-12,9],[-181,-25,10],[-178,-25,10],[-173.35,-25,11.94],[-162.625,-25,13.5],[-157.1,-25,13.5]],
+  "sacredWay": [agoraXZ(),[-127,36],[-142,36],
     [
       -152,
       8
@@ -191,15 +143,7 @@ export const ACROPOLIS={
       -65
     ]
   ],
-  "residentialBypass": [
-    [
-      -30,
-      20
-    ],
-    [
-      -120,
-      20
-    ],
+  "residentialBypass": [agoraXZ(),[-127,36],[-143,36],
     [
       -170,
       8
@@ -237,13 +181,26 @@ export function nearestAcropolisRamp(x,z){
   if(distance<best.distance)best={distance,height:a[2]+(b[2]-a[2])*t};
  }return best;
 }
+// Signed distance to the existing sanctuary perimeter; positive is inside.
+export function acropolisBoundaryDistance(x,z){
+ const points=ACROPOLIS.precinctOutline;let inside=false,distance=Infinity;
+ for(let i=0,j=points.length-1;i<points.length;j=i++){
+  const a=points[j],b=points[i],dx=b[0]-a[0],dz=b[1]-a[1],t=clamp(((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz),0,1);
+  distance=Math.min(distance,Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t));
+  if((a[1]>z)!==(b[1]>z)&&x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0])inside=!inside;
+ }
+ return inside?distance:-distance;
+}
 export function shapeAcropolisGround(x,z,baseHeight,seaLevel){
  const b=ACROPOLIS.bounds;
- const side=smooth(b.west-8,b.west+1,x)*(1-smooth(b.east-1,b.east+8,x));
- // Keep the existing theatre ground below -55 and Agora frontages above -9.
- const length=smooth(b.south-6,b.south+1,z)*(1-smooth(b.north-1,b.north+6,z));
- const weight=side*length;
+ const edge=acropolisBoundaryDistance(x,z);
+ // Preserve the separate, already-supported northern sanctuary terrace.
+ const main=(1-smooth(b.north-1,b.north+6,z));
+ const weight=smooth(-6,1,edge)*main;
  let height=baseHeight+(seaLevel+ACROPOLIS.heightAboveSea-baseHeight)*weight;
+ // Low bedrock irregularity on the same mesh, fading out before any plateau floor.
+ const rock=(1-smooth(-1,2,edge))*smooth(-14,-5,edge)*main;
+ height+=rock*(.45*Math.sin(x*.43+z*.21)+.22*Math.sin(z*.77-x*.18));
  // Local retained lobes share the existing height field. A tight north falloff
  // finishes before the Agora court; do not raise the whole city-facing slope.
  for(const site of[ACROPOLIS.northCourt,ACROPOLIS.nikeBastion]){
@@ -271,5 +228,8 @@ export function isAcropolisReserved(x,z,padding=0){
  const annex=[ACROPOLIS.northCourt,ACROPOLIS.nikeBastion].some(r=>x>r.west-padding&&x<r.east+padding&&z>r.south-padding&&z<r.north+padding);
  const buildingCourt=x>-160-padding&&x<-113+padding&&z>-15-padding&&z<3+padding;
  const gatewayReserve=x>-182-padding&&x<-155+padding&&z>-42-padding&&z<-9+padding;
- return gatewayReserve||buildingCourt||annex||(x>b.west-padding&&x<b.east+padding&&z>b.south-padding&&z<b.north+padding)||nearestAcropolisRamp(x,z).distance<6+padding||bypass;
+ // Keep anonymous infill out of the cultural slope between ridge and cavea.
+ const southernCulturalSlope=x>-164-padding&&x<10+padding&&z>-134-padding&&z<-102+padding;
+ return southernCulturalSlope||acropolisBoundaryDistance(x,z)>-padding||gatewayReserve||buildingCourt||annex||(x>b.west-padding&&x<b.east+padding&&z>b.south-padding&&z<b.north+padding)||nearestAcropolisRamp(x,z).distance<6+padding||bypass;
 }
+

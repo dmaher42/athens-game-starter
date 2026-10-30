@@ -1,3 +1,4 @@
+import {AGORA_LAYOUT} from './cityCivicLayout.js';
 import {ACROPOLIS} from './acropolisLayout.js';
 import * as THREE from "three";
 import {
@@ -34,14 +35,13 @@ export const HARBOR_CENTER_3D = new THREE.Vector3(
 );
 
 // Canonical horizontal district anchors; runtime placement samples terrain height.
-export const AGORA_CENTER_3D = new THREE.Vector3(-30, getCityGroundY(), 20);
+export const AGORA_CENTER_3D = new THREE.Vector3(AGORA_LAYOUT.x, getCityGroundY(), AGORA_LAYOUT.z);
 export const ACROPOLIS_PEAK_3D = new THREE.Vector3(ACROPOLIS.visit[0], resolveSeaLevelY()+ACROPOLIS.heightAboveSea, ACROPOLIS.visit[1]);
 // The broad base landform stays fixed to protect the theatre. The bounded
 // Acropolis profile is sculpted by the same terrain owner; the quest/minimap
 // anchor above is its accessible northern promenade, not a second hill.
 export const INLAND_LANDMARK_TERRACES = [
   { x: -32, z: -28, halfWidth: 12, halfDepth: 17, heightAboveSea: 7.5 },
-  { x: AGORA_CENTER_3D.x - 34, z: AGORA_CENTER_3D.z + 29, halfWidth: 10, halfDepth: 15, heightAboveSea: 3.8 },
 ];
 // Shared walking-space bounds: city placement and the visible square agree.
 export const AGORA_COURT_BOUNDS = {

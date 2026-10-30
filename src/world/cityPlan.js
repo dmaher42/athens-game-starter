@@ -1,8 +1,12 @@
+import {AGORA_LAYOUT} from './cityCivicLayout.js';
 import {getMarketCounterMaterial} from './materials.js';
+import {addResidentialStreetPocket} from './residentialStreetPocket.js';
+import {RESIDENTIAL_STREET_POCKETS} from './neighbourhoodLayout.js';
+import {createCountrysideEdge} from './countrysideEdge.js';
 import {COURT_STREET_LIFE} from './neighbourhoodLayout.js';
 import {createCourtStreetLife,COURT_STREET_MASONRY} from './courtStreetLife.js';
 import {queueSceneInteractable} from './interactions.js';
-import {cityInfillDecision} from './neighbourhoodLayout.js';
+import {cityInfillDecision,fitCityStreetLot} from './neighbourhoodLayout.js';
 import {isAcropolisReserved} from './acropolisLayout.js';
 import {createCourtyardHome} from './courtyardHome.js';
 import {isCourtyardHomeFrontage,homeCourtFrontage} from './neighbourhoodLayout.js';
@@ -2233,7 +2237,7 @@ export async function createCivicDistrict(scene, options = {}) {
   const centerPos = new THREE.Vector3(center.x, baseHeight + surfaceOffset, center.z);
   renderRoadNetworkSplines(group, roadNetwork, centerPos, terrainSampler);
 
-  const court = createTerrainCourt(44, 28, 0xcbbb9e, AGORA_CENTER_3D.x - center.x, AGORA_CENTER_3D.z - center.z, sampleLocalHeight, center);
+  const court = createTerrainCourt(AGORA_LAYOUT.width, AGORA_LAYOUT.depth, 0xcbbb9e, AGORA_CENTER_3D.x - center.x, AGORA_CENTER_3D.z - center.z, sampleLocalHeight, center);
   court.name = 'AgoraCourt';
   group.add(court);
   // Quiet shared civic masonry keeps the working market subordinate to the hill.
@@ -2255,10 +2259,6 @@ export async function createCivicDistrict(scene, options = {}) {
   const fountainX=CITY_FURNISHINGS.fountain.x-center.x,fountainZ=CITY_FURNISHINGS.fountain.z-center.z;
   fountain.position.set(fountainX,sampleLocalHeight(fountainX,fountainZ),fountainZ);
   group.add(fountain);
-  const sideCourt = createUrbanCourtAccent(() => 0.4);
-  const sideCourtX=CITY_FURNISHINGS.sideCourt.x-center.x,sideCourtZ=CITY_FURNISHINGS.sideCourt.z-center.z;
-  sideCourt.position.set(sideCourtX,sampleLocalHeight(sideCourtX,sideCourtZ),sideCourtZ);
-  group.add(sideCourt);
   const olive = createOliveTree({ scale: 1.3 });
   const oliveX=CITY_FURNISHINGS.olive.x-center.x,oliveZ=CITY_FURNISHINGS.olive.z-center.z;
   olive.position.set(oliveX,sampleLocalHeight(oliveX,oliveZ),oliveZ);
@@ -2302,7 +2302,7 @@ export async function createCivicDistrict(scene, options = {}) {
       put(createWorkshopLife('potters'), WORKSHOP_CONNECTOR.craft.x, WORKSHOP_CONNECTOR.craft.z);
       put(Prefabs.stoneBench(), WORKSHOP_CONNECTOR.bench.x, WORKSHOP_CONNECTOR.bench.z, Math.PI / 2);
     } else if (place.kind === 'weaving' || place.kind === 'trade') {
-      put(Prefabs.marketStall({ w: 4, rng: () => 0.25 }), -9, 0, Math.PI / 2);
+      put(Prefabs.marketStall({ w: 4, rng: () => 0.25 }), -9, place.kind === 'trade' ? 9 : 0, Math.PI / 2);
       put(Prefabs.marketStall({ w: 4, rng: () => 0.75 }), 7, 6, -Math.PI / 2);
       put(place.kind === 'weaving' ? createWorkshopLife('weavers') : createCommercialAccent(() => 0.3), -7, -6);
     } else {
@@ -2327,16 +2327,21 @@ export async function createCivicDistrict(scene, options = {}) {
     // The reward sits in a visible side pocket, away from scenery collisions.
     return { ...place, ...(place.id==='potters'?{craftStation:[place.x+WORKSHOP_CONNECTOR.resident.x,baseHeight+sampleLocalHeight(localX+WORKSHOP_CONNECTOR.resident.x,localZ+WORKSHOP_CONNECTOR.resident.z),place.z+WORKSHOP_CONNECTOR.resident.z]}:{}), frontages: frontages.length, reward: { x: place.x + 6, y: baseHeight + sampleLocalHeight(localX + 6, localZ - 5), z: place.z - 5 } };
   });
+  group.userData.plan.residentialStreetPockets=[];
   for (const [i, f] of NEIGHBOURHOOD_STREET_FRONTAGES.entries()) {
     const options = { w: f.w, d: f.d, h: 3.2 + (i % 3) * 0.45, rng: () => (i % 3) * 0.25 + 0.2 };
     const building = f.workshop ? Prefabs.workshop(options) : Prefabs.house(options);
     building.name = 'NeighbourhoodStreetFrontage';
+    const pocket=RESIDENTIAL_STREET_POCKETS.find(p=>p.index===i);if(pocket){const detail=addResidentialStreetPocket(building,{frontage:pocket,sample:terrainSampler});queueSceneInteractable(scene,detail.cue,{includeChildren:true});group.userData.plan.residentialStreetPockets.push({kind:pocket.kind,x:pocket.x,z:pocket.z,gate:detail.gate});}
     building.position.set(f.x - center.x, sampleLocalHeight(f.x - center.x, f.z - center.z), f.z - center.z);
     building.rotation.y = f.rotation;
     group.add(building);
   }
   group.userData.plan.neighbourhoodStreetFrontages = NEIGHBOURHOOD_STREET_FRONTAGES.length;
   
+  const countryside=createCountrysideEdge({sample:terrainSampler,origin:{x:center.x,y:baseHeight,z:center.z}});
+  group.add(countryside.root);queueSceneInteractable(scene,countryside.cue,{includeChildren:true});
+  group.userData.plan.countryside=countryside.root.userData.budget;
   group.userData.plan.workshopConnector=[];
   group.userData.plan.infillConsolidation={version:1,retired:[],moved:[],lots:[]};
   const connectorWallMaterial=new THREE.MeshStandardMaterial({color:0xb5a48b,roughness:1});
@@ -2377,6 +2382,10 @@ export async function createCivicDistrict(scene, options = {}) {
       // Road geometry is now handled by continuous splines for smoother visuals.
       continue;
     } else if (cell.type === 'plaza') {
+      cell.renderReservation='retired-legacy-grid-court';continue; // Named civic/neighbourhood courts above are the only authored squares.
+
+      // Obsolete grid promenade pads lie outside today's one continuous Agora.
+      if(isAgoraArrivalPromenadeCell(cell.gridX,cell.gridZ)){cell.renderReservation='retired-legacy-promenade';continue;}
       const isPrimaryPlazaCell =
         isAgoraPlazaCell(cell.gridX, cell.gridZ) ||
         isAgoraArrivalPromenadeCell(cell.gridX, cell.gridZ);
@@ -2567,7 +2576,8 @@ export async function createCivicDistrict(scene, options = {}) {
                   buildingGroup.position.set(connector.x-center.x,sampleLocalHeight(connector.x-center.x,connector.z-center.z),connector.z-center.z);rot=connector.rotation;
                   group.userData.plan.workshopConnector.push({gridX:cell.gridX,gridZ:cell.gridZ,from:[worldX,worldZ],to:[connector.x,connector.z],rotation:rot,frontDepth});
                 }
-                const infillMove=infillDecision?.move;
+                let infillMove=infillDecision?.move;
+                if(infillMove?.streetEdge){buildingGroup.rotation.y=0;buildingGroup.updateWorldMatrix(true,true);const front=new THREE.Box3().setFromObject(buildingGroup).max.z-buildingGroup.position.z;infillMove=fitCityStreetLot(infillMove,front);}
                 if(infillMove&&!connector){
                   buildingGroup.position.set(infillMove.x-center.x,sampleLocalHeight(infillMove.x-center.x,infillMove.z-center.z),infillMove.z-center.z);
                   rot=infillMove.rotation;
@@ -2575,7 +2585,10 @@ export async function createCivicDistrict(scene, options = {}) {
                 }
                 buildingGroup.rotation.y = connector||infillMove?rot:originalRotation;
                 cell.renderedBuilding=true;
-                group.userData.plan.infillConsolidation.lots.push({id:infillDecision?.id,position:[buildingGroup.position.x+center.x,buildingGroup.position.z+center.z],rotation:buildingGroup.rotation.y});
+                buildingGroup.updateWorldMatrix(true,true);const renderedBounds=new THREE.Box3().setFromObject(buildingGroup);
+                const savedRotation=buildingGroup.rotation.y;buildingGroup.rotation.y=0;buildingGroup.updateWorldMatrix(true,true);const localFootprint=new THREE.Box3().setFromObject(buildingGroup);buildingGroup.rotation.y=savedRotation;buildingGroup.updateWorldMatrix(true,true);
+                const footprint={width:localFootprint.max.x-localFootprint.min.x,depth:localFootprint.max.z-localFootprint.min.z,offsetX:(localFootprint.min.x+localFootprint.max.x)/2-buildingGroup.position.x,offsetZ:(localFootprint.min.z+localFootprint.max.z)/2-buildingGroup.position.z};
+                group.userData.plan.infillConsolidation.lots.push({id:infillDecision?.id,position:[buildingGroup.position.x+center.x,buildingGroup.position.z+center.z],rotation:buildingGroup.rotation.y,footprint,bounds:{west:renderedBounds.min.x+center.x,east:renderedBounds.max.x+center.x,south:renderedBounds.min.z+center.z,north:renderedBounds.max.z+center.z}});
                 if (i === 0) cellRot = rot;
                  group.add(buildingGroup);
                  buildingPlaced = true;
@@ -2794,3 +2807,4 @@ export async function createCivicDistrict(scene, options = {}) {
 }
 
 export default createCivicDistrict;
+

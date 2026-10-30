@@ -1200,9 +1200,10 @@ function createCityHarborConnector(cityGroundY, heightSampler) {
   for (let i = 0; i < steps; i++) {
     const topY = THREE.MathUtils.lerp(footY, cityGroundY, (i + 1) / steps);
     const height = topY - footY + 0.15;
-    const tread = new THREE.Mesh(new THREE.BoxGeometry(10 / steps, height, boardwalkWidth), new THREE.MeshStandardMaterial({ color: 0xbda987, roughness: 0.9 }));
+    const landingExtension=i===0?1:0; // One landward landing on the existing first tread.
+    const tread = new THREE.Mesh(new THREE.BoxGeometry(10 / steps + landingExtension, height, boardwalkWidth), new THREE.MeshStandardMaterial({ color: 0xbda987, roughness: 0.9 }));
     tread.name = 'HarborApproachStep';
-    tread.position.set(HARBOR_LAND_APPROACH_X - HARBOR_CENTER_3D.x + (i + 0.5) * 10 / steps, footY - groupY + height / 2, 0);
+    tread.position.set(HARBOR_LAND_APPROACH_X - HARBOR_CENTER_3D.x + (i + 0.5) * 10 / steps - landingExtension/2, footY - groupY + height / 2 - 0.15, 0);
     connector.add(tread);
   }
   connector.userData.landApproachX = HARBOR_LAND_APPROACH_X;

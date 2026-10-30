@@ -36,6 +36,7 @@ export interface MiniMapOptions {
 export interface MiniMapHandle {
   readonly rootElement: HTMLDivElement;
   dispose(): void;
+  setSuspended(value: boolean): void;
 }
 
 function normalizePosition(position: unknown): MiniMapPoint | null {
@@ -338,8 +339,9 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
     return `${position.x.toFixed(1)}|${position.z.toFixed(1)}`;
   };
 
+  let sceneSuspended=false;
   const loop = () => {
-    if (disposed) return;
+    if (disposed||sceneSuspended) return;
     try {
       const rawPosition = getPosition?.();
       const position = normalizePosition(rawPosition);
@@ -384,6 +386,7 @@ export function mountMiniMap(options: MiniMapOptions = {}): MiniMapHandle | null
 
   const handle: MiniMapHandle = {
     rootElement: wrapElement,
+    setSuspended(value:boolean){sceneSuspended=!!value;},
     dispose() {
       disposed = true;
       disposeUpdate();

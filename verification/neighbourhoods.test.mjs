@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { NEIGHBOURHOODS, NEIGHBOURHOOD_STREETS, neighbourhoodFrontages } from '../src/world/neighbourhoodLayout.js';
+import { NEIGHBOURHOODS, NEIGHBOURHOOD_STREETS, CITY_CORE_STREETS, neighbourhoodFrontages } from '../src/world/neighbourhoodLayout.js';
 import { HARBOR_SETBACKS } from '../src/world/locations.js';
 import { Prefabs } from '../src/world/buildingSpawner.js';
 import { PlayerController } from '../src/controls/PlayerController.js';
@@ -16,7 +16,7 @@ test('every neighbourhood connects to the city and has another way out', () => {
     if (!graph.has(b)) graph.set(b, new Set());
     graph.get(a).add(b); graph.get(b).add(a);
   }
-  const visited = new Set(['20,105', '-45,-60']);
+  const visited = new Set(CITY_CORE_STREETS.flatMap(s=>s.points.map(key)));
   const queue = [...visited];
   while (queue.length) for (const next of graph.get(queue.shift()) ?? []) {
     if (!visited.has(next)) { visited.add(next); queue.push(next); }

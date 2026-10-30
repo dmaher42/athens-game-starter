@@ -36,7 +36,7 @@ export async function createCityLandmarks(parent,{terrain}){
    const foundation=new THREE.Mesh(new THREE.BoxGeometry(def.width+4.4,.92,def.depth+5.6),firstStone);foundation.name='ParthenonRockFoundation';foundation.position.y=-.44;foundation.receiveShadow=true;building.add(foundation);
    await createAcropolisPrecinct(parent,{terrain,seaLevel:getSeaLevelY()});
    const statue=building.getObjectByName('ParthenonAthena');
-   if(statue){statue.userData.interactable=true;statue.userData.interactionRange=4.5;statue.userData.placeId='parthenon-athena';statue.userData.onUse=()=>scene.userData.interactor?.showDialogue('Athena watches over the city with shield, spear and a small figure of Victory. This original, simplified figure evokes the lost gold-and-ivory statue. Outside, the Agora supplies the city and the theatre gathers its voices.');queueSceneInteractable(scene,statue,{includeChildren:false});}
+   if(statue){statue.userData.interactable=true;statue.userData.interactionRange=4.5;statue.userData.placeId='parthenon-athena';statue.userData.onUse=()=>scene.userData.interactor?.showDialogue('Athena watches over the city with shield, spear and a small figure of Victory. This original gold-and-ivory interpretation evokes the lost Athena Parthenos; its exact appearance is uncertain. Outside, the Agora supplies the city and the theatre gathers its voices.');queueSceneInteractable(scene,statue,{includeChildren:false});}
   }
   if(def.kind==='hall')for(const z of[-4,4]){const bench=Prefabs.stoneBench({w:3});bench.position.set(-1,0,z);bench.rotation.y=Math.PI/2;building.add(bench);}
   if(def.kind==='warehouse'){

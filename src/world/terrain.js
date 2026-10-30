@@ -1,3 +1,4 @@
+import {AGORA_GRADE_BOUNDS} from './cityCivicLayout.js';
 import {shapeAcropolisGround} from './acropolisLayout.js';
 import {isCityDryGround} from './neighbourhoodLayout.js';
 import * as THREE from "three";
@@ -266,7 +267,7 @@ function getElevation(
     const influence = 1 - THREE.MathUtils.smoothstep(Math.hypot(dx, dz), 0, 40);
     h = THREE.MathUtils.lerp(h, seaLevel + terrace.heightAboveSea, influence);
   }
-  const court = AGORA_COURT_BOUNDS;
+  const court = AGORA_GRADE_BOUNDS;
   const courtDistance = Math.hypot(Math.max(court.west - x, x - court.east, 0), Math.max(court.south - worldZ, worldZ - court.north, 0));
   h = THREE.MathUtils.lerp(h, seaLevel + 2.5, 1 - THREE.MathUtils.smoothstep(courtDistance, 0, 18));
   h = shapeAcropolisGround(x,worldZ,h,seaLevel);

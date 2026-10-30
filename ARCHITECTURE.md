@@ -672,3 +672,21 @@ Source asset: Daniel's downloaded Socrates_v01_game (3).glb from the revised Ble
 Raw GLB budget: 13 material primitives / 42,308 triangles, ten materials, no texture images, one skin. Only Socrates_Listen_Idle is played through the existing encounter update, within 45 m of the player. It is standing/head-idle only, not walking, lip sync, facial acting or a full-body animation rig. Dynamic shadow casting remains disabled. The source Blender file remains in Daniel's downloaded ZIP; no Blender software was installed here.
 
 Slow optional loading initially exposed a 15-second timeout that discarded valid late completion. The fallback remains visible after 15 seconds, but a valid late model can now replace it; disposal still rejects late arrivals after the entity is destroyed. This does not block game boot or retry indefinitely. Normal requests and deliberately delayed requests use the same existing GLTF loader. The revised model and the dialogue have independent lifecycles; their identity/save storage is not replaced.
+
+
+## Docked trireme visit
+
+The optional harbour trireme visit reuses the existing player and interactor. Its owners and acceptance evidence are documented in documentation/trireme-stage-one.md. The single Application frame callback suspends city simulation/rendering aboard; city assets remain resident. Geometry and route dimensions have one contract in src/world/triremeModel.js. No independent save or quest system is introduced.
+
+
+## Hoplite player asset
+
+PlayerSystem loads hoplite-v04.glb first, followed by the retained Myrto/legacy fallbacks. Body-only height fitting excludes the spear. Character remains the animation owner; PlayerController physics and save ownership are unchanged. See documentation/hoplite-player.md for provenance, acceptance and limitations.
+
+
+## Parthenon interior ownership
+
+The existing parthenonArchitecture.js owner contains the cella dimensional contract; athenaStatue.js creates the single original Athena sculpture with a structural plinth. Interior wall/ceiling/floor materials remain local to this temple. precinctLife.js preserves the outdoor bronze clone height. Place IDs and save/quest ownership are unchanged. See documentation/parthenon-interior.md for acceptance, historical limits and headless/native capture distinction.
+
+
+The current hoplite is the whole v04 GLB with its own bundled clips; no v03 animation mixing or shield offset. See documentation/hoplite-player-v04.md for the revised carry acceptance. Existing temple and ship ownership remains unchanged.

@@ -4,7 +4,7 @@ import { createLabelSprite } from './demoTour.js';
 import { getSeaLevelY } from './locations.js';
 import '../ui/harborActivity.css';
 
-export function mountHarborActivity({scene,harbor,questManager,interactor,player,collider,interactionHud,canvas}={}) {
+export function mountHarborActivity({scene,harbor,questManager,interactor,player,collider,interactionHud,canvas,onBoardTrireme}={}) {
  if(typeof window==='undefined'||typeof document==='undefined'||!harbor)return null;
  const model=new HarborEvidenceActivity(questManager),markers=[];
  const root=new THREE.Group();root.name='HarborLearningEvidence';root.userData.noCollision=true;scene.add(root);
@@ -40,6 +40,7 @@ export function mountHarborActivity({scene,harbor,questManager,interactor,player
    for(const [label,text] of [['Observe',evidence.observed],['Historical context',evidence.history],['Infer',evidence.inference]]){const p=element('p');p.appendChild(element('strong',label+': '));p.appendChild(document.createTextNode(text));card.appendChild(p);}
    card.appendChild(element('p',evidence.caution,'harbor-activity__note'));dialog.appendChild(card);
   }
+  if(currentEvidence==='trireme'&&onBoardTrireme){dialog.appendChild(button('Board the full-size trireme',()=>{close();onBoardTrireme();},{id:'board-trireme'}));dialog.appendChild(element('p','A separate docked visit: explore the deck and narrow rowing bays, then return here. No sailing destinations are available yet.','harbor-activity__note'));}
   const progress=element('p',`Evidence inspected: ${state.observed.length}/2. ${state.objective}`,'harbor-activity__progress');progress.dataset.testid='activity-progress';dialog.appendChild(progress);
   const review=element('nav',null,'harbor-activity__actions');review.setAttribute('aria-label','Review inspected evidence');
   for(const id of state.observed)review.appendChild(button('Review '+(id==='merchant'?'merchant cargo':'trireme'),()=>{currentEvidence=id;render(model.snapshot());},{id:'review-'+id}));dialog.appendChild(review);

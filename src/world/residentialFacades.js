@@ -36,6 +36,8 @@ export function residentialStyle(sample=0){
  return Math.floor(n*3);
 }
 
+export function residentialDoorX(w,v){return v===0?-w*.14:v===1?w*.16:0;}
+
 export function addResidentialFacade(root,{w,d,h,variant=0,rowhouse=false}){
  const p=getResidentialPalette(),v=variant%3;
  const detail=new THREE.Group();detail.name='ResidentialFacadeDetails';detail.userData.noCollision=true;root.add(detail);
@@ -44,7 +46,7 @@ export function addResidentialFacade(root,{w,d,h,variant=0,rowhouse=false}){
   const o=new THREE.Mesh(boxGeometry,mat);o.name=name;o.position.set(x,y,z);o.scale.set(width,height,depth);o.castShadow=false;o.receiveShadow=true;o.userData.noCollision=true;o.userData.noCull=true;detail.add(o);return o;
  };
  const doorWidth=Math.min(rowhouse?1.05:1.15,w*.29),doorHeight=Math.min(2.12,h-.45);
- const doorX=v===0?-w*.14:v===1?w*.16:0;
+ const doorX=residentialDoorX(w,v);
  const jamb=v===1?wood:p.stone;
  box('ResidentialStoneSocle',p.stone,0,.19,0,w+.018,.38,d+.018);
  box(rowhouse?'RowhouseStreetDoor':'HouseStreetDoor',wood,doorX,doorHeight/2,front+.055,doorWidth,doorHeight,.075);
@@ -72,3 +74,4 @@ export function addResidentialFacade(root,{w,d,h,variant=0,rowhouse=false}){
  root.userData.residentialFacade={version:1,variant:v,doorX,enterable:false};
  return detail;
 }
+

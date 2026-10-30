@@ -1,7 +1,9 @@
 // Apply shared, metre-scaled textures to the authored street/court surfaces.
 import * as THREE from "three";
-import { MATERIALS } from "../materials/materialRegistry.js";
-import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
+import {getStreetSurfaceTexture} from "../materials/streetSurfaceTextures.js";
+import {resolveBaseUrl,joinPath} from "../utils/baseUrl.js";
+let earthTexturePromise;
+function getEarthTexture(){earthTexturePromise??=new THREE.TextureLoader().loadAsync(joinPath(resolveBaseUrl(),"textures/ground/dirt-albedo.jpg")).then(map=>{map.wrapS=map.wrapT=THREE.RepeatWrapping;map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=4;return map;}).catch(()=>getStreetSurfaceTexture(false));return earthTexturePromise;}
 
 // Walkable architecture also has groundSurface metadata for collision support.
 // Only authored road ribbons and court overlays belong to this material pass.
@@ -16,27 +18,11 @@ export async function applyGravelToRoads({ scene } = {}) {
     if (o.isMesh && isRoadSurface(o) && !o.material?.userData?.__isGravel) surfaces.push(o);
   });
   if (!surfaces.length) return;
-  const loader = new THREE.TextureLoader();
-  const load = async url => {
-    try {
-      const map = await loader.loadAsync(url);
-      map.wrapS = map.wrapT = THREE.RepeatWrapping;
-      map.colorSpace = THREE.SRGBColorSpace;
-      map.anisotropy = 8;
-      return map;
-    } catch (error) {
-      console.warn('[roads] Using untextured ground fallback:', url, error);
-      return null;
-    }
-  };
-  const [stone, dirt] = await Promise.all([
-    load(joinPath(resolveBaseUrl(), 'textures/stone_rough.jpg')),
-    load(MATERIALS.dirt.albedo),
-  ]);
+  const stone=getStreetSurfaceTexture(true),dirt=await getEarthTexture();
   const materials = new Map();
   for (const mesh of surfaces) {
-    const paved = mesh.userData.groundSurface === 'court' || mesh.userData.roadType === 'artery';
-    const color = mesh.userData.groundSurface === 'court' ? mesh.material.color.getHex() : paved ? 0xe0d4bd : 0xd2bd9d;
+    const paved = mesh.userData.roadType === 'artery' || mesh.name === 'NeighbourhoodCourt-traders';
+    const color = paved ? 0xe7e1d4 : 0xd6d0c2;
     const key = `${paved}:${color}`;
     if (!materials.has(key)) {
       const material = new THREE.MeshStandardMaterial({
@@ -45,6 +31,8 @@ export async function applyGravelToRoads({ scene } = {}) {
         vertexColors: true, transparent: true, depthWrite: false,
         polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
       });
+      if(!paved){material.onBeforeCompile=(shader,renderer)=>{THREE.MeshStandardMaterial.prototype.onBeforeCompile.call(material,shader,renderer);shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+ float soilValue=dot(diffuseColor.rgb,vec3(.299,.587,.114));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(soilValue)*vec3(1.05,1.015,.93),.78);`);};material.customProgramCacheKey=()=>THREE.MeshStandardMaterial.prototype.customProgramCacheKey.call(material)+'|quiet-packed-earth-v1';}
       material.userData.__isGravel = true;
       materials.set(key, material);
     }

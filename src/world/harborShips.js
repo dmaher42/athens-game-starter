@@ -101,7 +101,7 @@ function shipBeam(t, naval) {
  const fullness=Math.sqrt(Math.max(0,1-Math.pow(Math.abs(t),4)));
  return Math.max(naval?.025:(t<0?.12:.025),fullness);
 }
-function presentationHull(length,width,naval) {
+export function createShipPresentationHull(length,width,naval) {
  const key=`${length}:${width}:${naval}`;if(presentationGeometry.has(key))return presentationGeometry.get(key);
  const positions=[],uv=[],indices=[],section=[[1,1.7],[.995,1.1],[.98,.5],[.82,-.25],[.4,-.85],[0,-1.08],[-.4,-.85],[-.82,-.25],[-.98,.5],[-.995,1.1],[-1,1.7]];
  for(let i=0;i<=24;i++){const t=i/12-1,beam=shipBeam(t,naval),rise=shipSheer(t,naval)-1.7;for(const[z,y]of section){positions.push(t*length/2,y+(Math.max(0,y)/1.7)*rise,z*width*.5*beam);uv.push(i/24,(z+1)/2);}}
@@ -119,7 +119,7 @@ function upgradeShipPresentation(ship,naval,p) {
  const deckMaterial=getShipDeckMaterial();ship.getObjectByName('ShipDeck').material=deckMaterial;
  const {length,width}=ship.userData.shipDimensions,details=new THREE.Group();details.name='ShipVisualDetails';details.userData.noCollision=true;ship.add(details);
  const physicalHull=ship.getObjectByName('CurvedShipHull');physicalHull.name='ShipHullCollision';physicalHull.layers.mask=0;physicalHull.userData.noCull=true;
- const hull=new THREE.Mesh(presentationHull(length,width,naval),p.body);hull.name='CurvedShipHull';hull.castShadow=true;hull.receiveShadow=true;details.add(hull);
+ const hull=new THREE.Mesh(createShipPresentationHull(length,width,naval),p.body);hull.name='CurvedShipHull';hull.castShadow=true;hull.receiveShadow=true;details.add(hull);
  for(const child of ship.children)if(child.name==='Gunwale'){child.layers.mask=0;child.userData.noCull=true;}
  const lines=[],gap=ship.userData.boardingGap,mastX=naval?0:-1;
  for(const side of [-1,1]){

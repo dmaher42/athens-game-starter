@@ -295,11 +295,12 @@ export const Prefabs = {
     g.name = "ProceduralCourtyard";
     g.add(makeBaseShadow(w, d));
     const wallHeight = 2.5;
+    const wallMaterial=getResidentialPalette().plaster[2];
     const walls = [
-      makeBox((w - 2.4) / 2, wallHeight, 0.4, createMaterial("plaster", rng)),
-      makeBox(w, wallHeight, 0.4, createMaterial("plaster", rng)),
-      makeBox(0.4, wallHeight, d, createMaterial("plaster", rng)),
-      makeBox(0.4, wallHeight, d, createMaterial("plaster", rng))
+      makeBox((w - 2.4) / 2, wallHeight, 0.4, wallMaterial),
+      makeBox(w, wallHeight, 0.4, wallMaterial),
+      makeBox(0.4, wallHeight, d, wallMaterial),
+      makeBox(0.4, wallHeight, d, wallMaterial)
     ];
     walls[0].position.set(-(w + 2.4) / 4, wallHeight/2, d/2);
     const entranceSide = walls[0].clone();
@@ -557,7 +558,7 @@ export function poolMaterialsAndMerge(group) {
   const toRemove = [];
 
   group.traverse((child) => {
-    if (!child.isMesh || !child.geometry || !child.material) return;
+    if (!child.isMesh || child.isInstancedMesh || child.isSkinnedMesh || !child.geometry || !child.material) return; // Instance/bone transforms are not ordinary static geometry.
     // Mutable registered subtrees own their visibility (including saved outcomes).
     // Do not bake them or hidden descendants into a permanent city batch.
     for (let ancestor = child; ancestor; ancestor = ancestor.parent) {
@@ -646,3 +647,4 @@ export function poolMaterialsAndMerge(group) {
 }
 
 function clamp(v, a, b) { return Math.min(Math.max(v, a), b); }
+

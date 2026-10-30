@@ -18,6 +18,7 @@ function isRoadObject(obj) {
   );
 }
 
+/** @param {any} [options] Legacy runtime-control options plus active-scene routing. */
 export function installApplicationRuntimeControls({
   scene,
   playerSystem,
@@ -29,6 +30,8 @@ export function installApplicationRuntimeControls({
   bloomPass,
   toggleFog,
   probePlayerPosition,
+  isWorldActive=()=>Boolean(true),
+  getActiveInteractor=()=>interactor,
 } = {}) {
   if (typeof window === "undefined") {
     return;
@@ -169,11 +172,12 @@ export function installApplicationRuntimeControls({
 
   renderer.domElement.addEventListener("pointerdown", (event) => {
     if (event.button === 0) {
-      interactor.useObject();
+      getActiveInteractor()?.useObject();
     }
   });
 
   window.addEventListener("keydown", (event) => {
+    if(!isWorldActive())return;
     if (event.code === "KeyG" && !event.repeat) {
       toggleFog();
       return;

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { createProceduralMarbleTextures } from "../core/AssetLoader.js";
+import { getResidentialPalette } from "./residentialFacades.js";
 import { resolveBaseUrl, joinPath } from "../utils/baseUrl.js";
 
 const textureLoader = new THREE.TextureLoader();
@@ -19,24 +19,19 @@ function loadTexture(path, tilingX = 1, tilingY = 1) {
 }
 
 export function makeMarbleMaterial() {
-  const { map, normalMap, roughnessMap, aoMap } =
-    createProceduralMarbleTextures();
-
-  return new THREE.MeshPhysicalMaterial({
-    map,
-    normalMap,
-    roughnessMap,
-    aoMap,
-    metalness: 0.1, // Slightly higher for subtle highlights
-    roughness: 0.45, // Smoother for polished look
-    clearcoat: 0.25,
-    clearcoatRoughness: 0.3,
-    sheen: 0.15,
-    sheenRoughness: 0.8,
-    envMapIntensity: 1.25, // Stronger environmental highlights
+  // Generic civic prefabs use restrained limestone. Reuse the existing quiet
+  // mineral grain; the Parthenon's hero materials have a separate owner.
+  const material = new THREE.MeshStandardMaterial({
+    color: 0xbeb9aa,
+    map: getResidentialPalette().plaster[0].map,
+    roughness: 0.95,
+    metalness: 0,
+    envMapIntensity: 0.25,
   });
+  material.name = 'QuietCivicLimestone';
+  material.userData.materialType = 'civic-limestone';
+  return material;
 }
-
 export function makeBronzeMaterial() {
   return new THREE.MeshPhysicalMaterial({
     color: 0x8d6e63,
@@ -144,3 +139,5 @@ export function getMarketCounterMaterial(){
  }
  marketTimber=new THREE.MeshStandardMaterial({name:'AgoraCounterTimber',color:0xffffff,map,roughness:1,metalness:0,envMapIntensity:.08});marketTimber.userData.materialType='marketTimber';return marketTimber;
 }
+
+

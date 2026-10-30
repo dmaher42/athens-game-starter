@@ -76,6 +76,7 @@ export function createInteractor(renderer, camera, scene, { getPlayerPosition } 
   const citizenPrompt = createCitizenPrompt();
   const citizenDialogueOverlay = createCitizenDialogueOverlay();
   let dialogueHideTimer = null;
+  let suspended=false;
 
   function isInScene(object) {
     let node = object;
@@ -349,6 +350,7 @@ export function createInteractor(renderer, camera, scene, { getPlayerPosition } 
   }
 
   function updateHover(deltaSeconds = HOVER_UPDATE_INTERVAL) {
+    if(suspended)return null;
     if (Number.isFinite(deltaSeconds)) {
       hoverTimer += deltaSeconds;
       stationaryHoverTimer += deltaSeconds;
@@ -399,6 +401,7 @@ export function createInteractor(renderer, camera, scene, { getPlayerPosition } 
   }
 
   function useObject() {
+    if(suspended)return;
     const aimedWorker = currentHover?.userData?.preferAimedUse && isWithinRange(currentHover);
     const nearby = aimedWorker ? null : findNearbyInteractable();
     if (nearby) { setCitizenHover(null); if (nearby !== currentHover) { clearHover(); applyHighlight(nearby); } }
@@ -518,6 +521,8 @@ export function createInteractor(renderer, camera, scene, { getPlayerPosition } 
 
   const api = {
     showDialogue: showCitizenDialogue,
+    setSuspended(value){suspended=!!value;if(suspended){clearHover();clearTimeout(dialogueHideTimer);if(citizenDialogueOverlay)citizenDialogueOverlay.style.opacity='0';}},
+    dispose(){clearHover();clearTimeout(dialogueHideTimer);for(const object of [...trackedInteractables.keys()])unregisterInteractable(object);citizenPrompt?.remove();citizenDialogueOverlay?.remove();},
     raycaster,
     mouse,
     pickObject,

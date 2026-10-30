@@ -1,0 +1,2 @@
+Hoplite_Player_v04.glb supplied by Daniel, downloaded 2026-10-30. SHA256 03113e5c4c9e1716a06a365115ee5f9338b49348ee71e447cc3afb26681aaa15
+Complete revised rig with bundled Idle_Breathe, Walk and Run. PlayerSystem loads these animations directly from this GLB; no v03 clips, shield offsets or retargeting. Myrto/legacy fallbacks retained. No combat or dedicated jump animation. Existing capsule remains unchanged.
