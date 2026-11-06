@@ -1,0 +1,75 @@
+name: Verify published Athens
+on:
+  push:
+    branches: [codex/verify-athens-public-20261106]
+permissions:
+  contents: read
+jobs:
+  live-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Test published game in Chrome
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from "playwright";
+          import assert from "node:assert/strict";
+          const browser = await chromium.launch({
+            executablePath: process.env.CHROME_BIN || "/usr/bin/google-chrome",
+            args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
+          });
+          const page = await browser.newPage({ viewport: { width: 1024, height: 768 } });
+          const errors = [];
+          page.on("pageerror", error => errors.push(error.message));
+          page.on("console", msg => { if (msg.type() === "error") errors.push(msg.text()); });
+          try {
+            const response = await page.goto("https://dmaher42.github.io/athens-game-starter/", {
+              waitUntil: "domcontentloaded", timeout: 90000
+            });
+            assert.equal(response.status(), 200, "Public page did not return HTTP 200");
+            await page.waitForFunction(() =>
+              typeof window.render_game_to_text === "function" ||
+              document.body.innerText.includes("We couldn't finish loading Athens"),
+              null, { timeout: 180000 });
+            const failed = await page.locator("body").innerText();
+            assert.ok(!failed.includes("We couldn't finish loading Athens"), "Game showed a loading error");
+            await page.waitForFunction(() => {
+              try { return Boolean(JSON.parse(window.render_game_to_text()).player); }
+              catch { return false; }
+            }, null, { timeout: 60000 });
+            assert.ok(await page.locator("canvas").count() > 0, "Game canvas is missing");
+            const initial = await page.evaluate(() => JSON.parse(window.render_game_to_text()).player);
+            await page.keyboard.down("w");
+            await page.waitForTimeout(4000);
+            await page.keyboard.up("w");
+            let final = await page.evaluate(() => JSON.parse(window.render_game_to_text()).player);
+            let moved = Math.hypot(final.x - initial.x, final.z - initial.z);
+            if (moved < 0.05) {
+              await page.keyboard.down("a");
+              await page.waitForTimeout(4000);
+              await page.keyboard.up("a");
+              final = await page.evaluate(() => JSON.parse(window.render_game_to_text()).player);
+              moved = Math.hypot(final.x - initial.x, final.z - initial.z);
+            }
+            await page.screenshot({ path: "athens-live-smoke.png" });
+            console.log(JSON.stringify({ url: page.url(), title: await page.title(), initial, final, moved, errors }));
+            assert.ok(moved >= 0.05, "Player did not move in response to keyboard input");
+            assert.deepEqual(errors, [], "Browser reported errors");
+          } finally {
+            await page.screenshot({ path: "athens-live-smoke.png" }).catch(() => {});
+            await browser.close();
+          }
+          NODE
+      - name: Save live test screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: athens-live-smoke
+          path: athens-live-smoke.png
+          if-no-files-found: ignore
