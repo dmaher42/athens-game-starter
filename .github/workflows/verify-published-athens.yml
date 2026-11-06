@@ -85,6 +85,22 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Inspect current city baseline
+        run: |
+          node --input-type=module <<'NODE'
+          import {createHash} from "node:crypto";
+          import * as THREE from "three";
+          import {generateCityGrid} from "./src/world/cityPlan.js";
+          import {CITY_STREETS, CITY_QUARTERS, AGORA_FRONTAGES, cityQuarterRecipe} from "./src/world/neighbourhoodLayout.js";
+          import {createLayoutFixture} from "./verification/city-layout.fixture.mjs";
+          const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+          const {cells, roadNetwork} = generateCityGrid(() => 4);
+          const data = cells.map(c => ({x:c.position.x,z:c.position.z,type:c.type,district:c.district,buildable:c.buildable,gridX:c.gridX,gridZ:c.gridZ}));
+          const roadTriangles = roadNetwork.reduce((s,r) => s + r.renderRibbon(new THREE.Vector3(0,4,0),()=>4).geometry.index.count/3, 0);
+          const {stats} = await createLayoutFixture();
+          const typesAt=(x,z) => Array.from({length:1000},(_,i)=>cityQuarterRecipe(x,z,(i+.5)/1000)?.type);
+          console.log(JSON.stringify({baselineProbe: {streetHash:hash(roadNetwork.map(r=>({width:r.width,type:r.type,points:r.points.map(p=>[p.x,p.z])}))),gridHash:hash(data),roadTriangles,city:stats,streets:CITY_STREETS.length,quarters:CITY_QUARTERS.length,frontages:AGORA_FRONTAGES.length,workshop:typesAt(-170,38).filter(x=>x==="workshop").length,homes:typesAt(-65,115).filter(x=>x==="house").length,blendA:cityQuarterRecipe(-139,85,.001),blendB:cityQuarterRecipe(-138.9,85,.001)}}));
+          NODE
       - name: Install system dependencies
         timeout-minutes: 5
         run: npx playwright install-deps chromium
