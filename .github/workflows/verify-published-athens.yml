@@ -111,6 +111,8 @@ jobs:
       - name: Install headless Chromium only
         timeout-minutes: 5
         run: npx playwright install --only-shell chromium
+      - name: Check current city walking routes
+        run: node verification/neighbourhood-walk.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Verify complete build
