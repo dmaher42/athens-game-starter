@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "lts/*"
+          node-version: "22"
           cache: "npm"
 
       - name: Configure GitHub Pages
@@ -38,9 +38,10 @@ jobs:
         timeout-minutes: 5
         run: npx playwright install-deps chromium
 
-      - name: Install Playwright Chromium
+      # Verification launches Chromium in headless mode only.
+      - name: Install Playwright headless Chromium
         timeout-minutes: 5
-        run: npx playwright install chromium
+        run: npx playwright install --only-shell chromium
 
       - name: Typecheck
         run: npm run typecheck
