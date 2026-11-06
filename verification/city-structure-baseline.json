@@ -1,13 +1,13 @@
 {
-  "note": "Pre-pass existing geometry on flat height4 Node fixture; no browser/GPU/FPS evidence. Great Theatre reservation: exact bounded grid delta checked against saved pre-theatre generator; street geometry and limits unchanged.",
-  "streetHash": "1bc6e317050dda79a700d2b7e560f428f2f74b77e4369e966460cfc0c70b27e6",
-  "gridHash": "8bcfddb38a711e4e9744064c2d9b58ef78fa564a1c4b634b72e0fbf33257609f",
-  "roadTriangles": 22664,
+  "note": "Flat height-4 fixture baseline for the 30 October city-planning release, including the relocated Agora and neighbourhoods. This is not browser, GPU or FPS evidence.",
+  "streetHash": "041bbf2cfbe4582cbd5d570aa6808f868dcd406137bcb3ee05b23b521a3194d1",
+  "gridHash": "6cf8d9bb72a110fdd3efc9faef2c03eeec1b2026eb021b39b7363d873c6ec571",
+  "roadTriangles": 29104,
   "city": {
-    "triangles": 65700,
-    "meshes": 343,
+    "triangles": 79666,
+    "meshes": 522,
     "lights": 0,
-    "buildingLots": 183,
-    "streetFrontages": 26
+    "buildingLots": 149,
+    "streetFrontages": 10
   }
 }

@@ -24,6 +24,7 @@ try {
     window.requestAnimationFrame = (callback) => callback.name === 'bound _loop' ? 0 : window.walkRAF(callback);
     const { PlayerController } = await import('/athens-game-starter/src/controls/PlayerController.js');
     const { EnvironmentCollider } = await import('/athens-game-starter/src/env/EnvironmentCollider.js');
+    const { AGORA_CENTER_3D, ACROPOLIS_PEAK_3D } = await import('/athens-game-starter/src/world/locations.js');
     const THREE = window.THREE, scene = window.scene;
     const terrain = scene.getObjectByName('Terrain');
     const plan = scene.getObjectByName('CivicDistrict').userData.plan;
@@ -32,18 +33,18 @@ try {
     const input = { forward: false, consumeLookDelta: () => ({ yaw: 0, pitch: 0 }) };
     const player = new PlayerController(input, environment, { camera, terrainHeightSampler: terrain.userData.getHeightAt });
     player.cameraControlledExternally = true;
-    player.position.set(-30, terrain.userData.getHeightAt(-30, 20) + 1, 20); player.syncCapsuleToObject();
+    player.position.set(AGORA_CENTER_3D.x, terrain.userData.getHeightAt(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z) + 1, AGORA_CENTER_3D.z); player.syncCapsuleToObject();
     for (let i = 0; i < 30; i++) player.update(1 / 60);
     const paths = [];
     scene.traverse((o) => { if (o.userData.routePoints) paths.push(o.userData); });
-    const visited = new Set(); const walks = []; let frames = 0;
-    function walkTo(x, z) {
+    const visited = new Set(); const walks = []; let frames = 0; let activeRoute = 'start';
+    function walkTo(x, z, tolerance = 0.6) {
       input.forward = true;
       let steps = 0;
-      while (Math.hypot(player.position.x - x, player.position.z - z) > 0.6) {
+      while (Math.hypot(player.position.x - x, player.position.z - z) > tolerance) {
         camera.position.copy(player.position).add(new THREE.Vector3(0, 2, 0)); camera.lookAt(x, camera.position.y, z); camera.updateMatrixWorld();
         player.update(1 / 30); window.collectibles.update(1 / 30, player.position); frames++;
-        if (++steps > 240) throw new Error(`Walking blocked on the way to (${x.toFixed(1)},${z.toFixed(1)}) at ${player.position.toArray().map(v => v.toFixed(2))}`);
+        if (++steps > 240 && Math.hypot(player.position.x - x, player.position.z - z) > tolerance) throw new Error(`${activeRoute}: walking blocked on the way to (${x.toFixed(1)},${z.toFixed(1)}) at ${player.position.toArray().map(v => v.toFixed(2))}`);
         if (player.position.y < terrain.userData.getHeightAt(player.position.x, player.position.z) - 0.5) throw new Error('Player fell through city ground.');
       }
       input.forward = false;
@@ -56,6 +57,7 @@ try {
       walkTo(place.x, place.z); visited.add(place.id);
     }
     function follow(path, reverse = false) {
+      activeRoute = `${path.streetId}${reverse ? ' (reverse)' : ''}`;
       const points = path.routePoints.map(([x, z]) => new THREE.Vector3(x, 0, z));
       if (reverse) points.reverse();
       const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.2);
@@ -64,26 +66,34 @@ try {
       walks.push(path.streetId ?? 'city-connector');
     }
     const byId = (id) => { const path = paths.find((p) => p.streetId === id); if (!path) throw new Error(`Missing ${id}`); return path; };
-    const nw = paths.find((p) => p.routePoints[0][0] === -30 && p.routePoints.at(-1)[0] === -108);
-    const south = paths.find((p) => p.routePoints[0][0] === -30 && p.routePoints.at(-1)[0] === -45);
-    const north = paths.find((p) => p.routePoints[0][0] === -31.5 && p.routePoints.at(-1)[0] === 20);
-    const harbour = paths.find(p=>p.routePoints[0][0]===-30 && p.routePoints.at(-1)[0]===0 && p.routePoints.at(-1)[1]===10);
-    if(!harbour)throw new Error('Missing harbour approach');
+    const harbour = byId('harbour-agora');
     follow(harbour);
+    activeRoute = 'harbour pier';
     for(let x=0;x<=110;x+=2)walkTo(x,10);
     if(player.position.y<1.7)throw new Error('Player left the pier and walked on the water.');
     for(let x=110;x>=0;x-=2)walkTo(x,10);
-    follow(harbour,true);walkTo(-30,20);
-    const sacred = paths.find((p) => p.routePoints.at(-1)[0] === -32 && p.routePoints.at(-1)[1] === -10);
-    if (!sacred) throw new Error('Missing temple approach');
-    follow(sacred); walkTo(-24, -8);
-    const templeReward = window.collectibles.items.find(item => Math.abs(item.position.x + 24) < 0.01 && Math.abs(item.position.z + 8) < 0.01);
+    follow(harbour,true);
+
+    const sacred = byId('sacred-way');
+    follow(sacred);
+    activeRoute = 'Acropolis reward';
+    // Pickups have a 1.8m collection radius; verify collection without requiring the player to stand on the pickup.
+    walkTo(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.z, 1.6);
+    const templeReward = window.collectibles.items.find(item => Math.abs(item.position.x - ACROPOLIS_PEAK_3D.x) < 0.01 && Math.abs(item.position.z - ACROPOLIS_PEAK_3D.z) < 0.01);
     if (!templeReward?.userData.collected) throw new Error('Temple reward is unreachable on foot.');
-    follow(sacred, true); walkTo(-30, 20);
-    follow(nw); follow(byId('potters-olive')); follow(byId('olive-garden')); follow(byId('garden-traders'));
-    follow(byId('traders-city')); follow(north, true); walkTo(-30, 20);
-    follow(south); follow(byId('weavers-city')); follow(byId('weavers-potters'));
-    follow(byId('potters-olive')); follow(byId('olive-traders'));
+    follow(sacred, true);
+
+    follow(byId('potters-approach'));
+    follow(byId('potters-olive'));
+    follow(byId('olive-garden'));
+    follow(byId('garden-traders'));
+    follow(byId('traders-city'));
+    follow(byId('north-residential-collector'), true);
+    activeRoute = 'return to Agora'; walkTo(AGORA_CENTER_3D.x, AGORA_CENTER_3D.z);
+    follow(byId('west-residential-loop'));
+    follow(byId('weavers-potters'));
+    follow(byId('potters-olive'));
+    follow(byId('olive-traders'));
     return { harbourReached: true, templeReached: true, visited: [...visited], walks, frames, onFoot: !player.flying, finalPosition: player.position.toArray() };
   });
   assert.equal(report.visited.length, 5); assert.equal(report.onFoot, true); assert.deepEqual(errors, []);

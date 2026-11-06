@@ -22,6 +22,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Retain the checked-in release's hashed assets for already-open game tabs.
+      - name: Save existing release assets
+        run: |
+          if [ -d docs/assets ]; then
+            mkdir -p "$RUNNER_TEMP/athens-existing-assets"
+            cp -a docs/assets/. "$RUNNER_TEMP/athens-existing-assets/"
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -48,6 +56,12 @@ jobs:
 
       - name: Verify
         run: npm run verify
+
+      - name: Retain existing release assets
+        run: |
+          if [ -d "$RUNNER_TEMP/athens-existing-assets" ]; then
+            cp -an "$RUNNER_TEMP/athens-existing-assets/." docs/assets/
+          fi
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
