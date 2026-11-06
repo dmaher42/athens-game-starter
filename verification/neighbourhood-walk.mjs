@@ -44,7 +44,7 @@ try {
       while (Math.hypot(player.position.x - x, player.position.z - z) > tolerance) {
         camera.position.copy(player.position).add(new THREE.Vector3(0, 2, 0)); camera.lookAt(x, camera.position.y, z); camera.updateMatrixWorld();
         player.update(1 / 30); window.collectibles.update(1 / 30, player.position); frames++;
-        if (++steps > 240) throw new Error(`${activeRoute}: walking blocked on the way to (${x.toFixed(1)},${z.toFixed(1)}) at ${player.position.toArray().map(v => v.toFixed(2))}`);
+        if (++steps > 240 && Math.hypot(player.position.x - x, player.position.z - z) > tolerance) throw new Error(`${activeRoute}: walking blocked on the way to (${x.toFixed(1)},${z.toFixed(1)}) at ${player.position.toArray().map(v => v.toFixed(2))}`);
         if (player.position.y < terrain.userData.getHeightAt(player.position.x, player.position.z) - 0.5) throw new Error('Player fell through city ground.');
       }
       input.forward = false;
@@ -77,7 +77,7 @@ try {
     const sacred = byId('sacred-way');
     follow(sacred);
     activeRoute = 'Acropolis reward';
-    // A pickup is collected within 1.8m; the temple's solid colonnade prevents standing at its exact centre.
+    // Pickups have a 1.8m collection radius; verify collection without requiring the player to stand on the pickup.
     walkTo(ACROPOLIS_PEAK_3D.x, ACROPOLIS_PEAK_3D.z, 1.6);
     const templeReward = window.collectibles.items.find(item => Math.abs(item.position.x - ACROPOLIS_PEAK_3D.x) < 0.01 && Math.abs(item.position.z - ACROPOLIS_PEAK_3D.z) < 0.01);
     if (!templeReward?.userData.collected) throw new Error('Temple reward is unreachable on foot.');
