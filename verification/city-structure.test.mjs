@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import * as THREE from 'three';
-import {CITY_STREETS,CITY_QUARTERS,AGORA_FRONTAGES,cityQuarterRecipe} from '../src/world/neighbourhoodLayout.js';
+import {CITY_STREETS,CITY_QUARTERS,AGORA_FRONTAGES,NEIGHBOURHOODS,cityQuarterRecipe} from '../src/world/neighbourhoodLayout.js';
 import {generateCityGrid} from '../src/world/cityPlan.js';
+import {AGORA_LAYOUT} from '../src/world/cityCivicLayout.js';
 import {createLayoutFixture} from './city-layout.fixture.mjs';
 import {PlayerController} from '../src/controls/PlayerController.js';
 import {EnvironmentCollider} from '../src/env/EnvironmentCollider.js';
@@ -17,15 +18,17 @@ test('one authored street network retains all existing centre lines and clear bu
  assert.equal(hash(roadNetwork.map(r=>({width:r.width,type:r.type,points:r.points.map(p=>[p.x,p.z])}))),baseline.streetHash);
  assert.equal(hash(cellsData(cells)),baseline.gridHash,'No extra building slots or lost protected reservations in this bounded pass.');
  assert.equal(AGORA_FRONTAGES.length,5);assert.equal(CITY_QUARTERS.length,5);
+ assert.deepEqual([AGORA_LAYOUT.x,AGORA_LAYOUT.z],[-105,36],'Keep the relocated Agora at its documented anchor.');
+ const potters=NEIGHBOURHOODS.find(place=>place.id==='potters');assert.deepEqual([potters.x,potters.z],[-165,66],'Keep Potters Court on the western craft approach.');
  const triangles=roadNetwork.reduce((sum,road)=>{for(const t of [0,.25,.5,.75,1])assert.ok(road.getWidthAt(t)>=3&&road.getWidthAt(t)<=road.width);const mesh=road.renderRibbon(new THREE.Vector3(0,4,0),()=>4);assert.equal(mesh.userData.streetId,road.id);assert.equal(mesh.userData.groundSurface,'street');return sum+mesh.geometry.index.count/3;},0);
  assert.equal(triangles,baseline.roadTriangles,'Taper the existing ribbons without adding another ground mesh.');
 });
 test('workshop and residential recipes blend deterministically without new landmark/harbour owners',()=>{
  const typesAt=(x,z)=>Array.from({length:1000},(_,i)=>cityQuarterRecipe(x,z,(i+.5)/1000)?.type);
- assert.ok(typesAt(-105,10).filter(t=>t==='workshop').length>=600);
+ assert.ok(typesAt(-170,38).filter(t=>t==='workshop').length>=600);
  assert.ok(typesAt(-65,115).filter(t=>t==='house').length>=700);
- const a=cityQuarterRecipe(-90,70,.2),b=cityQuarterRecipe(-89.9,70,.2);assert.ok(a&&b);assert.ok(Math.abs(a.workshopWeight-b.workshopWeight)<.01);
- assert.deepEqual(cityQuarterRecipe(-90,70,.2),a);for(const [x,z]of [[-30,20],[-32,-28],[68,10],[500,500]])assert.equal(cityQuarterRecipe(x,z),null);
+ const a=cityQuarterRecipe(-139,85,.001),b=cityQuarterRecipe(-138.99,85,.001);assert.ok(a&&b);assert.ok(a.workshopWeight>0&&a.workshopWeight<1);assert.ok(Math.abs(a.workshopWeight-b.workshopWeight)<.01);
+ assert.deepEqual(cityQuarterRecipe(-139,85,.001),a);for(const [x,z]of [[-30,20],[-32,-28],[68,10],[500,500]])assert.equal(cityQuarterRecipe(x,z),null);
 });
 test('existing city prefabs stay within geometry/light budgets and the main district routes admit a walking capsule',async()=>{
  const {scene,city,stats}=await createLayoutFixture();
