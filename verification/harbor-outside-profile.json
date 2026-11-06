@@ -3,5 +3,6 @@
   "segments": 256,
   "seaLevel": -1,
   "vertices": 65633,
-  "sha256": "fab5e01062be3ace4d87e779475bda30c8ac8b1f0fc9d902f9bbd116aa0188da"
+  "sha256": "18f4c47480062cc8986092ee1b4a82a62f1654f7caf022cac9b2c6f5dc5cb1bf",
+  "note": "Current 30 October 2026 terrain, including intentional city, Acropolis and theatre changes outside the harbour."
 }

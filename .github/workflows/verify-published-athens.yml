@@ -85,6 +85,10 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Check published release identity
+        run: |
+          curl -fsSL https://dmaher42.github.io/athens-game-starter/assets/index-R7CvCpwi.js -o /tmp/athens-published.js
+          sha256sum /tmp/athens-published.js docs/assets/index-R7CvCpwi.js
       - name: Inspect current city baseline
         run: |
           node --input-type=module <<'NODE'

@@ -308,6 +308,7 @@ async function runVerification() {
       assert.equal(harborLayout.normalWater, true, "Verify the production Water shader rather than simplified automation water.");
       assert.ok(harborLayout.heightErrors.every((error) => error !== null && error < 1e-6), "Ground placement must match the visible terrain triangles.");
       assert.equal(harborLayout.waterStillSolid, true, "Preserve existing water traversal pending a separate gameplay decision.");
+      console.log("HARBOR_LAYOUT_DIAGNOSTIC", JSON.stringify(harborLayout));
       const outsideBaseline = JSON.parse(await readFile(new URL('./harbor-outside-profile.json', import.meta.url), 'utf8'));
       assert.equal(harborLayout.outsideHarborProfile, outsideBaseline.sha256, 'Preserve every terrain vertex outside the explicitly redesigned harbour shoreline.');
       assert.ok(harborLayout.groundedHarbor.length >= 16 && harborLayout.groundedHarbor.every(o=>o.dry), 'Every harbour land building and work area needs a fully dry footprint.');
